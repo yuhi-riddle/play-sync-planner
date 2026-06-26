@@ -31,6 +31,23 @@ describe("eventSchema", () => {
       })
     ).toThrow("タイトルを入力してください");
   });
+
+  it("defaults event status when it is omitted", () => {
+    const result = eventSchema.parse({
+      category: "nazotoki",
+      title: "週末の予定",
+      url: "",
+      location_name: "",
+      address: "",
+      start_date: "",
+      end_date: "",
+      price: "",
+      capacity: "",
+      memo: ""
+    });
+
+    expect(result.status).toBe("interested");
+  });
 });
 
 describe("planSchema", () => {

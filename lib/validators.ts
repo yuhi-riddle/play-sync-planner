@@ -63,7 +63,7 @@ export const eventSchema = z.object({
   end_date: nullableDate.default(null),
   price: nullableInteger.default(null),
   capacity: nullableInteger.default(null),
-  status: z.enum(EVENT_STATUSES),
+  status: z.enum(EVENT_STATUSES).default("interested"),
   memo: nullableText.default(null)
 });
 
