@@ -134,7 +134,7 @@ export function SelectField({
   label: string;
   name: string;
   defaultValue?: string;
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: string; label: string; disabled?: boolean }>;
   required?: boolean;
 }) {
   return (
@@ -147,7 +147,7 @@ export function SelectField({
         required={required}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}
           </option>
         ))}

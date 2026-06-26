@@ -32,7 +32,7 @@ export function EventForm({
         defaultValue={event?.category ?? ""}
         required
         options={[
-          { value: "", label: "選択してね" },
+          { value: "", label: "---選択してください---", disabled: true },
           ...EVENT_CATEGORIES.map((category) => ({ value: category, label: categoryLabels[category] }))
         ]}
       />
