@@ -48,7 +48,7 @@ export function EventForm({
       <TextField label="URL" name="url" type="url" defaultValue={event?.url} />
       <div className="grid gap-5 sm:grid-cols-2">
         <TextField label="場所" name="location_name" defaultValue={event?.location_name} />
-        <TextField label="住所" name="address" defaultValue={event?.address} />
+        <TextField label="開催住所" name="address" defaultValue={event?.address} />
       </div>
       <TextArea label="メモ" name="memo" defaultValue={event?.memo} />
       <div>

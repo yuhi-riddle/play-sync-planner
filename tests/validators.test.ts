@@ -66,7 +66,7 @@ describe("planSchema", () => {
       title: "土曜夜の回",
       participantNames: "Haru\nMio",
       candidateDates: "2026-07-01T10:00\n2026-07-02T10:00",
-      answer_deadline_at: "",
+      answer_deadline_at: "2026-06-30T22:00",
       memo: ""
     });
 
@@ -79,7 +79,7 @@ describe("planSchema", () => {
       title: "",
       participantNames: "",
       candidateDates: "2026-07-01T10:00",
-      answer_deadline_at: "",
+      answer_deadline_at: "2026-06-30T22:00",
       memo: ""
     });
 
@@ -92,10 +92,10 @@ describe("planSchema", () => {
         title: "",
         participantNames: "Haru",
         candidateDates: "",
-        answer_deadline_at: "",
+        answer_deadline_at: "2026-06-30T22:00",
         memo: ""
       })
-    ).toThrow("候補日を1つ以上入力してください");
+    ).toThrow("候補日時を1つ以上選択してください");
   });
 
   it("rejects invalid candidate dates", () => {
@@ -104,10 +104,22 @@ describe("planSchema", () => {
         title: "土曜夜の回",
         participantNames: "Haru",
         candidateDates: "not-a-date",
+        answer_deadline_at: "2026-06-30T22:00",
+        memo: ""
+      })
+    ).toThrow("候補日時は YYYY-MM-DDTHH:mm 形式で入力してください");
+  });
+
+  it("requires an answer deadline", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "土曜夜の回",
+        participantNames: "Haru",
+        candidateDates: "2026-07-01T10:00",
         answer_deadline_at: "",
         memo: ""
       })
-    ).toThrow("候補日は YYYY-MM-DDTHH:mm 形式で入力してください");
+    ).toThrow("回答期限を選択してください");
   });
 
   it("rejects an invalid answer deadline", () => {
@@ -128,10 +140,10 @@ describe("planSchema", () => {
         title: "",
         participantNames: "",
         candidateDates: "2026-07-01T10:07",
-        answer_deadline_at: "",
+        answer_deadline_at: "2026-06-30T22:00",
         memo: ""
       })
-    ).toThrow("候補日時は15分単位で入力してください");
+    ).toThrow("候補日時は15分単位で選択してください");
   });
 
   it("rejects answer deadline outside 15 minute steps", () => {
@@ -143,6 +155,6 @@ describe("planSchema", () => {
         answer_deadline_at: "2026-07-01T09:10",
         memo: ""
       })
-    ).toThrow("回答期限は15分単位で入力してください");
+    ).toThrow("回答期限は15分単位で選択してください");
   });
 });

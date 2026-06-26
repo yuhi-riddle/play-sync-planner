@@ -49,14 +49,16 @@ function isValidQuarterHourDateTimeLocal(value: string) {
   return isValidDateTimeLocal(value) && match !== null && Number(match[5]) % 15 === 0;
 }
 
-const nullableDateTime = (formatMessage: string, stepMessage: string) =>
+const requiredDateTime = (requiredMessage: string, formatMessage: string, stepMessage: string) =>
   z.preprocess(
     emptyToNull,
     z
-      .string()
+      .string({
+        required_error: requiredMessage,
+        invalid_type_error: requiredMessage
+      })
       .refine(isValidDateTimeLocal, formatMessage)
       .refine(isValidQuarterHourDateTimeLocal, stepMessage)
-      .nullable()
   );
 
 export const eventSchema = z.object({
@@ -112,14 +114,15 @@ export const planSchema = z.object({
   title: nullableText.default(null),
   participantNames: optionalNewlineList().default([]),
   candidateDates: dateTimeList(
-    "候補日を1つ以上入力してください",
-    "候補日は YYYY-MM-DDTHH:mm 形式で入力してください",
-    "候補日時は15分単位で入力してください"
+    "候補日時を1つ以上選択してください",
+    "候補日時は YYYY-MM-DDTHH:mm 形式で入力してください",
+    "候補日時は15分単位で選択してください"
   ),
-  answer_deadline_at: nullableDateTime(
+  answer_deadline_at: requiredDateTime(
+    "回答期限を選択してください",
     "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください",
-    "回答期限は15分単位で入力してください"
-  ).default(null),
+    "回答期限は15分単位で選択してください"
+  ),
   memo: nullableText.default(null)
 });
 
