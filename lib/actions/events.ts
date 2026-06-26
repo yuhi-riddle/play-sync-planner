@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { formDataToObject } from "@/lib/form-data";
+import { getAfterEventCreatePath } from "@/lib/domain/event-flow";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { eventSchema } from "@/lib/validators";
 
@@ -30,7 +31,7 @@ export async function createEventAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/events");
-  redirect(`/events/${data.id}`);
+  redirect(getAfterEventCreatePath(data.id));
 }
 
 export async function updateEventAction(eventId: string, formData: FormData) {

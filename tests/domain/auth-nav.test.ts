@@ -7,6 +7,7 @@ describe("getAuthNavState", () => {
     expect(getAuthNavState(null)).toEqual({
       isSignedIn: false,
       displayEmail: null,
+      accountLabel: null,
       primaryLabel: "ログイン",
       primaryHref: "/login"
     });
@@ -16,6 +17,7 @@ describe("getAuthNavState", () => {
     expect(getAuthNavState("user@example.com")).toEqual({
       isSignedIn: true,
       displayEmail: "user@example.com",
+      accountLabel: "user",
       primaryLabel: "設定",
       primaryHref: "/settings"
     });

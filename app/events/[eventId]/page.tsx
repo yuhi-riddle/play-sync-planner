@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { categoryLabels, eventStatusLabels, planStatusLabels } from "@/lib/constants";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -32,33 +32,30 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
     <div className="space-y-6">
       <PageHeader
         title={event.title}
-        description="イベント情報と紐づく参加予定を確認します。"
-        action={<ButtonLink href={`/events/${event.id}/plans/new`}>参加予定を作成</ButtonLink>}
+        description="この予定の日程調整を作成・確認します。"
+        action={<ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink>}
       />
 
       <Card>
         <dl className="grid gap-3 sm:grid-cols-2">
           <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
-          <Info label="ステータス" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
-          <Info label="開催期間" value={`${formatDate(event.start_date)} - ${formatDate(event.end_date)}`} />
+          <Info label="状態" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
           <Info label="場所" value={event.location_name ?? "未設定"} />
-          <Info label="料金" value={event.price ? `${event.price.toLocaleString()}円` : "未設定"} />
-          <Info label="定員" value={event.capacity ? `${event.capacity}人` : "未設定"} />
           <Info label="URL" value={event.url ?? "未設定"} />
           <Info label="メモ" value={event.memo ?? "未設定"} />
         </dl>
         <div className="mt-5">
-          <SecondaryLink href={`/events/${event.id}/edit`}>イベントを編集</SecondaryLink>
+          <SecondaryLink href={`/events/${event.id}/edit`}>予定を編集</SecondaryLink>
         </div>
       </Card>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-ink">参加予定</h2>
+        <h2 className="text-xl font-semibold text-ink">日程調整</h2>
         {(event.plans as EventPlan[] | undefined)?.length ? (
           <div className="grid gap-3">
             {((event.plans ?? []) as EventPlan[]).map((plan) => (
               <a key={plan.id} href={`/plans/${plan.id}`} className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft hover:border-moss">
-                <span className="block font-semibold text-ink">{plan.title ?? "参加予定"}</span>
+                <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
                 <span className="mt-1 block text-sm text-ink/60">
                   {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}
                 </span>
@@ -66,7 +63,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
             ))}
           </div>
         ) : (
-          <EmptyState>参加予定はまだありません。</EmptyState>
+          <EmptyState>日程調整はまだありません。上の「日程調整を始める」から候補日時を入力します。</EmptyState>
         )}
       </section>
     </div>
