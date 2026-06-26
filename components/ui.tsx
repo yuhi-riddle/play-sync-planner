@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
+import { brand } from "@/lib/brand";
+
 export function PageHeader({
   title,
   description,
@@ -14,7 +16,7 @@ export function PageHeader({
   return (
     <div className="relative flex flex-col gap-4 rounded-lg border border-white/70 bg-cream/72 p-5 shadow-soft backdrop-blur sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss">PlaySync Planner</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss">{brand.shortName}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-normal text-ink sm:text-4xl">{title}</h1>
         {description ? <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/68">{description}</p> : null}
       </div>

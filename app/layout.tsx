@@ -3,12 +3,13 @@ import Link from "next/link";
 import { CalendarDays, Home, ListChecks, Settings } from "lucide-react";
 
 import { AuthNav } from "@/components/auth-nav";
+import { brand } from "@/lib/brand";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PlaySync Planner",
-  description: "遊び予定の日程調整をまとめて管理するアプリ"
+  title: brand.name,
+  description: brand.description
 };
 
 const navItems = [
@@ -26,12 +27,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <header className="border-b border-white/80 bg-cream/80 backdrop-blur-md">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
               <Link href="/" className="group flex items-center gap-3 text-lg font-bold tracking-normal text-ink">
-                <span className="relative inline-flex h-9 w-11 items-end justify-center rounded-lg bg-skywash/70 shadow-soft">
+                <span className="relative inline-flex h-10 w-12 items-end justify-center rounded-lg border border-white/70 bg-skywash/70 shadow-soft">
+                  <span className="absolute right-2 top-2 h-3 w-3 rounded-full bg-honey" />
                   <span className="absolute bottom-2 left-2 h-4 w-5 bg-pine [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
                   <span className="absolute bottom-2 right-2 h-6 w-6 bg-moss [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
                   <span className="absolute bottom-2 right-3 h-3 w-3 bg-cream [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
+                  <span className="absolute bottom-2 left-1.5 h-1.5 w-9 rounded-full bg-cream/80" />
                 </span>
-                <span>PlaySync Planner</span>
+                <span>{brand.name}</span>
               </Link>
               <AuthNav />
             </div>

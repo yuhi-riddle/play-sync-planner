@@ -1,4 +1,4 @@
-# PlaySync Planner Phase 1 セットアップ手順
+# Madoi Phase 1 セットアップ手順
 
 この手順は、Phase 1 を自分のSupabase環境で動かすためのものです。
 
@@ -95,7 +95,7 @@ OAuth Clientを作る前に、Google側でアプリ名などを登録します�
 2. `OAuth consent screen` を開きます。
 3. User Type を聞かれたら、個人開発ならまず `External` を選びます。
 4. `Create` を押します。
-5. App name に `PlaySync Planner` と入力します。
+5. App name に `Madoi` と入力します。
 6. User support email に自分のGoogleアカウントを選びます。
 7. Developer contact information の Email addresses に自分のメールアドレスを入れます。
 8. `Save and Continue` を押します。
@@ -113,7 +113,7 @@ OAuth Clientを作る前に、Google側でアプリ名などを登録します�
 3. `Create Credentials` または `Create Client` を押します。
 4. 種類を聞かれたら `OAuth client ID` を選びます。
 5. Application type は `Web application` を選びます。
-6. Name には `PlaySync Planner local` など分かりやすい名前を入れます。
+6. Name には `Madoi local` など分かりやすい名前を入れます。
 7. `Authorized JavaScript origins` の `Add URI` を押します。
 8. 次を入力します。
 
