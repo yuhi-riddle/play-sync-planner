@@ -58,4 +58,28 @@ describe("planSchema", () => {
       })
     ).toThrow("候補日を1つ以上入力してください");
   });
+
+  it("rejects invalid candidate dates", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "土曜夜の回",
+        participantNames: "Haru",
+        candidateDates: "not-a-date",
+        answer_deadline_at: "",
+        memo: ""
+      })
+    ).toThrow("候補日は YYYY-MM-DDTHH:mm 形式で入力してください");
+  });
+
+  it("rejects an invalid answer deadline", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "土曜夜の回",
+        participantNames: "Haru",
+        candidateDates: "2026-07-01T10:00",
+        answer_deadline_at: "tomorrow",
+        memo: ""
+      })
+    ).toThrow("回答期限は YYYY-MM-DDTHH:mm 形式で入力してください");
+  });
 });
