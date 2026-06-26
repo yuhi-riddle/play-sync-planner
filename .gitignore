@@ -1,0 +1,7 @@
+.next/
+node_modules/
+.env.local
+.env*.local
+.secrets/
+dev-server.log
+dev-server.err
