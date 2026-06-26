@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { FormEvent, InvalidEvent, ReactNode } from "react";
 import { clsx } from "clsx";
 
 import { brand } from "@/lib/brand";
@@ -63,7 +65,8 @@ export function TextField({
   required,
   placeholder,
   helpText,
-  step
+  step,
+  requiredMessage
 }: {
   label: string;
   name: string;
@@ -73,7 +76,18 @@ export function TextField({
   placeholder?: string;
   helpText?: string;
   step?: number;
+  requiredMessage?: string;
 }) {
+  function handleInvalid(event: InvalidEvent<HTMLInputElement>) {
+    if (requiredMessage && event.currentTarget.validity.valueMissing) {
+      event.currentTarget.setCustomValidity(requiredMessage);
+    }
+  }
+
+  function handleInput(event: FormEvent<HTMLInputElement>) {
+    event.currentTarget.setCustomValidity("");
+  }
+
   return (
     <label className="block text-sm font-medium text-ink">
       <span className="text-ink/72">{label}</span>
@@ -85,6 +99,8 @@ export function TextField({
         required={required}
         placeholder={placeholder}
         step={step}
+        onInvalid={handleInvalid}
+        onInput={handleInput}
       />
       {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
@@ -98,7 +114,8 @@ export function TextArea({
   rows = 4,
   required,
   placeholder,
-  helpText
+  helpText,
+  requiredMessage
 }: {
   label: string;
   name: string;
@@ -107,7 +124,18 @@ export function TextArea({
   required?: boolean;
   placeholder?: string;
   helpText?: string;
+  requiredMessage?: string;
 }) {
+  function handleInvalid(event: InvalidEvent<HTMLTextAreaElement>) {
+    if (requiredMessage && event.currentTarget.validity.valueMissing) {
+      event.currentTarget.setCustomValidity(requiredMessage);
+    }
+  }
+
+  function handleInput(event: FormEvent<HTMLTextAreaElement>) {
+    event.currentTarget.setCustomValidity("");
+  }
+
   return (
     <label className="block text-sm font-medium text-ink">
       <span className="text-ink/72">{label}</span>
@@ -118,6 +146,8 @@ export function TextArea({
         rows={rows}
         required={required}
         placeholder={placeholder}
+        onInvalid={handleInvalid}
+        onInput={handleInput}
       />
       {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
@@ -129,14 +159,26 @@ export function SelectField({
   name,
   defaultValue,
   options,
-  required
+  required,
+  requiredMessage
 }: {
   label: string;
   name: string;
   defaultValue?: string;
   options: Array<{ value: string; label: string; disabled?: boolean }>;
   required?: boolean;
+  requiredMessage?: string;
 }) {
+  function handleInvalid(event: InvalidEvent<HTMLSelectElement>) {
+    if (requiredMessage && event.currentTarget.validity.valueMissing) {
+      event.currentTarget.setCustomValidity(requiredMessage);
+    }
+  }
+
+  function handleInput(event: FormEvent<HTMLSelectElement>) {
+    event.currentTarget.setCustomValidity("");
+  }
+
   return (
     <label className="block text-sm font-medium text-ink">
       <span className="text-ink/72">{label}</span>
@@ -145,6 +187,8 @@ export function SelectField({
         name={name}
         defaultValue={defaultValue}
         required={required}
+        onInvalid={handleInvalid}
+        onInput={handleInput}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value} disabled={option.disabled}>

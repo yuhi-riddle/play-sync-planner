@@ -31,12 +31,20 @@ export function EventForm({
         name="category"
         defaultValue={event?.category ?? ""}
         required
+        requiredMessage="カテゴリを選択してください"
         options={[
           { value: "", label: "---選択してください---", disabled: true },
           ...EVENT_CATEGORIES.map((category) => ({ value: category, label: categoryLabels[category] }))
         ]}
       />
-      <TextField label="予定名" name="title" defaultValue={event?.title} required placeholder="例: 7月の謎解き会" />
+      <TextField
+        label="予定名"
+        name="title"
+        defaultValue={event?.title}
+        required
+        requiredMessage="予定名を入力してください"
+        placeholder="例: 7月の謎解き会"
+      />
       <TextField label="URL" name="url" type="url" defaultValue={event?.url} />
       <div className="grid gap-5 sm:grid-cols-2">
         <TextField label="場所" name="location_name" defaultValue={event?.location_name} />

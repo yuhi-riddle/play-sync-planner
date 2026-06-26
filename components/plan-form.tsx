@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import type { FormEvent, InvalidEvent } from "react";
 import { useState } from "react";
 
 import { SubmitButton, TextArea, TextField } from "@/components/ui";
@@ -39,6 +40,16 @@ export function PlanForm({
     setCandidateDates((current) => (current.length === 1 ? current : current.filter((_, currentIndex) => currentIndex !== index)));
   }
 
+  function handleCandidateInvalid(event: InvalidEvent<HTMLInputElement>) {
+    if (event.currentTarget.validity.valueMissing) {
+      event.currentTarget.setCustomValidity("候補日時を選択してください");
+    }
+  }
+
+  function handleCandidateInput(event: FormEvent<HTMLInputElement>) {
+    event.currentTarget.setCustomValidity("");
+  }
+
   return (
     <form action={action} className="grid gap-6">
       <section className="rounded-lg border border-white/75 bg-white/48 p-4">
@@ -69,6 +80,8 @@ export function PlanForm({
                   type="datetime-local"
                   value={candidateDate}
                   onChange={(event) => updateCandidateDate(index, event.target.value)}
+                  onInvalid={handleCandidateInvalid}
+                  onInput={handleCandidateInput}
                   step={900}
                   required={index === 0}
                 />
