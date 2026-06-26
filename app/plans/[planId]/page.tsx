@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { planStatusLabels } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
@@ -61,7 +62,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
       <PageHeader
         title={plan.title ?? "参加予定"}
         description={event?.title ?? "イベント未設定"}
-        action={<ButtonLink href={`/plans/${plan.id}/confirm`}>日程確定</ButtonLink>}
+        action={plan.status === "date_confirmed" ? undefined : <ButtonLink href={`/plans/${plan.id}/confirm`}>日程確定</ButtonLink>}
       />
 
       <Card>
@@ -79,11 +80,9 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
 
       <Card>
         <h2 className="text-lg font-semibold text-ink">共有リンク</h2>
-        {shareUrl ? (
-          <p className="mt-3 break-all rounded-md bg-skywash/60 p-3 text-sm text-ink">{shareUrl}</p>
-        ) : (
-          <EmptyState>共有リンクがありません。</EmptyState>
-        )}
+        <div className="mt-3">
+          <ShareLinkCard shareUrl={shareUrl} />
+        </div>
       </Card>
 
       <section className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">

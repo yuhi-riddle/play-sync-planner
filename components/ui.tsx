@@ -60,13 +60,17 @@ export function TextField({
   name,
   type = "text",
   defaultValue,
-  required
+  required,
+  placeholder,
+  helpText
 }: {
   label: string;
   name: string;
   type?: string;
   defaultValue?: string | number | null;
   required?: boolean;
+  placeholder?: string;
+  helpText?: string;
 }) {
   return (
     <label className="block text-sm font-medium text-ink">
@@ -77,7 +81,9 @@ export function TextField({
         type={type}
         defaultValue={defaultValue ?? ""}
         required={required}
+        placeholder={placeholder}
       />
+      {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
   );
 }
@@ -87,13 +93,17 @@ export function TextArea({
   name,
   defaultValue,
   rows = 4,
-  required
+  required,
+  placeholder,
+  helpText
 }: {
   label: string;
   name: string;
   defaultValue?: string | null;
   rows?: number;
   required?: boolean;
+  placeholder?: string;
+  helpText?: string;
 }) {
   return (
     <label className="block text-sm font-medium text-ink">
@@ -104,7 +114,9 @@ export function TextArea({
         defaultValue={defaultValue ?? ""}
         rows={rows}
         required={required}
+        placeholder={placeholder}
       />
+      {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
   );
 }
