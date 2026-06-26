@@ -60,7 +60,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   };
 
   const [{ error: participantsError }, { error: datesError }, { error: linkError }] = await Promise.all([
-    supabase.from("participants").insert(participants),
+    participants.length > 0 ? supabase.from("participants").insert(participants) : Promise.resolve({ error: null }),
     supabase.from("candidate_dates").insert(candidateDates),
     supabase.from("share_links").insert(shareLink)
   ]);
@@ -98,6 +98,8 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     throw new Error(planError.message);
   }
 
+  const shouldReplaceParticipants = formData.has("participantNames");
+
   await supabase.from("availability_answers").delete().in(
     "candidate_date_id",
     await supabase
@@ -106,7 +108,9 @@ export async function updatePlanAction(planId: string, formData: FormData) {
       .eq("plan_id", planId)
       .then(({ data }) => (data ?? []).map((row) => row.id))
   );
-  await supabase.from("participants").delete().eq("plan_id", planId);
+  if (shouldReplaceParticipants) {
+    await supabase.from("participants").delete().eq("plan_id", planId);
+  }
   await supabase.from("candidate_dates").delete().eq("plan_id", planId);
 
   const participants = values.participantNames.map((displayName) => ({
@@ -125,7 +129,9 @@ export async function updatePlanAction(planId: string, formData: FormData) {
   }));
 
   const [{ error: participantsError }, { error: datesError }] = await Promise.all([
-    supabase.from("participants").insert(participants),
+    shouldReplaceParticipants && participants.length > 0
+      ? supabase.from("participants").insert(participants)
+      : Promise.resolve({ error: null }),
     supabase.from("candidate_dates").insert(candidateDates)
   ]);
 

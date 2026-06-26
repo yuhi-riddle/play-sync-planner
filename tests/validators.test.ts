@@ -32,6 +32,16 @@ describe("eventSchema", () => {
     ).toThrow("タイトルを入力してください");
   });
 
+  it("requires a selected category", () => {
+    expect(() =>
+      eventSchema.parse({
+        category: "",
+        title: "週末の予定",
+        status: "interested"
+      })
+    ).toThrow("カテゴリを選択してください");
+  });
+
   it("defaults event status when it is omitted", () => {
     const result = eventSchema.parse({
       category: "nazotoki",
@@ -62,6 +72,18 @@ describe("planSchema", () => {
 
     expect(result.participantNames).toEqual(["Haru", "Mio"]);
     expect(result.candidateDates).toHaveLength(2);
+  });
+
+  it("allows empty participant names because guests can join from a shared link", () => {
+    const result = planSchema.parse({
+      title: "",
+      participantNames: "",
+      candidateDates: "2026-07-01T10:00",
+      answer_deadline_at: "",
+      memo: ""
+    });
+
+    expect(result.participantNames).toEqual([]);
   });
 
   it("requires at least one candidate date", () => {
@@ -98,5 +120,29 @@ describe("planSchema", () => {
         memo: ""
       })
     ).toThrow("回答期限は YYYY-MM-DDTHH:mm 形式で入力してください");
+  });
+
+  it("rejects date times outside 15 minute steps", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "",
+        participantNames: "",
+        candidateDates: "2026-07-01T10:07",
+        answer_deadline_at: "",
+        memo: ""
+      })
+    ).toThrow("候補日時は15分単位で入力してください");
+  });
+
+  it("rejects answer deadline outside 15 minute steps", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "",
+        participantNames: "",
+        candidateDates: "2026-07-01T10:00",
+        answer_deadline_at: "2026-07-01T09:10",
+        memo: ""
+      })
+    ).toThrow("回答期限は15分単位で入力してください");
   });
 });

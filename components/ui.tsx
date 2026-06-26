@@ -62,7 +62,8 @@ export function TextField({
   defaultValue,
   required,
   placeholder,
-  helpText
+  helpText,
+  step
 }: {
   label: string;
   name: string;
@@ -71,6 +72,7 @@ export function TextField({
   required?: boolean;
   placeholder?: string;
   helpText?: string;
+  step?: number;
 }) {
   return (
     <label className="block text-sm font-medium text-ink">
@@ -82,6 +84,7 @@ export function TextField({
         defaultValue={defaultValue ?? ""}
         required={required}
         placeholder={placeholder}
+        step={step}
       />
       {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
@@ -125,12 +128,14 @@ export function SelectField({
   label,
   name,
   defaultValue,
-  options
+  options,
+  required
 }: {
   label: string;
   name: string;
   defaultValue?: string;
   options: Array<{ value: string; label: string }>;
+  required?: boolean;
 }) {
   return (
     <label className="block text-sm font-medium text-ink">
@@ -139,6 +144,7 @@ export function SelectField({
         className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         defaultValue={defaultValue}
+        required={required}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

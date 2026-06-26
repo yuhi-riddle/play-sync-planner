@@ -44,17 +44,29 @@ function isValidDateTimeLocal(value: string) {
   );
 }
 
-const nullableDateTime = (message: string) =>
+function isValidQuarterHourDateTimeLocal(value: string) {
+  const match = dateTimeLocalPattern.exec(value);
+  return isValidDateTimeLocal(value) && match !== null && Number(match[5]) % 15 === 0;
+}
+
+const nullableDateTime = (formatMessage: string, stepMessage: string) =>
   z.preprocess(
     emptyToNull,
     z
       .string()
-      .refine(isValidDateTimeLocal, message)
+      .refine(isValidDateTimeLocal, formatMessage)
+      .refine(isValidQuarterHourDateTimeLocal, stepMessage)
       .nullable()
   );
 
 export const eventSchema = z.object({
-  category: z.enum(EVENT_CATEGORIES),
+  category: z.preprocess(
+    emptyToNull,
+    z.enum(EVENT_CATEGORIES, {
+      required_error: "カテゴリを選択してください",
+      invalid_type_error: "カテゴリを選択してください"
+    })
+  ),
   title: z.string().trim().min(1, "タイトルを入力してください"),
   url: nullableText.default(null),
   location_name: nullableText.default(null),
@@ -70,7 +82,7 @@ export const eventSchema = z.object({
 const newlineList = (message: string) =>
   z.preprocess((value) => {
     if (Array.isArray(value)) {
-      return value;
+      return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
     }
 
     return String(value ?? "")
@@ -79,14 +91,35 @@ const newlineList = (message: string) =>
       .filter(Boolean);
   }, z.array(z.string().min(1)).min(1, message));
 
-const dateTimeList = (requiredMessage: string, dateTimeMessage: string) =>
-  newlineList(requiredMessage).pipe(z.array(z.string().refine(isValidDateTimeLocal, dateTimeMessage)));
+const optionalNewlineList = () =>
+  z.preprocess((value) => {
+    if (Array.isArray(value)) {
+      return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+    }
+
+    return String(value ?? "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }, z.array(z.string().min(1)));
+
+const dateTimeList = (requiredMessage: string, dateTimeMessage: string, stepMessage: string) =>
+  newlineList(requiredMessage).pipe(
+    z.array(z.string().refine(isValidDateTimeLocal, dateTimeMessage).refine(isValidQuarterHourDateTimeLocal, stepMessage))
+  );
 
 export const planSchema = z.object({
   title: nullableText.default(null),
-  participantNames: newlineList("参加者を1人以上入力してください"),
-  candidateDates: dateTimeList("候補日を1つ以上入力してください", "候補日は YYYY-MM-DDTHH:mm 形式で入力してください"),
-  answer_deadline_at: nullableDateTime("回答期限は YYYY-MM-DDTHH:mm 形式で入力してください").default(null),
+  participantNames: optionalNewlineList().default([]),
+  candidateDates: dateTimeList(
+    "候補日を1つ以上入力してください",
+    "候補日は YYYY-MM-DDTHH:mm 形式で入力してください",
+    "候補日時は15分単位で入力してください"
+  ),
+  answer_deadline_at: nullableDateTime(
+    "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください",
+    "回答期限は15分単位で入力してください"
+  ).default(null),
   memo: nullableText.default(null)
 });
 

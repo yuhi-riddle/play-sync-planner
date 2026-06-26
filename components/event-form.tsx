@@ -29,8 +29,12 @@ export function EventForm({
       <SelectField
         label="カテゴリ"
         name="category"
-        defaultValue={event?.category ?? "nazotoki"}
-        options={EVENT_CATEGORIES.map((category) => ({ value: category, label: categoryLabels[category] }))}
+        defaultValue={event?.category ?? ""}
+        required
+        options={[
+          { value: "", label: "選択してね" },
+          ...EVENT_CATEGORIES.map((category) => ({ value: category, label: categoryLabels[category] }))
+        ]}
       />
       <TextField label="予定名" name="title" defaultValue={event?.title} required placeholder="例: 7月の謎解き会" />
       <TextField label="URL" name="url" type="url" defaultValue={event?.url} />
