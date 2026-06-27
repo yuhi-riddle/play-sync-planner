@@ -9,7 +9,8 @@ describe("getAuthNavState", () => {
       displayEmail: null,
       accountLabel: null,
       primaryLabel: "ログイン",
-      primaryHref: "/login"
+      primaryHref: "/login",
+      settingsHref: "/settings"
     });
   });
 
@@ -18,8 +19,9 @@ describe("getAuthNavState", () => {
       isSignedIn: true,
       displayEmail: "user@example.com",
       accountLabel: "user",
-      primaryLabel: "設定",
-      primaryHref: "/settings"
+      primaryLabel: "ログイン",
+      primaryHref: "/login",
+      settingsHref: "/settings"
     });
   });
 });

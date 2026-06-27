@@ -61,7 +61,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
     <div className="space-y-6">
       <PageHeader
         title={plan.title ?? "参加予定"}
-        description={event?.title ?? "イベント未設定"}
+        description={event?.title ?? "予定未設定"}
         action={plan.status === "date_confirmed" ? undefined : <ButtonLink href={`/plans/${plan.id}/confirm`}>日程確定</ButtonLink>}
       />
 
@@ -73,8 +73,8 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
           <Info label="メモ" value={plan.memo ?? "未設定"} />
         </dl>
         <div className="mt-5 flex flex-wrap gap-3">
-          <SecondaryLink href={`/plans/${plan.id}/edit`}>予定を編集</SecondaryLink>
-          {event?.id ? <SecondaryLink href={`/events/${event.id}`}>イベントへ戻る</SecondaryLink> : null}
+          <SecondaryLink href={`/plans/${plan.id}/edit`}>調整内容を編集</SecondaryLink>
+          {event?.id ? <SecondaryLink href={`/events/${event.id}`}>予定管理へ</SecondaryLink> : null}
         </div>
       </Card>
 

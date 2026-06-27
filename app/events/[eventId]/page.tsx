@@ -32,20 +32,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
     <div className="space-y-6">
       <PageHeader
         title={event.title}
-        description="この予定の日程調整を作成・確認します。"
+        description="基本情報、日程調整、回答状況をここで確認します。"
         action={<ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink>}
       />
 
       <Card>
         <dl className="grid gap-3 sm:grid-cols-2">
           <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
-          <Info label="状態" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
-          <Info label="場所" value={event.location_name ?? "未設定"} />
+          <Info label="管理状態" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
+          <Info label="場所メモ" value={event.location_name ?? "未設定"} />
           <Info label="URL" value={event.url ?? "未設定"} />
           <Info label="メモ" value={event.memo ?? "未設定"} />
         </dl>
         <div className="mt-5">
-          <SecondaryLink href={`/events/${event.id}/edit`}>予定を編集</SecondaryLink>
+          <SecondaryLink href={`/events/${event.id}/edit`}>基本情報を編集</SecondaryLink>
         </div>
       </Card>
 
@@ -63,7 +63,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
             ))}
           </div>
         ) : (
-          <EmptyState>日程調整はまだありません。上の「日程調整を始める」から候補日時を入力します。</EmptyState>
+          <EmptyState>日程調整はまだありません。「日程調整を始める」から候補日時を入力します。</EmptyState>
         )}
       </section>
     </div>

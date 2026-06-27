@@ -10,7 +10,7 @@ export default async function EventsPage() {
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="イベント" />
+        <PageHeader title="予定一覧" />
         <SetupPanel />
       </div>
     );
@@ -24,7 +24,7 @@ export default async function EventsPage() {
   if (!user) {
     return (
       <div className="space-y-6">
-        <PageHeader title="イベント" />
+        <PageHeader title="予定一覧" />
         <LoginPanel />
       </div>
     );
@@ -38,7 +38,7 @@ export default async function EventsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="イベント" description="気になる公演や遊び予定の元情報を管理します。" action={<ButtonLink href="/events/new">作成</ButtonLink>} />
+      <PageHeader title="予定一覧" description="日程調整の元になる予定を管理します。" action={<ButtonLink href="/events/new">予定作成</ButtonLink>} />
       {(events ?? []).length > 0 ? (
         <div className="grid gap-4">
           {(events ?? []).map((event) => (
@@ -51,7 +51,7 @@ export default async function EventsPage() {
                     </div>
                     <h2 className="text-xl font-bold text-ink">{event.title}</h2>
                     <p className="mt-2 text-sm text-ink/60">
-                      {event.location_name ?? "場所未設定"}
+                      {event.location_name ?? "場所メモ未設定"}
                     </p>
                     <p className="mt-1 text-sm text-ink/60">
                       {formatDate(event.start_date)} - {formatDate(event.end_date)}
@@ -67,7 +67,7 @@ export default async function EventsPage() {
           ))}
         </div>
       ) : (
-        <EmptyState>まだイベントがありません。</EmptyState>
+        <EmptyState>まだ予定がありません。まずは「予定作成」から日程調整の箱を作ります。</EmptyState>
       )}
     </div>
   );

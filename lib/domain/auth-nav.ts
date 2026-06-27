@@ -2,8 +2,9 @@ export type AuthNavState = {
   isSignedIn: boolean;
   displayEmail: string | null;
   accountLabel: string | null;
-  primaryLabel: "ログイン" | "設定";
-  primaryHref: "/login" | "/settings";
+  primaryLabel: "ログイン";
+  primaryHref: "/login";
+  settingsHref: "/settings";
 };
 
 export function getAuthNavState(email: string | null | undefined): AuthNavState {
@@ -13,7 +14,8 @@ export function getAuthNavState(email: string | null | undefined): AuthNavState 
       displayEmail: null,
       accountLabel: null,
       primaryLabel: "ログイン",
-      primaryHref: "/login"
+      primaryHref: "/login",
+      settingsHref: "/settings"
     };
   }
 
@@ -23,7 +25,8 @@ export function getAuthNavState(email: string | null | undefined): AuthNavState 
     isSignedIn: true,
     displayEmail: email,
     accountLabel,
-    primaryLabel: "設定",
-    primaryHref: "/settings"
+    primaryLabel: "ログイン",
+    primaryHref: "/login",
+    settingsHref: "/settings"
   };
 }

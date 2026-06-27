@@ -28,7 +28,15 @@ export async function AuthNav() {
           {state.accountLabel}
         </span>
       </div>
-      <AuthLink href={state.primaryHref} label={state.primaryLabel} />
+      <Link
+        href={state.settingsHref}
+        className="inline-flex min-h-10 items-center gap-2 rounded-full border border-ink/10 bg-white/64 px-3 py-2 text-sm font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        aria-label="設定"
+        title="設定"
+      >
+        <Settings aria-hidden="true" className="h-4 w-4" />
+        <span className="hidden sm:inline">設定</span>
+      </Link>
       <form action={signOutAction}>
         <button
           type="submit"
@@ -43,15 +51,15 @@ export async function AuthNav() {
   );
 }
 
-function AuthLink({ href, label }: { href: "/login" | "/settings"; label: "ログイン" | "設定" }) {
+function AuthLink({ href, label }: { href: "/login"; label: "ログイン" }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/64 text-sm font-bold text-pine transition-colors hover:border-moss hover:bg-skywash/60 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/64 px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-moss hover:bg-skywash/60 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
       aria-label={label}
       title={label}
     >
-      {label === "設定" ? <Settings aria-hidden="true" className="h-4 w-4" /> : label}
+      {label}
     </Link>
   );
 }

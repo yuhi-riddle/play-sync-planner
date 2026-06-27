@@ -28,7 +28,7 @@ async function signInWithGoogle() {
 export default function LoginPage() {
   return (
     <div className="space-y-6">
-      <PageHeader title="ログイン" description="イベント作成と日程確定にはログインが必要です。共有リンクの回答は未ログインでも使えます。" />
+      <PageHeader title="ログイン" description="予定作成と日程確定にはログインが必要です。共有リンクの回答は未ログインでも使えます。" />
       <Card className="max-w-xl">
         {hasSupabaseEnv() ? (
           <form action={signInWithGoogle}>
