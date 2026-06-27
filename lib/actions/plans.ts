@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { formDataToObject } from "@/lib/form-data";
+import { buildAnswerShareLink } from "@/lib/domain/plans";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/validators";
 
@@ -54,11 +55,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     sort_order: index
   }));
 
-  const shareLink = {
-    plan_id: plan.id,
-    token: crypto.randomUUID(),
-    purpose: "answer"
-  };
+  const shareLink = buildAnswerShareLink(plan.id, values.answer_deadline_at);
 
   const [{ error: participantsError }, { error: datesError }, { error: linkError }] = await Promise.all([
     participants.length > 0 ? supabase.from("participants").insert(participants) : Promise.resolve({ error: null }),

@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PlanForm } from "@/components/plan-form";
@@ -61,5 +61,21 @@ describe("PlanForm", () => {
 
     expect(screen.getByLabelText("開始時")).toHaveValue("13");
     expect(screen.getByLabelText("終了時")).toHaveValue("15");
+  });
+
+  it("adds a multi-day candidate by choosing a different end date", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月1日.*を選択/));
+    fireEvent.change(screen.getByLabelText("開始時"), { target: { value: "23" } });
+    fireEvent.change(screen.getByLabelText("開始分"), { target: { value: "00" } });
+    fireEvent.click(screen.getByRole("button", { name: "終了日を変更" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "終了日を選択" })).getByLabelText(/7月2日.*を選択/));
+    fireEvent.change(screen.getByLabelText("終了時"), { target: { value: "01" } });
+    fireEvent.change(screen.getByLabelText("終了分"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
+
+    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-01T23:00");
+    expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-02T01:30");
   });
 });

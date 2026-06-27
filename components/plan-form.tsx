@@ -114,12 +114,14 @@ function TimeSelect({
 }
 
 function CalendarPicker({
+  label = "日付を選択",
   selectedDate,
   visibleMonth,
   onSelectDate,
   onChangeMonth,
   minDate
 }: {
+  label?: string;
   selectedDate: string;
   visibleMonth: Date;
   onSelectDate: (value: string) => void;
@@ -136,7 +138,7 @@ function CalendarPicker({
   }
 
   return (
-    <div className="rounded-lg border border-white/75 bg-white/58 p-3">
+    <div role="group" aria-label={label} className="rounded-lg border border-white/75 bg-white/58 p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
         <button
           type="button"
@@ -259,6 +261,11 @@ export function PlanForm({
       }))
     : [];
   const initialCandidate = splitDateTime(initialCandidateDates[0]?.start, defaultCandidateTime);
+  const initialCandidateEnd = splitDateTime(
+    initialCandidateDates[0]?.end ||
+      addMinutes(toDateTimeLocalValueFromParts(initialCandidate.date, initialCandidate.time), defaultDurationMinutes),
+    "21:00"
+  );
   const initialDeadlineValue = toDateTimeLocalValue(plan?.answer_deadline_at);
   const initialDeadline = splitDateTime(initialDeadlineValue, defaultDeadlineTime);
   const candidateHourRef = useRef<HTMLSelectElement>(null);
@@ -269,16 +276,16 @@ export function PlanForm({
   const [visibleMonth, setVisibleMonth] = useState(toMonthDate(initialCandidate.date));
   const [candidateDate, setCandidateDate] = useState(initialCandidate.date);
   const [candidateStartTime, setCandidateStartTime] = useState(initialCandidate.time);
-  const [candidateEndTime, setCandidateEndTime] = useState(() =>
-    splitDateTime(initialCandidateDates[0]?.end || addMinutes(toDateTimeLocalValueFromParts(initialCandidate.date, initialCandidate.time), defaultDurationMinutes), "21:00").time
-  );
+  const [candidateEndDate, setCandidateEndDate] = useState(initialCandidateEnd.date);
+  const [candidateEndTime, setCandidateEndTime] = useState(initialCandidateEnd.time);
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   const [candidateDates, setCandidateDates] = useState<CandidateDraft[]>(initialCandidateDates);
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
   const [message, setMessage] = useState("");
 
   const selectedCandidateStart = toDateTimeLocalValueFromParts(candidateDate, candidateStartTime);
-  const selectedCandidateEnd = toDateTimeLocalValueFromParts(candidateDate, candidateEndTime);
+  const selectedCandidateEnd = toDateTimeLocalValueFromParts(candidateEndDate, candidateEndTime);
   const selectedDeadline = toDateTimeLocalValueFromParts(deadlineDate, deadlineTime);
   const firstCandidate = candidateDates[0]?.start;
   const deadlineIsTooLate =
@@ -289,8 +296,15 @@ export function PlanForm({
 
   function updateCandidateDate(value: string) {
     setCandidateDate(value);
+    setCandidateEndDate((currentEndDate) => (currentEndDate === candidateDate || currentEndDate < value ? value : currentEndDate));
     setVisibleMonth(toMonthDate(value));
     window.setTimeout(() => candidateHourRef.current?.focus(), 0);
+  }
+
+  function updateCandidateEndDate(value: string) {
+    setCandidateEndDate(value);
+    setVisibleMonth(toMonthDate(value));
+    setEndDatePickerOpen(false);
   }
 
   function updateDeadlineDate(value: string) {
@@ -326,8 +340,11 @@ export function PlanForm({
 
   function applyTemplateTime(time: string) {
     const start = toDateTimeLocalValueFromParts(candidateDate, time);
+    const end = splitDateTime(addMinutes(start, defaultDurationMinutes), "12:00");
     setCandidateStartTime(time);
-    setCandidateEndTime(splitDateTime(addMinutes(start, defaultDurationMinutes), "12:00").time);
+    setCandidateEndDate(end.date);
+    setCandidateEndTime(end.time);
+    setEndDatePickerOpen(false);
     window.setTimeout(() => candidateHourRef.current?.focus(), 0);
   }
 
@@ -404,6 +421,7 @@ export function PlanForm({
             </div>
           ) : null}
           <CalendarPicker
+            label="候補日を選択"
             selectedDate={candidateDate}
             visibleMonth={visibleMonth}
             onSelectDate={updateCandidateDate}
@@ -418,8 +436,32 @@ export function PlanForm({
             <div>
               <p className="text-sm font-bold text-ink">終了時間</p>
               <TimeSelect time={candidateEndTime} onTimeChange={setCandidateEndTime} labelPrefix="終了" />
+              <button
+                type="button"
+                onClick={() => {
+                  setEndDatePickerOpen((open) => !open);
+                  setVisibleMonth(toMonthDate(candidateEndDate));
+                }}
+                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                aria-expanded={endDatePickerOpen}
+              >
+                終了日を変更
+              </button>
             </div>
           </div>
+          {endDatePickerOpen ? (
+            <div className="grid gap-2">
+              <p className="text-sm font-bold text-ink">終了日</p>
+              <CalendarPicker
+                label="終了日を選択"
+                selectedDate={candidateEndDate}
+                visibleMonth={visibleMonth}
+                onSelectDate={updateCandidateEndDate}
+                onChangeMonth={setVisibleMonth}
+                minDate={candidateDate}
+              />
+            </div>
+          ) : null}
           {candidateIsPast ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">過去の日時は候補にできません。</p> : null}
           {candidateEndIsInvalid ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">終了時間は開始時間より後にしてください。</p> : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -446,6 +488,7 @@ export function PlanForm({
             <p className="mt-1 text-sm leading-6 text-ink/60">参加者に回答してほしい締め切りを選びます。</p>
           </div>
           <CalendarPicker
+            label="回答期限の日付を選択"
             selectedDate={deadlineDate}
             visibleMonth={visibleMonth}
             onSelectDate={updateDeadlineDate}
