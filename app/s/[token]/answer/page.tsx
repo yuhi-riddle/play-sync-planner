@@ -33,16 +33,19 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
 
   const plan = Array.isArray(link.plans) ? link.plans[0] : link.plans;
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const candidateDates = plan.candidate_dates ?? [];
   const answerable = canAnswerPlan(plan.answer_deadline_at, new Date()) && canAnswerPlan(link.expires_at, new Date());
 
   return (
     <div className="space-y-6">
-      <PageHeader title="日程回答" description={`${event?.title ?? "イベント"} / ${plan.title ?? "参加予定"}`} />
+      <PageHeader title="日程回答" description={`${event?.title ?? "予定"} / ${plan.title ?? "日程調整"}`} />
       <Card>
-        {answerable ? (
-          <AnswerForm token={token} candidateDates={plan.candidate_dates ?? []} />
-        ) : (
+        {!answerable ? (
           <EmptyState>回答期限を過ぎているため、回答できません。</EmptyState>
+        ) : candidateDates.length > 0 ? (
+          <AnswerForm token={token} candidateDates={candidateDates} />
+        ) : (
+          <EmptyState>回答できる候補日時がまだありません。</EmptyState>
         )}
       </Card>
     </div>

@@ -1,6 +1,6 @@
 import { confirmPlanAction } from "@/lib/actions/confirm";
 import { SubmitButton } from "@/components/ui";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeRange } from "@/lib/format";
 
 type CandidateSummary = {
   id: string;
@@ -24,7 +24,7 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
             <input className="mt-1" type="radio" name="candidateDateId" value={candidate.id} required />
             <div>
               <p className="font-semibold text-ink">
-                {formatDateTime(candidate.start_at)}
+                {formatDateTimeRange(candidate.start_at, candidate.end_at)}
                 {candidate.recommended ? <span className="ml-2 text-sm text-clay">おすすめ</span> : null}
               </p>
               <p className="mt-2 text-sm text-ink/70">

@@ -13,7 +13,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
 
   return (
     <form action={action} className="grid gap-5">
-      <TextField label="名前" name="displayName" required />
+      <TextField label="名前" name="displayName" required requiredMessage="回答者の名前を入力してください" />
       <div className="grid gap-4">
         {candidateDates.map((candidate) => (
           <fieldset key={candidate.id} className="rounded-lg border border-white/80 bg-white/68 p-4">
