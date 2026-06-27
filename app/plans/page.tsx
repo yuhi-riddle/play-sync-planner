@@ -89,8 +89,8 @@ function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCand
   };
 }
 
-function buildSearchHref(year: number, month: number, dateKey: string) {
-  return `/plans?month=${monthParam(year, month)}&date=${dateKey}`;
+function buildSearchHref(dateKey: string) {
+  return `/plans?month=${dateKey.slice(0, 7)}&date=${dateKey}`;
 }
 
 export default async function PlansPage({
@@ -156,6 +156,7 @@ export default async function PlansPage({
         <div className="flex items-center justify-between gap-3">
           <Link
             href={`/plans?month=${monthParam(previous.year, previous.month)}&date=${defaultSelectedDate(previous.year, previous.month)}`}
+            scroll={false}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="前の月"
           >
@@ -164,6 +165,7 @@ export default async function PlansPage({
           <h2 className="text-xl font-bold text-ink">{formatMonthLabel(year, month)}</h2>
           <Link
             href={`/plans?month=${monthParam(next.year, next.month)}&date=${defaultSelectedDate(next.year, next.month)}`}
+            scroll={false}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="次の月"
           >
@@ -183,13 +185,15 @@ export default async function PlansPage({
           {calendar.weeks.flat().map((day) => (
             <Link
               key={day.dateKey}
-              href={buildSearchHref(year, month, day.dateKey)}
+              href={buildSearchHref(day.dateKey)}
+              scroll={false}
               className={[
                 "min-h-20 rounded-lg border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
                 day.isSelected ? "border-pine bg-moss/18" : "border-white/70 bg-white/58 hover:border-moss/45",
                 day.isCurrentMonth ? "text-ink" : "text-ink/32"
               ].join(" ")}
               aria-label={`${day.dateKey}の候補を表示`}
+              aria-current={day.isSelected ? "date" : undefined}
             >
               <span className="text-sm font-bold">{day.day}</span>
               {day.candidateCount > 0 ? (

@@ -2,7 +2,7 @@
 
 ## 概要
 
-Madoi は、友人同士の遊び予定について、日程調整・参加者管理・Googleカレンダー登録・リマインド・Walica風清算・支払い証拠管理までを一元管理するWebアプリです。
+Madoi は、友人同士の遊び予定について、候補日時を出し、参加者に回答してもらい、日程を確定するためのWebアプリです。
 
 リポジトリ名と開発プロジェクト名は `play-sync-planner` のままです。
 
@@ -11,26 +11,27 @@ Madoi は、友人同士の遊び予定について、日程調整・参加者�
 
 ## コンセプト
 
-TimeRex のような日程調整の便利さと、Walica のような割り勘清算の分かりやすさを、遊び予定向けに統合する。
+まずは日程調整に集中し、複数の予定調整を見比べやすくする。後続Phaseで、Googleカレンダー連携やWalica風清算を足していく。
 
-## MVPの中心機能
+## Phase 1の中心機能
 
-- イベント / 公演登録
-- 参加予定作成
+- 予定登録
+- 日程調整作成
 - 候補日登録
 - 日程回答
 - 日程確定
 - 共有リンク
-- Googleカレンダー連携
-- リマインド
-- Walica風清算
-- 支払い証拠管理
+- 調整カレンダー
+- 参加者管理
+- 利用規約・プライバシーポリシーのドラフト表示
+
+Googleカレンダー連携、リマインド、清算、支払い証拠管理は後続Phaseで実装します。
 
 ## ファイル構成
 
-- `docs/design/01_requirements.md`：要件定義書 v1.0
+- `docs/design/01_requirements.md`：要件定義書 v1.1
 - `docs/design/02_database_design.md`：DB設計 v1.0
-- `docs/design/03_screen_flow.md`：画面一覧・画面遷移 v1.0
+- `docs/design/03_screen_flow.md`：画面一覧・画面遷移 v1.1
 - `docs/design/04_codex_phase1_prompt.md`：Codex Phase 1 実装プロンプト
 - `docs/phase1-user-setup.md`：Phase 1 セットアップ手順
 
