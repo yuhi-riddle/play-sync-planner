@@ -1,0 +1,49 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CalendarDays } from "lucide-react";
+
+export function AdjustmentMonthPicker({ currentMonth, label }: { currentMonth: string; label: string }) {
+  const router = useRouter();
+  const [month, setMonth] = useState(currentMonth);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return;
+    }
+
+    router.push(`/plans?month=${month}&date=${month}-01`, { scroll: false });
+  }
+
+  return (
+    <details className="group relative">
+      <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-ink/10 bg-white/75 px-4 py-2 text-xl font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay [&::-webkit-details-marker]:hidden">
+        <CalendarDays aria-hidden="true" className="h-5 w-5 text-pine" />
+        {label}
+      </summary>
+      <form
+        onSubmit={handleSubmit}
+        className="absolute left-1/2 z-10 mt-2 w-64 -translate-x-1/2 rounded-lg border border-white/80 bg-cream p-3 shadow-lift"
+      >
+        <label className="block text-sm font-bold text-ink/72">
+          表示する月
+          <input
+            type="month"
+            value={month}
+            onChange={(event) => setMonth(event.currentTarget.value)}
+            className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/90 px-3 py-2 text-base text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
+          />
+        </label>
+        <button
+          type="submit"
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        >
+          この月を見る
+        </button>
+      </form>
+    </details>
+  );
+}

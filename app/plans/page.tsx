@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 
+import { AdjustmentMonthPicker } from "@/components/adjustment-month-picker";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { planStatusLabels } from "@/lib/constants";
 import { buildAdjustmentCalendar, toDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
+import { formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -64,8 +66,47 @@ function formatMonthLabel(year: number, month: number) {
   return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(year, month - 1, 1));
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+function formatDateLabel(dateKey: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short"
+  }).format(new Date(`${dateKey}T00:00:00`));
+}
+
+function weekdayTextClass(dayIndex: number) {
+  if (dayIndex === 0) {
+    return "text-clay";
+  }
+
+  if (dayIndex === 6) {
+    return "text-sky-700";
+  }
+
+  return "text-ink/50";
+}
+
+function dayCellTone(day: { date: Date; isCurrentMonth: boolean; isSelected: boolean }) {
+  const dayIndex = day.date.getDay();
+
+  if (day.isSelected) {
+    return "border-pine bg-moss/18 text-ink";
+  }
+
+  if (!day.isCurrentMonth) {
+    return "border-white/70 bg-white/38 text-ink/30 hover:border-moss/35";
+  }
+
+  if (dayIndex === 0) {
+    return "border-white/70 bg-clay/8 text-clay hover:border-clay/45";
+  }
+
+  if (dayIndex === 6) {
+    return "border-white/70 bg-skywash/55 text-sky-800 hover:border-sky-300";
+  }
+
+  return "border-white/70 bg-white/58 text-ink hover:border-moss/45";
 }
 
 function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCandidate {
@@ -84,6 +125,7 @@ function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCand
     eventTitle: event?.title ?? "予定未設定",
     planTitle: plan.title,
     startAt: candidate.start_at,
+    endAt: candidate.end_at,
     status: plan.status,
     ...counts
   };
@@ -162,7 +204,7 @@ export default async function PlansPage({
           >
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
           </Link>
-          <h2 className="text-xl font-bold text-ink">{formatMonthLabel(year, month)}</h2>
+          <AdjustmentMonthPicker currentMonth={monthParam(year, month)} label={formatMonthLabel(year, month)} />
           <Link
             href={`/plans?month=${monthParam(next.year, next.month)}&date=${defaultSelectedDate(next.year, next.month)}`}
             scroll={false}
@@ -173,9 +215,9 @@ export default async function PlansPage({
           </Link>
         </div>
 
-        <div className="mt-5 grid grid-cols-7 gap-1 text-center text-xs font-bold text-ink/50">
-          {["日", "月", "火", "水", "木", "金", "土"].map((label) => (
-            <div key={label} className="py-2">
+        <div className="mt-5 grid grid-cols-7 gap-1 text-center text-xs font-bold">
+          {["日", "月", "火", "水", "木", "金", "土"].map((label, index) => (
+            <div key={label} className={["py-2", weekdayTextClass(index)].join(" ")}>
               {label}
             </div>
           ))}
@@ -189,8 +231,7 @@ export default async function PlansPage({
               scroll={false}
               className={[
                 "min-h-20 rounded-lg border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                day.isSelected ? "border-pine bg-moss/18" : "border-white/70 bg-white/58 hover:border-moss/45",
-                day.isCurrentMonth ? "text-ink" : "text-ink/32"
+                dayCellTone(day)
               ].join(" ")}
               aria-label={`${day.dateKey}の候補を表示`}
               aria-current={day.isSelected ? "date" : undefined}
@@ -212,7 +253,7 @@ export default async function PlansPage({
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">Timeline</p>
-            <h2 className="mt-1 text-xl font-bold text-ink">{calendar.selectedDateKey}</h2>
+            <h2 className="mt-1 text-xl font-bold text-ink">{formatDateLabel(calendar.selectedDateKey)}</h2>
           </div>
           <p className="text-sm text-ink/58">○ 行ける / △ 微妙 / × 行けない</p>
         </div>
@@ -227,7 +268,7 @@ export default async function PlansPage({
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm font-bold text-pine">{formatTime(candidate.startAt)}</p>
+                    <p className="text-sm font-bold text-pine">{formatDateTimeRange(candidate.startAt, candidate.endAt)}</p>
                     <h3 className="mt-1 text-base font-bold text-ink">{candidate.eventTitle}</h3>
                     <p className="mt-1 text-sm text-ink/60">{candidate.planTitle ?? "日程調整"}</p>
                   </div>

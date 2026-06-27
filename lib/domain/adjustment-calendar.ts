@@ -4,6 +4,7 @@ export type AdjustmentCandidate = {
   eventTitle: string;
   planTitle: string | null;
   startAt: string;
+  endAt?: string | null;
   status: string;
   yes: number;
   maybe: number;
