@@ -134,27 +134,28 @@ describe("planSchema", () => {
     ).toThrow("回答期限は YYYY-MM-DDTHH:mm 形式で入力してください");
   });
 
-  it("rejects date times outside 15 minute steps", () => {
-    expect(() =>
-      planSchema.parse({
-        title: "",
-        participantNames: "",
-        candidateDates: "2026-07-01T10:07",
-        answer_deadline_at: "2026-06-30T22:00",
-        memo: ""
-      })
-    ).toThrow("候補日時は15分単位で選択してください");
+  it("accepts minute-level times", () => {
+    const result = planSchema.parse({
+      title: "",
+      participantNames: "",
+      candidateDates: "2026-07-01T10:07",
+      answer_deadline_at: "2026-06-30T22:08",
+      memo: ""
+    });
+
+    expect(result.candidateDates).toEqual(["2026-07-01T10:07"]);
+    expect(result.answer_deadline_at).toBe("2026-06-30T22:08");
   });
 
-  it("rejects answer deadline outside 15 minute steps", () => {
+  it("rejects an answer deadline after the first candidate", () => {
     expect(() =>
       planSchema.parse({
         title: "",
         participantNames: "",
         candidateDates: "2026-07-01T10:00",
-        answer_deadline_at: "2026-07-01T09:10",
+        answer_deadline_at: "2026-07-01T10:01",
         memo: ""
       })
-    ).toThrow("回答期限は15分単位で選択してください");
+    ).toThrow("回答期限は最初の候補日時より前にしてください");
   });
 });

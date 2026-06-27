@@ -1,7 +1,11 @@
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
+
 export type CalendarCell = {
   date: string;
   day: number;
+  dayOfWeek: number;
   isCurrentMonth: boolean;
+  isHoliday: boolean;
   isToday: boolean;
 };
 
@@ -30,7 +34,9 @@ export function buildMonthCalendar(year: number, monthIndex: number): CalendarCe
     return {
       date,
       day: cellDate.getDate(),
+      dayOfWeek: cellDate.getDay(),
       isCurrentMonth: cellDate.getMonth() === monthIndex,
+      isHoliday: isJapaneseHoliday(date),
       isToday: date === today
     };
   });

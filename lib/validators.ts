@@ -44,12 +44,7 @@ function isValidDateTimeLocal(value: string) {
   );
 }
 
-function isValidQuarterHourDateTimeLocal(value: string) {
-  const match = dateTimeLocalPattern.exec(value);
-  return isValidDateTimeLocal(value) && match !== null && Number(match[5]) % 15 === 0;
-}
-
-const requiredDateTime = (requiredMessage: string, formatMessage: string, stepMessage: string) =>
+const requiredDateTime = (requiredMessage: string, formatMessage: string) =>
   z.preprocess(
     emptyToNull,
     z
@@ -58,7 +53,6 @@ const requiredDateTime = (requiredMessage: string, formatMessage: string, stepMe
         invalid_type_error: requiredMessage
       })
       .refine(isValidDateTimeLocal, formatMessage)
-      .refine(isValidQuarterHourDateTimeLocal, stepMessage)
   );
 
 export const eventSchema = z.object({
@@ -105,26 +99,37 @@ const optionalNewlineList = () =>
       .filter(Boolean);
   }, z.array(z.string().min(1)));
 
-const dateTimeList = (requiredMessage: string, dateTimeMessage: string, stepMessage: string) =>
+const dateTimeList = (requiredMessage: string, dateTimeMessage: string) =>
   newlineList(requiredMessage).pipe(
-    z.array(z.string().refine(isValidDateTimeLocal, dateTimeMessage).refine(isValidQuarterHourDateTimeLocal, stepMessage))
+    z.array(z.string().refine(isValidDateTimeLocal, dateTimeMessage))
   );
 
-export const planSchema = z.object({
-  title: nullableText.default(null),
-  participantNames: optionalNewlineList().default([]),
-  candidateDates: dateTimeList(
-    "候補日時を1つ以上選択してください",
-    "候補日時は YYYY-MM-DDTHH:mm 形式で入力してください",
-    "候補日時は15分単位で選択してください"
-  ),
-  answer_deadline_at: requiredDateTime(
-    "回答期限を選択してください",
-    "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください",
-    "回答期限は15分単位で選択してください"
-  ),
-  memo: nullableText.default(null)
-});
+export const planSchema = z
+  .object({
+    title: nullableText.default(null),
+    participantNames: optionalNewlineList().default([]),
+    candidateDates: dateTimeList(
+      "候補日時を1つ以上選択してください",
+      "候補日時は YYYY-MM-DDTHH:mm 形式で入力してください"
+    ),
+    answer_deadline_at: requiredDateTime(
+      "回答期限を選択してください",
+      "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください"
+    ),
+    memo: nullableText.default(null)
+  })
+  .superRefine((values, context) => {
+    const firstCandidateTime = Math.min(...values.candidateDates.map((candidateDate) => new Date(candidateDate).getTime()));
+    const deadlineTime = new Date(values.answer_deadline_at).getTime();
+
+    if (deadlineTime >= firstCandidateTime) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["answer_deadline_at"],
+        message: "回答期限は最初の候補日時より前にしてください"
+      });
+    }
+  });
 
 export type EventFormValues = z.infer<typeof eventSchema>;
 export type PlanFormValues = z.infer<typeof planSchema>;

@@ -46,10 +46,12 @@ export function EventForm({
         placeholder="例: 7月の謎解き会"
       />
       <TextField label="URL" name="url" type="url" defaultValue={event?.url} />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <TextField label="場所" name="location_name" defaultValue={event?.location_name} />
-        <TextField label="開催住所" name="address" defaultValue={event?.address} />
-      </div>
+      <TextField
+        label="場所メモ"
+        name="location_name"
+        defaultValue={event?.location_name}
+        placeholder="例: 新宿周辺 / 東京ミステリーサーカス / 未定"
+      />
       <TextArea label="メモ" name="memo" defaultValue={event?.memo} />
       <div>
         <SubmitButton>{submitLabel}</SubmitButton>

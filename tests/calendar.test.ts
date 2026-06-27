@@ -15,7 +15,18 @@ describe("calendar helpers", () => {
     expect(cells[3]).toMatchObject({
       date: "2026-07-01",
       day: 1,
+      dayOfWeek: 3,
       isCurrentMonth: true
+    });
+  });
+
+  it("marks Japanese holidays", () => {
+    const cells = buildMonthCalendar(2026, 6);
+    const marineDay = cells.find((cell) => cell.date === "2026-07-20");
+
+    expect(marineDay).toMatchObject({
+      date: "2026-07-20",
+      isHoliday: true
     });
   });
 

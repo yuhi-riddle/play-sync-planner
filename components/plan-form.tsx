@@ -2,7 +2,8 @@
 
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import React from "react";
-import { useMemo, useState } from "react";
+import type { RefObject } from "react";
+import { useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
 import { TextArea } from "@/components/ui";
@@ -20,7 +21,7 @@ const steps = ["候補日時", "回答期限", "確認"];
 const defaultCandidateTime = "19:00";
 const defaultDeadlineTime = "23:45";
 const hourOptions = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
-const minuteOptions = ["00", "15", "30", "45"];
+const minuteOptions = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 
 function splitDateTime(value: string | null | undefined, fallbackTime: string) {
   if (!value) {
@@ -50,32 +51,22 @@ function formatDateLabel(value: string) {
 }
 
 function TimeSelect({
-  date,
   time,
-  onDateChange,
-  onTimeChange
+  onTimeChange,
+  hourRef
 }: {
-  date: string;
   time: string;
-  onDateChange: (value: string) => void;
   onTimeChange: (value: string) => void;
+  hourRef?: RefObject<HTMLSelectElement | null>;
 }) {
   const [hour, minute] = time.split(":");
 
   return (
-    <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr_0.8fr]">
-      <label className="text-sm font-medium text-ink">
-        <span className="text-ink/72">選択中の日付</span>
-        <input
-          className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-          type="date"
-          value={date}
-          onChange={(event) => onDateChange(event.target.value)}
-        />
-      </label>
+    <div className="grid gap-3 sm:grid-cols-2">
       <label className="text-sm font-medium text-ink">
         <span className="text-ink/72">時</span>
         <select
+          ref={hourRef}
           className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
           value={hour}
           onChange={(event) => onTimeChange(`${event.target.value}:${minute}`)}
@@ -116,8 +107,10 @@ function CalendarPicker({
   onSelectDate: (value: string) => void;
   onChangeMonth: (value: Date) => void;
 }) {
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const cells = useMemo(() => buildMonthCalendar(visibleMonth.getFullYear(), visibleMonth.getMonth()), [visibleMonth]);
   const monthLabel = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(visibleMonth);
+  const yearOptions = Array.from({ length: 11 }, (_, index) => visibleMonth.getFullYear() - 5 + index);
 
   function moveMonth(amount: number) {
     onChangeMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1));
@@ -134,10 +127,15 @@ function CalendarPicker({
         >
           <ChevronLeft aria-hidden="true" className="h-5 w-5" />
         </button>
-        <div className="inline-flex items-center gap-2 text-base font-bold text-ink">
+        <button
+          type="button"
+          onClick={() => setMonthPickerOpen((open) => !open)}
+          className="inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-base font-bold text-ink transition-colors hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay"
+          aria-expanded={monthPickerOpen}
+        >
           <CalendarDays aria-hidden="true" className="h-5 w-5 text-moss" />
           {monthLabel}
-        </div>
+        </button>
         <button
           type="button"
           onClick={() => moveMonth(1)}
@@ -147,6 +145,40 @@ function CalendarPicker({
           <ChevronRight aria-hidden="true" className="h-5 w-5" />
         </button>
       </div>
+      {monthPickerOpen ? (
+        <div className="mb-3 grid gap-2 rounded-lg border border-moss/18 bg-cream/70 p-3 sm:grid-cols-2">
+          <label className="text-sm font-medium text-ink">
+            <span className="text-ink/72">年</span>
+            <select
+              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              value={visibleMonth.getFullYear()}
+              onChange={(event) => onChangeMonth(new Date(Number(event.target.value), visibleMonth.getMonth(), 1))}
+              aria-label="年を選択"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}年
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-ink">
+            <span className="text-ink/72">月</span>
+            <select
+              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              value={visibleMonth.getMonth()}
+              onChange={(event) => onChangeMonth(new Date(visibleMonth.getFullYear(), Number(event.target.value), 1))}
+              aria-label="月を選択"
+            >
+              {Array.from({ length: 12 }, (_, month) => (
+                <option key={month} value={month}>
+                  {month + 1}月
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-ink/52">
         {["日", "月", "火", "水", "木", "金", "土"].map((weekday) => (
@@ -158,6 +190,8 @@ function CalendarPicker({
       <div className="grid grid-cols-7 gap-1">
         {cells.map((cell) => {
           const selected = cell.date === selectedDate;
+          const holidayColor = cell.isHoliday || cell.dayOfWeek === 0;
+          const saturdayColor = cell.dayOfWeek === 6;
           return (
             <button
               key={cell.date}
@@ -168,6 +202,8 @@ function CalendarPicker({
                 selected
                   ? "bg-ink text-white shadow-soft"
                   : "bg-cream/70 text-ink hover:bg-mist/60",
+                !selected && holidayColor && "text-red-700",
+                !selected && !holidayColor && saturdayColor && "text-blue-700",
                 !cell.isCurrentMonth && !selected && "text-ink/30",
                 cell.isToday && !selected && "ring-1 ring-moss/40"
               )}
@@ -198,6 +234,8 @@ export function PlanForm({
   const initialCandidate = splitDateTime(initialCandidateDates[0], defaultCandidateTime);
   const initialDeadlineValue = toDateTimeLocalValue(plan?.answer_deadline_at);
   const initialDeadline = splitDateTime(initialDeadlineValue, defaultDeadlineTime);
+  const candidateHourRef = useRef<HTMLSelectElement>(null);
+  const deadlineHourRef = useRef<HTMLSelectElement>(null);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [visibleMonth, setVisibleMonth] = useState(toMonthDate(initialCandidate.date));
@@ -210,16 +248,21 @@ export function PlanForm({
 
   const selectedCandidate = toDateTimeLocalValueFromParts(candidateDate, candidateTime);
   const selectedDeadline = toDateTimeLocalValueFromParts(deadlineDate, deadlineTime);
-  const canReview = candidateDates.length > 0 && selectedDeadline.length > 0;
+  const firstCandidate = candidateDates[0];
+  const deadlineIsTooLate =
+    Boolean(firstCandidate) && new Date(selectedDeadline).getTime() >= new Date(firstCandidate ?? "").getTime();
+  const canReview = candidateDates.length > 0 && selectedDeadline.length > 0 && !deadlineIsTooLate;
 
   function updateCandidateDate(value: string) {
     setCandidateDate(value);
     setVisibleMonth(toMonthDate(value));
+    window.setTimeout(() => candidateHourRef.current?.focus(), 0);
   }
 
   function updateDeadlineDate(value: string) {
     setDeadlineDate(value);
     setVisibleMonth(toMonthDate(value));
+    window.setTimeout(() => deadlineHourRef.current?.focus(), 0);
   }
 
   function addCandidateDate() {
@@ -245,6 +288,11 @@ export function PlanForm({
 
     if (step === 2 && selectedDeadline.length === 0) {
       setMessage("回答期限を選択してください。");
+      return;
+    }
+
+    if (step === 2 && deadlineIsTooLate) {
+      setMessage("");
       return;
     }
 
@@ -283,7 +331,6 @@ export function PlanForm({
         <section className="grid gap-5">
           <div>
             <h2 className="text-xl font-bold text-ink">候補日時を選ぶ</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">カレンダーで日付を選び、15分単位で時間を決めます。</p>
           </div>
           <CalendarPicker
             selectedDate={candidateDate}
@@ -291,7 +338,7 @@ export function PlanForm({
             onSelectDate={updateCandidateDate}
             onChangeMonth={setVisibleMonth}
           />
-          <TimeSelect date={candidateDate} time={candidateTime} onDateChange={updateCandidateDate} onTimeChange={setCandidateTime} />
+          <TimeSelect time={candidateTime} onTimeChange={setCandidateTime} hourRef={candidateHourRef} />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
@@ -319,8 +366,17 @@ export function PlanForm({
             onSelectDate={updateDeadlineDate}
             onChangeMonth={setVisibleMonth}
           />
-          <TimeSelect date={deadlineDate} time={deadlineTime} onDateChange={updateDeadlineDate} onTimeChange={setDeadlineTime} />
-          <p className="rounded-lg border border-moss/20 bg-mist/28 p-3 text-sm text-ink/70">回答期限: {formatDateTime(selectedDeadline)}</p>
+          <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} />
+          <p
+            className={clsx(
+              "rounded-lg border p-3 text-sm",
+              deadlineIsTooLate ? "border-clay/25 bg-clay/10 text-ink" : "border-moss/20 bg-mist/28 text-ink/70"
+            )}
+          >
+            {deadlineIsTooLate
+              ? "回答期限は最初の候補日時より前にしてください。"
+              : `回答期限: ${formatDateTime(selectedDeadline)}`}
+          </p>
         </section>
       ) : null}
 

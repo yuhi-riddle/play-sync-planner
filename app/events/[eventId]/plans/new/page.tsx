@@ -20,7 +20,7 @@ export default async function NewPlanPage({ params }: { params: Promise<{ eventI
 
   return (
     <div className="space-y-6">
-      <PageHeader title="日程調整を作成" description={`${event.title} の候補日時と回答期限を決めます。共有リンクから参加者に回答してもらいます。`} />
+      <PageHeader title="日程調整を作成" description="日程候補を作って、回答リンクを共有します。" />
       <Card>
         <PlanForm action={action} submitLabel="共有リンクを作成" />
       </Card>
