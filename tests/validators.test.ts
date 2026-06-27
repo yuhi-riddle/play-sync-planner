@@ -139,12 +139,40 @@ describe("planSchema", () => {
       title: "",
       participantNames: "",
       candidateDates: "2026-07-01T10:07",
+      candidateEndDates: "2026-07-01T12:07",
       answer_deadline_at: "2026-06-30T22:08",
       memo: ""
     });
 
     expect(result.candidateDates).toEqual(["2026-07-01T10:07"]);
+    expect(result.candidateEndDates).toEqual(["2026-07-01T12:07"]);
     expect(result.answer_deadline_at).toBe("2026-06-30T22:08");
+  });
+
+  it("rejects past candidate dates", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "",
+        participantNames: "",
+        candidateDates: "2000-01-01T10:00",
+        candidateEndDates: "2000-01-01T12:00",
+        answer_deadline_at: "1999-12-31T22:00",
+        memo: ""
+      })
+    ).toThrow("過去の日時は候補にできません");
+  });
+
+  it("rejects candidate end times before the start time", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "",
+        participantNames: "",
+        candidateDates: "2026-07-01T10:00",
+        candidateEndDates: "2026-07-01T09:59",
+        answer_deadline_at: "2026-06-30T22:00",
+        memo: ""
+      })
+    ).toThrow("終了時間は開始時間より後にしてください");
   });
 
   it("rejects an answer deadline after the first candidate", () => {

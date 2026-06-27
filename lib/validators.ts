@@ -55,6 +55,9 @@ const requiredDateTime = (requiredMessage: string, formatMessage: string) =>
       .refine(isValidDateTimeLocal, formatMessage)
   );
 
+const optionalDateTimeList = (dateTimeMessage: string) =>
+  optionalNewlineList().pipe(z.array(z.string().refine(isValidDateTimeLocal, dateTimeMessage)));
+
 export const eventSchema = z.object({
   category: z.preprocess(
     emptyToNull,
@@ -112,6 +115,7 @@ export const planSchema = z
       "候補日時を1つ以上選択してください",
       "候補日時は YYYY-MM-DDTHH:mm 形式で入力してください"
     ),
+    candidateEndDates: optionalDateTimeList("終了日時は YYYY-MM-DDTHH:mm 形式で入力してください").default([]),
     answer_deadline_at: requiredDateTime(
       "回答期限を選択してください",
       "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください"
@@ -119,8 +123,31 @@ export const planSchema = z
     memo: nullableText.default(null)
   })
   .superRefine((values, context) => {
-    const firstCandidateTime = Math.min(...values.candidateDates.map((candidateDate) => new Date(candidateDate).getTime()));
+    const now = Date.now();
+    const candidateTimes = values.candidateDates.map((candidateDate) => new Date(candidateDate).getTime());
+    const firstCandidateTime = Math.min(...candidateTimes);
     const deadlineTime = new Date(values.answer_deadline_at).getTime();
+
+    values.candidateDates.forEach((candidateDate, index) => {
+      const startTime = new Date(candidateDate).getTime();
+      const endDate = values.candidateEndDates[index];
+
+      if (startTime < now) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["candidateDates", index],
+          message: "過去の日時は候補にできません"
+        });
+      }
+
+      if (endDate && new Date(endDate).getTime() <= startTime) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["candidateEndDates", index],
+          message: "終了時間は開始時間より後にしてください"
+        });
+      }
+    });
 
     if (deadlineTime >= firstCandidateTime) {
       context.addIssue({

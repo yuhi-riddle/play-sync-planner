@@ -12,7 +12,7 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
     .from("plans")
-    .select("*, participants(display_name), candidate_dates(start_at)")
+    .select("*, events(category), participants(display_name), candidate_dates(start_at, end_at)")
     .eq("id", planId)
     .single();
 
@@ -21,12 +21,13 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
   }
 
   const action = updatePlanAction.bind(null, planId);
+  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
 
   return (
     <div className="space-y-6">
       <PageHeader title="日程調整を編集" description="候補日時と回答期限を更新します。" />
       <Card>
-        <PlanForm action={action} plan={plan} submitLabel="日程調整を更新" />
+        <PlanForm action={action} plan={plan} submitLabel="日程調整を更新" eventCategory={event?.category} />
       </Card>
     </div>
   );

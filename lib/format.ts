@@ -19,6 +19,35 @@ export function formatDateTime(value: string | null | undefined): string {
   }).format(new Date(value));
 }
 
+export function formatTime(value: string | null | undefined): string {
+  if (!value) {
+    return "未設定";
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
+export function formatDateTimeRange(start: string | null | undefined, end: string | null | undefined): string {
+  if (!start) {
+    return "未設定";
+  }
+
+  if (!end) {
+    return formatDateTime(start);
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const sameDay =
+    startDate.getFullYear() === endDate.getFullYear() &&
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getDate() === endDate.getDate();
+
+  return sameDay ? `${formatDateTime(start)} - ${formatTime(end)}` : `${formatDateTime(start)} - ${formatDateTime(end)}`;
+}
+
 export function toDateInputValue(value: string | null | undefined): string {
   if (!value) {
     return "";

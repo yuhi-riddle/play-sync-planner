@@ -1,5 +1,5 @@
 import { submitAvailabilityAnswersAction } from "@/lib/actions/answers";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeRange } from "@/lib/format";
 import { SubmitButton, TextField } from "@/components/ui";
 
 type CandidateDate = {
@@ -17,7 +17,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
       <div className="grid gap-4">
         {candidateDates.map((candidate) => (
           <fieldset key={candidate.id} className="rounded-lg border border-white/80 bg-white/68 p-4">
-            <legend className="px-1 text-sm font-semibold text-ink">{formatDateTime(candidate.start_at)}</legend>
+            <legend className="px-1 text-sm font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at)}</legend>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               {[
                 ["yes", "○ 行ける"],

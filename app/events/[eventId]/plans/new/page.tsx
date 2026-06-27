@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function NewPlanPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: event } = await supabase.from("events").select("id, title").eq("id", eventId).single();
+  const { data: event } = await supabase.from("events").select("id, title, category").eq("id", eventId).single();
 
   if (!event) {
     notFound();
@@ -22,7 +22,7 @@ export default async function NewPlanPage({ params }: { params: Promise<{ eventI
     <div className="space-y-6">
       <PageHeader title="日程調整を作成" description="日程候補を作って、回答リンクを共有します。" />
       <Card>
-        <PlanForm action={action} submitLabel="共有リンクを作成" />
+        <PlanForm action={action} submitLabel="共有リンクを作成" eventCategory={event.category} />
       </Card>
     </div>
   );

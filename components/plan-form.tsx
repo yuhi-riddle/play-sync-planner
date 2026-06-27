@@ -8,20 +8,27 @@ import { clsx } from "clsx";
 
 import { TextArea } from "@/components/ui";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/calendar";
-import { formatDateTime, toDateTimeLocalValue } from "@/lib/format";
+import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib/format";
 
 type PlanRecord = {
   title?: string | null;
   answer_deadline_at?: string | null;
   memo?: string | null;
-  candidate_dates?: Array<{ start_at: string }>;
+  candidate_dates?: Array<{ start_at: string; end_at?: string | null }>;
+};
+
+type CandidateDraft = {
+  start: string;
+  end: string;
 };
 
 const steps = ["候補日時", "回答期限", "確認"];
 const defaultCandidateTime = "19:00";
+const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
 const hourOptions = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
 const minuteOptions = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
+const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
 
 function splitDateTime(value: string | null | undefined, fallbackTime: string) {
   if (!value) {
@@ -42,6 +49,12 @@ function toMonthDate(dateValue: string) {
   return new Date(year, month - 1, 1);
 }
 
+function addMinutes(dateTime: string, minutes: number) {
+  const date = new Date(dateTime);
+  date.setMinutes(date.getMinutes() + minutes);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 function formatDateLabel(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
     month: "long",
@@ -53,11 +66,13 @@ function formatDateLabel(value: string) {
 function TimeSelect({
   time,
   onTimeChange,
-  hourRef
+  hourRef,
+  labelPrefix
 }: {
   time: string;
   onTimeChange: (value: string) => void;
   hourRef?: RefObject<HTMLSelectElement | null>;
+  labelPrefix: string;
 }) {
   const [hour, minute] = time.split(":");
 
@@ -70,6 +85,7 @@ function TimeSelect({
           className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
           value={hour}
           onChange={(event) => onTimeChange(`${event.target.value}:${minute}`)}
+          aria-label={`${labelPrefix}時`}
         >
           {hourOptions.map((option) => (
             <option key={option} value={option}>
@@ -84,6 +100,7 @@ function TimeSelect({
           className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
           value={minute}
           onChange={(event) => onTimeChange(`${hour}:${event.target.value}`)}
+          aria-label={`${labelPrefix}分`}
         >
           {minuteOptions.map((option) => (
             <option key={option} value={option}>
@@ -100,12 +117,14 @@ function CalendarPicker({
   selectedDate,
   visibleMonth,
   onSelectDate,
-  onChangeMonth
+  onChangeMonth,
+  minDate
 }: {
   selectedDate: string;
   visibleMonth: Date;
   onSelectDate: (value: string) => void;
   onChangeMonth: (value: Date) => void;
+  minDate?: string;
 }) {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const cells = useMemo(() => buildMonthCalendar(visibleMonth.getFullYear(), visibleMonth.getMonth()), [visibleMonth]);
@@ -192,11 +211,13 @@ function CalendarPicker({
           const selected = cell.date === selectedDate;
           const holidayColor = cell.isHoliday || cell.dayOfWeek === 0;
           const saturdayColor = cell.dayOfWeek === 6;
+          const disabled = Boolean(minDate && cell.date < minDate);
           return (
             <button
               key={cell.date}
               type="button"
               onClick={() => onSelectDate(cell.date)}
+              disabled={disabled}
               className={clsx(
                 "relative flex aspect-square min-h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
                 selected
@@ -205,7 +226,8 @@ function CalendarPicker({
                 !selected && holidayColor && "text-red-700",
                 !selected && !holidayColor && saturdayColor && "text-blue-700",
                 !cell.isCurrentMonth && !selected && "text-ink/30",
-                cell.isToday && !selected && "ring-1 ring-moss/40"
+                cell.isToday && !selected && "ring-1 ring-moss/40",
+                disabled && "pointer-events-none bg-white/36 text-ink/20 line-through"
               )}
               aria-pressed={selected}
               aria-label={`${formatDateLabel(cell.date)}を選択`}
@@ -222,35 +244,47 @@ function CalendarPicker({
 export function PlanForm({
   action,
   plan,
-  submitLabel
+  submitLabel,
+  eventCategory
 }: {
   action: (formData: FormData) => void | Promise<void>;
   plan?: PlanRecord;
   submitLabel: string;
+  eventCategory?: string | null;
 }) {
   const initialCandidateDates = plan?.candidate_dates?.length
-    ? plan.candidate_dates.map((candidate) => toDateTimeLocalValue(candidate.start_at))
+    ? plan.candidate_dates.map((candidate) => ({
+        start: toDateTimeLocalValue(candidate.start_at),
+        end: toDateTimeLocalValue(candidate.end_at)
+      }))
     : [];
-  const initialCandidate = splitDateTime(initialCandidateDates[0], defaultCandidateTime);
+  const initialCandidate = splitDateTime(initialCandidateDates[0]?.start, defaultCandidateTime);
   const initialDeadlineValue = toDateTimeLocalValue(plan?.answer_deadline_at);
   const initialDeadline = splitDateTime(initialDeadlineValue, defaultDeadlineTime);
   const candidateHourRef = useRef<HTMLSelectElement>(null);
   const deadlineHourRef = useRef<HTMLSelectElement>(null);
+  const today = formatDateForInput(new Date());
 
   const [currentStep, setCurrentStep] = useState(0);
   const [visibleMonth, setVisibleMonth] = useState(toMonthDate(initialCandidate.date));
   const [candidateDate, setCandidateDate] = useState(initialCandidate.date);
-  const [candidateTime, setCandidateTime] = useState(initialCandidate.time);
-  const [candidateDates, setCandidateDates] = useState(initialCandidateDates);
+  const [candidateStartTime, setCandidateStartTime] = useState(initialCandidate.time);
+  const [candidateEndTime, setCandidateEndTime] = useState(() =>
+    splitDateTime(initialCandidateDates[0]?.end || addMinutes(toDateTimeLocalValueFromParts(initialCandidate.date, initialCandidate.time), defaultDurationMinutes), "21:00").time
+  );
+  const [candidateDates, setCandidateDates] = useState<CandidateDraft[]>(initialCandidateDates);
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
   const [message, setMessage] = useState("");
 
-  const selectedCandidate = toDateTimeLocalValueFromParts(candidateDate, candidateTime);
+  const selectedCandidateStart = toDateTimeLocalValueFromParts(candidateDate, candidateStartTime);
+  const selectedCandidateEnd = toDateTimeLocalValueFromParts(candidateDate, candidateEndTime);
   const selectedDeadline = toDateTimeLocalValueFromParts(deadlineDate, deadlineTime);
-  const firstCandidate = candidateDates[0];
+  const firstCandidate = candidateDates[0]?.start;
   const deadlineIsTooLate =
     Boolean(firstCandidate) && new Date(selectedDeadline).getTime() >= new Date(firstCandidate ?? "").getTime();
+  const candidateIsPast = new Date(selectedCandidateStart).getTime() < Date.now();
+  const candidateEndIsInvalid = new Date(selectedCandidateEnd).getTime() <= new Date(selectedCandidateStart).getTime();
   const canReview = candidateDates.length > 0 && selectedDeadline.length > 0 && !deadlineIsTooLate;
 
   function updateCandidateDate(value: string) {
@@ -266,18 +300,35 @@ export function PlanForm({
   }
 
   function addCandidateDate() {
-    if (candidateDates.includes(selectedCandidate)) {
+    if (candidateIsPast) {
+      setMessage("過去の日時は候補にできません。");
+      return;
+    }
+
+    if (candidateEndIsInvalid) {
+      setMessage("終了時間は開始時間より後にしてください。");
+      return;
+    }
+
+    if (candidateDates.some((candidate) => candidate.start === selectedCandidateStart)) {
       setMessage("この候補日時はすでに追加されています。");
       return;
     }
 
-    setCandidateDates((current) => [...current, selectedCandidate].sort());
-    setMessage(`${formatDateTime(selectedCandidate)} を候補に追加しました。`);
+    setCandidateDates((current) => [...current, { start: selectedCandidateStart, end: selectedCandidateEnd }].sort((left, right) => left.start.localeCompare(right.start)));
+    setMessage(`${formatDateTime(selectedCandidateStart)} を候補に追加しました。`);
   }
 
   function removeCandidateDate(value: string) {
-    setCandidateDates((current) => current.filter((candidate) => candidate !== value));
+    setCandidateDates((current) => current.filter((candidate) => candidate.start !== value));
     setMessage("");
+  }
+
+  function applyTemplateTime(time: string) {
+    const start = toDateTimeLocalValueFromParts(candidateDate, time);
+    setCandidateStartTime(time);
+    setCandidateEndTime(splitDateTime(addMinutes(start, defaultDurationMinutes), "12:00").time);
+    window.setTimeout(() => candidateHourRef.current?.focus(), 0);
   }
 
   function moveToStep(step: number) {
@@ -304,7 +355,10 @@ export function PlanForm({
   return (
     <form action={action} className="grid gap-6">
       {candidateDates.map((candidateDateValue) => (
-        <input key={candidateDateValue} type="hidden" name="candidateDates" value={candidateDateValue} />
+        <React.Fragment key={candidateDateValue.start}>
+          <input type="hidden" name="candidateDates" value={candidateDateValue.start} />
+          <input type="hidden" name="candidateEndDates" value={candidateDateValue.end} />
+        </React.Fragment>
       ))}
       <input type="hidden" name="answer_deadline_at" value={selectedDeadline} />
 
@@ -332,13 +386,42 @@ export function PlanForm({
           <div>
             <h2 className="text-xl font-bold text-ink">候補日時を選ぶ</h2>
           </div>
+          {eventCategory === "nazotoki" ? (
+            <div className="rounded-lg border border-moss/20 bg-mist/24 p-3">
+              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {nazotokiTemplateTimes.map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => applyTemplateTime(time)}
+                    className="rounded-full border border-ink/10 bg-white/80 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                  >
+                    {time}〜
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <CalendarPicker
             selectedDate={candidateDate}
             visibleMonth={visibleMonth}
             onSelectDate={updateCandidateDate}
             onChangeMonth={setVisibleMonth}
+            minDate={today}
           />
-          <TimeSelect time={candidateTime} onTimeChange={setCandidateTime} hourRef={candidateHourRef} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-sm font-bold text-ink">開始時間</p>
+              <TimeSelect time={candidateStartTime} onTimeChange={setCandidateStartTime} hourRef={candidateHourRef} labelPrefix="開始" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-ink">終了時間</p>
+              <TimeSelect time={candidateEndTime} onTimeChange={setCandidateEndTime} labelPrefix="終了" />
+            </div>
+          </div>
+          {candidateIsPast ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">過去の日時は候補にできません。</p> : null}
+          {candidateEndIsInvalid ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">終了時間は開始時間より後にしてください。</p> : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
@@ -348,7 +431,9 @@ export function PlanForm({
               <Plus aria-hidden="true" className="h-4 w-4" />
               候補に追加
             </button>
-            <p className="text-sm text-ink/60">選択中: {formatDateTime(selectedCandidate)}</p>
+            <p className="text-sm text-ink/60">
+              選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd)}
+            </p>
           </div>
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
         </section>
@@ -365,13 +450,15 @@ export function PlanForm({
             visibleMonth={visibleMonth}
             onSelectDate={updateDeadlineDate}
             onChangeMonth={setVisibleMonth}
+            minDate={today}
           />
-          <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} />
+          <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
           <p
             className={clsx(
               "rounded-lg border p-3 text-sm",
               deadlineIsTooLate ? "border-clay/25 bg-clay/10 text-ink" : "border-moss/20 bg-mist/28 text-ink/70"
             )}
+            aria-live="polite"
           >
             {deadlineIsTooLate
               ? "回答期限は最初の候補日時より前にしてください。"
@@ -395,7 +482,7 @@ export function PlanForm({
         </section>
       ) : null}
 
-      {message ? <p className="rounded-lg border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink">{message}</p> : null}
+      {message ? <p className="rounded-lg border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink" aria-live="polite">{message}</p> : null}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
@@ -431,7 +518,7 @@ export function PlanForm({
   );
 }
 
-function SelectedCandidates({ candidates, onRemove }: { candidates: string[]; onRemove: (value: string) => void }) {
+function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDraft[]; onRemove: (value: string) => void }) {
   if (candidates.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-moss/30 bg-white/54 p-4 text-sm text-ink/62">
@@ -443,14 +530,16 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: string[]; on
   return (
     <div className="grid gap-2">
       {candidates.map((candidate, index) => (
-        <div key={candidate} className="flex items-center justify-between gap-3 rounded-lg border border-white/72 bg-white/70 px-4 py-3">
+        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-lg border border-white/72 bg-white/70 px-4 py-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">候補 {index + 1}</p>
-            <p className="mt-1 text-sm font-bold text-ink">{formatDateTime(candidate)}</p>
+            <p className="mt-1 text-sm font-bold text-ink">
+              {formatDateTimeRange(candidate.start, candidate.end)}
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => onRemove(candidate)}
+            onClick={() => onRemove(candidate.start)}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-white/76 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label={`候補${index + 1}を削除`}
             title="削除"

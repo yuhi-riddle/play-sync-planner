@@ -49,6 +49,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   const candidateDates = values.candidateDates.map((candidateDate, index) => ({
     plan_id: plan.id,
     start_at: toIsoDateTime(candidateDate),
+    end_at: values.candidateEndDates[index] ? toIsoDateTime(values.candidateEndDates[index]) : null,
     is_all_day: false,
     sort_order: index
   }));
@@ -124,6 +125,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
   const candidateDates = values.candidateDates.map((candidateDate, index) => ({
     plan_id: planId,
     start_at: toIsoDateTime(candidateDate),
+    end_at: values.candidateEndDates[index] ? toIsoDateTime(values.candidateEndDates[index]) : null,
     is_all_day: false,
     sort_order: index
   }));

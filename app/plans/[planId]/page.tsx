@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { planStatusLabels } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -94,7 +94,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
                 const counts = countAnswers((candidate.availability_answers ?? []) as AnswerRow[]);
                 return (
                   <div key={candidate.id} className="rounded-lg border border-ink/8 bg-white/58 p-3">
-                    <p className="font-semibold text-ink">{formatDateTime(candidate.start_at)}</p>
+                    <p className="font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at)}</p>
                     <p className="mt-2 text-sm text-ink/60">
                       ○ {counts.yes} / △ {counts.maybe} / × {counts.no} / 未回答 {counts.unanswered}
                     </p>
