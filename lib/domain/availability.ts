@@ -30,8 +30,16 @@ export function normalizeAvailabilityInput(input: AvailabilityInput): Availabili
     displayName,
     answers: input.answers.map((answer) => ({
       candidateDateId: answer.candidateDateId,
-      answer: answer.answer,
+      answer: normalizeAvailabilityAnswer(answer.answer),
       comment: answer.comment?.trim() ? answer.comment.trim() : null
     }))
   };
+}
+
+function normalizeAvailabilityAnswer(answer: string): AvailabilityAnswer {
+  if (!AVAILABILITY_ANSWERS.includes(answer as AvailabilityAnswer) || answer === "unanswered") {
+    throw new Error("回答は ○ / △ / × から選んでください");
+  }
+
+  return answer as AvailabilityAnswer;
 }

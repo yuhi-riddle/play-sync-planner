@@ -47,4 +47,13 @@ describe("normalizeAvailabilityInput", () => {
       })
     ).toThrow("名前を入力してください");
   });
+
+  it("throws when an answer value is invalid", () => {
+    expect(() =>
+      normalizeAvailabilityInput({
+        displayName: "Haru",
+        answers: [{ candidateDateId: "date-1", answer: "invalid" as never, comment: null }]
+      })
+    ).toThrow("回答は ○ / △ / × から選んでください");
+  });
 });
