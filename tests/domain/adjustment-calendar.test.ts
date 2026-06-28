@@ -70,6 +70,54 @@ describe("buildAdjustmentCalendar", () => {
     expect(july12?.hasConfirmed).toBe(false);
   });
 
+  it("marks overlapping candidate time ranges even when start times differ", () => {
+    const calendar = buildAdjustmentCalendar({
+      year: 2026,
+      month: 7,
+      selectedDateKey: "2026-07-12",
+      candidates: [
+        {
+          ...baseCandidates[0],
+          id: "range-1",
+          startAt: "2026-07-12T13:00:00+09:00",
+          endAt: "2026-07-12T15:00:00+09:00"
+        },
+        {
+          ...baseCandidates[1],
+          id: "range-2",
+          startAt: "2026-07-12T14:30:00+09:00",
+          endAt: "2026-07-12T16:00:00+09:00"
+        }
+      ]
+    });
+
+    expect(calendar.daysByKey.get("2026-07-12")?.hasOverlap).toBe(true);
+  });
+
+  it("shows multi-day candidates on every day they span", () => {
+    const calendar = buildAdjustmentCalendar({
+      year: 2026,
+      month: 7,
+      selectedDateKey: "2026-07-13",
+      candidates: [
+        {
+          ...baseCandidates[0],
+          id: "multi-day",
+          startAt: "2026-07-12T23:00:00+09:00",
+          endAt: "2026-07-13T01:30:00+09:00"
+        }
+      ]
+    });
+
+    expect(calendar.daysByKey.get("2026-07-12")?.candidateCount).toBe(1);
+    expect(calendar.daysByKey.get("2026-07-13")?.candidateCount).toBe(1);
+    expect(calendar.selectedCandidates).toEqual([
+      expect.objectContaining({
+        id: "multi-day"
+      })
+    ]);
+  });
+
   it("returns selected day candidates sorted by time", () => {
     const calendar = buildAdjustmentCalendar({
       year: 2026,

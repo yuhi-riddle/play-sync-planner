@@ -40,23 +40,39 @@ export function toDateKey(value: Date | string) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
-function toTimeKey(value: string) {
-  const date = new Date(value);
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
-}
-
 function addDays(value: Date, days: number) {
   const date = new Date(value);
   date.setDate(date.getDate() + days);
   return date;
 }
 
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function getCandidateEnd(candidate: AdjustmentCandidate) {
+  return candidate.endAt ? new Date(candidate.endAt) : new Date(candidate.startAt);
+}
+
+function candidateDateKeys(candidate: AdjustmentCandidate) {
+  const keys: string[] = [];
+  const start = startOfDay(new Date(candidate.startAt));
+  const end = startOfDay(getCandidateEnd(candidate));
+
+  for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
+    keys.push(toDateKey(cursor));
+  }
+
+  return keys;
+}
+
 function groupCandidatesByDate(candidates: AdjustmentCandidate[]) {
   const grouped = new Map<string, AdjustmentCandidate[]>();
 
   for (const candidate of candidates) {
-    const key = toDateKey(candidate.startAt);
-    grouped.set(key, [...(grouped.get(key) ?? []), candidate]);
+    for (const key of candidateDateKeys(candidate)) {
+      grouped.set(key, [...(grouped.get(key) ?? []), candidate]);
+    }
   }
 
   for (const [key, items] of grouped) {
@@ -69,15 +85,20 @@ function groupCandidatesByDate(candidates: AdjustmentCandidate[]) {
   return grouped;
 }
 
-function hasOverlappingStartTimes(candidates: AdjustmentCandidate[]) {
-  const timeCounts = new Map<string, number>();
+function hasOverlappingTimeRanges(candidates: AdjustmentCandidate[]) {
+  const sorted = [...candidates].sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
 
-  for (const candidate of candidates) {
-    const timeKey = toTimeKey(candidate.startAt);
-    timeCounts.set(timeKey, (timeCounts.get(timeKey) ?? 0) + 1);
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = sorted[index - 1];
+    const current = sorted[index];
+    const previousStart = new Date(previous.startAt).getTime();
+    const currentStart = new Date(current.startAt).getTime();
+    if (currentStart === previousStart || currentStart < getCandidateEnd(previous).getTime()) {
+      return true;
+    }
   }
 
-  return [...timeCounts.values()].some((count) => count > 1);
+  return false;
 }
 
 export function buildAdjustmentCalendar({
@@ -109,7 +130,7 @@ export function buildAdjustmentCalendar({
       isCurrentMonth: cursor.getMonth() === month - 1,
       isSelected: dateKey === selectedDateKey,
       candidateCount: dayCandidates.length,
-      hasOverlap: hasOverlappingStartTimes(dayCandidates),
+      hasOverlap: hasOverlappingTimeRanges(dayCandidates),
       hasConfirmed: dayCandidates.some((candidate) => candidate.status === "date_confirmed"),
       hasCollecting: dayCandidates.some((candidate) => candidate.status === "collecting_answers" || candidate.status === "draft")
     };
