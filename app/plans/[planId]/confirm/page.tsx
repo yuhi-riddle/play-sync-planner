@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ConfirmForm } from "@/components/confirm-form";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
-import { pickRecommendedCandidate } from "@/lib/actions/confirm";
+import { summarizeCandidateAnswers } from "@/lib/domain/confirmation";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function ConfirmPlanPage({ params }: { params: Promise<{ pl
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
     .from("plans")
-    .select("id, title, owner_user_id, candidate_dates(id, start_at, end_at, availability_answers(answer))")
+    .select("id, title, owner_user_id, participants(id), candidate_dates(id, start_at, end_at, availability_answers(answer))")
     .eq("id", planId)
     .eq("owner_user_id", userId)
     .single();
@@ -33,28 +33,12 @@ export default async function ConfirmPlanPage({ params }: { params: Promise<{ pl
     notFound();
   }
 
-  const candidates = ((plan.candidate_dates ?? []) as CandidateRow[]).map((candidate) => {
-    const counts = candidate.availability_answers.reduce(
-      (result, answer) => {
-        result[answer.answer] += 1;
-        return result;
-      },
-      { yes: 0, maybe: 0, no: 0, unanswered: 0 }
-    );
-
-    return {
-      id: candidate.id,
-      start_at: candidate.start_at,
-      end_at: candidate.end_at,
-      ...counts
-    };
-  });
-  const recommendedId = pickRecommendedCandidate(candidates.map((candidate) => ({ candidateDateId: candidate.id, yes: candidate.yes, maybe: candidate.maybe, no: candidate.no })));
-  const summaries = candidates.map((candidate) => ({ ...candidate, recommended: candidate.id === recommendedId }));
+  const participantCount = Array.isArray(plan.participants) ? plan.participants.length : 0;
+  const summaries = summarizeCandidateAnswers((plan.candidate_dates ?? []) as CandidateRow[], participantCount);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="日程確定" description={plan.title ?? "参加予定"} />
+      <PageHeader title="日程確定" description={plan.title ?? "日程調整"} />
       <Card>
         {summaries.length > 0 ? <ConfirmForm planId={planId} candidates={summaries} /> : <EmptyState>候補日がありません。</EmptyState>}
       </Card>
