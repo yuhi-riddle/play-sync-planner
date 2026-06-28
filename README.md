@@ -34,6 +34,7 @@ Googleカレンダー連携、リマインド、清算、支払い証拠管理�
 - `docs/design/03_screen_flow.md`：画面一覧・画面遷移 v1.1
 - `docs/design/04_codex_phase1_prompt.md`：Codex Phase 1 実装プロンプト
 - `docs/phase1-user-setup.md`：Phase 1 セットアップ手順
+- `docs/phase1-completion-checklist.md`：Phase 1 完了判定
 
 ## 開発方針
 
@@ -41,8 +42,8 @@ Googleカレンダー連携、リマインド、清算、支払い証拠管理�
 2. DB設計を確定する
 3. 画面一覧・画面遷移を確定する
 4. CodexにPhase 1実装を依頼する
-5. Phase 2でWalica風清算を実装する
-6. Phase 3でGoogleカレンダー・通知連携を拡張する
+5. Phase 2でGoogleカレンダー連携を実装する
+6. Phase 3でWalica風清算を実装する
 
 ## Phase 1 開発メモ
 

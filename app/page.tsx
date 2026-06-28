@@ -108,7 +108,7 @@ export default async function HomePage() {
                 const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
                 return (
                   <SecondaryLink key={plan.id} href={`/plans/${plan.id}`}>
-                    {(event?.title ?? "予定未設定") + " / " + (plan.title ?? "参加予定")}
+                    {(event?.title ?? "予定未設定") + " / " + (plan.title ?? "日程調整")}
                   </SecondaryLink>
                 );
               })
@@ -144,7 +144,7 @@ export default async function HomePage() {
           {(plans ?? []).length > 0 ? (
             (plans ?? []).map((plan) => (
               <a key={plan.id} href={`/plans/${plan.id}`} className="rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45">
-                <span className="font-semibold text-ink">{plan.title ?? "参加予定"}</span>
+                <span className="font-semibold text-ink">{plan.title ?? "日程調整"}</span>
                 <span className="ml-3 text-sm text-ink/60">{planStatusLabels[plan.status as keyof typeof planStatusLabels]}</span>
               </a>
             ))
