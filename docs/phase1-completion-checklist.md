@@ -28,6 +28,10 @@ Phase 1 は、実装範囲の主要機能を満たしています。
 - 利用規約ドラフト
 - プライバシーポリシードラフト
 
+補足:
+
+- 終日候補はDBカラムのみ準備済みです。UIと保存処理は、Google Calendar連携と扱いをそろえるためPhase 2で実装します。
+
 ## 画面
 
 - `/`
@@ -81,6 +85,7 @@ Phase 1 のマイグレーションは `supabase/migrations/001_phase1_schema.sq
 - Google Calendar連携
 - Google Calendarの空き状況取得
 - 自動候補日時提案
+- 終日候補のUI
 - リマインド送信
 - X連携
 - LINE連携
@@ -108,6 +113,7 @@ Phase 2:
 - Google Calendar連携
 - 自分のGoogle Calendar予定を見ながら候補日時を決める
 - 確定日時をGoogle Calendarへ登録する
+- 終日候補の入力とGoogle Calendar登録
 - 回答期限リマインドの設計
 
 Phase 3:
