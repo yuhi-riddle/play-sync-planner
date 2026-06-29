@@ -1,0 +1,77 @@
+import React from "react";
+import { CalendarCheck, CalendarX } from "lucide-react";
+
+import { Card } from "@/components/ui";
+import { formatDateTime } from "@/lib/format";
+
+export function CalendarConnectionCard({
+  connected,
+  accountEmail,
+  updatedAt,
+  status
+}: {
+  connected: boolean;
+  accountEmail: string | null;
+  updatedAt: string | null;
+  status?: string;
+}) {
+  return (
+    <Card>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            {connected ? (
+              <CalendarCheck aria-hidden="true" className="h-5 w-5 text-pine" />
+            ) : (
+              <CalendarX aria-hidden="true" className="h-5 w-5 text-clay" />
+            )}
+            <h2 className="text-lg font-bold text-ink">Google Calendar連携</h2>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-ink/62">
+            候補日時を作るときに、自分のGoogle Calendar予定と重なっていないか確認できます。
+          </p>
+          {status === "error" ? (
+            <p className="mt-3 rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+              Google Calendarと接続できませんでした。もう一度試してください。
+            </p>
+          ) : null}
+          <dl className="mt-4 grid gap-2 text-sm">
+            <div>
+              <dt className="text-ink/54">状態</dt>
+              <dd className="font-bold text-ink">{connected ? "連携済み" : "未連携"}</dd>
+            </div>
+            {connected ? (
+              <>
+                <div>
+                  <dt className="text-ink/54">アカウント</dt>
+                  <dd className="font-bold text-ink">{accountEmail ?? "Google Calendar"}</dd>
+                </div>
+                <div>
+                  <dt className="text-ink/54">最終更新</dt>
+                  <dd className="font-bold text-ink">{formatDateTime(updatedAt)}</dd>
+                </div>
+              </>
+            ) : null}
+          </dl>
+        </div>
+        {connected ? (
+          <form action="/api/google-calendar/disconnect" method="post">
+            <button
+              type="submit"
+              className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+            >
+              連携を解除
+            </button>
+          </form>
+        ) : (
+          <a
+            href="/api/google-calendar/connect"
+            className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          >
+            Google Calendarを連携
+          </a>
+        )}
+      </div>
+    </Card>
+  );
+}
