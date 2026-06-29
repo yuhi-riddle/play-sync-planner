@@ -3,11 +3,13 @@
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import React from "react";
 import type { RefObject } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
+import { CalendarAvailabilityPanel } from "@/components/calendar-availability-panel";
 import { TextArea } from "@/components/ui";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/calendar";
+import { busyCountByDate, busyRangesForDate, type BusyRange } from "@/lib/domain/calendar-availability";
 import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib/format";
 
 type PlanRecord = {
@@ -119,7 +121,8 @@ function CalendarPicker({
   visibleMonth,
   onSelectDate,
   onChangeMonth,
-  minDate
+  minDate,
+  busyCounts = {}
 }: {
   label?: string;
   selectedDate: string;
@@ -127,6 +130,7 @@ function CalendarPicker({
   onSelectDate: (value: string) => void;
   onChangeMonth: (value: Date) => void;
   minDate?: string;
+  busyCounts?: Record<string, number>;
 }) {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const cells = useMemo(() => buildMonthCalendar(visibleMonth.getFullYear(), visibleMonth.getMonth()), [visibleMonth]);
@@ -235,6 +239,9 @@ function CalendarPicker({
               aria-label={`${formatDateLabel(cell.date)}を選択`}
             >
               {cell.day}
+              {busyCounts[cell.date] ? (
+                <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-clay" aria-hidden="true" />
+              ) : null}
             </button>
           );
         })}
@@ -247,12 +254,14 @@ export function PlanForm({
   action,
   plan,
   submitLabel,
-  eventCategory
+  eventCategory,
+  calendarAvailability
 }: {
   action: (formData: FormData) => void | Promise<void>;
   plan?: PlanRecord;
   submitLabel: string;
   eventCategory?: string | null;
+  calendarAvailability?: { enabled: boolean };
 }) {
   const initialCandidateDates = plan?.candidate_dates?.length
     ? plan.candidate_dates.map((candidate) => ({
@@ -283,7 +292,17 @@ export function PlanForm({
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
   const [message, setMessage] = useState("");
+  const [busyRanges, setBusyRanges] = useState<BusyRange[]>([]);
+  const [busyLoading, setBusyLoading] = useState(false);
+  const [busyError, setBusyError] = useState(false);
 
+  const visibleMonthKey = `${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, "0")}`;
+  const calendarConnected = Boolean(calendarAvailability?.enabled);
+  const busyCounts = useMemo(() => busyCountByDate(busyRanges), [busyRanges]);
+  const selectedDayBusyRanges = useMemo(
+    () => busyRangesForDate(busyRanges, candidateDate),
+    [busyRanges, candidateDate]
+  );
   const selectedCandidateStart = toDateTimeLocalValueFromParts(candidateDate, candidateStartTime);
   const selectedCandidateEnd = toDateTimeLocalValueFromParts(candidateEndDate, candidateEndTime);
   const selectedDeadline = toDateTimeLocalValueFromParts(deadlineDate, deadlineTime);
@@ -293,6 +312,45 @@ export function PlanForm({
   const candidateIsPast = new Date(selectedCandidateStart).getTime() < Date.now();
   const candidateEndIsInvalid = new Date(selectedCandidateEnd).getTime() <= new Date(selectedCandidateStart).getTime();
   const canReview = candidateDates.length > 0 && selectedDeadline.length > 0 && !deadlineIsTooLate;
+
+  useEffect(() => {
+    if (!calendarConnected) {
+      setBusyRanges([]);
+      return;
+    }
+
+    let cancelled = false;
+    setBusyLoading(true);
+    setBusyError(false);
+
+    fetch(`/api/google-calendar/freebusy?month=${visibleMonthKey}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("freebusy failed");
+        }
+        return response.json() as Promise<{ connected: boolean; busy: BusyRange[] }>;
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setBusyRanges(data.busy);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBusyError(true);
+          setBusyRanges([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBusyLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [calendarConnected, visibleMonthKey]);
 
   function updateCandidateDate(value: string) {
     setCandidateDate(value);
@@ -427,6 +485,16 @@ export function PlanForm({
             onSelectDate={updateCandidateDate}
             onChangeMonth={setVisibleMonth}
             minDate={today}
+            busyCounts={busyCounts}
+          />
+          <CalendarAvailabilityPanel
+            connected={calendarConnected}
+            loading={busyLoading}
+            error={busyError}
+            selectedDate={candidateDate}
+            candidateStart={selectedCandidateStart}
+            candidateEnd={selectedCandidateEnd}
+            busyRanges={selectedDayBusyRanges}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <div>

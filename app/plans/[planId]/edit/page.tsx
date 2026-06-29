@@ -15,11 +15,17 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
     .select("*, events(category), participants(display_name), candidate_dates(start_at, end_at)")
     .eq("id", planId)
     .single();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
   if (!plan) {
     notFound();
   }
 
+  const { data: calendarIntegration } = user
+    ? await supabase.from("calendar_integrations").select("id").eq("user_id", user.id).eq("provider", "google").maybeSingle()
+    : { data: null };
   const action = updatePlanAction.bind(null, planId);
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
 
@@ -27,7 +33,13 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
     <div className="space-y-6">
       <PageHeader title="日程調整を編集" description="候補日時と回答期限を更新します。" />
       <Card>
-        <PlanForm action={action} plan={plan} submitLabel="日程調整を更新" eventCategory={event?.category} />
+        <PlanForm
+          action={action}
+          plan={plan}
+          submitLabel="日程調整を更新"
+          eventCategory={event?.category}
+          calendarAvailability={{ enabled: Boolean(calendarIntegration) }}
+        />
       </Card>
     </div>
   );
