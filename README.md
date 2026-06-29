@@ -91,3 +91,7 @@ npm run dev
 npm test
 npm run build
 ```
+
+## Phase 2-A Google Calendar 連携
+
+Google Calendar の予定あり時間帯を候補日時作成画面に表示する設定手順は、`docs/phase2-google-calendar-setup.md` を参照してください。
