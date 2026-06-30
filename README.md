@@ -56,6 +56,7 @@ Supabase の SQL Editor で、マイグレーションを順番に実行しま�
 ```text
 supabase/migrations/001_phase1_schema.sql
 supabase/migrations/002_calendar_integrations.sql
+supabase/migrations/003_plan_reminder_settings.sql
 ```
 
 Google Calendar 連携を使う場合は、次の手順も実施してください。
@@ -130,3 +131,7 @@ npm run build
 - ×と未回答が少ない候補を上に出す
 - おすすめ、未回答あり、スコア、回答率を表示する
 - 確定前に確認ダイアログを出す
+
+## Phase 2 リマインダー設定
+
+参加予定ごとに、回答期限の何時間前・何日前に声をかけるかを保存できます。現時点では自動送信は行わず、参加予定詳細の表示と未回答者向けリマインド文面に反映します。

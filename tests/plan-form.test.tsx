@@ -96,6 +96,21 @@ describe("PlanForm", () => {
     expect(document.querySelector('input[name="candidateAllDays"]')).toHaveAttribute("value", "true");
   });
 
+  it("stores the selected reminder offset", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="蜈ｱ譛峨Μ繝ｳ繧ｯ繧剃ｽ懈・" />);
+
+    fireEvent.click(screen.getByLabelText(/7月1日.*を選択/));
+    fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    const reminderSelect = document.querySelector('select[name="reminder_offset_minutes"]');
+    expect(reminderSelect).toHaveValue("1440");
+
+    fireEvent.change(reminderSelect as Element, { target: { value: "180" } });
+
+    expect(reminderSelect).toHaveValue("180");
+  });
+
   it("shows a settings link when Google Calendar is not connected", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" calendarAvailability={{ enabled: false }} />);
 

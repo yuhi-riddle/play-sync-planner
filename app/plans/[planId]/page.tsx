@@ -34,6 +34,10 @@ type ParticipantRow = {
   status: string;
 };
 
+type ReminderSettingRow = {
+  reminder_offset_minutes: number | null;
+};
+
 const participantStatusLabels: Record<string, string> = {
   invited: "未回答",
   answered: "回答済み",
@@ -42,6 +46,22 @@ const participantStatusLabels: Record<string, string> = {
   waitlisted: "保留",
   cancelled: "キャンセル"
 };
+
+function reminderOffsetLabel(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "設定しない";
+  }
+
+  if (value % 1440 === 0) {
+    return `${value / 1440}日前`;
+  }
+
+  if (value % 60 === 0) {
+    return `${value / 60}時間前`;
+  }
+
+  return `${value}分前`;
+}
 
 function calendarNotice(status: string | undefined) {
   if (status === "added") {
@@ -74,7 +94,7 @@ export default async function PlanDetailPage({
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at)"
+      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at), plan_reminder_settings(reminder_offset_minutes)"
     )
     .eq("id", planId)
     .single();
@@ -95,11 +115,16 @@ export default async function PlanDetailPage({
   const participantProgress = summarizeParticipantProgress(participants);
   const pendingParticipantRows = pendingParticipants(participants);
   const pendingNames = pendingParticipantRows.map((participant) => participant.display_name);
+  const reminderSetting = (Array.isArray(plan.plan_reminder_settings)
+    ? plan.plan_reminder_settings[0]
+    : plan.plan_reminder_settings) as ReminderSettingRow | null | undefined;
+  const reminderOffsetMinutes = reminderSetting?.reminder_offset_minutes ?? null;
   const reminderMessage = buildReminderMessage({
     eventTitle: event?.title,
     planTitle: plan.title,
     pendingNames,
     answerDeadlineAt: plan.answer_deadline_at,
+    reminderOffsetMinutes,
     shareUrl
   });
   const candidateSummaries = summarizeCandidateAnswers(
@@ -133,7 +158,7 @@ export default async function PlanDetailPage({
           value={`${candidateSummaries.length}件`}
           detail={recommendedCandidate ? `おすすめ: ${formatDateTimeRange(recommendedCandidate.start_at, recommendedCandidate.end_at, Boolean(recommendedCandidate.is_all_day))}` : "候補を追加できます"}
         />
-        <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={planStatus} />
+        <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={`${planStatus} / リマインド: ${reminderOffsetLabel(reminderOffsetMinutes)}`} />
         <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))} detail={isConfirmed ? "確定済み" : "未確定"} />
       </section>
 

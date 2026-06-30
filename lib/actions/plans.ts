@@ -56,15 +56,20 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   }));
 
   const shareLink = buildAnswerShareLink(plan.id, values.answer_deadline_at);
+  const reminderSetting = {
+    plan_id: plan.id,
+    reminder_offset_minutes: values.reminder_offset_minutes
+  };
 
-  const [{ error: participantsError }, { error: datesError }, { error: linkError }] = await Promise.all([
+  const [{ error: participantsError }, { error: datesError }, { error: linkError }, { error: reminderError }] = await Promise.all([
     participants.length > 0 ? supabase.from("participants").insert(participants) : Promise.resolve({ error: null }),
     supabase.from("candidate_dates").insert(candidateDates),
-    supabase.from("share_links").insert(shareLink)
+    supabase.from("share_links").insert(shareLink),
+    supabase.from("plan_reminder_settings").insert(reminderSetting)
   ]);
 
-  if (participantsError || datesError || linkError) {
-    throw new Error(participantsError?.message ?? datesError?.message ?? linkError?.message);
+  if (participantsError || datesError || linkError || reminderError) {
+    throw new Error(participantsError?.message ?? datesError?.message ?? linkError?.message ?? reminderError?.message);
   }
 
   revalidatePath("/");
@@ -126,16 +131,21 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     is_all_day: values.candidateAllDays[index] ?? false,
     sort_order: index
   }));
+  const reminderSetting = {
+    plan_id: planId,
+    reminder_offset_minutes: values.reminder_offset_minutes
+  };
 
-  const [{ error: participantsError }, { error: datesError }] = await Promise.all([
+  const [{ error: participantsError }, { error: datesError }, { error: reminderError }] = await Promise.all([
     shouldReplaceParticipants && participants.length > 0
       ? supabase.from("participants").insert(participants)
       : Promise.resolve({ error: null }),
-    supabase.from("candidate_dates").insert(candidateDates)
+    supabase.from("candidate_dates").insert(candidateDates),
+    supabase.from("plan_reminder_settings").upsert(reminderSetting, { onConflict: "plan_id" })
   ]);
 
-  if (participantsError || datesError) {
-    throw new Error(participantsError?.message ?? datesError?.message);
+  if (participantsError || datesError || reminderError) {
+    throw new Error(participantsError?.message ?? datesError?.message ?? reminderError?.message);
   }
 
   revalidatePath("/");

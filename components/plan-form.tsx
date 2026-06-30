@@ -15,6 +15,7 @@ import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib
 type PlanRecord = {
   title?: string | null;
   answer_deadline_at?: string | null;
+  plan_reminder_settings?: Array<{ reminder_offset_minutes: number | null }> | { reminder_offset_minutes: number | null } | null;
   memo?: string | null;
   candidate_dates?: Array<{ start_at: string; end_at?: string | null; is_all_day?: boolean | null }>;
 };
@@ -29,9 +30,16 @@ const steps = ["候補日時", "回答期限", "確認"];
 const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
+const defaultReminderOffset = "1440";
 const hourOptions = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
 const minuteOptions = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
+const reminderOptions = [
+  { value: "", label: "設定しない" },
+  { value: "180", label: "3時間前" },
+  { value: "1440", label: "1日前" },
+  { value: "2880", label: "2日前" }
+];
 
 function splitDateTime(value: string | null | undefined, fallbackTime: string) {
   if (!value) {
@@ -70,6 +78,19 @@ function allDayRangeForDate(dateValue: string) {
     start: toDateTimeLocalValueFromParts(dateValue, "00:00"),
     end: toDateTimeLocalValueFromParts(addDaysToDateValue(dateValue, 1), "00:00")
   };
+}
+
+function initialReminderOffsetValue(settings: PlanRecord["plan_reminder_settings"]) {
+  const setting = Array.isArray(settings) ? settings[0] : settings;
+  if (!setting) {
+    return defaultReminderOffset;
+  }
+
+  return setting.reminder_offset_minutes === null ? "" : String(setting.reminder_offset_minutes);
+}
+
+function reminderOffsetLabel(value: string) {
+  return reminderOptions.find((option) => option.value === value)?.label ?? "設定しない";
 }
 
 function formatDateLabel(value: string) {
@@ -291,6 +312,7 @@ export function PlanForm({
   );
   const initialDeadlineValue = toDateTimeLocalValue(plan?.answer_deadline_at);
   const initialDeadline = splitDateTime(initialDeadlineValue, defaultDeadlineTime);
+  const initialReminderOffset = initialReminderOffsetValue(plan?.plan_reminder_settings);
   const candidateHourRef = useRef<HTMLSelectElement>(null);
   const deadlineHourRef = useRef<HTMLSelectElement>(null);
   const today = formatDateForInput(new Date());
@@ -306,6 +328,7 @@ export function PlanForm({
   const [candidateDates, setCandidateDates] = useState<CandidateDraft[]>(initialCandidateDates);
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
+  const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState(initialReminderOffset);
   const [message, setMessage] = useState("");
   const [busyRanges, setBusyRanges] = useState<CalendarEventRange[]>([]);
   const [busyLoading, setBusyLoading] = useState(false);
@@ -458,6 +481,7 @@ export function PlanForm({
         </React.Fragment>
       ))}
       <input type="hidden" name="answer_deadline_at" value={selectedDeadline} />
+      <input type="hidden" name="reminder_offset_minutes" value={reminderOffsetMinutes} />
 
       <ol className="grid gap-2 sm:grid-cols-3">
         {steps.map((step, index) => (
@@ -607,6 +631,22 @@ export function PlanForm({
             minDate={today}
           />
           <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
+          <label className="text-sm font-medium text-ink">
+            <span className="text-ink/72">リマインド</span>
+            <select
+              name="reminder_offset_minutes"
+              className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              value={reminderOffsetMinutes}
+              onChange={(event) => setReminderOffsetMinutes(event.target.value)}
+              aria-label="リマインド"
+            >
+              {reminderOptions.map((option) => (
+                <option key={option.value || "none"} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <p
             className={clsx(
               "rounded-lg border p-3 text-sm",
@@ -629,6 +669,7 @@ export function PlanForm({
           <div className="rounded-lg border border-moss/20 bg-mist/28 p-4">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">回答期限</p>
             <p className="mt-2 text-base font-bold text-ink">{formatDateTime(selectedDeadline)}</p>
+            <p className="mt-1 text-sm text-ink/60">リマインド: {reminderOffsetLabel(reminderOffsetMinutes)}</p>
           </div>
           <TextArea label="メモ" name="memo" defaultValue={plan?.memo} placeholder="集合場所や補足があれば入力します。" />
         </section>

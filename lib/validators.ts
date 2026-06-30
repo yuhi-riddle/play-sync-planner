@@ -22,6 +22,15 @@ const nullableInteger = z.preprocess((value) => {
   return Number(normalized);
 }, z.number().int().nonnegative().nullable());
 
+const nullableReminderOffset = z.preprocess((value) => {
+  const normalized = emptyToNull(value);
+  if (normalized === null) {
+    return null;
+  }
+
+  return Number(normalized);
+}, z.number().int().nonnegative().nullable());
+
 const nullableDate = z.preprocess(emptyToNull, z.string().nullable());
 
 const dateTimeLocalPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
@@ -127,6 +136,7 @@ export const planSchema = z
       "回答期限を選択してください",
       "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください"
     ),
+    reminder_offset_minutes: nullableReminderOffset.default(1440),
     memo: nullableText.default(null)
   })
   .superRefine((values, context) => {

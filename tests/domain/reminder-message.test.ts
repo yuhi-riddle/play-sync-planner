@@ -56,4 +56,17 @@ describe("buildReminderMessage", () => {
       })
     ).toContain("https://example.com/s/token/answer");
   });
+
+  it("includes the manual reminder timing when a reminder offset is set", () => {
+    expect(
+      buildReminderMessage({
+        eventTitle: "Event",
+        planTitle: "Plan",
+        pendingNames: ["Haru"],
+        answerDeadlineAt: "2026-07-01T21:00:00+09:00",
+        reminderOffsetMinutes: 1440,
+        shareUrl: "https://example.com/s/token/answer"
+      } as Parameters<typeof buildReminderMessage>[0] & { reminderOffsetMinutes: number })
+    ).toContain("2026/06/30 21:00");
+  });
 });

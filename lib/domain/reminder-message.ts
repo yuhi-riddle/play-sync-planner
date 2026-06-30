@@ -12,12 +12,14 @@ export function buildReminderMessage({
   planTitle,
   pendingNames,
   answerDeadlineAt,
+  reminderOffsetMinutes,
   shareUrl
 }: {
   eventTitle: string | null | undefined;
   planTitle: string | null | undefined;
   pendingNames: string[];
   answerDeadlineAt: string | null | undefined;
+  reminderOffsetMinutes?: number | null;
   shareUrl: string | null;
 }) {
   const addressedNames = pendingNames.length > 0 ? pendingNames.map(toPoliteName).join("、") : "みなさん";
@@ -30,6 +32,11 @@ export function buildReminderMessage({
     `回答期限: ${deadline}`,
     ""
   ];
+
+  const reminderTime = formatReminderTime(answerDeadlineAt, reminderOffsetMinutes);
+  if (reminderTime) {
+    lines.splice(4, 0, `繝ｪ繝槭う繝ｳ繝・ ${reminderTime}`, "");
+  }
 
   if (shareUrl) {
     lines.push("回答リンク:", shareUrl);
@@ -74,4 +81,14 @@ function formatReminderDeadline(value: string | null | undefined) {
     }, {});
 
   return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
+function formatReminderTime(value: string | null | undefined, offsetMinutes: number | null | undefined) {
+  if (!value || offsetMinutes === null || offsetMinutes === undefined) {
+    return null;
+  }
+
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - offsetMinutes);
+  return formatReminderDeadline(date.toISOString());
 }
