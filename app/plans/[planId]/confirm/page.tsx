@@ -40,7 +40,7 @@ export default async function ConfirmPlanPage({ params }: { params: Promise<{ pl
     <div className="space-y-6">
       <PageHeader title="日程確定" description={plan.title ?? "日程調整"} />
       <Card>
-        {summaries.length > 0 ? <ConfirmForm planId={planId} candidates={summaries} /> : <EmptyState>候補日がありません。</EmptyState>}
+        {summaries.length > 0 ? <ConfirmForm planId={planId} candidates={summaries} /> : <EmptyState>候補日時がありません。</EmptyState>}
       </Card>
     </div>
   );

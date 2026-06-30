@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchCalendarEvents, monthTimeRange, normalizeCalendarEventsResponse } from "@/lib/google-calendar/calendar-events";
+import {
+  fetchCalendarEvents,
+  insertCalendarEvent,
+  monthTimeRange,
+  normalizeCalendarEventsResponse
+} from "@/lib/google-calendar/calendar-events";
 
 describe("calendar event helpers", () => {
   it("normalizes Google Calendar event responses", () => {
@@ -93,5 +98,41 @@ describe("calendar event helpers", () => {
     );
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("singleEvents=true"), expect.anything());
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("summary%2Clocation"), expect.anything());
+  });
+
+  it("inserts a confirmed calendar event", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: "google-event-1", htmlLink: "https://calendar.google.com/event" })
+    })) as unknown as typeof fetch;
+
+    const result = await insertCalendarEvent({
+      accessToken: "access-token",
+      event: {
+        title: "土曜チーム - 謎解き公演",
+        location: "新宿",
+        start: "2026-07-01T10:00:00+09:00",
+        end: "2026-07-01T12:00:00+09:00"
+      },
+      fetchImpl
+    });
+
+    expect(result).toEqual({ id: "google-event-1", htmlLink: "https://calendar.google.com/event" });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          summary: "土曜チーム - 謎解き公演",
+          location: "新宿",
+          start: { dateTime: "2026-07-01T10:00:00+09:00" },
+          end: { dateTime: "2026-07-01T12:00:00+09:00" }
+        })
+      })
+    );
   });
 });

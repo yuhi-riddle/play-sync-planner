@@ -85,8 +85,8 @@ npm run build
 - `docs/phase1-completion-checklist.md`: Phase 1 完了チェック
 - `docs/phase2-google-calendar-setup.md`: Google Calendar セットアップ手順
 
-## Phase 2-A Google Calendar 連携
+## Phase 2 Google Calendar 連携
 
-候補日時作成画面で、自分の Google Calendar の予定名・場所・時間を確認できます。
+候補日時作成画面で、自分の Google Calendar の予定名・場所・時間を確認できます。日程を確定すると、確定した日程を Google Calendar に予定として追加します。
 
 取得するのは予定の開始・終了時刻、予定名、場所だけです。予定の説明、参加者、Meet URL、添付ファイルは取得しません。Google Calendar の予定詳細はデータベースに保存しません。

@@ -40,8 +40,33 @@ const participantStatusLabels: Record<string, string> = {
   cancelled: "キャンセル"
 };
 
-export default async function PlanDetailPage({ params }: { params: Promise<{ planId: string }> }) {
+function calendarNotice(status: string | undefined) {
+  if (status === "added") {
+    return {
+      title: "Google Calendarに登録しました",
+      body: "確定した日程を、連携中のGoogle Calendarへ追加しました。"
+    };
+  }
+
+  if (status === "failed") {
+    return {
+      title: "Google Calendarには登録できませんでした",
+      body: "日程の確定は完了しています。Google Calendar連携を確認して、必要なら手動で予定を追加してください。"
+    };
+  }
+
+  return null;
+}
+
+export default async function PlanDetailPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ planId: string }>;
+  searchParams?: Promise<{ calendar?: string }>;
+}) {
   const { planId } = await params;
+  const query = searchParams ? await searchParams : {};
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
     .from("plans")
@@ -72,6 +97,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
   const recommendedCandidate = candidateSummaries.find((candidate) => candidate.recommended);
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
   const isConfirmed = plan.status === "date_confirmed";
+  const notice = calendarNotice(query.calendar);
 
   return (
     <div className="space-y-6">
@@ -81,11 +107,18 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
         action={!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : undefined}
       />
 
+      {notice ? (
+        <div className="rounded-lg border border-moss/20 bg-mist/32 p-4">
+          <p className="font-bold text-ink">{notice.title}</p>
+          <p className="mt-1 text-sm leading-6 text-ink/66">{notice.body}</p>
+        </div>
+      ) : null}
+
       <section className="grid gap-3 md:grid-cols-4">
         <SummaryTile label="回答状況" value={`${participantProgress.responded}/${participantProgress.total}人`} detail={`未回答 ${participantProgress.pending}人`} />
         <SummaryTile label="候補日時" value={`${candidateSummaries.length}件`} detail={recommendedCandidate ? "おすすめ候補あり" : "候補を追加できます"} />
         <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={planStatus} />
-        <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)} detail={isConfirmed ? "カレンダー登録待ち" : "未確定"} />
+        <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)} detail={isConfirmed ? "確定済み" : "未確定"} />
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.45fr_0.9fr]">
@@ -95,7 +128,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
               <h2 className="text-lg font-semibold text-ink">候補日時</h2>
               <p className="mt-1 text-sm leading-6 text-ink/60">回答が集まったら、候補から日程を確定します。</p>
             </div>
-            <SecondaryLink href={`/plans/${plan.id}/edit`}>候補を編集</SecondaryLink>
+            {!isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/edit`}>候補を編集</SecondaryLink> : null}
           </div>
 
           <div className="mt-5 grid gap-3">
@@ -174,7 +207,7 @@ function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
           </p>
         </div>
         <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold">
-          <AnswerCount label="◯" value={candidate.yes} tone="text-pine" />
+          <AnswerCount label="○" value={candidate.yes} tone="text-pine" />
           <AnswerCount label="△" value={candidate.maybe} tone="text-moss" />
           <AnswerCount label="×" value={candidate.no} tone="text-clay" />
           <AnswerCount label="未" value={candidate.unanswered} tone="text-ink/55" />

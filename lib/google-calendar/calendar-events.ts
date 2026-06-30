@@ -1,4 +1,5 @@
 import type { BusyRange } from "@/lib/domain/calendar-availability";
+import type { ConfirmedCalendarEvent } from "@/lib/domain/calendar-sync";
 
 export type CalendarEventRange = BusyRange & {
   title: string | null;
@@ -103,4 +104,41 @@ export async function fetchCalendarEvents({
   }
 
   return normalizeCalendarEventsResponse((await response.json()) as GoogleCalendarEventsResponse);
+}
+
+export type GoogleCalendarInsertResponse = {
+  id?: string;
+  htmlLink?: string;
+};
+
+export async function insertCalendarEvent({
+  accessToken,
+  calendarId = "primary",
+  event,
+  fetchImpl = fetch
+}: {
+  accessToken: string;
+  calendarId?: string;
+  event: ConfirmedCalendarEvent;
+  fetchImpl?: typeof fetch;
+}): Promise<GoogleCalendarInsertResponse> {
+  const response = await fetchImpl(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      summary: event.title,
+      ...(event.location ? { location: event.location } : {}),
+      start: { dateTime: event.start },
+      end: { dateTime: event.end }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to insert Google Calendar event");
+  }
+
+  return (await response.json()) as GoogleCalendarInsertResponse;
 }

@@ -1,8 +1,13 @@
-# Madoi Phase 2-A Google Calendar セットアップ手順
+# Madoi Phase 2 Google Calendar セットアップ手順
 
-この手順は、自分の Google Calendar の予定を、候補日時作成画面で確認するための設定です。
+この手順は、自分の Google Calendar の予定を見ながら候補日時を決め、確定した日程を Google Calendar に登録するための設定です。
 
-Phase 2-A では、予定の開始・終了時刻、予定名、場所だけを取得します。予定の説明、参加者、Meet URL、添付ファイルは取得しません。取得した予定詳細はデータベースに保存せず、画面表示のためだけに使います。
+Madoi が扱う Google Calendar 情報は次の範囲です。
+
+- 候補日時作成時: 予定の開始・終了時刻、予定名、場所を取得します。
+- 日程確定時: 確定した日程を、連携中の Google Calendar に予定として作成します。
+- 取得しない情報: 予定の説明、参加者、Meet URL、添付ファイル。
+- 保存しない情報: Google Calendar 上の予定名や場所などの予定詳細。
 
 ## 1. Google Cloud Console を開く
 
@@ -53,12 +58,17 @@ https://esheopszeqggftmawdmu.supabase.co/auth/v1/callback
 3. 次のスコープを追加します。
 
 ```text
+https://www.googleapis.com/auth/calendar.events
+```
+
+以前追加していた次のスコープは、今回の実装では不要です。可能なら削除してください。
+
+```text
+https://www.googleapis.com/auth/calendar.freebusy
 https://www.googleapis.com/auth/calendar.events.readonly
 ```
 
-以前 `https://www.googleapis.com/auth/calendar.freebusy` を追加していた場合は、今回の実装では使いません。可能なら削除してください。
-
-スコープを変えた後は、Madoi の設定画面で Google Calendar を一度解除し、もう一度連携してください。古い連携トークンには新しい権限が含まれていないためです。
+スコープを変えた後は、Madoi の設定画面で Google Calendar を一度解除し、もう一度連携してください。古い連携トークンには新しい権限が含まれていません。
 
 ## 5. .env.local を更新する
 
@@ -105,7 +115,7 @@ npm.cmd run dev
 3. `Google Calendarを連携` を押します。
 4. Google の認可画面で許可します。
 5. `/settings?calendar=connected` に戻れば連携完了です。
-6. イベント詳細から `参加予定を作成` に進みます。
-7. 候補日時の入力画面で、Google Calendar の予定名と場所が表示されることを確認します。
+6. 候補日時の入力画面で、Google Calendar の予定名と場所が表示されることを確認します。
+7. 日程を確定し、Google Calendar に予定が追加されることを確認します。
 
 うまくいかない場合は、表示されているURL、エラーメッセージ、どの手順で止まったかを共有してください。
