@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 import { ReminderMessageCard } from "@/components/reminder-message-card";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import { markReminderSentAction } from "@/lib/actions/reminders";
 import { planStatusLabels } from "@/lib/constants";
 import {
   summarizeCandidateAnswers,
   summarizeParticipantProgress,
   type CandidateAnswerSummary
 } from "@/lib/domain/confirmation";
+import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
 import { formatDateTime, formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -36,6 +38,10 @@ type ParticipantRow = {
 
 type ReminderSettingRow = {
   reminder_offset_minutes: number | null;
+};
+
+type ReminderLogRow = {
+  sent_at: string;
 };
 
 const participantStatusLabels: Record<string, string> = {
@@ -94,7 +100,7 @@ export default async function PlanDetailPage({
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at), plan_reminder_settings(reminder_offset_minutes)"
+      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at), plan_reminder_settings(reminder_offset_minutes), plan_reminder_logs(sent_at)"
     )
     .eq("id", planId)
     .single();
@@ -127,6 +133,8 @@ export default async function PlanDetailPage({
     reminderOffsetMinutes,
     shareUrl
   });
+  const reminderLogSummary = summarizeReminderLogs((plan.plan_reminder_logs ?? []) as ReminderLogRow[]);
+  const markReminderSent = markReminderSentAction.bind(null, plan.id);
   const candidateSummaries = summarizeCandidateAnswers(
     ((plan.candidate_dates ?? []) as CandidateDateRow[]).sort((a, b) => a.start_at.localeCompare(b.start_at)),
     participantProgress.total
@@ -194,7 +202,14 @@ export default async function PlanDetailPage({
             <h2 className="text-lg font-semibold text-ink">未回答者</h2>
             <p className="mt-1 text-sm leading-6 text-ink/60">まだ回答していない人に送る文面をコピーできます。</p>
             <div className="mt-4">
-              <ReminderMessageCard pendingNames={pendingNames} message={reminderMessage} shareUrl={shareUrl} />
+              <ReminderMessageCard
+                pendingNames={pendingNames}
+                message={reminderMessage}
+                shareUrl={shareUrl}
+                markSentAction={markReminderSent}
+                latestSentAt={reminderLogSummary.latestSentAt}
+                sentCount={reminderLogSummary.totalCount}
+              />
             </div>
           </Card>
 

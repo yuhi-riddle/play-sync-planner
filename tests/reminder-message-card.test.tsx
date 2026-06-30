@@ -31,6 +31,25 @@ describe("ReminderMessageCard", () => {
     expect(screen.getByRole("button", { name: "コピーしました" })).toBeInTheDocument();
   });
 
+  it("shows reminder history and a mark-as-sent form", () => {
+    render(
+      <ReminderMessageCard
+        pendingNames={["鈴木", "田中"]}
+        message={"鈴木さん、田中さん\n\n回答をお願いします。"}
+        shareUrl="https://example.com/s/token/answer"
+        markSentAction={vi.fn()}
+        latestSentAt="2026-07-01T12:00:00+09:00"
+        sentCount={2}
+      />
+    );
+
+    expect(screen.getByText(/前回:/)).toBeInTheDocument();
+    expect(screen.getByText("記録済み 2回")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "送信済みに記録" })).toBeInTheDocument();
+    expect(document.querySelector('input[name="recipient_names"]')).toHaveAttribute("value", "鈴木\n田中");
+    expect(document.querySelector('input[name="reminder_message"]')).toHaveAttribute("value", "鈴木さん、田中さん\n\n回答をお願いします。");
+  });
+
   it("shows an empty state when everyone has answered", () => {
     render(<ReminderMessageCard pendingNames={[]} message={null} shareUrl="https://example.com/s/token/answer" />);
 
