@@ -89,16 +89,12 @@ https://www.googleapis.com/auth/calendar.events
 
 ## 7. Phase 2 でまだ実装しないもの
 
-- リマインド送信
+- LINE、メール、Discordなどへの自動リマインド送信
 - 自動候補日時提案
 - 参加者全員のカレンダーを集めた自動調整
 - Google Calendar 予定詳細のDB保存
 
 ## 8. 後続 Phase 候補
-
-### Phase 2-B
-
-- リマインド設定
 
 ### Phase 3
 

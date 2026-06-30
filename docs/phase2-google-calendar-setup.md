@@ -99,6 +99,8 @@ Supabase Dashboard の SQL Editor を開き、次のファイルの中身を実�
 
 ```text
 supabase/migrations/002_calendar_integrations.sql
+supabase/migrations/003_plan_reminder_settings.sql
+supabase/migrations/004_plan_reminder_logs.sql
 ```
 
 `001_phase1_schema.sql` をまだ実行していない場合は、先に `001_phase1_schema.sql` を実行してください。
