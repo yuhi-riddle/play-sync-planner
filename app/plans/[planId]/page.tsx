@@ -32,7 +32,7 @@ type ParticipantRow = {
 };
 
 const participantStatusLabels: Record<string, string> = {
-  invited: "回答待ち",
+  invited: "未回答",
   answered: "回答済み",
   confirmed: "参加確定",
   declined: "不参加",
@@ -44,14 +44,14 @@ function calendarNotice(status: string | undefined) {
   if (status === "added") {
     return {
       title: "Google Calendarに登録しました",
-      body: "確定した日程を、連携中のGoogle Calendarへ追加しました。"
+      body: "確定した日程を、連携中のGoogle Calendarへ予定として追加しました。"
     };
   }
 
   if (status === "failed") {
     return {
       title: "Google Calendarには登録できませんでした",
-      body: "日程の確定は完了しています。Google Calendar連携を確認して、必要なら手動で予定を追加してください。"
+      body: "Madoi側の日程確定は完了しています。Google Calendar連携を確認して、必要なら手動で予定を追加してください。"
     };
   }
 
@@ -94,7 +94,7 @@ export default async function PlanDetailPage({
     ((plan.candidate_dates ?? []) as CandidateDateRow[]).sort((a, b) => a.start_at.localeCompare(b.start_at)),
     participantProgress.total
   );
-  const recommendedCandidate = candidateSummaries.find((candidate) => candidate.recommended);
+  const recommendedCandidate = candidateSummaries[0];
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
   const isConfirmed = plan.status === "date_confirmed";
   const notice = calendarNotice(query.calendar);
@@ -116,7 +116,11 @@ export default async function PlanDetailPage({
 
       <section className="grid gap-3 md:grid-cols-4">
         <SummaryTile label="回答状況" value={`${participantProgress.responded}/${participantProgress.total}人`} detail={`未回答 ${participantProgress.pending}人`} />
-        <SummaryTile label="候補日時" value={`${candidateSummaries.length}件`} detail={recommendedCandidate ? "おすすめ候補あり" : "候補を追加できます"} />
+        <SummaryTile
+          label="候補日時"
+          value={`${candidateSummaries.length}件`}
+          detail={recommendedCandidate ? `おすすめ: ${formatDateTimeRange(recommendedCandidate.start_at, recommendedCandidate.end_at)}` : "候補を追加できます"}
+        />
         <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={planStatus} />
         <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)} detail={isConfirmed ? "確定済み" : "未確定"} />
       </section>
@@ -125,8 +129,8 @@ export default async function PlanDetailPage({
         <Card>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-ink">候補日時</h2>
-              <p className="mt-1 text-sm leading-6 text-ink/60">回答が集まったら、候補から日程を確定します。</p>
+              <h2 className="text-lg font-semibold text-ink">候補ランキング</h2>
+              <p className="mt-1 text-sm leading-6 text-ink/60">○が多く、×と未回答が少ない候補を上に並べています。</p>
             </div>
             {!isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/edit`}>候補を編集</SecondaryLink> : null}
           </div>
@@ -143,7 +147,7 @@ export default async function PlanDetailPage({
         <div className="grid gap-5">
           <Card>
             <h2 className="text-lg font-semibold text-ink">共有リンク</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">このリンクを送ると、ログインしていない人も回答できます。</p>
+            <p className="mt-1 text-sm leading-6 text-ink/60">このリンクを送ると、未ログインの人も回答できます。</p>
             <div className="mt-4">
               <ShareLinkCard shareUrl={shareUrl} />
             </div>
@@ -162,7 +166,7 @@ export default async function PlanDetailPage({
                   </div>
                 ))
               ) : (
-                <EmptyState>共有リンクから回答すると参加者として追加されます。</EmptyState>
+                <EmptyState>共有リンクから回答すると、参加者として追加されます。</EmptyState>
               )}
             </div>
           </Card>
@@ -199,9 +203,12 @@ function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at)}</h3>
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">{candidate.rank}位</span>
             {candidate.recommended ? <span className="rounded-full bg-honey/28 px-3 py-1 text-xs font-bold text-ink">おすすめ</span> : null}
+            {candidate.hasPendingAnswers ? <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">未回答あり</span> : null}
+            <span className="rounded-full bg-mist/42 px-3 py-1 text-xs font-bold text-pine">スコア {candidate.score}</span>
           </div>
+          <h3 className="mt-3 font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at)}</h3>
           <p className="mt-2 text-sm text-ink/60">
             回答済み {candidate.answered}/{candidate.totalParticipants}人
           </p>
@@ -216,13 +223,16 @@ function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink/8" aria-label={`回答率 ${answeredPercent}%`}>
         <div className="h-full rounded-full bg-moss" style={{ width: `${answeredPercent}%` }} />
       </div>
+      {!candidate.recommended && candidate.hasPendingAnswers ? (
+        <p className="mt-3 text-xs leading-5 text-ink/55">未回答者がいるため、必要なら回答を待ってから確定してください。</p>
+      ) : null}
     </article>
   );
 }
 
 function AnswerCount({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="min-w-12 rounded-lg border border-ink/8 bg-cream/70 px-2 py-2">
+    <div className="min-w-12 rounded-lg border border-ink/8 bg-cream/70 px-2 py-2" aria-label={`${label} ${value}`}>
       <p className={tone}>{label}</p>
       <p className="mt-1 text-ink">{value}</p>
     </div>

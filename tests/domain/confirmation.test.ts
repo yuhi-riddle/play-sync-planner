@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildConfirmationUpdates,
   pickRecommendedCandidate,
+  rankCandidateSummaries,
   summarizeCandidateAnswers,
   summarizeParticipantProgress
 } from "@/lib/domain/confirmation";
@@ -72,7 +73,10 @@ describe("summarizeCandidateAnswers", () => {
         unanswered: 1,
         answered: 2,
         totalParticipants: 3,
-        recommended: true
+        recommended: true,
+        rank: 1,
+        score: 4,
+        hasPendingAnswers: true
       },
       {
         id: "date-2",
@@ -84,9 +88,83 @@ describe("summarizeCandidateAnswers", () => {
         unanswered: 2,
         answered: 1,
         totalParticipants: 3,
-        recommended: false
+        recommended: false,
+        rank: 2,
+        score: -2,
+        hasPendingAnswers: true
       }
     ]);
+  });
+
+  it("returns ranked summaries with the best candidate first", () => {
+    const summaries = summarizeCandidateAnswers(
+      [
+        {
+          id: "date-late",
+          start_at: "2026-07-03T19:00:00+09:00",
+          end_at: "2026-07-03T21:00:00+09:00",
+          availability_answers: [{ answer: "yes" }, { answer: "no" }, { answer: "unanswered" }]
+        },
+        {
+          id: "date-best",
+          start_at: "2026-07-02T13:00:00+09:00",
+          end_at: "2026-07-02T15:00:00+09:00",
+          availability_answers: [{ answer: "yes" }, { answer: "yes" }, { answer: "maybe" }]
+        },
+        {
+          id: "date-ok",
+          start_at: "2026-07-01T10:00:00+09:00",
+          end_at: "2026-07-01T12:00:00+09:00",
+          availability_answers: [{ answer: "yes" }, { answer: "maybe" }, { answer: "maybe" }]
+        }
+      ],
+      3
+    );
+
+    expect(summaries.map((summary) => summary.id)).toEqual(["date-best", "date-ok", "date-late"]);
+    expect(summaries.map((summary) => summary.rank)).toEqual([1, 2, 3]);
+    expect(summaries[0]).toEqual(expect.objectContaining({ recommended: true, hasPendingAnswers: false }));
+    expect(summaries[2]).toEqual(expect.objectContaining({ hasPendingAnswers: true }));
+  });
+});
+
+describe("rankCandidateSummaries", () => {
+  it("uses unanswered count and start time as tie breakers", () => {
+    const ranked = rankCandidateSummaries([
+      {
+        id: "with-pending",
+        start_at: "2026-07-01T10:00:00+09:00",
+        end_at: null,
+        yes: 2,
+        maybe: 0,
+        no: 0,
+        unanswered: 1,
+        answered: 2,
+        totalParticipants: 3,
+        recommended: false,
+        rank: 0,
+        score: 0,
+        hasPendingAnswers: true
+      },
+      {
+        id: "earlier",
+        start_at: "2026-07-01T09:00:00+09:00",
+        end_at: null,
+        yes: 2,
+        maybe: 0,
+        no: 0,
+        unanswered: 0,
+        answered: 2,
+        totalParticipants: 2,
+        recommended: false,
+        rank: 0,
+        score: 0,
+        hasPendingAnswers: false
+      }
+    ]);
+
+    expect(ranked.map((summary) => summary.id)).toEqual(["earlier", "with-pending"]);
+    expect(ranked.map((summary) => summary.rank)).toEqual([1, 2]);
   });
 });
 

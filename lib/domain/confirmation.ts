@@ -33,6 +33,9 @@ export type CandidateAnswerSummary = {
   answered: number;
   totalParticipants: number;
   recommended: boolean;
+  rank: number;
+  score: number;
+  hasPendingAnswers: boolean;
 };
 
 type ParticipantAnswer = {
@@ -88,7 +91,10 @@ export function summarizeCandidateAnswers(
       unanswered: counts.unanswered + inferredUnanswered,
       answered,
       totalParticipants,
-      recommended: false
+      recommended: false,
+      rank: 0,
+      score: candidateScore(counts.yes, counts.maybe, counts.no),
+      hasPendingAnswers: counts.unanswered + inferredUnanswered > 0
     };
   });
 
@@ -101,10 +107,46 @@ export function summarizeCandidateAnswers(
     }))
   );
 
-  return summaries.map((summary) => ({
-    ...summary,
-    recommended: summary.id === recommendedId
-  }));
+  return rankCandidateSummaries(
+    summaries.map((summary) => ({
+      ...summary,
+      recommended: summary.id === recommendedId
+    }))
+  );
+}
+
+function candidateScore(yes: number, maybe: number, no: number) {
+  return yes * 3 + maybe - no * 2;
+}
+
+export function rankCandidateSummaries(candidates: CandidateAnswerSummary[]): CandidateAnswerSummary[] {
+  return [...candidates]
+    .sort((a, b) => {
+      if (b.yes !== a.yes) {
+        return b.yes - a.yes;
+      }
+
+      if (b.maybe !== a.maybe) {
+        return b.maybe - a.maybe;
+      }
+
+      if (a.no !== b.no) {
+        return a.no - b.no;
+      }
+
+      if (a.unanswered !== b.unanswered) {
+        return a.unanswered - b.unanswered;
+      }
+
+      return new Date(a.start_at).getTime() - new Date(b.start_at).getTime();
+    })
+    .map((candidate, index) => ({
+      ...candidate,
+      rank: index + 1,
+      score: candidateScore(candidate.yes, candidate.maybe, candidate.no),
+      hasPendingAnswers: candidate.unanswered > 0,
+      recommended: index === 0
+    }));
 }
 
 export function summarizeParticipantProgress(participants: ParticipantWithStatus[]) {
