@@ -149,6 +149,20 @@ describe("planSchema", () => {
     expect(result.answer_deadline_at).toBe("2026-06-30T22:08");
   });
 
+  it("keeps all-day flags aligned with candidate dates", () => {
+    const result = planSchema.parse({
+      title: "",
+      participantNames: "",
+      candidateDates: ["2026-07-01T00:00", "2026-07-02T10:00"],
+      candidateEndDates: ["2026-07-02T00:00", "2026-07-02T12:00"],
+      candidateAllDays: ["true", "false"],
+      answer_deadline_at: "2026-06-30T22:08",
+      memo: ""
+    });
+
+    expect(result.candidateAllDays).toEqual([true, false]);
+  });
+
   it("rejects past candidate dates", () => {
     expect(() =>
       planSchema.parse({

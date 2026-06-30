@@ -4,6 +4,7 @@ export type AnswerCandidateDate = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
 };
 
 export type AnswerCalendarEvent = BusyRange & {

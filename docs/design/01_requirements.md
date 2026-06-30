@@ -89,7 +89,6 @@ https://www.googleapis.com/auth/calendar.events
 
 ## 7. Phase 2 でまだ実装しないもの
 
-- 終日候補の UI
 - リマインド送信
 - 自動候補日時提案
 - 参加者全員のカレンダーを集めた自動調整
@@ -99,7 +98,6 @@ https://www.googleapis.com/auth/calendar.events
 
 ### Phase 2-B
 
-- 終日候補の入力
 - リマインド設定
 
 ### Phase 3
@@ -158,3 +156,13 @@ https://www.googleapis.com/auth/calendar.events
 - 未回答者がいる場合、回答期限と共有リンクを含むリマインド文面を生成する
 - 文面はコピーできるようにし、送信はユーザーが普段使う連絡手段で手動で行う
 - LINE、メール、Discordなどへの自動送信はまだ実装しない
+
+## 追加メモ: Phase 2 終日候補
+
+候補日時作成画面では、候補を終日として追加できます。
+
+- 終日候補は `candidate_dates.is_all_day` に保存する
+- 終日の開始は選択日の `00:00`、終了は翌日の `00:00` として扱う
+- 表示上は時刻ではなく「終日」と表示する
+- 日程確定時は `plans.is_all_day` にも反映する
+- Google Calendar 登録時は `dateTime` ではなく `date` 形式で予定を作成する

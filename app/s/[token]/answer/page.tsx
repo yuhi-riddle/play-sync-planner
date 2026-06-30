@@ -22,7 +22,7 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
   const supabase = createSupabaseAdminClient();
   const { data: link } = await supabase
     .from("share_links")
-    .select("token, expires_at, plans(id, title, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at))")
+    .select("token, expires_at, plans(id, title, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at, is_all_day))")
     .eq("token", token)
     .eq("purpose", "answer")
     .single();

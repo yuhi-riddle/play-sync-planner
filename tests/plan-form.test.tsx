@@ -79,6 +79,23 @@ describe("PlanForm", () => {
     expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-02T01:30");
   });
 
+  it("adds an all-day candidate with an all-day hidden flag", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="蜈ｱ譛峨Μ繝ｳ繧ｯ繧剃ｽ懈・" />);
+
+    const julyDateButton = screen
+      .getAllByRole("button")
+      .find((button) => button.getAttribute("aria-label")?.includes("7月1日")) as HTMLElement;
+
+    fireEvent.click(julyDateButton);
+    fireEvent.click(screen.getByRole("checkbox", { name: "終日" }));
+    const addButton = screen.getAllByRole("button").find((button) => button.textContent?.includes("候補")) as HTMLElement;
+    fireEvent.click(addButton);
+
+    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-01T00:00");
+    expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-02T00:00");
+    expect(document.querySelector('input[name="candidateAllDays"]')).toHaveAttribute("value", "true");
+  });
+
   it("shows a settings link when Google Calendar is not connected", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" calendarAvailability={{ enabled: false }} />);
 

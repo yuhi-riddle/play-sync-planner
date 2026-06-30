@@ -24,6 +24,7 @@ type CandidateDateRow = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
   availability_answers: AnswerRow[];
 };
 
@@ -73,7 +74,7 @@ export default async function PlanDetailPage({
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, availability_answers(answer)), share_links(token, expires_at)"
+      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at)"
     )
     .eq("id", planId)
     .single();
@@ -130,10 +131,10 @@ export default async function PlanDetailPage({
         <SummaryTile
           label="候補日時"
           value={`${candidateSummaries.length}件`}
-          detail={recommendedCandidate ? `おすすめ: ${formatDateTimeRange(recommendedCandidate.start_at, recommendedCandidate.end_at)}` : "候補を追加できます"}
+          detail={recommendedCandidate ? `おすすめ: ${formatDateTimeRange(recommendedCandidate.start_at, recommendedCandidate.end_at, Boolean(recommendedCandidate.is_all_day))}` : "候補を追加できます"}
         />
         <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={planStatus} />
-        <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)} detail={isConfirmed ? "確定済み" : "未確定"} />
+        <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))} detail={isConfirmed ? "確定済み" : "未確定"} />
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.45fr_0.9fr]">
@@ -227,7 +228,7 @@ function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
             {candidate.hasPendingAnswers ? <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">未回答あり</span> : null}
             <span className="rounded-full bg-mist/42 px-3 py-1 text-xs font-bold text-pine">スコア {candidate.score}</span>
           </div>
-          <h3 className="mt-3 font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at)}</h3>
+          <h3 className="mt-3 font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}</h3>
           <p className="mt-2 text-sm text-ink/60">
             回答済み {candidate.answered}/{candidate.totalParticipants}人
           </p>

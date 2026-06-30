@@ -74,7 +74,7 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: candidate, error: candidateError } = await supabase
     .from("candidate_dates")
-    .select("id, start_at, end_at, plans(id, title, event_id, owner_user_id, events(title, location_name))")
+    .select("id, start_at, end_at, is_all_day, plans(id, title, event_id, owner_user_id, events(title, location_name))")
     .eq("id", candidateDateId)
     .eq("plan_id", planId)
     .single();
@@ -110,7 +110,8 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
     .update({
       status: "date_confirmed",
       confirmed_start_at: candidate.start_at,
-      confirmed_end_at: candidate.end_at
+      confirmed_end_at: candidate.end_at,
+      is_all_day: candidate.is_all_day
     })
     .eq("id", planId)
     .eq("owner_user_id", userId);
@@ -150,7 +151,8 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
           eventTitle: event?.title,
           locationName: event?.location_name,
           startAt: candidate.start_at,
-          endAt: candidate.end_at
+          endAt: candidate.end_at,
+          isAllDay: candidate.is_all_day
         })
       });
       calendarResult = "added";

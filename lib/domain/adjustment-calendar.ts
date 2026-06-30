@@ -5,6 +5,7 @@ export type AdjustmentCandidate = {
   planTitle: string | null;
   startAt: string;
   endAt?: string | null;
+  isAllDay?: boolean | null;
   status: string;
   yes: number;
   maybe: number;
@@ -51,7 +52,12 @@ function startOfDay(value: Date) {
 }
 
 function getCandidateEnd(candidate: AdjustmentCandidate) {
-  return candidate.endAt ? new Date(candidate.endAt) : new Date(candidate.startAt);
+  const end = candidate.endAt ? new Date(candidate.endAt) : new Date(candidate.startAt);
+  if (!candidate.isAllDay) {
+    return end;
+  }
+
+  return addDays(end, -1);
 }
 
 function candidateDateKeys(candidate: AdjustmentCandidate) {

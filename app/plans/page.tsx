@@ -15,6 +15,7 @@ type CandidateDateRow = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
   availability_answers?: Array<{ answer: "yes" | "maybe" | "no" | "unanswered" }>;
 };
 
@@ -126,6 +127,7 @@ function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCand
     planTitle: plan.title,
     startAt: candidate.start_at,
     endAt: candidate.end_at,
+    isAllDay: candidate.is_all_day,
     status: plan.status,
     ...counts
   };
@@ -171,7 +173,7 @@ export default async function PlansPage({
 
   const { data: plans } = await supabase
     .from("plans")
-    .select("id, title, status, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at, availability_answers(answer))")
+    .select("id, title, status, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer))")
     .eq("owner_user_id", user.id)
     .in("status", ["draft", "collecting_answers", "date_confirmed"])
     .order("created_at", { ascending: false });
@@ -268,7 +270,7 @@ export default async function PlansPage({
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm font-bold text-pine">{formatDateTimeRange(candidate.startAt, candidate.endAt)}</p>
+                    <p className="text-sm font-bold text-pine">{formatDateTimeRange(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}</p>
                     <h3 className="mt-1 text-base font-bold text-ink">{candidate.eventTitle}</h3>
                     <p className="mt-1 text-sm text-ink/60">{candidate.planTitle ?? "日程調整"}</p>
                   </div>

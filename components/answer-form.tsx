@@ -196,7 +196,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
           return (
             <fieldset key={candidate.id} className="rounded-lg border border-white/80 bg-white/68 p-4">
               <legend className="px-1 text-sm font-semibold text-ink">
-                候補{index + 1} {formatDateTimeRange(candidate.start_at, candidate.end_at)}
+                候補{index + 1} {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
               </legend>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {choices.map((choice) => (

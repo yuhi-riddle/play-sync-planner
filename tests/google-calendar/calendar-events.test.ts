@@ -135,4 +135,34 @@ describe("calendar event helpers", () => {
       })
     );
   });
+
+  it("inserts an all-day confirmed calendar event with date fields", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: "google-event-1" })
+    })) as unknown as typeof fetch;
+
+    await insertCalendarEvent({
+      accessToken: "access-token",
+      event: {
+        title: "終日イベント",
+        location: null,
+        start: "2026-07-01T00:00:00+09:00",
+        end: "2026-07-02T00:00:00+09:00",
+        isAllDay: true
+      },
+      fetchImpl
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+      expect.objectContaining({
+        body: JSON.stringify({
+          summary: "終日イベント",
+          start: { date: "2026-07-01" },
+          end: { date: "2026-07-02" }
+        })
+      })
+    );
+  });
 });

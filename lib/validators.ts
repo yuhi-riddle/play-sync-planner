@@ -58,6 +58,12 @@ const requiredDateTime = (requiredMessage: string, formatMessage: string) =>
 const optionalDateTimeList = (dateTimeMessage: string) =>
   optionalNewlineList().pipe(z.array(z.string().refine(isValidDateTimeLocal, dateTimeMessage)));
 
+const booleanList = () =>
+  z.preprocess((value) => {
+    const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
+    return values.map((entry) => entry === true || entry === "true" || entry === "on");
+  }, z.array(z.boolean()));
+
 export const eventSchema = z.object({
   category: z.preprocess(
     emptyToNull,
@@ -116,6 +122,7 @@ export const planSchema = z
       "候補日時は YYYY-MM-DDTHH:mm 形式で入力してください"
     ),
     candidateEndDates: optionalDateTimeList("終了日時は YYYY-MM-DDTHH:mm 形式で入力してください").default([]),
+    candidateAllDays: booleanList().default([]),
     answer_deadline_at: requiredDateTime(
       "回答期限を選択してください",
       "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください"

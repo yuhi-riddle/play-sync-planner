@@ -15,6 +15,7 @@ type CandidateWithAnswers = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
   availability_answers: CandidateAnswerRow[];
 };
 
@@ -26,6 +27,7 @@ export type CandidateAnswerSummary = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
   yes: number;
   maybe: number;
   no: number;
@@ -85,6 +87,7 @@ export function summarizeCandidateAnswers(
       id: candidate.id,
       start_at: candidate.start_at,
       end_at: candidate.end_at,
+      is_all_day: candidate.is_all_day,
       yes: counts.yes,
       maybe: counts.maybe,
       no: counts.no,

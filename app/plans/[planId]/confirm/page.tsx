@@ -11,6 +11,7 @@ type CandidateRow = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
   availability_answers: Array<{ answer: "yes" | "maybe" | "no" | "unanswered" }>;
 };
 
@@ -24,7 +25,7 @@ export default async function ConfirmPlanPage({ params }: { params: Promise<{ pl
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
     .from("plans")
-    .select("id, title, owner_user_id, participants(id), candidate_dates(id, start_at, end_at, availability_answers(answer))")
+    .select("id, title, owner_user_id, participants(id), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer))")
     .eq("id", planId)
     .eq("owner_user_id", userId)
     .single();

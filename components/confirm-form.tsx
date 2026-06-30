@@ -35,7 +35,7 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
       return;
     }
 
-    const ok = window.confirm(`${formatDateTimeRange(selected.start_at, selected.end_at)} で日程を確定します。よろしいですか？`);
+    const ok = window.confirm(`${formatDateTimeRange(selected.start_at, selected.end_at, Boolean(selected.is_all_day))} で日程を確定します。よろしいですか？`);
     if (!ok) {
       event.preventDefault();
     }
@@ -64,7 +64,7 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
                 <span className="rounded-full bg-mist/42 px-3 py-1 text-xs font-bold text-pine">スコア {candidate.score}</span>
               </div>
 
-              <p className="mt-3 text-base font-bold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at)}</p>
+              <p className="mt-3 text-base font-bold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}</p>
               <p className="mt-1 text-sm text-ink/60">
                 回答済み {candidate.answered}/{candidate.totalParticipants}人
               </p>

@@ -51,7 +51,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     plan_id: plan.id,
     start_at: toIsoDateTime(candidateDate),
     end_at: values.candidateEndDates[index] ? toIsoDateTime(values.candidateEndDates[index]) : null,
-    is_all_day: false,
+    is_all_day: values.candidateAllDays[index] ?? false,
     sort_order: index
   }));
 
@@ -123,7 +123,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     plan_id: planId,
     start_at: toIsoDateTime(candidateDate),
     end_at: values.candidateEndDates[index] ? toIsoDateTime(values.candidateEndDates[index]) : null,
-    is_all_day: false,
+    is_all_day: values.candidateAllDays[index] ?? false,
     sort_order: index
   }));
 

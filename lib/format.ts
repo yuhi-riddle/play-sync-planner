@@ -31,9 +31,13 @@ export function formatTime(value: string | null | undefined): string {
   }).format(new Date(value));
 }
 
-export function formatDateTimeRange(start: string | null | undefined, end: string | null | undefined): string {
+export function formatDateTimeRange(start: string | null | undefined, end: string | null | undefined, isAllDay = false): string {
   if (!start) {
     return unsetLabel;
+  }
+
+  if (isAllDay) {
+    return formatAllDayRange(start, end);
   }
 
   if (!end) {
@@ -48,6 +52,22 @@ export function formatDateTimeRange(start: string | null | undefined, end: strin
     startDate.getDate() === endDate.getDate();
 
   return sameDay ? `${formatDateTime(start)} - ${formatTime(end)}` : `${formatDateTime(start)} - ${formatDateTime(end)}`;
+}
+
+function formatAllDayRange(start: string, end: string | null | undefined): string {
+  const startLabel = formatDate(start);
+  if (!end) {
+    return `${startLabel} 終日`;
+  }
+
+  const startDate = new Date(start);
+  const inclusiveEndDate = new Date(new Date(end).getTime() - 24 * 60 * 60 * 1000);
+  const sameDay =
+    startDate.getFullYear() === inclusiveEndDate.getFullYear() &&
+    startDate.getMonth() === inclusiveEndDate.getMonth() &&
+    startDate.getDate() === inclusiveEndDate.getDate();
+
+  return sameDay ? `${startLabel} 終日` : `${startLabel} - ${formatDate(inclusiveEndDate.toISOString())} 終日`;
 }
 
 export function toDateInputValue(value: string | null | undefined): string {

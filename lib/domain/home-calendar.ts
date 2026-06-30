@@ -8,6 +8,7 @@ export type HomeCalendarItem = {
   location?: string | null;
   startAt: string;
   endAt?: string | null;
+  isAllDay?: boolean | null;
   href?: string;
 };
 
@@ -50,7 +51,12 @@ function startOfDay(value: Date) {
 }
 
 function itemEndDate(item: HomeCalendarItem) {
-  return item.endAt ? new Date(item.endAt) : new Date(item.startAt);
+  const end = item.endAt ? new Date(item.endAt) : new Date(item.startAt);
+  if (!item.isAllDay) {
+    return end;
+  }
+
+  return addDays(end, -1);
 }
 
 function itemDateKeys(item: HomeCalendarItem) {

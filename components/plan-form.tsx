@@ -16,12 +16,13 @@ type PlanRecord = {
   title?: string | null;
   answer_deadline_at?: string | null;
   memo?: string | null;
-  candidate_dates?: Array<{ start_at: string; end_at?: string | null }>;
+  candidate_dates?: Array<{ start_at: string; end_at?: string | null; is_all_day?: boolean | null }>;
 };
 
 type CandidateDraft = {
   start: string;
   end: string;
+  isAllDay: boolean;
 };
 
 const steps = ["候補日時", "回答期限", "確認"];
@@ -55,6 +56,20 @@ function addMinutes(dateTime: string, minutes: number) {
   const date = new Date(dateTime);
   date.setMinutes(date.getMinutes() + minutes);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function addDaysToDateValue(dateValue: string, days: number) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + days);
+  return formatDateForInput(date);
+}
+
+function allDayRangeForDate(dateValue: string) {
+  return {
+    start: toDateTimeLocalValueFromParts(dateValue, "00:00"),
+    end: toDateTimeLocalValueFromParts(addDaysToDateValue(dateValue, 1), "00:00")
+  };
 }
 
 function formatDateLabel(value: string) {
@@ -264,7 +279,8 @@ export function PlanForm({
   const initialCandidateDates = plan?.candidate_dates?.length
     ? plan.candidate_dates.map((candidate) => ({
         start: toDateTimeLocalValue(candidate.start_at),
-        end: toDateTimeLocalValue(candidate.end_at)
+        end: toDateTimeLocalValue(candidate.end_at),
+        isAllDay: Boolean(candidate.is_all_day)
       }))
     : [];
   const initialCandidate = splitDateTime(initialCandidateDates[0]?.start, defaultCandidateTime);
@@ -285,6 +301,7 @@ export function PlanForm({
   const [candidateStartTime, setCandidateStartTime] = useState(initialCandidate.time);
   const [candidateEndDate, setCandidateEndDate] = useState(initialCandidateEnd.date);
   const [candidateEndTime, setCandidateEndTime] = useState(initialCandidateEnd.time);
+  const [candidateIsAllDay, setCandidateIsAllDay] = useState(initialCandidateDates[0]?.isAllDay ?? false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   const [candidateDates, setCandidateDates] = useState<CandidateDraft[]>(initialCandidateDates);
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
@@ -301,14 +318,15 @@ export function PlanForm({
     () => busyRangesForDate(busyRanges, candidateDate),
     [busyRanges, candidateDate]
   );
-  const selectedCandidateStart = toDateTimeLocalValueFromParts(candidateDate, candidateStartTime);
-  const selectedCandidateEnd = toDateTimeLocalValueFromParts(candidateEndDate, candidateEndTime);
+  const selectedAllDayRange = allDayRangeForDate(candidateDate);
+  const selectedCandidateStart = candidateIsAllDay ? selectedAllDayRange.start : toDateTimeLocalValueFromParts(candidateDate, candidateStartTime);
+  const selectedCandidateEnd = candidateIsAllDay ? selectedAllDayRange.end : toDateTimeLocalValueFromParts(candidateEndDate, candidateEndTime);
   const selectedDeadline = toDateTimeLocalValueFromParts(deadlineDate, deadlineTime);
   const firstCandidate = candidateDates[0]?.start;
   const deadlineIsTooLate =
     Boolean(firstCandidate) && new Date(selectedDeadline).getTime() >= new Date(firstCandidate ?? "").getTime();
   const candidateIsPast = new Date(selectedCandidateStart).getTime() < Date.now();
-  const candidateEndIsInvalid = new Date(selectedCandidateEnd).getTime() <= new Date(selectedCandidateStart).getTime();
+  const candidateEndIsInvalid = !candidateIsAllDay && new Date(selectedCandidateEnd).getTime() <= new Date(selectedCandidateStart).getTime();
   const canReview = candidateDates.length > 0 && selectedDeadline.length > 0 && !deadlineIsTooLate;
 
   useEffect(() => {
@@ -386,7 +404,7 @@ export function PlanForm({
     }
 
     setCandidateDates((current) =>
-      [...current, { start: selectedCandidateStart, end: selectedCandidateEnd }].sort((left, right) =>
+      [...current, { start: selectedCandidateStart, end: selectedCandidateEnd, isAllDay: candidateIsAllDay }].sort((left, right) =>
         left.start.localeCompare(right.start)
       )
     );
@@ -404,6 +422,7 @@ export function PlanForm({
     setCandidateStartTime(time);
     setCandidateEndDate(end.date);
     setCandidateEndTime(end.time);
+    setCandidateIsAllDay(false);
     setEndDatePickerOpen(false);
     window.setTimeout(() => candidateHourRef.current?.focus(), 0);
   }
@@ -435,6 +454,7 @@ export function PlanForm({
         <React.Fragment key={candidateDateValue.start}>
           <input type="hidden" name="candidateDates" value={candidateDateValue.start} />
           <input type="hidden" name="candidateEndDates" value={candidateDateValue.end} />
+          <input type="hidden" name="candidateAllDays" value={String(candidateDateValue.isAllDay)} />
         </React.Fragment>
       ))}
       <input type="hidden" name="answer_deadline_at" value={selectedDeadline} />
@@ -498,6 +518,21 @@ export function PlanForm({
             candidateEnd={selectedCandidateEnd}
             busyRanges={selectedDayBusyRanges}
           />
+          <label className="flex items-center gap-3 rounded-lg border border-white/75 bg-white/58 px-4 py-3 text-sm font-bold text-ink">
+            <input
+              type="checkbox"
+              aria-label="終日"
+              checked={candidateIsAllDay}
+              onChange={(event) => {
+                setCandidateIsAllDay(event.target.checked);
+                if (event.target.checked) {
+                  setEndDatePickerOpen(false);
+                }
+              }}
+              className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
+            />
+            終日
+          </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm font-bold text-ink">開始時間</p>
@@ -551,7 +586,7 @@ export function PlanForm({
               <Plus aria-hidden="true" className="h-4 w-4" />
               候補に追加
             </button>
-            <p className="text-sm text-ink/60">選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd)}</p>
+            <p className="text-sm text-ink/60">選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd, candidateIsAllDay)}</p>
           </div>
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
         </section>
@@ -654,7 +689,7 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
         <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-lg border border-white/72 bg-white/70 px-4 py-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">候補 {index + 1}</p>
-            <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end)}</p>
+            <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
           </div>
           <button
             type="button"

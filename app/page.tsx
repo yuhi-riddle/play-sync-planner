@@ -5,7 +5,7 @@ import { HomeMonthCalendar } from "@/components/home-month-calendar";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,7 @@ type CandidateDateRow = {
   id: string;
   start_at: string;
   end_at: string | null;
+  is_all_day?: boolean | null;
 };
 
 type PlanRow = {
@@ -22,6 +23,7 @@ type PlanRow = {
   status: string;
   confirmed_start_at: string | null;
   confirmed_end_at: string | null;
+  is_all_day?: boolean | null;
   answer_deadline_at: string | null;
   events: { title: string | null; location_name: string | null } | { title: string | null; location_name: string | null }[] | null;
   candidate_dates?: CandidateDateRow[];
@@ -128,6 +130,7 @@ function toCalendarItems(plans: PlanRow[]): HomeCalendarItem[] {
         location,
         startAt: plan.confirmed_start_at,
         endAt: plan.confirmed_end_at,
+        isAllDay: plan.is_all_day,
         href: `/plans/${plan.id}`
       };
 
@@ -142,6 +145,7 @@ function toCalendarItems(plans: PlanRow[]): HomeCalendarItem[] {
       location,
       startAt: candidate.start_at,
       endAt: candidate.end_at,
+      isAllDay: candidate.is_all_day,
       href: `/plans/${plan.id}`
     }));
   });
@@ -183,7 +187,7 @@ export default async function HomePage({
   const { data: plans } = await supabase
     .from("plans")
     .select(
-      "id, title, status, confirmed_start_at, confirmed_end_at, answer_deadline_at, events(title, location_name), candidate_dates(id, start_at, end_at)"
+      "id, title, status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at, events(title, location_name), candidate_dates(id, start_at, end_at, is_all_day)"
     )
     .eq("owner_user_id", user.id)
     .in("status", ["draft", "collecting_answers", "date_confirmed"])
@@ -258,7 +262,7 @@ export default async function HomePage({
                     className="block rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
                   >
                     <span className="block text-sm font-semibold text-ink">{event?.title ?? "イベント未設定"}</span>
-                    <span className="mt-1 block text-sm text-ink/60">{formatDateTime(plan.confirmed_start_at)}</span>
+                    <span className="mt-1 block text-sm text-ink/60">{formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}</span>
                   </Link>
                 );
               })

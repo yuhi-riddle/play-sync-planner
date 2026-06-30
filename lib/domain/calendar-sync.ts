@@ -3,6 +3,7 @@ export type ConfirmedCalendarEvent = {
   location: string | null;
   start: string;
   end: string;
+  isAllDay?: boolean;
 };
 
 function addHours(value: string, hours: number) {
@@ -27,13 +28,15 @@ export function buildConfirmedCalendarEvent({
   eventTitle,
   locationName,
   startAt,
-  endAt
+  endAt,
+  isAllDay = false
 }: {
   planTitle?: string | null;
   eventTitle?: string | null;
   locationName?: string | null;
   startAt: string;
   endAt?: string | null;
+  isAllDay?: boolean;
 }): ConfirmedCalendarEvent {
   const normalizedPlanTitle = planTitle?.trim();
   const normalizedEventTitle = eventTitle?.trim();
@@ -46,6 +49,7 @@ export function buildConfirmedCalendarEvent({
     title,
     location: locationName?.trim() || null,
     start: startAt,
-    end: endAt || addHours(startAt, 2)
+    end: endAt || addHours(startAt, 2),
+    ...(isAllDay ? { isAllDay } : {})
   };
 }
