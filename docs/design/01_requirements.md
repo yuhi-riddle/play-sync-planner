@@ -131,3 +131,11 @@ https://www.googleapis.com/auth/calendar.events
 - 日付を選ぶと、その日の予定をタイムラインで表示する
 - Google Calendarの予定はDBに保存せず、画面表示時に取得する
 - 日付選択や月移動では、不要にページ上部へ戻らないようにする
+## 追加メモ: Phase 2 回答画面のGoogle Calendar確認
+
+共有リンクの日程回答画面では、ログイン済みかつGoogle Calendar連携済みの場合、自分のGoogle Calendar予定と候補日時の重なりを見ながら回答できるようにします。
+
+- 候補日時とGoogle Calendar予定が重なる場合は注意表示する
+- 注意表示には予定名、場所、時間を表示する
+- 未ログイン、未連携、取得失敗の場合でも回答自体は止めない
+- Google Calendarの予定詳細はDBに保存しない

@@ -99,3 +99,11 @@ npm run build
 - Google Calendar: 青の点
 
 日付を選ぶと、その日の予定をタイムラインで確認できます。Google Calendarの予定は画面表示後に取得し、予定名・場所・時間を表示します。
+## Phase 2 回答画面のGoogle Calendar確認
+
+共有リンクの日程回答画面では、ログイン済みかつGoogle Calendar連携済みの場合、自分の予定と候補日時の重なりを確認しながら回答できます。
+
+- 候補日時とGoogle Calendar予定が重なる場合は注意表示を出す
+- 予定名、場所、時間を表示する
+- 未ログイン、未連携、取得失敗の場合でも回答は続けられる
+- Google Calendarの予定詳細はDBに保存しない
