@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import { CalendarAvailabilityPanel } from "@/components/calendar-availability-panel";
 
-const busyRanges = [{ start: "2026-07-01T10:00:00+09:00", end: "2026-07-01T11:00:00+09:00" }];
+const busyRanges = [
+  {
+    start: "2026-07-01T10:00:00+09:00",
+    end: "2026-07-01T11:00:00+09:00",
+    title: "謎解き公演",
+    location: "新宿"
+  }
+];
 
 describe("CalendarAvailabilityPanel", () => {
   it("links to settings when disconnected", () => {
@@ -21,7 +28,7 @@ describe("CalendarAvailabilityPanel", () => {
     expect(screen.getByRole("link", { name: "設定で連携する" })).toHaveAttribute("href", "/settings");
   });
 
-  it("shows busy ranges", () => {
+  it("shows calendar event title and location", () => {
     render(
       <CalendarAvailabilityPanel
         connected
@@ -33,6 +40,8 @@ describe("CalendarAvailabilityPanel", () => {
     );
 
     expect(screen.getByText(/10:00/)).toBeInTheDocument();
+    expect(screen.getByText("謎解き公演")).toBeInTheDocument();
+    expect(screen.getByText("場所: 新宿")).toBeInTheDocument();
   });
 
   it("shows a conflict warning", () => {

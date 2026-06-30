@@ -19,7 +19,7 @@ export function hasBusyConflict(candidate: BusyRange, busyRanges: BusyRange[]): 
   return busyRanges.some((busyRange) => rangesOverlap(candidate, busyRange));
 }
 
-export function busyCountByDate(busyRanges: BusyRange[]): Record<string, number> {
+export function busyCountByDate<T extends BusyRange>(busyRanges: T[]): Record<string, number> {
   return busyRanges.reduce<Record<string, number>>((result, busyRange) => {
     const key = toDateKey(busyRange.start);
     result[key] = (result[key] ?? 0) + 1;
@@ -27,6 +27,6 @@ export function busyCountByDate(busyRanges: BusyRange[]): Record<string, number>
   }, {});
 }
 
-export function busyRangesForDate(busyRanges: BusyRange[], dateKey: string): BusyRange[] {
+export function busyRangesForDate<T extends BusyRange>(busyRanges: T[], dateKey: string): T[] {
   return busyRanges.filter((busyRange) => toDateKey(busyRange.start) === dateKey);
 }

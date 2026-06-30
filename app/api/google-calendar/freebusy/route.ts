@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { fetchFreeBusy } from "@/lib/google-calendar/freebusy";
+import { fetchCalendarEvents } from "@/lib/google-calendar/calendar-events";
 import { refreshGoogleCalendarAccessToken } from "@/lib/google-calendar/oauth";
 import { decryptToken, encryptToken } from "@/lib/google-calendar/token-crypto";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         .eq("provider", "google");
     }
 
-    const busy = await fetchFreeBusy({
+    const busy = await fetchCalendarEvents({
       accessToken,
       calendarId: integration.calendar_id ?? "primary",
       month

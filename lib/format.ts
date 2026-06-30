@@ -1,6 +1,8 @@
+const unsetLabel = "未設定";
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) {
-    return "未設定";
+    return unsetLabel;
   }
 
   return new Intl.DateTimeFormat("ja-JP", {
@@ -10,7 +12,7 @@ export function formatDate(value: string | null | undefined): string {
 
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) {
-    return "未設定";
+    return unsetLabel;
   }
 
   return new Intl.DateTimeFormat("ja-JP", {
@@ -21,7 +23,7 @@ export function formatDateTime(value: string | null | undefined): string {
 
 export function formatTime(value: string | null | undefined): string {
   if (!value) {
-    return "未設定";
+    return unsetLabel;
   }
 
   return new Intl.DateTimeFormat("ja-JP", {
@@ -31,7 +33,7 @@ export function formatTime(value: string | null | undefined): string {
 
 export function formatDateTimeRange(start: string | null | undefined, end: string | null | undefined): string {
   if (!start) {
-    return "未設定";
+    return unsetLabel;
   }
 
   if (!end) {

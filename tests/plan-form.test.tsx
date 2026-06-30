@@ -78,6 +78,7 @@ describe("PlanForm", () => {
     expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-01T23:00");
     expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-02T01:30");
   });
+
   it("shows a settings link when Google Calendar is not connected", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" calendarAvailability={{ enabled: false }} />);
 

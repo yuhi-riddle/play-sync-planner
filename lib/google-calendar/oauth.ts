@@ -1,4 +1,4 @@
-export const CALENDAR_FREEBUSY_SCOPE = "https://www.googleapis.com/auth/calendar.freebusy";
+export const CALENDAR_EVENTS_READONLY_SCOPE = "https://www.googleapis.com/auth/calendar.events.readonly";
 
 export type GoogleTokenResponse = {
   access_token: string;
@@ -32,7 +32,7 @@ export function buildGoogleCalendarAuthUrl({
   url.searchParams.set("client_id", requireEnv("GOOGLE_CALENDAR_CLIENT_ID"));
   url.searchParams.set("redirect_uri", redirectUri(explicitRedirectUri));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", CALENDAR_FREEBUSY_SCOPE);
+  url.searchParams.set("scope", CALENDAR_EVENTS_READONLY_SCOPE);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
   url.searchParams.set("state", state);

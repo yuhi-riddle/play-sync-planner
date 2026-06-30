@@ -1,53 +1,29 @@
 # Madoi
 
-## 概要
+Madoi は、友人同士の遊びや公演参加の日程を合わせるための Web アプリです。
 
-Madoi は、友人同士の遊び予定について、候補日時を出し、参加者に回答してもらい、日程を確定するためのWebアプリです。
-
-リポジトリ名と開発プロジェクト名は `play-sync-planner` のままです。
-
-最初のMVPでは謎解き公演向けに作成します。  
-ただし、将来的にはライブ、旅行、飲み会、スノボ、ボードゲーム会などにも拡張できる設計とします。
+リポジトリ名と開発プロジェクト名は `play-sync-planner` のままです。画面上のサービス名は、ユーザーに伝わりやすいように `Madoi` としています。
 
 ## コンセプト
 
-まずは日程調整に集中し、複数の予定調整を見比べやすくする。後続Phaseで、Googleカレンダー連携やWalica風清算を足していく。
+まずは日程調整に集中します。候補日時を作り、参加者に回答してもらい、日程を確定する流れを軽くします。
 
-## Phase 1の中心機能
+後続 Phase では、Google Calendar への予定登録、リマインド、清算などを足していく想定です。
 
-- 予定登録
-- 日程調整作成
-- 候補日登録
+## 現在できること
+
+- イベント登録
+- 参加予定作成
+- 候補日時登録
 - 日程回答
 - 日程確定
-- 共有リンク
+- 共有リンクによる未ログイン回答
 - 調整カレンダー
 - 参加者管理
 - 利用規約・プライバシーポリシーのドラフト表示
+- Google Calendar の予定確認
 
-Googleカレンダー連携、リマインド、清算、支払い証拠管理は後続Phaseで実装します。
-
-## ファイル構成
-
-- `docs/design/01_requirements.md`：要件定義書 v1.1
-- `docs/design/02_database_design.md`：DB設計 v1.0
-- `docs/design/03_screen_flow.md`：画面一覧・画面遷移 v1.1
-- `docs/design/04_codex_phase1_prompt.md`：Codex Phase 1 実装プロンプト
-- `docs/phase1-user-setup.md`：Phase 1 セットアップ手順
-- `docs/phase1-completion-checklist.md`：Phase 1 完了判定
-
-## 開発方針
-
-1. 要件定義を確定する
-2. DB設計を確定する
-3. 画面一覧・画面遷移を確定する
-4. CodexにPhase 1実装を依頼する
-5. Phase 2でGoogleカレンダー連携を実装する
-6. Phase 3でWalica風清算を実装する
-
-## Phase 1 開発メモ
-
-### 技術スタック
+## 技術スタック
 
 - Next.js App Router
 - React
@@ -58,7 +34,7 @@ Googleカレンダー連携、リマインド、清算、支払い証拠管理�
 - Zod
 - Vitest
 
-### 初回セットアップ
+## セットアップ
 
 ```bash
 npm install
@@ -73,25 +49,44 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-SupabaseのSQLエディタで、以下のマイグレーションを実行します。
+Supabase の SQL Editor で、マイグレーションを順番に実行します。
 
 ```text
 supabase/migrations/001_phase1_schema.sql
+supabase/migrations/002_calendar_integrations.sql
 ```
 
-### 起動
+Google Calendar 連携を使う場合は、次の手順も実施してください。
+
+```text
+docs/phase2-google-calendar-setup.md
+```
+
+## 起動
 
 ```bash
 npm run dev
 ```
 
-### 確認
+## 確認
 
 ```bash
 npm test
 npm run build
 ```
 
+## ドキュメント
+
+- `docs/design/01_requirements.md`: 要件定義書
+- `docs/design/02_database_design.md`: DB設計
+- `docs/design/03_screen_flow.md`: 画面フロー
+- `docs/design/04_codex_phase1_prompt.md`: Phase 1 実装指示
+- `docs/phase1-user-setup.md`: Phase 1 セットアップ手順
+- `docs/phase1-completion-checklist.md`: Phase 1 完了チェック
+- `docs/phase2-google-calendar-setup.md`: Google Calendar セットアップ手順
+
 ## Phase 2-A Google Calendar 連携
 
-Google Calendar の予定あり時間帯を候補日時作成画面に表示する設定手順は、`docs/phase2-google-calendar-setup.md` を参照してください。
+候補日時作成画面で、自分の Google Calendar の予定名・場所・時間を確認できます。
+
+取得するのは予定の開始・終了時刻、予定名、場所だけです。予定の説明、参加者、Meet URL、添付ファイルは取得しません。Google Calendar の予定詳細はデータベースに保存しません。

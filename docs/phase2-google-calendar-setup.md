@@ -1,8 +1,8 @@
 # Madoi Phase 2-A Google Calendar セットアップ手順
 
-この手順は、自分の Google Calendar の予定あり時間帯を、候補日時作成画面で確認するための設定です。
+この手順は、自分の Google Calendar の予定を、候補日時作成画面で確認するための設定です。
 
-Phase 2-A では、予定名、場所、説明、参加者は取得しません。取得するのは「この時間帯は予定あり」という開始・終了時刻だけです。
+Phase 2-A では、予定の開始・終了時刻、予定名、場所だけを取得します。予定の説明、参加者、Meet URL、添付ファイルは取得しません。取得した予定詳細はデータベースに保存せず、画面表示のためだけに使います。
 
 ## 1. Google Cloud Console を開く
 
@@ -17,7 +17,7 @@ Phase 2-A では、予定名、場所、説明、参加者は取得しません�
 3. 初回の場合は `開始` を押します。
 4. アプリ名には `Madoi` を入力します。
 5. ユーザーサポートメールには、自分のメールアドレスを選びます。
-6. 対象は、まず `外部` で進めます。
+6. 対象は、開発中は `外部` のままで進めます。
 7. テストユーザーに、自分の Google アカウントを追加します。
 
 ## 3. OAuth Client を作成する
@@ -26,13 +26,25 @@ Phase 2-A では、予定名、場所、説明、参加者は取得しません�
 2. `クライアントを作成` を押します。
 3. アプリケーションの種類は `ウェブ アプリケーション` を選びます。
 4. 名前は `Madoi local` などにします。
-5. `承認済みのリダイレクト URI` に次を追加します。
+5. `承認済みの JavaScript 生成元` に次を追加します。
+
+```text
+http://localhost:3000
+```
+
+6. `承認済みのリダイレクト URI` に次を追加します。
 
 ```text
 http://localhost:3000/api/google-calendar/callback
 ```
 
-6. 作成後に表示される `クライアント ID` と `クライアント シークレット` を控えます。
+7. Supabase の Google ログインも同じ OAuth Client を使っている場合は、次の URI も残します。
+
+```text
+https://esheopszeqggftmawdmu.supabase.co/auth/v1/callback
+```
+
+8. 作成後に表示される `クライアント ID` と `クライアント シークレット` を控えます。
 
 ## 4. Calendar API のスコープを追加する
 
@@ -41,10 +53,12 @@ http://localhost:3000/api/google-calendar/callback
 3. 次のスコープを追加します。
 
 ```text
-https://www.googleapis.com/auth/calendar.freebusy
+https://www.googleapis.com/auth/calendar.events.readonly
 ```
 
-このスコープが選べない、または Google 側でエラーになる場合は、作業を止めて Codex に画面やエラー内容を共有してください。別スコープへ広げる判断が必要です。
+以前 `https://www.googleapis.com/auth/calendar.freebusy` を追加していた場合は、今回の実装では使いません。可能なら削除してください。
+
+スコープを変えた後は、Madoi の設定画面で Google Calendar を一度解除し、もう一度連携してください。古い連携トークンには新しい権限が含まれていないためです。
 
 ## 5. .env.local を更新する
 
@@ -61,11 +75,13 @@ CALENDAR_TOKEN_ENCRYPTION_KEY=32バイトのbase64文字列
 
 ```powershell
 $bytes = New-Object byte[] 32
-[Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
 [Convert]::ToBase64String($bytes)
+$rng.Dispose()
 ```
 
-表示された文字列を `CALENDAR_TOKEN_ENCRYPTION_KEY` に入れます。
+表示された文字列を、末尾の `=` も含めて `CALENDAR_TOKEN_ENCRYPTION_KEY` に入れます。
 
 ## 6. Supabase にマイグレーションを適用する
 
@@ -90,6 +106,6 @@ npm.cmd run dev
 4. Google の認可画面で許可します。
 5. `/settings?calendar=connected` に戻れば連携完了です。
 6. イベント詳細から `参加予定を作成` に進みます。
-7. 候補日時の入力画面で、Google Calendar の予定あり時間帯が表示されることを確認します。
+7. 候補日時の入力画面で、Google Calendar の予定名と場所が表示されることを確認します。
 
-うまくいかない場合は、表示されたURL、エラーメッセージ、どの手順で止まったかを共有してください。
+うまくいかない場合は、表示されているURL、エラーメッセージ、どの手順で止まったかを共有してください。

@@ -6,10 +6,10 @@ import type { RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
-import { CalendarAvailabilityPanel } from "@/components/calendar-availability-panel";
+import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar-availability-panel";
 import { TextArea } from "@/components/ui";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/calendar";
-import { busyCountByDate, busyRangesForDate, type BusyRange } from "@/lib/domain/calendar-availability";
+import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar-availability";
 import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib/format";
 
 type PlanRecord = {
@@ -226,9 +226,7 @@ function CalendarPicker({
               disabled={disabled}
               className={clsx(
                 "relative flex aspect-square min-h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                selected
-                  ? "bg-ink text-white shadow-soft"
-                  : "bg-cream/70 text-ink hover:bg-mist/60",
+                selected ? "bg-ink text-white shadow-soft" : "bg-cream/70 text-ink hover:bg-mist/60",
                 !selected && holidayColor && "text-red-700",
                 !selected && !holidayColor && saturdayColor && "text-blue-700",
                 !cell.isCurrentMonth && !selected && "text-ink/30",
@@ -292,7 +290,7 @@ export function PlanForm({
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
   const [message, setMessage] = useState("");
-  const [busyRanges, setBusyRanges] = useState<BusyRange[]>([]);
+  const [busyRanges, setBusyRanges] = useState<CalendarEventRange[]>([]);
   const [busyLoading, setBusyLoading] = useState(false);
   const [busyError, setBusyError] = useState(false);
 
@@ -326,9 +324,9 @@ export function PlanForm({
     fetch(`/api/google-calendar/freebusy?month=${visibleMonthKey}`)
       .then((response) => {
         if (!response.ok) {
-          throw new Error("freebusy failed");
+          throw new Error("calendar events failed");
         }
-        return response.json() as Promise<{ connected: boolean; busy: BusyRange[] }>;
+        return response.json() as Promise<{ connected: boolean; busy: CalendarEventRange[] }>;
       })
       .then((data) => {
         if (!cancelled) {
@@ -387,7 +385,11 @@ export function PlanForm({
       return;
     }
 
-    setCandidateDates((current) => [...current, { start: selectedCandidateStart, end: selectedCandidateEnd }].sort((left, right) => left.start.localeCompare(right.start)));
+    setCandidateDates((current) =>
+      [...current, { start: selectedCandidateStart, end: selectedCandidateEnd }].sort((left, right) =>
+        left.start.localeCompare(right.start)
+      )
+    );
     setMessage(`${formatDateTime(selectedCandidateStart)} を候補に追加しました。`);
   }
 
@@ -530,8 +532,16 @@ export function PlanForm({
               />
             </div>
           ) : null}
-          {candidateIsPast ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">過去の日時は候補にできません。</p> : null}
-          {candidateEndIsInvalid ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">終了時間は開始時間より後にしてください。</p> : null}
+          {candidateIsPast ? (
+            <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+              過去の日時は候補にできません。
+            </p>
+          ) : null}
+          {candidateEndIsInvalid ? (
+            <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+              終了時間は開始時間より後にしてください。
+            </p>
+          ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
@@ -541,9 +551,7 @@ export function PlanForm({
               <Plus aria-hidden="true" className="h-4 w-4" />
               候補に追加
             </button>
-            <p className="text-sm text-ink/60">
-              選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd)}
-            </p>
+            <p className="text-sm text-ink/60">選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd)}</p>
           </div>
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
         </section>
@@ -571,9 +579,7 @@ export function PlanForm({
             )}
             aria-live="polite"
           >
-            {deadlineIsTooLate
-              ? "回答期限は最初の候補日時より前にしてください。"
-              : `回答期限: ${formatDateTime(selectedDeadline)}`}
+            {deadlineIsTooLate ? "回答期限は最初の候補日時より前にしてください。" : `回答期限: ${formatDateTime(selectedDeadline)}`}
           </p>
         </section>
       ) : null}
@@ -593,7 +599,11 @@ export function PlanForm({
         </section>
       ) : null}
 
-      {message ? <p className="rounded-lg border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink" aria-live="polite">{message}</p> : null}
+      {message ? (
+        <p className="rounded-lg border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink" aria-live="polite">
+          {message}
+        </p>
+      ) : null}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
@@ -644,15 +654,13 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
         <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-lg border border-white/72 bg-white/70 px-4 py-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">候補 {index + 1}</p>
-            <p className="mt-1 text-sm font-bold text-ink">
-              {formatDateTimeRange(candidate.start, candidate.end)}
-            </p>
+            <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end)}</p>
           </div>
           <button
             type="button"
             onClick={() => onRemove(candidate.start)}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-white/76 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
-            aria-label={`候補${index + 1}を削除`}
+            aria-label={`候補 ${index + 1} を削除`}
             title="削除"
           >
             <Trash2 aria-hidden="true" className="h-4 w-4" />
