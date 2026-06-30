@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { ReminderMessageCard } from "@/components/reminder-message-card";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { planStatusLabels } from "@/lib/constants";
@@ -9,6 +10,7 @@ import {
   summarizeParticipantProgress,
   type CandidateAnswerSummary
 } from "@/lib/domain/confirmation";
+import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
 import { formatDateTime, formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -90,6 +92,15 @@ export default async function PlanDetailPage({
     a.display_name.localeCompare(b.display_name, "ja")
   );
   const participantProgress = summarizeParticipantProgress(participants);
+  const pendingParticipantRows = pendingParticipants(participants);
+  const pendingNames = pendingParticipantRows.map((participant) => participant.display_name);
+  const reminderMessage = buildReminderMessage({
+    eventTitle: event?.title,
+    planTitle: plan.title,
+    pendingNames,
+    answerDeadlineAt: plan.answer_deadline_at,
+    shareUrl
+  });
   const candidateSummaries = summarizeCandidateAnswers(
     ((plan.candidate_dates ?? []) as CandidateDateRow[]).sort((a, b) => a.start_at.localeCompare(b.start_at)),
     participantProgress.total
@@ -150,6 +161,14 @@ export default async function PlanDetailPage({
             <p className="mt-1 text-sm leading-6 text-ink/60">このリンクを送ると、未ログインの人も回答できます。</p>
             <div className="mt-4">
               <ShareLinkCard shareUrl={shareUrl} />
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="text-lg font-semibold text-ink">未回答者</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">まだ回答していない人に送る文面をコピーできます。</p>
+            <div className="mt-4">
+              <ReminderMessageCard pendingNames={pendingNames} message={reminderMessage} shareUrl={shareUrl} />
             </div>
           </Card>
 

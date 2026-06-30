@@ -37,6 +37,7 @@ export function ShareLinkCard({ shareUrl }: { shareUrl: string | null }) {
         type="button"
         onClick={copyShareUrl}
         className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        aria-live="polite"
       >
         {copied ? <Check aria-hidden="true" className="mr-2 h-4 w-4" /> : <Copy aria-hidden="true" className="mr-2 h-4 w-4" />}
         {copied ? "コピーしました" : "リンクをコピー"}
