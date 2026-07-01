@@ -1,8 +1,8 @@
 export const EVENT_CATEGORIES = [
-  "nazotoki",
   "live",
   "travel",
   "drinking",
+  "nazotoki",
   "snowboard",
   "boardgame",
   "movie_stage",
