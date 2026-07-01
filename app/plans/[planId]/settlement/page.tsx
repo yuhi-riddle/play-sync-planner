@@ -25,6 +25,7 @@ import {
   type SettlementPaymentProgress
 } from "@/lib/domain/settlement";
 import { buildPublicSettlementUrl } from "@/lib/domain/plans";
+import { summarizeSettlementReminderLogs, type SettlementReminderLogView } from "@/lib/domain/reminder-log";
 import { formatDateTime, formatYen } from "@/lib/format";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
@@ -84,6 +85,8 @@ type SettlementRow = {
 
 type ReminderLogRow = {
   sent_at: string;
+  recipient_names: string[] | null;
+  reminder_message: string | null;
 };
 
 type ShareLinkRow = {
@@ -129,7 +132,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at)"
+      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at, recipient_names, reminder_message)"
     )
     .eq("id", planId)
     .single();
@@ -151,6 +154,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     );
   });
   const reminderLogs = ((plan.settlement_reminder_logs ?? []) as ReminderLogRow[]).sort((a, b) => b.sent_at.localeCompare(a.sent_at));
+  const reminderLogSummary = summarizeSettlementReminderLogs(reminderLogs);
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost:3000";
   const protocol = host.includes("localhost") ? "http" : "https";
@@ -299,8 +303,8 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                 recipientNames={[...new Set(unpaidSettlements.map((settlement) => participantName(settlement.from_participant)))]}
                 message={paymentRequestMessage}
                 markSentAction={markReminderSent}
-                latestSentAt={reminderLogs[0]?.sent_at}
-                sentCount={reminderLogs.length}
+                latestSentAt={reminderLogSummary.latestPaymentRequestSentAt}
+                sentCount={reminderLogSummary.paymentRequestCount}
                 textareaLabel="支払い依頼文面"
                 markSentLabel="依頼済みに記録"
               />
@@ -319,8 +323,8 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                 recipientNames={[...new Set(settlementNextActions.confirmationWaiting.map((item) => item.participantName))]}
                 message={confirmationRequestMessage}
                 markSentAction={markReminderSent}
-                latestSentAt={reminderLogs[0]?.sent_at}
-                sentCount={reminderLogs.length}
+                latestSentAt={reminderLogSummary.latestConfirmationRequestSentAt}
+                sentCount={reminderLogSummary.confirmationRequestCount}
                 textareaLabel="受け取り確認依頼文面"
                 markSentLabel="確認依頼済みに記録"
                 emptyText="確認待ちはありません。"
@@ -331,6 +335,22 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           </div>
         </Card>
       </section>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-ink">送信記録</h2>
+        <p className="mt-1 text-sm leading-6 text-ink/60">支払い依頼と確認依頼を分けて確認できます。</p>
+        <div className="mt-5">
+          {reminderLogSummary.recentLogs.length > 0 ? (
+            <div className="grid gap-2">
+              {reminderLogSummary.recentLogs.slice(0, 6).map((log) => (
+                <SettlementReminderLogItem key={`${log.sentAt}-${log.label}-${log.recipientNames.join(",")}`} log={log} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState>送信記録はまだありません。</EmptyState>
+          )}
+        </div>
+      </Card>
 
       <Card>
         <h2 className="text-lg font-semibold text-ink">清算結果</h2>
@@ -482,6 +502,20 @@ function NextActionList({
       ) : (
         <p className="mt-3 rounded-lg border border-dashed border-moss/24 bg-cream/54 px-3 py-2 text-sm text-ink/58">{emptyText}</p>
       )}
+    </div>
+  );
+}
+
+function SettlementReminderLogItem({ log }: { log: SettlementReminderLogView }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-white/75 bg-white/58 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">{log.label}</span>
+        <span className="text-sm font-medium text-ink">
+          {log.recipientNames.length > 0 ? log.recipientNames.join("、") : "宛先未記録"}
+        </span>
+      </div>
+      <span className="text-xs text-ink/58">{formatDateTime(log.sentAt)}</span>
     </div>
   );
 }
