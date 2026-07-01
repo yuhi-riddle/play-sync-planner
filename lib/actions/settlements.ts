@@ -370,7 +370,7 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 
   const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
   if (error || !settlement || plan?.owner_user_id !== userId) {
-    throw new Error("主催者だけが清算支払いを記録できます");
+    throw new Error("主催者だけが支払い記録を追加できます");
   }
 
   const currentProgress = summarizeSettlementPaymentProgress(

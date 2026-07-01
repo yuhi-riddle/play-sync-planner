@@ -76,7 +76,14 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
                 <AnswerStat label="未" value={candidate.unanswered} tone="text-ink/55" />
               </div>
 
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/8" aria-label={`回答率 ${progressPercent(candidate)}%`}>
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-ink/8"
+                aria-label={`回答率 ${progressPercent(candidate)}%`}
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={candidate.totalParticipants}
+                aria-valuenow={candidate.answered}
+              >
                 <div className="h-full rounded-full bg-moss" style={{ width: `${progressPercent(candidate)}%` }} />
               </div>
             </div>

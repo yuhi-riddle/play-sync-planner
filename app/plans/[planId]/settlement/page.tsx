@@ -140,6 +140,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const createExpense = createExpenseAction.bind(null, plan.id);
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);
   const unpaidSettlements = settlements.filter((settlement) => settlementProgress(settlement).remainingAmount > 0);
+  const hasMissingPaymentInstructions = unpaidSettlements.some((settlement) => !settlement.payment_method && !settlement.payment_url);
   const settlementPaymentCount = settlements.reduce((total, settlement) => total + (settlement.settlement_payments ?? []).length, 0);
   const settlementOverview = summarizeSettlementOverview(
     settlements.map((settlement) => ({
@@ -168,9 +169,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   return (
     <div className="space-y-6">
       <PageHeader
-        title="清算"
+        title="支払い・清算"
         description={event?.title ? `${event.title} の支払いと清算をまとめます。` : "支払いと清算をまとめます。"}
-        action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整へ戻る</SecondaryLink>}
+        action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整に戻る</SecondaryLink>}
       />
 
       <section className="grid gap-3 md:grid-cols-4">
@@ -210,6 +211,11 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         <Card>
           <h2 className="text-lg font-semibold text-ink">支払い依頼文面</h2>
           <p className="mt-1 text-sm leading-6 text-ink/60">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
+          {hasMissingPaymentInstructions ? (
+            <p className="mt-3 rounded-lg border border-honey/35 bg-honey/14 p-3 text-sm leading-6 text-ink/70">
+              受け取り方法が未設定の清算があります。必要なら「清算結果」で送金先を入力してから文面をコピーしてください。
+            </p>
+          ) : null}
           <div className="mt-5">
             {paymentRequestMessage ? (
               <SettlementReminderCard
@@ -219,6 +225,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                 latestSentAt={reminderLogs[0]?.sent_at}
                 sentCount={reminderLogs.length}
                 textareaLabel="支払い依頼文面"
+                markSentLabel="依頼済みに記録"
               />
             ) : (
               <EmptyState>未払いの清算はありません。</EmptyState>
@@ -270,7 +277,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         {settlementPaymentCount > 0 ? (
           <p className="mt-1 text-sm leading-6 text-ink/60">清算支払いが始まっているため、立替支払いの編集と削除はロックしています。</p>
         ) : (
-          <p className="mt-1 text-sm leading-6 text-ink/60">入力ミスがあれば、清算支払いを記録する前にここで直せます。</p>
+          <p className="mt-1 text-sm leading-6 text-ink/60">入力ミスがあれば、支払った金額を記録する前にここで直せます。</p>
         )}
         <div className="mt-5 grid gap-3">
           {expenses.length > 0 ? (
@@ -374,11 +381,11 @@ function PaymentLink({ href, label }: { href: string; label: string }) {
 
 function SettlementActions({ settlement, progress }: { settlement: SettlementRow; progress: SettlementPaymentProgress }) {
   return (
-    <div className="grid min-w-72 gap-3">
+    <div className="grid w-full min-w-0 gap-3 md:min-w-72">
       {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
 
       <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-        <summary className="cursor-pointer text-sm font-bold text-ink">支払い先メモを設定</summary>
+        <summary className="cursor-pointer text-sm font-bold text-ink">受け取り方法を設定</summary>
         <form action={updateSettlementPaymentInstructionAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
           <label className="text-sm font-medium text-ink">
             <span className="text-ink/72">支払い方法</span>
@@ -390,7 +397,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
             />
           </label>
           <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">支払い先URL</span>
+            <span className="text-ink/72">送金先URL</span>
             <input
               name="payment_url"
               defaultValue={settlement.payment_url ?? ""}
@@ -408,19 +415,19 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
               placeholder="例: 送金後に連絡ください"
             />
           </label>
-          {settlement.payment_url ? <PaymentLink href={settlement.payment_url} label="支払い先を開く" /> : null}
+          {settlement.payment_url ? <PaymentLink href={settlement.payment_url} label="送金先を開く" /> : null}
           <button
             type="submit"
             className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           >
-            支払い先を保存
+            受け取り方法を保存
           </button>
         </form>
       </details>
 
       {progress.remainingAmount > 0 ? (
         <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-          <summary className="cursor-pointer text-sm font-bold text-ink">清算支払いを記録</summary>
+          <summary className="cursor-pointer text-sm font-bold text-ink">支払った金額を記録</summary>
           <form action={recordSettlementPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
             <label className="text-sm font-medium text-ink">
               <span className="text-ink/72">支払い金額</span>
@@ -444,11 +451,11 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
               />
             </label>
             <label className="text-sm font-medium text-ink">
-              <span className="text-ink/72">支払いURL</span>
+              <span className="text-ink/72">支払い記録URL</span>
               <input
                 name="payment_url"
                 className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-                placeholder="https://..."
+                placeholder="送金履歴や控えのURLがあれば"
               />
             </label>
             <label className="text-sm font-medium text-ink">
@@ -484,7 +491,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                   <p className="leading-6">{[payment.payment_method, payment.memo].filter(Boolean).join(" / ")}</p>
                 ) : null}
                 {payment.payment_url ? (
-                  <PaymentLink href={payment.payment_url} label="支払い先を開く" />
+                  <PaymentLink href={payment.payment_url} label="支払い記録を開く" />
                 ) : null}
                 {!payment.confirmed_at ? (
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>

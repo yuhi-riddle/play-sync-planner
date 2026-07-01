@@ -12,7 +12,8 @@ export function SettlementReminderCard({
   markSentAction,
   latestSentAt,
   sentCount = 0,
-  textareaLabel = "清算リマインド文面"
+  textareaLabel = "清算リマインド文面",
+  markSentLabel = "送信済みに記録"
 }: {
   recipientNames: string[];
   message: string;
@@ -20,6 +21,7 @@ export function SettlementReminderCard({
   latestSentAt?: string | null;
   sentCount?: number;
   textareaLabel?: string;
+  markSentLabel?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -65,7 +67,7 @@ export function SettlementReminderCard({
             type="submit"
             className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           >
-            送信済みに記録
+            {markSentLabel}
           </button>
         </form>
       </div>

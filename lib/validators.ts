@@ -37,19 +37,9 @@ const nullableUrl = z.preprocess(
   emptyToNull,
   z
     .string()
-    .url("支払いURLはURL形式で入力してください")
+    .url("URLは https://... の形式で入力してください")
     .nullable()
 );
-
-const requiredInteger = (requiredMessage: string, nonnegativeMessage: string) =>
-  z.preprocess((value) => {
-    const normalized = emptyToNull(value);
-    if (normalized === null) {
-      return undefined;
-    }
-
-    return Number(normalized);
-  }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).int("金額は1円単位で入力してください").nonnegative(nonnegativeMessage));
 
 const positiveInteger = (requiredMessage: string, positiveMessage: string) =>
   z.preprocess((value) => {
@@ -71,14 +61,14 @@ const optionalStringList = () =>
     return normalized === null ? [] : [String(normalized)];
   }, z.array(z.string().min(1)));
 
-const optionalIntegerList = () =>
+const optionalPositiveIntegerList = () =>
   z.preprocess((value) => {
     const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
     return values
       .map((entry) => emptyToNull(entry))
       .filter((entry): entry is string => entry !== null)
       .map((entry) => Number(entry));
-  }, z.array(z.number().int("金額は1円単位で入力してください").nonnegative("金額は0円以上で入力してください")));
+  }, z.array(z.number().int("金額は1円単位で入力してください").positive("個別金額は1円以上で入力してください")));
 
 const dateTimeLocalPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 
@@ -147,14 +137,14 @@ export const expenseSchema = z
   .object({
     title: z.string().trim().min(1, "支払い内容を入力してください"),
     payer_participant_id: z.string().trim().min(1, "支払った人を選択してください"),
-    amount: requiredInteger("金額を入力してください", "金額は0円以上で入力してください"),
+    amount: positiveInteger("金額を入力してください", "金額は1円以上で入力してください"),
     split_mode: z.enum(["equal", "individual"], {
       required_error: "割り方を選択してください",
       invalid_type_error: "割り方を選択してください"
     }),
     split_participant_ids: optionalStringList().default([]),
     individual_participant_ids: optionalStringList().default([]),
-    individual_split_amounts: optionalIntegerList().default([]),
+    individual_split_amounts: optionalPositiveIntegerList().default([]),
     memo: nullableText.default(null),
     payment_method: nullableText.default(null),
     payment_url: nullableUrl.default(null),

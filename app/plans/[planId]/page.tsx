@@ -152,7 +152,7 @@ export default async function PlanDetailPage({
         action={
           <div className="flex flex-wrap gap-3">
             {!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : null}
-            <SecondaryLink href={`/plans/${plan.id}/settlement`}>清算へ</SecondaryLink>
+            {isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/settlement`}>支払い・清算へ</SecondaryLink> : null}
           </div>
         }
       />
@@ -242,8 +242,8 @@ export default async function PlanDetailPage({
         <h2 className="text-lg font-semibold text-ink">調整メモ</h2>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70">{plan.memo?.trim() ? plan.memo : "メモはまだありません。"}</p>
         <div className="mt-5 flex flex-wrap gap-3">
-          {event?.id ? <SecondaryLink href={`/events/${event.id}`}>イベント詳細へ</SecondaryLink> : null}
-          <SecondaryLink href="/plans">調整一覧へ</SecondaryLink>
+          {event?.id ? <SecondaryLink href={`/events/${event.id}`}>予定詳細へ</SecondaryLink> : null}
+          <SecondaryLink href="/plans">調整カレンダーへ</SecondaryLink>
         </div>
       </Card>
     </div>
@@ -285,7 +285,14 @@ function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
           <AnswerCount label="未" value={candidate.unanswered} tone="text-ink/55" />
         </div>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink/8" aria-label={`回答率 ${answeredPercent}%`}>
+      <div
+        className="mt-4 h-2 overflow-hidden rounded-full bg-ink/8"
+        aria-label={`回答率 ${answeredPercent}%`}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={candidate.totalParticipants}
+        aria-valuenow={candidate.answered}
+      >
         <div className="h-full rounded-full bg-moss" style={{ width: `${answeredPercent}%` }} />
       </div>
       {!candidate.recommended && candidate.hasPendingAnswers ? (

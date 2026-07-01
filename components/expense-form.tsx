@@ -78,7 +78,7 @@ export function ExpenseForm({
           name="amount"
           type="number"
           step={1}
-          min={0}
+          min={1}
           defaultValue={initialValues?.amount}
           required
           requiredMessage="金額を入力してください"
@@ -156,7 +156,7 @@ export function ExpenseForm({
                     <input
                       name="individual_split_amounts"
                       type="number"
-                      min={0}
+                      min={1}
                       step={1}
                       value={individualAmounts[participant.id] ?? ""}
                       onChange={(event) =>

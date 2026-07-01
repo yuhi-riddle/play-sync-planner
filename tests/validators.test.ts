@@ -286,6 +286,18 @@ describe("expenseSchema", () => {
     expect(result.is_important).toBe(false);
   });
 
+  it("rejects zero yen expenses", () => {
+    expect(() =>
+      expenseSchema.parse({
+        title: "チケット代",
+        payer_participant_id: "alice",
+        amount: "0",
+        split_mode: "equal",
+        split_participant_ids: ["alice"]
+      })
+    ).toThrow("金額は1円以上で入力してください");
+  });
+
   it("rejects a negative amount", () => {
     expect(() =>
       expenseSchema.parse({
@@ -295,7 +307,7 @@ describe("expenseSchema", () => {
         split_mode: "equal",
         split_participant_ids: ["alice"]
       })
-    ).toThrow("金額は0円以上で入力してください");
+    ).toThrow("金額は1円以上で入力してください");
   });
 
   it("rejects individual split expenses when the total does not match", () => {
@@ -374,6 +386,6 @@ describe("settlementPaymentInstructionSchema", () => {
         payment_url: "not-a-url",
         memo: ""
       })
-    ).toThrow("支払いURLはURL形式で入力してください");
+    ).toThrow("URLは https://... の形式で入力してください");
   });
 });

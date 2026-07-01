@@ -39,7 +39,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       <Card>
         <dl className="grid gap-3 sm:grid-cols-2">
           <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
-          <Info label="管理状態" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
+          <Info label="進行状況" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
           <Info label="場所メモ" value={event.location_name ?? "未設定"} />
           <Info label="URL" value={event.url ?? "未設定"} />
           <Info label="メモ" value={event.memo ?? "未設定"} />
