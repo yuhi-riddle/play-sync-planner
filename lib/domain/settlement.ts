@@ -21,6 +21,18 @@ export type SettlementTransfer = {
   amount: number;
 };
 
+export type SettlementPaymentForProgress = {
+  amount: number;
+  confirmedAt: string | null;
+};
+
+export type SettlementPaymentProgress = {
+  paidAmount: number;
+  confirmedAmount: number;
+  remainingAmount: number;
+  status: "unpaid" | "partially_paid" | "paid" | "confirmed";
+};
+
 type SettlementInput = {
   participants: SettlementParticipant[];
   expenses: ExpenseForSettlement[];
@@ -147,4 +159,38 @@ export function calculateSettlementTransfers({ participants, expenses }: Settlem
   }
 
   return transfers;
+}
+
+export function summarizeSettlementPaymentProgress(
+  settlementAmount: number,
+  payments: SettlementPaymentForProgress[]
+): SettlementPaymentProgress {
+  assertYenAmount(settlementAmount);
+
+  const paidAmount = payments.reduce((total, payment) => {
+    assertYenAmount(payment.amount);
+    return total + payment.amount;
+  }, 0);
+  const confirmedAmount = payments.reduce((total, payment) => total + (payment.confirmedAt ? payment.amount : 0), 0);
+
+  if (paidAmount > settlementAmount) {
+    throw new Error("支払い済み金額が請求額を超えています");
+  }
+
+  const remainingAmount = settlementAmount - paidAmount;
+  const status =
+    settlementAmount === 0 || confirmedAmount === settlementAmount
+      ? "confirmed"
+      : paidAmount === settlementAmount
+        ? "paid"
+        : paidAmount > 0
+          ? "partially_paid"
+          : "unpaid";
+
+  return {
+    paidAmount,
+    confirmedAmount,
+    remainingAmount,
+    status
+  };
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEqualExpenseSplits,
   calculateSettlementTransfers,
+  summarizeSettlementPaymentProgress,
   validateIndividualSplits
 } from "@/lib/domain/settlement";
 
@@ -109,5 +110,45 @@ describe("calculateSettlementTransfers", () => {
       { fromParticipantId: "bob", toParticipantId: "alice", amount: 500 },
       { fromParticipantId: "bob", toParticipantId: "chika", amount: 900 }
     ]);
+  });
+});
+
+describe("summarizeSettlementPaymentProgress", () => {
+  it("summarizes partial settlement payments", () => {
+    expect(
+      summarizeSettlementPaymentProgress(3000, [
+        { amount: 1000, confirmedAt: null },
+        { amount: 500, confirmedAt: null }
+      ])
+    ).toEqual({
+      paidAmount: 1500,
+      confirmedAmount: 0,
+      remainingAmount: 1500,
+      status: "partially_paid"
+    });
+  });
+
+  it("marks a settlement as paid when the full amount is recorded but not confirmed", () => {
+    expect(summarizeSettlementPaymentProgress(3000, [{ amount: 3000, confirmedAt: null }])).toEqual({
+      paidAmount: 3000,
+      confirmedAmount: 0,
+      remainingAmount: 0,
+      status: "paid"
+    });
+  });
+
+  it("marks a settlement as confirmed when the full amount is confirmed", () => {
+    expect(summarizeSettlementPaymentProgress(3000, [{ amount: 3000, confirmedAt: "2026-07-01T00:00:00Z" }])).toEqual({
+      paidAmount: 3000,
+      confirmedAmount: 3000,
+      remainingAmount: 0,
+      status: "confirmed"
+    });
+  });
+
+  it("rejects overpayments", () => {
+    expect(() => summarizeSettlementPaymentProgress(3000, [{ amount: 3001, confirmedAt: null }])).toThrow(
+      "支払い済み金額が請求額を超えています"
+    );
   });
 });

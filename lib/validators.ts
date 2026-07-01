@@ -51,6 +51,16 @@ const requiredInteger = (requiredMessage: string, nonnegativeMessage: string) =>
     return Number(normalized);
   }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).int("金額は1円単位で入力してください").nonnegative(nonnegativeMessage));
 
+const positiveInteger = (requiredMessage: string, positiveMessage: string) =>
+  z.preprocess((value) => {
+    const normalized = emptyToNull(value);
+    if (normalized === null) {
+      return undefined;
+    }
+
+    return Number(normalized);
+  }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).int("金額は1円単位で入力してください").positive(positiveMessage));
+
 const optionalStringList = () =>
   z.preprocess((value) => {
     if (Array.isArray(value)) {
@@ -185,6 +195,13 @@ export const expenseSchema = z
     }
   });
 
+export const settlementPaymentSchema = z.object({
+  amount: positiveInteger("支払い金額を入力してください", "支払い金額は1円以上で入力してください"),
+  payment_method: nullableText.default(null),
+  payment_url: nullableUrl.default(null),
+  memo: nullableText.default(null)
+});
+
 const newlineList = (message: string) =>
   z.preprocess((value) => {
     if (Array.isArray(value)) {
@@ -270,3 +287,4 @@ export const planSchema = z
 export type EventFormValues = z.infer<typeof eventSchema>;
 export type PlanFormValues = z.infer<typeof planSchema>;
 export type ExpenseFormValues = z.infer<typeof expenseSchema>;
+export type SettlementPaymentFormValues = z.infer<typeof settlementPaymentSchema>;

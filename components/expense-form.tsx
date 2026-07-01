@@ -10,16 +10,38 @@ type ParticipantOption = {
   displayName: string;
 };
 
+type ExpenseFormInitialValues = {
+  title?: string | null;
+  amount?: number | null;
+  payerParticipantId?: string | null;
+  memo?: string | null;
+  paymentMethod?: string | null;
+  paymentUrl?: string | null;
+  splitMode?: "equal" | "individual";
+  splitParticipantIds?: string[];
+  individualAmounts?: Record<string, number>;
+};
+
 export function ExpenseForm({
   participants,
-  action
+  action,
+  initialValues,
+  submitLabel = "支払いを追加"
 }: {
   participants: ParticipantOption[];
   action: (formData: FormData) => void | Promise<void>;
+  initialValues?: ExpenseFormInitialValues;
+  submitLabel?: string;
 }) {
-  const [splitMode, setSplitMode] = useState<"equal" | "individual">("equal");
-  const [selectedIds, setSelectedIds] = useState(() => new Set(participants.map((participant) => participant.id)));
-  const [individualAmounts, setIndividualAmounts] = useState<Record<string, string>>({});
+  const [splitMode, setSplitMode] = useState<"equal" | "individual">(initialValues?.splitMode ?? "equal");
+  const [selectedIds, setSelectedIds] = useState(
+    () => new Set(initialValues?.splitParticipantIds?.length ? initialValues.splitParticipantIds : participants.map((participant) => participant.id))
+  );
+  const [individualAmounts, setIndividualAmounts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      Object.entries(initialValues?.individualAmounts ?? {}).map(([participantId, amount]) => [participantId, String(amount)])
+    )
+  );
 
   const selectedCount = selectedIds.size;
   const selectedParticipants = useMemo(
@@ -42,8 +64,25 @@ export function ExpenseForm({
   return (
     <form action={action} className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-        <TextField label="支払い内容" name="title" required requiredMessage="何の支払いか入力してください" placeholder="例: チケット代" />
-        <TextField label="金額" name="amount" type="number" step={1} min={0} required requiredMessage="金額を入力してください" placeholder="例: 3600" />
+        <TextField
+          label="支払い内容"
+          name="title"
+          defaultValue={initialValues?.title}
+          required
+          requiredMessage="何の支払いか入力してください"
+          placeholder="例: チケット代"
+        />
+        <TextField
+          label="金額"
+          name="amount"
+          type="number"
+          step={1}
+          min={0}
+          defaultValue={initialValues?.amount}
+          required
+          requiredMessage="金額を入力してください"
+          placeholder="例: 3600"
+        />
       </div>
 
       <label className="block text-sm font-medium text-ink">
@@ -54,7 +93,7 @@ export function ExpenseForm({
           className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
           onInvalid={(event) => event.currentTarget.setCustomValidity("支払った人を選択してください")}
           onInput={(event) => event.currentTarget.setCustomValidity("")}
-          defaultValue=""
+          defaultValue={initialValues?.payerParticipantId ?? ""}
         >
           <option value="" disabled>
             --- 選択してください ---
@@ -140,17 +179,17 @@ export function ExpenseForm({
       </fieldset>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <TextField label="支払い方法メモ" name="payment_method" placeholder="例: PayPay、銀行振込、現金" />
-        <TextField label="支払い用URL" name="payment_url" placeholder="https://..." />
+        <TextField label="支払い方法メモ" name="payment_method" defaultValue={initialValues?.paymentMethod} placeholder="例: PayPay、銀行振込、現金" />
+        <TextField label="支払い用URL" name="payment_url" defaultValue={initialValues?.paymentUrl} placeholder="https://..." />
       </div>
-      <TextArea label="メモ" name="memo" rows={3} placeholder="補足があれば入力します。" />
+      <TextArea label="メモ" name="memo" defaultValue={initialValues?.memo} rows={3} placeholder="補足があれば入力します。" />
 
       <button
         type="submit"
         className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
       >
         <ReceiptText aria-hidden="true" className="h-4 w-4" />
-        支払いを追加
+        {submitLabel}
       </button>
     </form>
   );

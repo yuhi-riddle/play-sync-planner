@@ -16,8 +16,9 @@ users
  │       ├─ participants
  │       ├─ expenses
  │       │   └─ expense_splits
- │       ├─ settlements
- │       │   └─ payment_proofs
+│       ├─ settlements
+│       │   ├─ settlement_payments
+│       │   └─ payment_proofs
  │       ├─ settlement_reminder_logs
  │       ├─ reminders
  │       └─ share_links
@@ -229,6 +230,29 @@ status 候補：
 - paid
 - confirmed
 
+## settlement_payments
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| id | uuid | yes | 清算支払いID |
+| settlement_id | uuid | yes | 清算ID |
+| paid_by_participant_id | uuid | no | 支払った参加者 |
+| amount | integer | yes | 支払い金額 |
+| payment_method | text | no | 支払い方法メモ |
+| payment_url | text | no | 支払い用URL |
+| memo | text | no | メモ |
+| paid_at | timestamptz | yes | 支払い記録日時 |
+| confirmed_at | timestamptz | no | 受け取り確認日時 |
+| created_at | timestamptz | yes | 作成日時 |
+| updated_at | timestamptz | yes | 更新日時 |
+
+用途：
+
+- 清算に対する実際の支払い履歴を保存する
+- 一部支払いを扱うため、1つの `settlements` に複数行を持てる
+- 支払いごとに受け取り確認する
+- 支払い合計が `settlements.amount` を超えないようアプリ側で検証する
+
 ## payment_proofs
 
 | カラム名 | 型 | 必須 | 説明 |
@@ -337,6 +361,10 @@ Phase 3-A：
 - settlements
 - payment_proofs
 - settlement_reminder_logs
+
+Phase 3-B：
+
+- settlement_payments
 
 後続Phase：
 

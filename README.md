@@ -29,6 +29,9 @@ Madoi は、友人同士の遊びや公演参加の日程を合わせるため�
 - 支払い履歴追加
 - 均等割り・個別金額による清算計算
 - 清算の支払い済み・受け取り確認
+- 立替支払いの編集・削除
+- 一部清算支払いの記録
+- 清算支払いごとの受け取り確認
 - 清算リマインド文面コピーと送信済み記録
 
 ## 技術スタック
@@ -65,6 +68,7 @@ supabase/migrations/002_calendar_integrations.sql
 supabase/migrations/003_plan_reminder_settings.sql
 supabase/migrations/004_plan_reminder_logs.sql
 supabase/migrations/005_settlement_core.sql
+supabase/migrations/006_settlement_payments.sql
 ```
 
 Google Calendar 連携を使う場合は、次の手順も実施してください。
@@ -161,3 +165,14 @@ npm run build
 - 未払いの清算リマインド文面をコピーし、送信済みとして記録できる
 
 外部決済サービスへの直接連携、支払い証拠画像アップロード、自動リマインド送信はまだ行いません。
+
+## Phase 3-B 清算の運用改善
+
+清算支払いを始める前であれば、立替支払いを編集・削除できます。清算支払いは別履歴として保存し、一部支払いにも対応します。
+
+- 立替支払いの入力ミスを編集・削除できる
+- 清算支払いが1件でも記録された後は、立替支払いの変更をロックする
+- 清算支払いを一部金額で記録できる
+- 支払いごとに支払い方法、URL、メモを保存できる
+- 支払いごとに受け取り確認できる
+- 未払いリマインドは残額ベースで作る

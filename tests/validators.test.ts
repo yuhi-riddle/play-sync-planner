@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { eventSchema, expenseSchema, planSchema } from "@/lib/validators";
+import { eventSchema, expenseSchema, planSchema, settlementPaymentSchema } from "@/lib/validators";
 
 describe("eventSchema", () => {
   it("accepts a minimal event", () => {
@@ -284,5 +284,45 @@ describe("expenseSchema", () => {
         individual_split_amounts: ["500", "900"]
       })
     ).toThrow("個別金額の合計を支払い金額と同じにしてください");
+  });
+});
+
+describe("settlementPaymentSchema", () => {
+  it("accepts a partial payment", () => {
+    const result = settlementPaymentSchema.parse({
+      amount: "1000",
+      payment_method: "PayPay",
+      payment_url: "https://example.com/pay",
+      memo: "先に一部だけ"
+    });
+
+    expect(result).toEqual({
+      amount: 1000,
+      payment_method: "PayPay",
+      payment_url: "https://example.com/pay",
+      memo: "先に一部だけ"
+    });
+  });
+
+  it("rejects zero yen payments", () => {
+    expect(() =>
+      settlementPaymentSchema.parse({
+        amount: "0",
+        payment_method: "",
+        payment_url: "",
+        memo: ""
+      })
+    ).toThrow("支払い金額は1円以上で入力してください");
+  });
+
+  it("rejects negative payments", () => {
+    expect(() =>
+      settlementPaymentSchema.parse({
+        amount: "-1",
+        payment_method: "",
+        payment_url: "",
+        memo: ""
+      })
+    ).toThrow("支払い金額は1円以上で入力してください");
   });
 });
