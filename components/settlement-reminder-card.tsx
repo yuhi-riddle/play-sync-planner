@@ -11,13 +11,15 @@ export function SettlementReminderCard({
   message,
   markSentAction,
   latestSentAt,
-  sentCount = 0
+  sentCount = 0,
+  textareaLabel = "清算リマインド文面"
 }: {
   recipientNames: string[];
   message: string;
   markSentAction: (formData: FormData) => void | Promise<void>;
   latestSentAt?: string | null;
   sentCount?: number;
+  textareaLabel?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -44,7 +46,7 @@ export function SettlementReminderCard({
         className="min-h-36 w-full resize-y rounded-lg border border-ink/10 bg-white/82 p-3 text-sm leading-6 text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
         value={message}
         readOnly
-        aria-label="清算リマインド文面"
+        aria-label={textareaLabel}
       />
       <div className="flex flex-wrap gap-3">
         <button

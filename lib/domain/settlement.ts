@@ -50,6 +50,15 @@ export type SettlementOverview = {
   confirmedCount: number;
 };
 
+export type SettlementPaymentRequest = {
+  fromName: string;
+  toName: string;
+  remainingAmount: number;
+  paymentMethod?: string | null;
+  paymentUrl?: string | null;
+  memo?: string | null;
+};
+
 type SettlementInput = {
   participants: SettlementParticipant[];
   expenses: ExpenseForSettlement[];
@@ -241,4 +250,54 @@ export function summarizeSettlementOverview(settlements: SettlementForOverview[]
       confirmedCount: 0
     }
   );
+}
+
+export function buildSettlementPaymentRequestMessage({
+  title,
+  requests
+}: {
+  title: string | null | undefined;
+  requests: SettlementPaymentRequest[];
+}) {
+  const activeRequests = requests.filter((request) => request.remainingAmount > 0);
+  if (activeRequests.length === 0) {
+    return "";
+  }
+
+  const lines = ["清算のお願いです。", "", `${title?.trim() || "予定"} の清算をお願いします。`, ""];
+
+  activeRequests.forEach((request, index) => {
+    if (index > 0) {
+      lines.push("");
+    }
+
+    lines.push(`${toPoliteName(request.fromName)}`);
+    lines.push(`${toPoliteName(request.toName)}へ ${formatYenText(request.remainingAmount)} の支払いをお願いします。`);
+
+    if (request.paymentMethod) {
+      lines.push(`支払い方法: ${request.paymentMethod}`);
+    }
+
+    if (request.paymentUrl) {
+      lines.push(`支払い先: ${request.paymentUrl}`);
+    }
+
+    if (request.memo) {
+      lines.push(`メモ: ${request.memo}`);
+    }
+  });
+
+  lines.push("", "支払いが終わったら、Madoi上で支払いを記録してください。");
+
+  return lines.join("\n");
+}
+
+function toPoliteName(name: string) {
+  const trimmed = name.trim() || "参加者";
+  return /(さん|様|くん|君|ちゃん)$/.test(trimmed) ? trimmed : `${trimmed}さん`;
+}
+
+function formatYenText(amount: number) {
+  assertYenAmount(amount);
+  return `${amount.toLocaleString("ja-JP")}円`;
 }

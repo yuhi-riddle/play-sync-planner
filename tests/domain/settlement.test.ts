@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildEqualExpenseSplits,
+  buildSettlementPaymentRequestMessage,
   calculateSettlementTransfers,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
@@ -182,5 +183,34 @@ describe("summarizeSettlementOverview", () => {
       paidCount: 0,
       confirmedCount: 1
     });
+  });
+});
+
+describe("buildSettlementPaymentRequestMessage", () => {
+  it("builds payment requests with remaining amounts and payment URLs", () => {
+    const message = buildSettlementPaymentRequestMessage({
+      title: "週末の予定",
+      requests: [
+        {
+          fromName: "Bob",
+          toName: "Alice",
+          remainingAmount: 1500,
+          paymentMethod: "PayPay",
+          paymentUrl: "https://example.com/pay/alice",
+          memo: "送金後に連絡ください"
+        }
+      ]
+    });
+
+    expect(message).toContain("週末の予定");
+    expect(message).toContain("Bobさん");
+    expect(message).toContain("Aliceさんへ 1,500円");
+    expect(message).toContain("PayPay");
+    expect(message).toContain("https://example.com/pay/alice");
+    expect(message).toContain("送金後に連絡ください");
+  });
+
+  it("returns an empty message when no requests remain", () => {
+    expect(buildSettlementPaymentRequestMessage({ title: "予定", requests: [] })).toBe("");
   });
 });

@@ -206,6 +206,12 @@ export const settlementPaymentSchema = z.object({
   memo: nullableText.default(null)
 });
 
+export const settlementPaymentInstructionSchema = z.object({
+  payment_method: nullableText.default(null),
+  payment_url: nullableUrl.default(null),
+  memo: nullableText.default(null)
+});
+
 const newlineList = (message: string) =>
   z.preprocess((value) => {
     if (Array.isArray(value)) {
@@ -292,3 +298,4 @@ export type EventFormValues = z.infer<typeof eventSchema>;
 export type PlanFormValues = z.infer<typeof planSchema>;
 export type ExpenseFormValues = z.infer<typeof expenseSchema>;
 export type SettlementPaymentFormValues = z.infer<typeof settlementPaymentSchema>;
+export type SettlementPaymentInstructionFormValues = z.infer<typeof settlementPaymentInstructionSchema>;

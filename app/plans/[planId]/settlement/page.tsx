@@ -9,9 +9,11 @@ import {
   deleteExpenseAction,
   markSettlementReminderSentAction,
   recordSettlementPaymentAction,
+  updateSettlementPaymentInstructionAction,
   updateExpenseAction
 } from "@/lib/actions/settlements";
 import {
+  buildSettlementPaymentRequestMessage,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
   type SettlementPaymentProgress
@@ -102,30 +104,6 @@ function settlementProgress(settlement: SettlementRow) {
   );
 }
 
-function buildSettlementReminderMessage(settlements: SettlementRow[]) {
-  const unpaid = settlements
-    .map((settlement) => ({
-      settlement,
-      progress: settlementProgress(settlement)
-    }))
-    .filter(({ progress }) => progress.remainingAmount > 0);
-
-  if (unpaid.length === 0) {
-    return "";
-  }
-
-  return [
-    "清算のお願いです。",
-    "",
-    ...unpaid.map(
-      ({ settlement, progress }) =>
-        `${participantName(settlement.from_participant)} → ${participantName(settlement.to_participant)}: ${formatYen(progress.remainingAmount)}`
-    ),
-    "",
-    "支払いが終わったら、Madoi上で支払い済みにしておいてください。"
-  ].join("\n");
-}
-
 export default async function SettlementPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = await params;
   const userId = await getCurrentUserId();
@@ -172,7 +150,20 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
       }))
     }))
   );
-  const reminderMessage = buildSettlementReminderMessage(settlements);
+  const paymentRequestMessage = buildSettlementPaymentRequestMessage({
+    title: event?.title,
+    requests: settlements.map((settlement) => {
+      const progress = settlementProgress(settlement);
+      return {
+        fromName: participantName(settlement.from_participant),
+        toName: participantName(settlement.to_participant),
+        remainingAmount: progress.remainingAmount,
+        paymentMethod: settlement.payment_method,
+        paymentUrl: settlement.payment_url,
+        memo: settlement.memo
+      };
+    })
+  });
 
   return (
     <div className="space-y-6">
@@ -217,16 +208,17 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-ink">清算リマインド</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">未払いの人に送る文面をコピーして、送ったら記録できます。</p>
+          <h2 className="text-lg font-semibold text-ink">支払い依頼文面</h2>
+          <p className="mt-1 text-sm leading-6 text-ink/60">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
           <div className="mt-5">
-            {reminderMessage ? (
+            {paymentRequestMessage ? (
               <SettlementReminderCard
                 recipientNames={[...new Set(unpaidSettlements.map((settlement) => participantName(settlement.from_participant)))]}
-                message={reminderMessage}
+                message={paymentRequestMessage}
                 markSentAction={markReminderSent}
                 latestSentAt={reminderLogs[0]?.sent_at}
                 sentCount={reminderLogs.length}
+                textareaLabel="支払い依頼文面"
               />
             ) : (
               <EmptyState>未払いの清算はありません。</EmptyState>
@@ -384,6 +376,47 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
   return (
     <div className="grid min-w-72 gap-3">
       {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
+
+      <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
+        <summary className="cursor-pointer text-sm font-bold text-ink">支払い先メモを設定</summary>
+        <form action={updateSettlementPaymentInstructionAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
+          <label className="text-sm font-medium text-ink">
+            <span className="text-ink/72">支払い方法</span>
+            <input
+              name="payment_method"
+              defaultValue={settlement.payment_method ?? ""}
+              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              placeholder="例: PayPay、銀行振込、現金"
+            />
+          </label>
+          <label className="text-sm font-medium text-ink">
+            <span className="text-ink/72">支払い先URL</span>
+            <input
+              name="payment_url"
+              defaultValue={settlement.payment_url ?? ""}
+              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              placeholder="https://..."
+            />
+          </label>
+          <label className="text-sm font-medium text-ink">
+            <span className="text-ink/72">メモ</span>
+            <textarea
+              name="memo"
+              rows={2}
+              defaultValue={settlement.memo ?? ""}
+              className="mt-2 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              placeholder="例: 送金後に連絡ください"
+            />
+          </label>
+          {settlement.payment_url ? <PaymentLink href={settlement.payment_url} label="支払い先を開く" /> : null}
+          <button
+            type="submit"
+            className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          >
+            支払い先を保存
+          </button>
+        </form>
+      </details>
 
       {progress.remainingAmount > 0 ? (
         <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">

@@ -11,7 +11,12 @@ import {
 } from "@/lib/domain/settlement";
 import { formDataToObject } from "@/lib/form-data";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
-import { expenseSchema, settlementPaymentSchema, type ExpenseFormValues } from "@/lib/validators";
+import {
+  expenseSchema,
+  settlementPaymentInstructionSchema,
+  settlementPaymentSchema,
+  type ExpenseFormValues
+} from "@/lib/validators";
 
 type ParticipantRow = {
   id: string;
@@ -470,6 +475,42 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     .from("plans")
     .update({ settlement_status: (openSettlements ?? []).length === 0 ? "settled" : "settling" })
     .eq("id", settlement.plan_id);
+
+  revalidatePath(`/plans/${settlement.plan_id}`);
+  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+}
+
+export async function updateSettlementPaymentInstructionAction(settlementId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const values = settlementPaymentInstructionSchema.parse(formDataToObject(formData));
+  const supabase = await createSupabaseServerClient();
+  const { data: settlement, error } = await supabase
+    .from("settlements")
+    .select("id, plan_id, plans(owner_user_id)")
+    .eq("id", settlementId)
+    .single();
+
+  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
+  if (error || !settlement || plan?.owner_user_id !== userId) {
+    throw new Error("主催者だけが支払い先メモを編集できます");
+  }
+
+  const { error: updateError } = await supabase
+    .from("settlements")
+    .update({
+      payment_method: values.payment_method,
+      payment_url: values.payment_url,
+      memo: values.memo
+    })
+    .eq("id", settlementId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);

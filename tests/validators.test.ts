@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { eventSchema, expenseSchema, planSchema, settlementPaymentSchema } from "@/lib/validators";
+import { eventSchema, expenseSchema, planSchema, settlementPaymentInstructionSchema, settlementPaymentSchema } from "@/lib/validators";
 
 describe("eventSchema", () => {
   it("accepts a minimal event", () => {
@@ -349,5 +349,31 @@ describe("settlementPaymentSchema", () => {
         memo: ""
       })
     ).toThrow("支払い金額は1円以上で入力してください");
+  });
+});
+
+describe("settlementPaymentInstructionSchema", () => {
+  it("accepts payment instructions for a settlement", () => {
+    const result = settlementPaymentInstructionSchema.parse({
+      payment_method: "PayPay",
+      payment_url: "https://example.com/pay/alice",
+      memo: "送金後に連絡ください"
+    });
+
+    expect(result).toEqual({
+      payment_method: "PayPay",
+      payment_url: "https://example.com/pay/alice",
+      memo: "送金後に連絡ください"
+    });
+  });
+
+  it("rejects invalid payment URLs", () => {
+    expect(() =>
+      settlementPaymentInstructionSchema.parse({
+        payment_method: "PayPay",
+        payment_url: "not-a-url",
+        memo: ""
+      })
+    ).toThrow("支払いURLはURL形式で入力してください");
   });
 });
