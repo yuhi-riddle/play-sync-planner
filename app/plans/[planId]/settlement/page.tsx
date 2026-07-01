@@ -33,6 +33,7 @@ type ExpenseRow = {
   memo: string | null;
   payment_method: string | null;
   payment_url: string | null;
+  is_important: boolean;
   payer_participant_id: string;
   payer: ParticipantRelation;
   expense_splits: Array<{
@@ -132,7 +133,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at)"
+      "id, title, owner_user_id, events(id, title), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at)"
     )
     .eq("id", planId)
     .single();
@@ -260,9 +261,17 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="font-semibold text-ink">{expense.title}</p>
+                    {expense.is_important ? (
+                      <p className="mt-2 inline-flex rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">重要メモ</p>
+                    ) : null}
                     <p className="mt-1 text-sm text-ink/60">
                       {participantName(expense.payer)} が支払い / {formatDateTime(expense.paid_at)}
                     </p>
+                    {expense.memo ? (
+                      <p className={expense.is_important ? "mt-3 rounded-lg border border-clay/22 bg-white/75 p-3 text-sm leading-6 text-ink" : "mt-3 text-sm leading-6 text-ink/62"}>
+                        {expense.memo}
+                      </p>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
                         <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
@@ -291,6 +300,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                             memo: expense.memo,
                             paymentMethod: expense.payment_method,
                             paymentUrl: expense.payment_url,
+                            isImportant: expense.is_important,
                             splitMode: "individual",
                             splitParticipantIds: expense.expense_splits.map((split) => split.participant_id),
                             individualAmounts: Object.fromEntries(expense.expense_splits.map((split) => [split.participant_id, split.amount]))

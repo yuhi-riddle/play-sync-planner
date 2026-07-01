@@ -14,12 +14,11 @@ users
  │       ├─ candidate_dates
  │       │   └─ availability_answers
  │       ├─ participants
- │       ├─ expenses
- │       │   └─ expense_splits
+│       ├─ expenses
+│       │   └─ expense_splits
 │       ├─ settlements
 │       │   ├─ settlement_payments
-│       │   └─ payment_proofs
- │       ├─ settlement_reminder_logs
+│       ├─ settlement_reminder_logs
  │       ├─ reminders
  │       └─ share_links
  └─ calendar_integrations
@@ -191,6 +190,7 @@ answer 候補：
 | memo | text | no | メモ |
 | payment_method | text | no | 支払い方法メモ |
 | payment_url | text | no | 支払い用URL |
+| is_important | boolean | yes | 重要メモとして表示するか |
 | created_at | timestamptz | yes | 作成日時 |
 | updated_at | timestamptz | yes | 更新日時 |
 
@@ -253,7 +253,7 @@ status 候補：
 - 支払いごとに受け取り確認する
 - 支払い合計が `settlements.amount` を超えないようアプリ側で検証する
 
-## payment_proofs
+## payment_proofs deprecated
 
 | カラム名 | 型 | 必須 | 説明 |
 |---|---|---:|---|
@@ -272,6 +272,8 @@ proof_type 候補：
 
 - memo_url
 - image_url
+
+現在の画面では使用しない。支払い証拠画像アップロードは実装対象から外し、予約番号や当日必要な情報は `expenses.memo` と `expenses.is_important` で扱う。
 
 ## settlement_reminder_logs
 
@@ -359,12 +361,12 @@ Phase 3-A：
 - expenses
 - expense_splits
 - settlements
-- payment_proofs
 - settlement_reminder_logs
 
 Phase 3-B：
 
 - settlement_payments
+- expenses.is_important
 
 後続Phase：
 

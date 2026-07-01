@@ -216,7 +216,8 @@ export async function createExpenseAction(planId: string, formData: FormData) {
       amount: values.amount,
       memo: values.memo,
       payment_method: values.payment_method,
-      payment_url: values.payment_url
+      payment_url: values.payment_url,
+      is_important: values.is_important
     })
     .select("id")
     .single();
@@ -284,7 +285,8 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
       amount: values.amount,
       memo: values.memo,
       payment_method: values.payment_method,
-      payment_url: values.payment_url
+      payment_url: values.payment_url,
+      is_important: values.is_important
     })
     .eq("id", expenseId);
 
@@ -345,58 +347,6 @@ export async function deleteExpenseAction(expenseId: string) {
   revalidatePath(`/plans/${expense.plan_id}`);
   revalidatePath(`/plans/${expense.plan_id}/settlement`);
   redirect(`/plans/${expense.plan_id}/settlement`);
-}
-
-export async function markSettlementPaidAction(settlementId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    redirect("/login");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: settlement, error } = await supabase
-    .from("settlements")
-    .select("id, plan_id, from_participant_id, plans(owner_user_id)")
-    .eq("id", settlementId)
-    .single();
-
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
-  if (error || !settlement || plan?.owner_user_id !== userId) {
-    throw new Error("主催者だけが清算を更新できます");
-  }
-
-  const paymentMethod = optionalString(formData.get("payment_method"));
-  const paymentUrl = optionalString(formData.get("payment_url"));
-  const memo = optionalString(formData.get("memo"));
-
-  const { error: updateError } = await supabase
-    .from("settlements")
-    .update({
-      status: "paid",
-      paid_at: new Date().toISOString(),
-      payment_method: paymentMethod,
-      payment_url: paymentUrl,
-      memo
-    })
-    .eq("id", settlementId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  await supabase.from("payment_proofs").insert({
-    settlement_id: settlementId,
-    uploaded_by_participant_id: settlement.from_participant_id,
-    proof_type: "memo_url",
-    proof_url: paymentUrl,
-    memo,
-    payment_method: paymentMethod
-  });
-
-  await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
-
-  revalidatePath(`/plans/${settlement.plan_id}`);
-  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
 }
 
 export async function recordSettlementPaymentAction(settlementId: string, formData: FormData) {
@@ -508,52 +458,6 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
       confirmed_at: nextProgress.status === "confirmed" ? confirmedAt : null
     })
     .eq("id", settlement.id);
-
-  const { data: openSettlements } = await supabase
-    .from("settlements")
-    .select("id")
-    .eq("plan_id", settlement.plan_id)
-    .neq("status", "confirmed")
-    .limit(1);
-
-  await supabase
-    .from("plans")
-    .update({ settlement_status: (openSettlements ?? []).length === 0 ? "settled" : "settling" })
-    .eq("id", settlement.plan_id);
-
-  revalidatePath(`/plans/${settlement.plan_id}`);
-  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
-}
-
-export async function confirmSettlementReceivedAction(settlementId: string) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    redirect("/login");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: settlement, error } = await supabase
-    .from("settlements")
-    .select("id, plan_id, plans(owner_user_id)")
-    .eq("id", settlementId)
-    .single();
-
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
-  if (error || !settlement || plan?.owner_user_id !== userId) {
-    throw new Error("主催者だけが清算を更新できます");
-  }
-
-  const { error: updateError } = await supabase
-    .from("settlements")
-    .update({
-      status: "confirmed",
-      confirmed_at: new Date().toISOString()
-    })
-    .eq("id", settlementId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
 
   const { data: openSettlements } = await supabase
     .from("settlements")

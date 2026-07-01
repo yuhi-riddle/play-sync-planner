@@ -120,6 +120,9 @@ const booleanList = () =>
     return values.map((entry) => entry === true || entry === "true" || entry === "on");
   }, z.array(z.boolean()));
 
+const checkboxBoolean = () =>
+  z.preprocess((value) => value === true || value === "true" || value === "on", z.boolean()).default(false);
+
 export const eventSchema = z.object({
   category: z.preprocess(
     emptyToNull,
@@ -154,7 +157,8 @@ export const expenseSchema = z
     individual_split_amounts: optionalIntegerList().default([]),
     memo: nullableText.default(null),
     payment_method: nullableText.default(null),
-    payment_url: nullableUrl.default(null)
+    payment_url: nullableUrl.default(null),
+    is_important: checkboxBoolean()
   })
   .superRefine((values, context) => {
     if (values.split_mode === "equal") {

@@ -17,6 +17,7 @@ type ExpenseFormInitialValues = {
   memo?: string | null;
   paymentMethod?: string | null;
   paymentUrl?: string | null;
+  isImportant?: boolean | null;
   splitMode?: "equal" | "individual";
   splitParticipantIds?: string[];
   individualAmounts?: Record<string, number>;
@@ -182,7 +183,19 @@ export function ExpenseForm({
         <TextField label="支払い方法メモ" name="payment_method" defaultValue={initialValues?.paymentMethod} placeholder="例: PayPay、銀行振込、現金" />
         <TextField label="支払い用URL" name="payment_url" defaultValue={initialValues?.paymentUrl} placeholder="https://..." />
       </div>
-      <TextArea label="メモ" name="memo" defaultValue={initialValues?.memo} rows={3} placeholder="補足があれば入力します。" />
+      <label className="flex items-start gap-3 rounded-lg border border-moss/18 bg-mist/30 p-3 text-sm text-ink">
+        <input
+          type="checkbox"
+          name="is_important"
+          defaultChecked={Boolean(initialValues?.isImportant)}
+          className="mt-1 h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
+        />
+        <span>
+          <span className="block font-bold">重要メモとして表示</span>
+          <span className="mt-1 block leading-6 text-ink/62">予約番号、当日見せる情報、高額なチケット代など、あとで見返したい支払いに付けます。</span>
+        </span>
+      </label>
+      <TextArea label="メモ" name="memo" defaultValue={initialValues?.memo} rows={3} placeholder="例: 予約番号、当日必要な情報、購入ページの補足など" />
 
       <button
         type="submit"

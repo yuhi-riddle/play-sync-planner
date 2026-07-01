@@ -261,6 +261,31 @@ describe("expenseSchema", () => {
     expect(result.individual_split_amounts).toEqual([500, 1000]);
   });
 
+  it("marks expenses as important when the checkbox is submitted", () => {
+    const result = expenseSchema.parse({
+      title: "チケット代",
+      payer_participant_id: "alice",
+      amount: "12000",
+      split_mode: "equal",
+      split_participant_ids: ["alice", "bob"],
+      is_important: "on"
+    });
+
+    expect(result.is_important).toBe(true);
+  });
+
+  it("defaults expenses to not important", () => {
+    const result = expenseSchema.parse({
+      title: "飲み物代",
+      payer_participant_id: "alice",
+      amount: "500",
+      split_mode: "equal",
+      split_participant_ids: ["alice"]
+    });
+
+    expect(result.is_important).toBe(false);
+  });
+
   it("rejects a negative amount", () => {
     expect(() =>
       expenseSchema.parse({
