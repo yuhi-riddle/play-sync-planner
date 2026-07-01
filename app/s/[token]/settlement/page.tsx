@@ -5,6 +5,7 @@ import {
   type PublicSettlementExpense,
   type PublicSettlementItem
 } from "@/components/public-settlement-summary";
+import { PaymentRecordedNotice } from "@/components/payment-recorded-notice";
 import { SetupPanel } from "@/components/state-panels";
 import { Card, PageHeader } from "@/components/ui";
 import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlements";
@@ -108,12 +109,7 @@ export default async function PublicSettlementPage({
         title="支払い・清算"
         description="共有された予定の立替内容と、支払い先を確認できます。"
       />
-      {query.paid === "1" ? (
-        <div className="rounded-lg border border-moss/20 bg-mist/32 p-4">
-          <p className="font-bold text-ink">支払いを記録しました</p>
-          <p className="mt-1 text-sm leading-6 text-ink/66">主催者が受け取り確認をすると、清算済みに変わります。</p>
-        </div>
-      ) : null}
+      {query.paid === "1" ? <PaymentRecordedNotice /> : null}
       {expenses.length === 0 && settlements.length === 0 ? (
         <Card>
           <p className="text-sm leading-6 text-ink/70">まだ清算内容は登録されていません。</p>
