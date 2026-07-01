@@ -23,6 +23,8 @@ type ExpenseFormInitialValues = {
   individualAmounts?: Record<string, number>;
 };
 
+const paymentMethodOptions = ["PayPay", "銀行振込", "現金"];
+
 export function ExpenseForm({
   participants,
   action,
@@ -180,9 +182,20 @@ export function ExpenseForm({
       </fieldset>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <TextField label="支払い方法メモ" name="payment_method" defaultValue={initialValues?.paymentMethod} placeholder="例: PayPay、銀行振込、現金" />
+        <TextField
+          label="支払い方法"
+          name="payment_method"
+          defaultValue={initialValues?.paymentMethod}
+          placeholder="例: PayPay、銀行振込、現金"
+          list="expense-payment-method-options"
+        />
         <TextField label="支払い用URL" name="payment_url" defaultValue={initialValues?.paymentUrl} placeholder="https://..." />
       </div>
+      <datalist id="expense-payment-method-options">
+        {paymentMethodOptions.map((method) => (
+          <option key={method} value={method} />
+        ))}
+      </datalist>
       <label className="flex items-start gap-3 rounded-lg border border-moss/18 bg-mist/30 p-3 text-sm text-ink">
         <input
           type="checkbox"

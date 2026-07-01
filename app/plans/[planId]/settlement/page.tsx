@@ -16,6 +16,7 @@ import {
 } from "@/lib/actions/settlements";
 import {
   buildSettlementPaymentRequestMessage,
+  getPaymentInstructionView,
   summarizeSettlementNextActions,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
@@ -95,6 +96,8 @@ const settlementStatusLabels: Record<SettlementPaymentProgress["status"], string
   paid: "支払い済み",
   confirmed: "受け取り確認済み"
 };
+
+const paymentMethodOptions = ["PayPay", "銀行振込", "現金"];
 
 function firstParticipant(value: ParticipantRelation) {
   return Array.isArray(value) ? value[0] : value;
@@ -196,6 +199,11 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
 
   return (
     <div className="space-y-6">
+      <datalist id="settlement-payment-method-options">
+        {paymentMethodOptions.map((method) => (
+          <option key={method} value={method} />
+        ))}
+      </datalist>
       <PageHeader
         title="支払い・清算"
         description={event?.title ? `${event.title} の支払いと清算をまとめます。` : "支払いと清算をまとめます。"}
@@ -343,7 +351,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         )}
         <div className="mt-5 grid gap-3">
           {expenses.length > 0 ? (
-            expenses.map((expense) => (
+            expenses.map((expense) => {
+              const paymentView = getPaymentInstructionView(expense.payment_method, expense.payment_url);
+              return (
               <article key={expense.id} className="rounded-lg border border-white/75 bg-white/62 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -359,7 +369,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                         {expense.memo}
                       </p>
                     ) : null}
-                    {expense.payment_url ? <PaymentLink href={expense.payment_url} label="支払い・購入ページを開く" /> : null}
+                    {expense.payment_url ? <PaymentLink href={expense.payment_url} label="支払い・購入ページを開く" detail={paymentView.detail} /> : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
                         <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
@@ -408,7 +418,8 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                   </div>
                 ) : null}
               </article>
-            ))
+            );
+            })
           ) : (
             <EmptyState>支払い履歴はまだありません。</EmptyState>
           )}
@@ -457,20 +468,25 @@ function SummaryTile({ label, value, detail }: { label: string; value: string; d
   );
 }
 
-function PaymentLink({ href, label }: { href: string; label: string }) {
+function PaymentLink({ href, label, detail }: { href: string; label: string; detail?: string }) {
   return (
-    <a
-      className="mt-3 inline-flex min-h-9 items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-1 text-xs font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-    >
-      {label}
-    </a>
+    <div className="mt-3 flex flex-col items-start gap-1">
+      <a
+        className="inline-flex min-h-9 items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-1 text-xs font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {label}
+      </a>
+      {detail ? <span className="text-xs leading-5 text-ink/55">{detail}</span> : null}
+    </div>
   );
 }
 
 function SettlementActions({ settlement, progress }: { settlement: SettlementRow; progress: SettlementPaymentProgress }) {
+  const instructionView = getPaymentInstructionView(settlement.payment_method, settlement.payment_url);
+
   return (
     <div className="grid w-full min-w-0 gap-3 md:min-w-72">
       {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
@@ -482,6 +498,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
             <span className="text-ink/72">支払い方法</span>
             <input
               name="payment_method"
+              list="settlement-payment-method-options"
               defaultValue={settlement.payment_method ?? ""}
               className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               placeholder="例: PayPay、銀行振込、現金"
@@ -506,7 +523,11 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
               placeholder="例: 送金後に連絡ください"
             />
           </label>
-          {settlement.payment_url ? <PaymentLink href={settlement.payment_url} label="送金先を開く" /> : null}
+          {settlement.payment_url ? (
+            <PaymentLink href={settlement.payment_url} label={instructionView.linkLabel} detail={instructionView.detail} />
+          ) : (
+            <p className="text-xs leading-5 text-ink/55">{instructionView.detail}</p>
+          )}
           <button
             type="submit"
             className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
@@ -537,6 +558,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
               <span className="text-ink/72">支払い方法</span>
               <input
                 name="payment_method"
+                list="settlement-payment-method-options"
                 className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                 placeholder="例: PayPay"
               />
@@ -572,7 +594,9 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">支払い履歴</p>
           {[...(settlement.settlement_payments ?? [])]
             .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
-            .map((payment) => (
+            .map((payment) => {
+              const paymentView = getPaymentInstructionView(payment.payment_method, payment.payment_url);
+              return (
               <div key={payment.id} className="grid gap-2 rounded-lg border border-ink/8 bg-cream/60 p-3 text-sm text-ink/70">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-bold text-ink">{formatYen(payment.amount)}</span>
@@ -582,7 +606,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                   <p className="leading-6">{[payment.payment_method, payment.memo].filter(Boolean).join(" / ")}</p>
                 ) : null}
                 {payment.payment_url ? (
-                  <PaymentLink href={payment.payment_url} label="支払い記録を開く" />
+                  <PaymentLink href={payment.payment_url} label="支払い記録を開く" detail={paymentView.detail} />
                 ) : null}
                 {!payment.confirmed_at ? (
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>
@@ -595,7 +619,8 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                   </form>
                 ) : null}
               </div>
-            ))}
+            );
+            })}
         </div>
       ) : null}
     </div>

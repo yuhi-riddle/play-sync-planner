@@ -86,6 +86,13 @@ export type SettlementNextActions = {
   isComplete: boolean;
 };
 
+export type PaymentInstructionView = {
+  methodLabel: string;
+  detail: string;
+  linkLabel: string;
+  hasExternalLink: boolean;
+};
+
 const settlementStatusViews: Record<string, SettlementStatusView> = {
   not_started: {
     label: "未開始",
@@ -315,6 +322,48 @@ export function getSettlementStatusView(status: string | null | undefined): Sett
       tone: "muted"
     }
   );
+}
+
+export function getPaymentInstructionView(
+  paymentMethod: string | null | undefined,
+  paymentUrl: string | null | undefined
+): PaymentInstructionView {
+  const normalizedMethod = paymentMethod?.trim();
+  const hasExternalLink = Boolean(paymentUrl?.trim());
+
+  if (normalizedMethod && /paypay/i.test(normalizedMethod)) {
+    return {
+      methodLabel: "PayPay",
+      detail: hasExternalLink ? "外部決済ページを開いて支払えます" : "PayPayで支払います",
+      linkLabel: "PayPayで支払う",
+      hasExternalLink
+    };
+  }
+
+  if (normalizedMethod && /(銀行|振込|口座)/.test(normalizedMethod)) {
+    return {
+      methodLabel: "銀行振込",
+      detail: hasExternalLink ? "振込先情報を開けます" : "振込先はメモを確認してください",
+      linkLabel: "振込先情報を開く",
+      hasExternalLink
+    };
+  }
+
+  if (normalizedMethod && /(現金|手渡し)/.test(normalizedMethod)) {
+    return {
+      methodLabel: "現金",
+      detail: "当日または手渡しで支払います",
+      linkLabel: "支払い先を開く",
+      hasExternalLink
+    };
+  }
+
+  return {
+    methodLabel: normalizedMethod || "送金先",
+    detail: hasExternalLink ? "支払い先ページを開けます" : "支払い方法を確認してください",
+    linkLabel: "支払い先を開く",
+    hasExternalLink
+  };
 }
 
 export function summarizeSettlementNextActions(settlements: SettlementNextActionInput[]): SettlementNextActions {

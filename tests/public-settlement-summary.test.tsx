@@ -41,7 +41,8 @@ describe("PublicSettlementSummary", () => {
     expect(screen.getByText("予約番号 ABC-123")).toBeInTheDocument();
     expect(screen.getByText("田中 → 鈴木")).toBeInTheDocument();
     expect(screen.getByText("残り 2,600円")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "送金先を開く" })).toHaveAttribute("href", "https://example.com/pay/suzuki");
+    expect(screen.getByText("外部決済ページを開いて支払えます")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "PayPayで支払う" })).toHaveAttribute("href", "https://example.com/pay/suzuki");
   });
 
   it("shows a payment record form when an action is provided", () => {

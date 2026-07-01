@@ -68,6 +68,7 @@ export function TextField({
   helpText,
   step,
   min,
+  list,
   requiredMessage
 }: {
   label: string;
@@ -79,6 +80,7 @@ export function TextField({
   helpText?: string;
   step?: number;
   min?: number;
+  list?: string;
   requiredMessage?: string;
 }) {
   function handleInvalid(event: InvalidEvent<HTMLInputElement>) {
@@ -103,6 +105,7 @@ export function TextField({
         placeholder={placeholder}
         step={step}
         min={min}
+        list={list}
         onInvalid={handleInvalid}
         onInput={handleInput}
       />

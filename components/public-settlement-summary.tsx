@@ -1,7 +1,7 @@
 import React from "react";
 
 import { Card, EmptyState } from "@/components/ui";
-import { summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
+import { getPaymentInstructionView, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
 
 export type PublicSettlementExpense = {
   id: string;
@@ -22,6 +22,8 @@ export type PublicSettlementItem = {
   memo: string | null;
   payments: Array<{ amount: number; confirmedAt: string | null }>;
 };
+
+const paymentMethodOptions = ["PayPay", "銀行振込", "現金"];
 
 export function PublicSettlementSummary({
   eventTitle,
@@ -46,6 +48,11 @@ export function PublicSettlementSummary({
 
   return (
     <div className="space-y-6">
+      <datalist id="public-payment-method-options">
+        {paymentMethodOptions.map((method) => (
+          <option key={method} value={method} />
+        ))}
+      </datalist>
       <Card>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">予定</p>
         <h2 className="mt-2 text-2xl font-bold text-ink">{eventTitle}</h2>
@@ -63,6 +70,7 @@ export function PublicSettlementSummary({
           {unpaidSettlements.length > 0 ? (
             unpaidSettlements.map((settlement) => {
               const progress = summarizeSettlementPaymentProgress(settlement.amount, settlement.payments);
+              const paymentView = getPaymentInstructionView(settlement.paymentMethod, settlement.paymentUrl);
               return (
                 <article key={settlement.id} className="rounded-lg border border-white/75 bg-white/62 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -73,7 +81,8 @@ export function PublicSettlementSummary({
                       <p className="mt-1 text-sm text-ink/60">
                         残り {formatYenText(progress.remainingAmount)}
                       </p>
-                      {settlement.paymentMethod ? <p className="mt-3 text-sm text-ink/70">支払い方法: {settlement.paymentMethod}</p> : null}
+                      <p className="mt-3 text-sm text-ink/70">支払い方法: {paymentView.methodLabel}</p>
+                      <p className="mt-1 text-sm text-ink/58">{paymentView.detail}</p>
                       {settlement.memo ? <p className="mt-1 text-sm text-ink/70">メモ: {settlement.memo}</p> : null}
                     </div>
                     {settlement.paymentUrl ? (
@@ -83,7 +92,7 @@ export function PublicSettlementSummary({
                         rel="noreferrer"
                         className="inline-flex min-h-10 items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
                       >
-                        送金先を開く
+                        {paymentView.linkLabel}
                       </a>
                     ) : null}
                   </div>
@@ -108,6 +117,7 @@ export function PublicSettlementSummary({
                           <span className="text-ink/72">支払い方法</span>
                           <input
                             name="payment_method"
+                            list="public-payment-method-options"
                             className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                             placeholder="例: PayPay"
                           />

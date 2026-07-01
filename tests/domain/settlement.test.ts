@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEqualExpenseSplits,
   getSettlementStatusView,
+  getPaymentInstructionView,
   buildSettlementPaymentRequestMessage,
   calculateSettlementTransfers,
   summarizeSettlementNextActions,
@@ -210,6 +211,44 @@ describe("getSettlementStatusView", () => {
       label: "清算未設定",
       detail: "清算画面で確認してください",
       tone: "muted"
+    });
+  });
+});
+
+describe("getPaymentInstructionView", () => {
+  it("recognizes PayPay links", () => {
+    expect(getPaymentInstructionView("PayPay", "https://paypay.ne.jp/example")).toEqual({
+      methodLabel: "PayPay",
+      detail: "外部決済ページを開いて支払えます",
+      linkLabel: "PayPayで支払う",
+      hasExternalLink: true
+    });
+  });
+
+  it("recognizes bank transfer instructions", () => {
+    expect(getPaymentInstructionView("銀行振込", null)).toEqual({
+      methodLabel: "銀行振込",
+      detail: "振込先はメモを確認してください",
+      linkLabel: "振込先情報を開く",
+      hasExternalLink: false
+    });
+  });
+
+  it("recognizes cash payments", () => {
+    expect(getPaymentInstructionView("現金", null)).toEqual({
+      methodLabel: "現金",
+      detail: "当日または手渡しで支払います",
+      linkLabel: "支払い先を開く",
+      hasExternalLink: false
+    });
+  });
+
+  it("falls back to a generic payment destination", () => {
+    expect(getPaymentInstructionView(null, "https://example.com/pay")).toEqual({
+      methodLabel: "送金先",
+      detail: "支払い先ページを開けます",
+      linkLabel: "支払い先を開く",
+      hasExternalLink: true
     });
   });
 });
