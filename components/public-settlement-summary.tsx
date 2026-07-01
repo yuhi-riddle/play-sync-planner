@@ -1,5 +1,6 @@
 import React from "react";
 
+import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { Card, EmptyState } from "@/components/ui";
 import { getPaymentInstructionView, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
 
@@ -85,16 +86,7 @@ export function PublicSettlementSummary({
                       <p className="mt-1 text-sm text-ink/58">{paymentView.detail}</p>
                       {settlement.memo ? <p className="mt-1 text-sm text-ink/70">メモ: {settlement.memo}</p> : null}
                     </div>
-                    {settlement.paymentUrl ? (
-                      <a
-                        href={settlement.paymentUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-h-10 items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                      >
-                        {paymentView.linkLabel}
-                      </a>
-                    ) : null}
+                    {settlement.paymentUrl ? <PaymentDestinationLink href={settlement.paymentUrl} label={paymentView.linkLabel} /> : null}
                   </div>
                   {recordPaymentAction ? (
                     <details className="mt-4 rounded-lg border border-ink/10 bg-cream/70 p-3">

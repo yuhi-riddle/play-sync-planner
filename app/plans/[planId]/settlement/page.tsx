@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { ExpenseForm } from "@/components/expense-form";
+import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
 import { Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
@@ -420,7 +421,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                         {expense.memo}
                       </p>
                     ) : null}
-                    {expense.payment_url ? <PaymentLink href={expense.payment_url} label="支払い・購入ページを開く" detail={paymentView.detail} /> : null}
+                    {expense.payment_url ? <PaymentDestinationLink href={expense.payment_url} label="支払い・購入ページを開く" detail={paymentView.detail} className="mt-3" /> : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
                         <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
@@ -533,28 +534,19 @@ function SummaryTile({ label, value, detail }: { label: string; value: string; d
   );
 }
 
-function PaymentLink({ href, label, detail }: { href: string; label: string; detail?: string }) {
-  return (
-    <div className="mt-3 flex flex-col items-start gap-1">
-      <a
-        className="inline-flex min-h-9 items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-1 text-xs font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {label}
-      </a>
-      {detail ? <span className="text-xs leading-5 text-ink/55">{detail}</span> : null}
-    </div>
-  );
-}
-
 function SettlementActions({ settlement, progress }: { settlement: SettlementRow; progress: SettlementPaymentProgress }) {
   const instructionView = getPaymentInstructionView(settlement.payment_method, settlement.payment_url);
 
   return (
     <div className="grid w-full min-w-0 gap-3 md:min-w-72">
       {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
+
+      <div className="rounded-lg border border-white/75 bg-white/58 p-3">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">支払い先</p>
+        <p className="mt-2 text-sm font-bold text-ink">{instructionView.methodLabel}</p>
+        <PaymentDestinationLink href={settlement.payment_url} label={instructionView.linkLabel} detail={instructionView.detail} className="mt-2" />
+        {settlement.memo ? <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-ink/60">メモ: {settlement.memo}</p> : null}
+      </div>
 
       <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
         <summary className="cursor-pointer text-sm font-bold text-ink">受け取り方法を設定</summary>
@@ -588,11 +580,6 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
               placeholder="例: 送金後に連絡ください"
             />
           </label>
-          {settlement.payment_url ? (
-            <PaymentLink href={settlement.payment_url} label={instructionView.linkLabel} detail={instructionView.detail} />
-          ) : (
-            <p className="text-xs leading-5 text-ink/55">{instructionView.detail}</p>
-          )}
           <button
             type="submit"
             className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
@@ -671,7 +658,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                   <p className="leading-6">{[payment.payment_method, payment.memo].filter(Boolean).join(" / ")}</p>
                 ) : null}
                 {payment.payment_url ? (
-                  <PaymentLink href={payment.payment_url} label="支払い記録を開く" detail={paymentView.detail} />
+                  <PaymentDestinationLink href={payment.payment_url} label="支払い記録を開く" detail={paymentView.detail} className="mt-1" />
                 ) : null}
                 {!payment.confirmed_at ? (
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>
