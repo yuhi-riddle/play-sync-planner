@@ -13,7 +13,8 @@ export function SettlementReminderCard({
   latestSentAt,
   sentCount = 0,
   textareaLabel = "清算リマインド文面",
-  markSentLabel = "送信済みに記録"
+  markSentLabel = "送信済みに記録",
+  emptyText = "未払いの清算はありません。"
 }: {
   recipientNames: string[];
   message: string;
@@ -22,6 +23,7 @@ export function SettlementReminderCard({
   sentCount?: number;
   textareaLabel?: string;
   markSentLabel?: string;
+  emptyText?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -32,7 +34,7 @@ export function SettlementReminderCard({
   }
 
   if (recipientNames.length === 0) {
-    return <EmptyState>未払いの清算はありません。</EmptyState>;
+    return <EmptyState>{emptyText}</EmptyState>;
   }
 
   return (

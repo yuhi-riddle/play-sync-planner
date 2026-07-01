@@ -15,6 +15,7 @@ import {
   updateExpenseAction
 } from "@/lib/actions/settlements";
 import {
+  buildSettlementConfirmationRequestMessage,
   buildSettlementPaymentRequestMessage,
   getPaymentInstructionView,
   summarizeSettlementNextActions,
@@ -154,6 +155,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const host = requestHeaders.get("host") ?? "localhost:3000";
   const protocol = host.includes("localhost") ? "http" : "https";
   const origin = `${protocol}://${host}`;
+  const ownerSettlementUrl = `${origin.replace(/\/$/, "")}/plans/${plan.id}/settlement`;
   const answerShareLink = ((plan.share_links ?? []) as ShareLinkRow[]).find((link) => link.purpose === "answer");
   const publicSettlementUrl = answerShareLink ? buildPublicSettlementUrl(origin, answerShareLink.token) : null;
   const createExpense = createExpenseAction.bind(null, plan.id);
@@ -195,6 +197,11 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         memo: settlement.memo
       };
     })
+  });
+  const confirmationRequestMessage = buildSettlementConfirmationRequestMessage({
+    title: event?.title,
+    settlementUrl: ownerSettlementUrl,
+    requests: settlementNextActions.confirmationWaiting
   });
 
   return (
@@ -299,6 +306,27 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
               />
             ) : (
               <EmptyState>未払いの清算はありません。</EmptyState>
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-semibold text-ink">受け取り確認依頼文面</h2>
+          <p className="mt-1 text-sm leading-6 text-ink/60">支払い記録がある人に、受け取り確認をお願いする文面です。</p>
+          <div className="mt-5">
+            {confirmationRequestMessage ? (
+              <SettlementReminderCard
+                recipientNames={[...new Set(settlementNextActions.confirmationWaiting.map((item) => item.participantName))]}
+                message={confirmationRequestMessage}
+                markSentAction={markReminderSent}
+                latestSentAt={reminderLogs[0]?.sent_at}
+                sentCount={reminderLogs.length}
+                textareaLabel="受け取り確認依頼文面"
+                markSentLabel="確認依頼済みに記録"
+                emptyText="確認待ちはありません。"
+              />
+            ) : (
+              <EmptyState>確認待ちはありません。</EmptyState>
             )}
           </div>
         </Card>

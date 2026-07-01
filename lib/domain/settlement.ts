@@ -67,6 +67,12 @@ export type SettlementPaymentRequest = {
   memo?: string | null;
 };
 
+export type SettlementConfirmationRequestMessageInput = {
+  title: string | null | undefined;
+  settlementUrl?: string | null;
+  requests: SettlementNextActionItem[];
+};
+
 export type SettlementNextActionInput = {
   fromName: string;
   toName: string;
@@ -446,6 +452,45 @@ export function buildSettlementPaymentRequestMessage({
   } else {
     lines.push("", "支払いが終わったら、Madoi上で支払いを記録してください。");
   }
+
+  return lines.join("\n");
+}
+
+export function buildSettlementConfirmationRequestMessage({
+  title,
+  settlementUrl,
+  requests
+}: SettlementConfirmationRequestMessageInput) {
+  const activeRequests = requests.filter((request) => request.amount > 0);
+  if (activeRequests.length === 0) {
+    return "";
+  }
+
+  const grouped = activeRequests.reduce<Map<string, SettlementNextActionItem[]>>((result, request) => {
+    const items = result.get(request.participantName) ?? [];
+    items.push(request);
+    result.set(request.participantName, items);
+    return result;
+  }, new Map());
+
+  const lines = ["受け取り確認のお願いです。", "", `${title?.trim() || "予定"} の清算で、支払い記録があります。`, ""];
+
+  Array.from(grouped.entries()).forEach(([participantName, items], index) => {
+    if (index > 0) {
+      lines.push("");
+    }
+
+    lines.push(toPoliteName(participantName));
+    items.forEach((item) => {
+      lines.push(`${toPoliteName(item.counterpartyName)}から ${formatYenText(item.amount)} の支払い記録があります。`);
+    });
+  });
+
+  if (settlementUrl) {
+    lines.push("", `清算ページ: ${settlementUrl}`);
+  }
+
+  lines.push("", "Madoiで受け取り確認をお願いします。");
 
   return lines.join("\n");
 }

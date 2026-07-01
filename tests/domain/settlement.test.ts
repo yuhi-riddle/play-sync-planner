@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildEqualExpenseSplits,
+  buildSettlementConfirmationRequestMessage,
   getSettlementStatusView,
   getPaymentInstructionView,
   buildSettlementPaymentRequestMessage,
@@ -361,5 +362,37 @@ describe("buildSettlementPaymentRequestMessage", () => {
 
   it("returns an empty message when no requests remain", () => {
     expect(buildSettlementPaymentRequestMessage({ title: "予定", requests: [] })).toBe("");
+  });
+});
+
+describe("buildSettlementConfirmationRequestMessage", () => {
+  it("builds confirmation requests grouped by recipient", () => {
+    const message = buildSettlementConfirmationRequestMessage({
+      title: "7月の謎解き会",
+      settlementUrl: "https://madoi.example/plans/plan-1/settlement",
+      requests: [
+        {
+          participantName: "鈴木",
+          counterpartyName: "田中",
+          amount: 1000
+        },
+        {
+          participantName: "鈴木",
+          counterpartyName: "佐藤",
+          amount: 2000
+        }
+      ]
+    });
+
+    expect(message).toContain("受け取り確認のお願いです。");
+    expect(message).toContain("7月の謎解き会");
+    expect(message).toContain("鈴木さん");
+    expect(message).toContain("田中さんから 1,000円");
+    expect(message).toContain("佐藤さんから 2,000円");
+    expect(message).toContain("清算ページ: https://madoi.example/plans/plan-1/settlement");
+  });
+
+  it("returns an empty message when no confirmation requests remain", () => {
+    expect(buildSettlementConfirmationRequestMessage({ title: "予定", requests: [] })).toBe("");
   });
 });

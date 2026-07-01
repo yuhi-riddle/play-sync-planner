@@ -17,4 +17,17 @@ describe("SettlementReminderCard", () => {
 
     expect(screen.getByRole("button", { name: "依頼済みに記録" })).toBeInTheDocument();
   });
+
+  it("allows a custom empty message", () => {
+    render(
+      <SettlementReminderCard
+        recipientNames={[]}
+        message=""
+        markSentAction={vi.fn()}
+        emptyText="確認待ちはありません。"
+      />
+    );
+
+    expect(screen.getByText("確認待ちはありません。")).toBeInTheDocument();
+  });
 });
