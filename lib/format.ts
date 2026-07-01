@@ -1,5 +1,17 @@
 const unsetLabel = "未設定";
 
+export function formatYen(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return unsetLabel;
+  }
+
+  return new Intl.NumberFormat("ja-JP", {
+    style: "currency",
+    currency: "JPY",
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) {
     return unsetLabel;

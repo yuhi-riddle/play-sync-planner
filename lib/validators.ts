@@ -33,6 +33,43 @@ const nullableReminderOffset = z.preprocess((value) => {
 
 const nullableDate = z.preprocess(emptyToNull, z.string().nullable());
 
+const nullableUrl = z.preprocess(
+  emptyToNull,
+  z
+    .string()
+    .url("支払いURLはURL形式で入力してください")
+    .nullable()
+);
+
+const requiredInteger = (requiredMessage: string, nonnegativeMessage: string) =>
+  z.preprocess((value) => {
+    const normalized = emptyToNull(value);
+    if (normalized === null) {
+      return undefined;
+    }
+
+    return Number(normalized);
+  }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).int("金額は1円単位で入力してください").nonnegative(nonnegativeMessage));
+
+const optionalStringList = () =>
+  z.preprocess((value) => {
+    if (Array.isArray(value)) {
+      return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+    }
+
+    const normalized = emptyToNull(value);
+    return normalized === null ? [] : [String(normalized)];
+  }, z.array(z.string().min(1)));
+
+const optionalIntegerList = () =>
+  z.preprocess((value) => {
+    const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
+    return values
+      .map((entry) => emptyToNull(entry))
+      .filter((entry): entry is string => entry !== null)
+      .map((entry) => Number(entry));
+  }, z.array(z.number().int("金額は1円単位で入力してください").nonnegative("金額は0円以上で入力してください")));
+
 const dateTimeLocalPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 
 function isValidDateTimeLocal(value: string) {
@@ -92,6 +129,61 @@ export const eventSchema = z.object({
   status: z.enum(EVENT_STATUSES).default("interested"),
   memo: nullableText.default(null)
 });
+
+export const expenseSchema = z
+  .object({
+    title: z.string().trim().min(1, "支払い内容を入力してください"),
+    payer_participant_id: z.string().trim().min(1, "支払った人を選択してください"),
+    amount: requiredInteger("金額を入力してください", "金額は0円以上で入力してください"),
+    split_mode: z.enum(["equal", "individual"], {
+      required_error: "割り方を選択してください",
+      invalid_type_error: "割り方を選択してください"
+    }),
+    split_participant_ids: optionalStringList().default([]),
+    individual_participant_ids: optionalStringList().default([]),
+    individual_split_amounts: optionalIntegerList().default([]),
+    memo: nullableText.default(null),
+    payment_method: nullableText.default(null),
+    payment_url: nullableUrl.default(null)
+  })
+  .superRefine((values, context) => {
+    if (values.split_mode === "equal") {
+      if (values.split_participant_ids.length === 0) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["split_participant_ids"],
+          message: "負担者を1人以上選択してください"
+        });
+      }
+      return;
+    }
+
+    if (values.individual_participant_ids.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["individual_participant_ids"],
+        message: "負担者を1人以上選択してください"
+      });
+    }
+
+    if (values.individual_participant_ids.length !== values.individual_split_amounts.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["individual_split_amounts"],
+        message: "個別金額は負担者ごとに入力してください"
+      });
+      return;
+    }
+
+    const splitTotal = values.individual_split_amounts.reduce((total, amount) => total + amount, 0);
+    if (splitTotal !== values.amount) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["individual_split_amounts"],
+        message: "個別金額の合計を支払い金額と同じにしてください"
+      });
+    }
+  });
 
 const newlineList = (message: string) =>
   z.preprocess((value) => {
@@ -177,3 +269,4 @@ export const planSchema = z
 
 export type EventFormValues = z.infer<typeof eventSchema>;
 export type PlanFormValues = z.infer<typeof planSchema>;
+export type ExpenseFormValues = z.infer<typeof expenseSchema>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { eventSchema, planSchema } from "@/lib/validators";
+import { eventSchema, expenseSchema, planSchema } from "@/lib/validators";
 
 describe("eventSchema", () => {
   it("accepts a minimal event", () => {
@@ -65,8 +65,8 @@ describe("planSchema", () => {
     const result = planSchema.parse({
       title: "土曜夜の回",
       participantNames: "Haru\nMio",
-      candidateDates: "2026-07-01T10:00\n2026-07-02T10:00",
-      answer_deadline_at: "2026-06-30T22:00",
+      candidateDates: "2026-07-15T10:00\n2026-07-16T10:00",
+      answer_deadline_at: "2026-07-14T22:00",
       memo: ""
     });
 
@@ -78,8 +78,8 @@ describe("planSchema", () => {
     const result = planSchema.parse({
       title: "",
       participantNames: "",
-      candidateDates: "2026-07-01T10:00",
-      answer_deadline_at: "2026-06-30T22:00",
+      candidateDates: "2026-07-15T10:00",
+      answer_deadline_at: "2026-07-14T22:00",
       memo: ""
     });
 
@@ -92,7 +92,7 @@ describe("planSchema", () => {
         title: "",
         participantNames: "Haru",
         candidateDates: "",
-        answer_deadline_at: "2026-06-30T22:00",
+        answer_deadline_at: "2026-07-14T22:00",
         memo: ""
       })
     ).toThrow("候補日時を1つ以上選択してください");
@@ -104,7 +104,7 @@ describe("planSchema", () => {
         title: "土曜夜の回",
         participantNames: "Haru",
         candidateDates: "not-a-date",
-        answer_deadline_at: "2026-06-30T22:00",
+        answer_deadline_at: "2026-07-14T22:00",
         memo: ""
       })
     ).toThrow("候補日時は YYYY-MM-DDTHH:mm 形式で入力してください");
@@ -115,7 +115,7 @@ describe("planSchema", () => {
       planSchema.parse({
         title: "土曜夜の回",
         participantNames: "Haru",
-        candidateDates: "2026-07-01T10:00",
+        candidateDates: "2026-07-15T10:00",
         answer_deadline_at: "",
         memo: ""
       })
@@ -127,7 +127,7 @@ describe("planSchema", () => {
       planSchema.parse({
         title: "土曜夜の回",
         participantNames: "Haru",
-        candidateDates: "2026-07-01T10:00",
+        candidateDates: "2026-07-15T10:00",
         answer_deadline_at: "tomorrow",
         memo: ""
       })
@@ -138,25 +138,25 @@ describe("planSchema", () => {
     const result = planSchema.parse({
       title: "",
       participantNames: "",
-      candidateDates: "2026-07-01T10:07",
-      candidateEndDates: "2026-07-01T12:07",
-      answer_deadline_at: "2026-06-30T22:08",
+      candidateDates: "2026-07-15T10:07",
+      candidateEndDates: "2026-07-15T12:07",
+      answer_deadline_at: "2026-07-14T22:08",
       memo: ""
     });
 
-    expect(result.candidateDates).toEqual(["2026-07-01T10:07"]);
-    expect(result.candidateEndDates).toEqual(["2026-07-01T12:07"]);
-    expect(result.answer_deadline_at).toBe("2026-06-30T22:08");
+    expect(result.candidateDates).toEqual(["2026-07-15T10:07"]);
+    expect(result.candidateEndDates).toEqual(["2026-07-15T12:07"]);
+    expect(result.answer_deadline_at).toBe("2026-07-14T22:08");
   });
 
   it("keeps all-day flags aligned with candidate dates", () => {
     const result = planSchema.parse({
       title: "",
       participantNames: "",
-      candidateDates: ["2026-07-01T00:00", "2026-07-02T10:00"],
-      candidateEndDates: ["2026-07-02T00:00", "2026-07-02T12:00"],
+      candidateDates: ["2026-07-15T00:00", "2026-07-16T10:00"],
+      candidateEndDates: ["2026-07-16T00:00", "2026-07-16T12:00"],
       candidateAllDays: ["true", "false"],
-      answer_deadline_at: "2026-06-30T22:08",
+      answer_deadline_at: "2026-07-14T22:08",
       memo: ""
     });
 
@@ -167,9 +167,9 @@ describe("planSchema", () => {
     const result = planSchema.parse({
       title: "",
       participantNames: "",
-      candidateDates: "2026-07-01T10:00",
-      candidateEndDates: "2026-07-01T12:00",
-      answer_deadline_at: "2026-06-30T22:00",
+      candidateDates: "2026-07-15T10:00",
+      candidateEndDates: "2026-07-15T12:00",
+      answer_deadline_at: "2026-07-14T22:00",
       reminder_offset_minutes: "1440",
       memo: ""
     });
@@ -182,9 +182,9 @@ describe("planSchema", () => {
       planSchema.parse({
         title: "",
         participantNames: "",
-        candidateDates: "2026-07-01T10:00",
-        candidateEndDates: "2026-07-01T12:00",
-        answer_deadline_at: "2026-06-30T22:00",
+        candidateDates: "2026-07-15T10:00",
+        candidateEndDates: "2026-07-15T12:00",
+        answer_deadline_at: "2026-07-14T22:00",
         reminder_offset_minutes: "-1",
         memo: ""
       })
@@ -209,9 +209,9 @@ describe("planSchema", () => {
       planSchema.parse({
         title: "",
         participantNames: "",
-        candidateDates: "2026-07-01T10:00",
-        candidateEndDates: "2026-07-01T09:59",
-        answer_deadline_at: "2026-06-30T22:00",
+        candidateDates: "2026-07-15T10:00",
+        candidateEndDates: "2026-07-15T09:59",
+        answer_deadline_at: "2026-07-14T22:00",
         memo: ""
       })
     ).toThrow("終了時間は開始時間より後にしてください");
@@ -222,10 +222,67 @@ describe("planSchema", () => {
       planSchema.parse({
         title: "",
         participantNames: "",
-        candidateDates: "2026-07-01T10:00",
-        answer_deadline_at: "2026-07-01T10:01",
+        candidateDates: "2026-07-15T10:00",
+        answer_deadline_at: "2026-07-15T10:01",
         memo: ""
       })
     ).toThrow("回答期限は最初の候補日時より前にしてください");
+  });
+});
+
+describe("expenseSchema", () => {
+  it("accepts equal split expenses", () => {
+    const result = expenseSchema.parse({
+      title: "チケット代",
+      payer_participant_id: "alice",
+      amount: "3600",
+      split_mode: "equal",
+      split_participant_ids: ["alice", "bob", "chika"],
+      memo: "",
+      payment_method: "",
+      payment_url: ""
+    });
+
+    expect(result.amount).toBe(3600);
+    expect(result.split_participant_ids).toEqual(["alice", "bob", "chika"]);
+    expect(result.payment_url).toBeNull();
+  });
+
+  it("accepts individual split expenses when the total matches the amount", () => {
+    const result = expenseSchema.parse({
+      title: "先払い",
+      payer_participant_id: "alice",
+      amount: "1500",
+      split_mode: "individual",
+      individual_participant_ids: ["alice", "bob"],
+      individual_split_amounts: ["500", "1000"]
+    });
+
+    expect(result.individual_split_amounts).toEqual([500, 1000]);
+  });
+
+  it("rejects a negative amount", () => {
+    expect(() =>
+      expenseSchema.parse({
+        title: "チケット代",
+        payer_participant_id: "alice",
+        amount: "-1",
+        split_mode: "equal",
+        split_participant_ids: ["alice"]
+      })
+    ).toThrow("金額は0円以上で入力してください");
+  });
+
+  it("rejects individual split expenses when the total does not match", () => {
+    expect(() =>
+      expenseSchema.parse({
+        title: "先払い",
+        payer_participant_id: "alice",
+        amount: "1500",
+        split_mode: "individual",
+        individual_participant_ids: ["alice", "bob"],
+        individual_split_amounts: ["500", "900"]
+      })
+    ).toThrow("個別金額の合計を支払い金額と同じにしてください");
   });
 });

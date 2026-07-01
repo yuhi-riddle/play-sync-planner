@@ -149,7 +149,12 @@ export default async function PlanDetailPage({
       <PageHeader
         title={plan.title ?? "日程調整"}
         description={event?.title ? `${event.title} の日程を調整しています。` : "候補日時と回答状況を確認します。"}
-        action={!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : undefined}
+        action={
+          <div className="flex flex-wrap gap-3">
+            {!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : null}
+            <SecondaryLink href={`/plans/${plan.id}/settlement`}>清算へ</SecondaryLink>
+          </div>
+        }
       />
 
       {notice ? (

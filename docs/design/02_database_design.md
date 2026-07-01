@@ -18,6 +18,7 @@ users
  │       │   └─ expense_splits
  │       ├─ settlements
  │       │   └─ payment_proofs
+ │       ├─ settlement_reminder_logs
  │       ├─ reminders
  │       └─ share_links
  └─ calendar_integrations
@@ -187,6 +188,8 @@ answer 候補：
 | amount | integer | yes | 金額 |
 | paid_at | timestamptz | no | 支払日時 |
 | memo | text | no | メモ |
+| payment_method | text | no | 支払い方法メモ |
+| payment_url | text | no | 支払い用URL |
 | created_at | timestamptz | yes | 作成日時 |
 | updated_at | timestamptz | yes | 更新日時 |
 
@@ -214,6 +217,9 @@ answer 候補：
 | calculated_at | timestamptz | yes | 計算日時 |
 | paid_at | timestamptz | no | 支払い済み登録日時 |
 | confirmed_at | timestamptz | no | 受け取り確認日時 |
+| payment_method | text | no | 支払い方法メモ |
+| payment_url | text | no | 支払い用URL |
+| memo | text | no | 支払いメモ |
 | created_at | timestamptz | yes | 作成日時 |
 | updated_at | timestamptz | yes | 更新日時 |
 
@@ -222,7 +228,6 @@ status 候補：
 - unpaid
 - paid
 - confirmed
-- excluded
 
 ## payment_proofs
 
@@ -230,14 +235,31 @@ status 候補：
 |---|---|---:|---|
 | id | uuid | yes | 証拠ID |
 | settlement_id | uuid | yes | 清算ID |
-| uploaded_by_participant_id | uuid | yes | 登録者 |
+| uploaded_by_participant_id | uuid | no | 登録者 |
 | proof_type | text | yes | 証拠種別 |
-| image_url | text | no | 証拠画像URL |
+| proof_url | text | no | 証拠URL |
 | memo | text | no | 証拠メモ |
 | payment_method | text | no | 支払い方法 |
 | paid_at | timestamptz | no | 支払い日時 |
 | created_at | timestamptz | yes | 作成日時 |
 | updated_at | timestamptz | yes | 更新日時 |
+
+proof_type 候補：
+
+- memo_url
+- image_url
+
+## settlement_reminder_logs
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| id | uuid | yes | 清算リマインド記録ID |
+| plan_id | uuid | yes | 参加予定ID |
+| actor_user_id | uuid | no | 記録したユーザー |
+| recipient_names | text[] | yes | 送信先名 |
+| reminder_message | text | no | 送信した文面 |
+| sent_at | timestamptz | yes | 送信記録日時 |
+| created_at | timestamptz | yes | 作成日時 |
 
 ## reminders
 
@@ -304,12 +326,18 @@ Phase 1：
 
 Phase 2：
 
+- calendar_integrations
+- plan_reminder_settings
+- plan_reminder_logs
+
+Phase 3-A：
+
 - expenses
 - expense_splits
 - settlements
 - payment_proofs
+- settlement_reminder_logs
 
-Phase 3：
+後続Phase：
 
 - reminders
-- calendar_integrations
