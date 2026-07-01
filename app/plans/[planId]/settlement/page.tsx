@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { ExpenseForm } from "@/components/expense-form";
+import { ShareLinkCard } from "@/components/share-link-card";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
 import { Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import {
@@ -18,6 +20,7 @@ import {
   summarizeSettlementPaymentProgress,
   type SettlementPaymentProgress
 } from "@/lib/domain/settlement";
+import { buildPublicSettlementUrl } from "@/lib/domain/plans";
 import { formatDateTime, formatYen } from "@/lib/format";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
@@ -79,6 +82,11 @@ type ReminderLogRow = {
   sent_at: string;
 };
 
+type ShareLinkRow = {
+  token: string;
+  purpose: string;
+};
+
 const settlementStatusLabels: Record<SettlementPaymentProgress["status"], string> = {
   unpaid: "未払い",
   partially_paid: "一部支払い済み",
@@ -115,7 +123,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at)"
+      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at)"
     )
     .eq("id", planId)
     .single();
@@ -137,6 +145,12 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     );
   });
   const reminderLogs = ((plan.settlement_reminder_logs ?? []) as ReminderLogRow[]).sort((a, b) => b.sent_at.localeCompare(a.sent_at));
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") ?? "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  const origin = `${protocol}://${host}`;
+  const answerShareLink = ((plan.share_links ?? []) as ShareLinkRow[]).find((link) => link.purpose === "answer");
+  const publicSettlementUrl = answerShareLink ? buildPublicSettlementUrl(origin, answerShareLink.token) : null;
   const createExpense = createExpenseAction.bind(null, plan.id);
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);
   const unpaidSettlements = settlements.filter((settlement) => settlementProgress(settlement).remainingAmount > 0);
@@ -153,6 +167,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   );
   const paymentRequestMessage = buildSettlementPaymentRequestMessage({
     title: event?.title,
+    publicSettlementUrl,
     requests: settlements.map((settlement) => {
       const progress = settlementProgress(settlement);
       return {
@@ -205,6 +220,14 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
             ) : (
               <EmptyState>まだ参加者がいません。共有リンクから回答してもらうと、参加者として追加されます。</EmptyState>
             )}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-semibold text-ink">参加者向け清算リンク</h2>
+          <p className="mt-1 text-sm leading-6 text-ink/60">参加者はこのリンクから支払い先を確認し、支払い記録を残せます。</p>
+          <div className="mt-5">
+            <ShareLinkCard shareUrl={publicSettlementUrl} />
           </div>
         </Card>
 

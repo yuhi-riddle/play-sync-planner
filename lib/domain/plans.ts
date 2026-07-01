@@ -17,3 +17,7 @@ export function buildAnswerShareLink(
     expires_at: answerDeadlineAt
   };
 }
+
+export function buildPublicSettlementUrl(origin: string, token: string) {
+  return `${origin.replace(/\/$/, "")}/s/${token}/settlement`;
+}

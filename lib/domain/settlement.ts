@@ -254,9 +254,11 @@ export function summarizeSettlementOverview(settlements: SettlementForOverview[]
 
 export function buildSettlementPaymentRequestMessage({
   title,
+  publicSettlementUrl,
   requests
 }: {
   title: string | null | undefined;
+  publicSettlementUrl?: string | null;
   requests: SettlementPaymentRequest[];
 }) {
   const activeRequests = requests.filter((request) => request.remainingAmount > 0);
@@ -287,7 +289,12 @@ export function buildSettlementPaymentRequestMessage({
     }
   });
 
-  lines.push("", "支払いが終わったら、Madoi上で支払いを記録してください。");
+  if (publicSettlementUrl) {
+    lines.push("", `支払い・清算ページ: ${publicSettlementUrl}`);
+    lines.push("", "支払いが終わったら、上のページから支払いを記録してください。");
+  } else {
+    lines.push("", "支払いが終わったら、Madoi上で支払いを記録してください。");
+  }
 
   return lines.join("\n");
 }

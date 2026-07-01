@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnswerShareLink } from "@/lib/domain/plans";
+import { buildAnswerShareLink, buildPublicSettlementUrl } from "@/lib/domain/plans";
 
 describe("buildAnswerShareLink", () => {
   it("uses the answer deadline as the share link expiration", () => {
@@ -19,5 +19,15 @@ describe("buildAnswerShareLink", () => {
       purpose: "answer",
       expires_at: null
     });
+  });
+});
+
+describe("buildPublicSettlementUrl", () => {
+  it("builds a settlement URL from the public answer token", () => {
+    expect(buildPublicSettlementUrl("https://madoi.example", "token-1")).toBe("https://madoi.example/s/token-1/settlement");
+  });
+
+  it("normalizes trailing slash on the origin", () => {
+    expect(buildPublicSettlementUrl("https://madoi.example/", "token-1")).toBe("https://madoi.example/s/token-1/settlement");
   });
 });

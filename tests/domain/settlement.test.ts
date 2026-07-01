@@ -210,6 +210,23 @@ describe("buildSettlementPaymentRequestMessage", () => {
     expect(message).toContain("送金後に連絡ください");
   });
 
+  it("includes the public settlement URL when provided", () => {
+    const message = buildSettlementPaymentRequestMessage({
+      title: "7月の謎解き会",
+      publicSettlementUrl: "https://madoi.example/s/token-1/settlement",
+      requests: [
+        {
+          fromName: "田中",
+          toName: "鈴木",
+          remainingAmount: 2600
+        }
+      ]
+    });
+
+    expect(message).toContain("支払い・清算ページ: https://madoi.example/s/token-1/settlement");
+    expect(message).toContain("支払いが終わったら、上のページから支払いを記録してください。");
+  });
+
   it("returns an empty message when no requests remain", () => {
     expect(buildSettlementPaymentRequestMessage({ title: "予定", requests: [] })).toBe("");
   });

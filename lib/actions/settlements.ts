@@ -10,7 +10,7 @@ import {
   validateIndividualSplits
 } from "@/lib/domain/settlement";
 import { formDataToObject } from "@/lib/form-data";
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import {
   expenseSchema,
   settlementPaymentInstructionSchema,
@@ -418,6 +418,80 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+}
+
+export async function recordPublicSettlementPaymentAction(token: string, settlementId: string, formData: FormData) {
+  const values = settlementPaymentSchema.parse(formDataToObject(formData));
+  const supabase = createSupabaseAdminClient();
+  const { data: link, error: linkError } = await supabase
+    .from("share_links")
+    .select("plan_id")
+    .eq("token", token)
+    .eq("purpose", "answer")
+    .single();
+
+  if (linkError || !link) {
+    throw new Error("共有リンクが見つかりません");
+  }
+
+  const { data: settlement, error } = await supabase
+    .from("settlements")
+    .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at)")
+    .eq("id", settlementId)
+    .eq("plan_id", link.plan_id)
+    .single();
+
+  if (error || !settlement) {
+    throw new Error("清算内容が見つかりません");
+  }
+
+  const currentProgress = summarizeSettlementPaymentProgress(
+    settlement.amount,
+    ((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
+      amount: payment.amount,
+      confirmedAt: payment.confirmed_at
+    }))
+  );
+
+  if (values.amount > currentProgress.remainingAmount) {
+    throw new Error("支払い金額が残額を超えています");
+  }
+
+  const { error: insertError } = await supabase.from("settlement_payments").insert({
+    settlement_id: settlement.id,
+    paid_by_participant_id: settlement.from_participant_id,
+    amount: values.amount,
+    payment_method: values.payment_method,
+    payment_url: values.payment_url,
+    memo: values.memo
+  });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  const nextProgress = summarizeSettlementPaymentProgress(settlement.amount, [
+    ...((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
+      amount: payment.amount,
+      confirmedAt: payment.confirmed_at
+    })),
+    { amount: values.amount, confirmedAt: null }
+  ]);
+
+  await supabase
+    .from("settlements")
+    .update({
+      status: nextProgress.status === "paid" || nextProgress.status === "confirmed" ? nextProgress.status : "unpaid",
+      paid_at: nextProgress.paidAmount > 0 ? new Date().toISOString() : null
+    })
+    .eq("id", settlement.id);
+
+  await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
+
+  revalidatePath(`/plans/${settlement.plan_id}`);
+  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+  revalidatePath(`/s/${token}/settlement`);
+  redirect(`/s/${token}/settlement?paid=1`);
 }
 
 export async function confirmSettlementPaymentAction(paymentId: string) {
