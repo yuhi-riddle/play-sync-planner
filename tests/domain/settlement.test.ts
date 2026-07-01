@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildEqualExpenseSplits,
+  getSettlementStatusView,
   buildSettlementPaymentRequestMessage,
   calculateSettlementTransfers,
   summarizeSettlementOverview,
@@ -182,6 +183,32 @@ describe("summarizeSettlementOverview", () => {
       partiallyPaidCount: 1,
       paidCount: 0,
       confirmedCount: 1
+    });
+  });
+});
+
+describe("getSettlementStatusView", () => {
+  it("shows that settlement is waiting when expenses need to be checked", () => {
+    expect(getSettlementStatusView("needed")).toEqual({
+      label: "清算待ち",
+      detail: "立替内容を確認してください",
+      tone: "warning"
+    });
+  });
+
+  it("shows a settled status when every settlement has been confirmed", () => {
+    expect(getSettlementStatusView("settled")).toEqual({
+      label: "清算済み",
+      detail: "支払いは完了しています",
+      tone: "done"
+    });
+  });
+
+  it("falls back safely for unknown values", () => {
+    expect(getSettlementStatusView("mystery")).toEqual({
+      label: "清算未設定",
+      detail: "清算画面で確認してください",
+      tone: "muted"
     });
   });
 });

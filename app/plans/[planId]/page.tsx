@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { ReminderMessageCard } from "@/components/reminder-message-card";
+import { SettlementStatusBadge } from "@/components/settlement-status-badge";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { markReminderSentAction } from "@/lib/actions/reminders";
@@ -13,6 +14,7 @@ import {
 } from "@/lib/domain/confirmation";
 import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
+import { getSettlementStatusView } from "@/lib/domain/settlement";
 import { formatDateTime, formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -141,6 +143,7 @@ export default async function PlanDetailPage({
   );
   const recommendedCandidate = candidateSummaries[0];
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
+  const settlementStatus = getSettlementStatusView(plan.settlement_status);
   const isConfirmed = plan.status === "date_confirmed";
   const notice = calendarNotice(query.calendar);
 
@@ -164,7 +167,7 @@ export default async function PlanDetailPage({
         </div>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-5">
         <SummaryTile label="回答状況" value={`${participantProgress.responded}/${participantProgress.total}人`} detail={`未回答 ${participantProgress.pending}人`} />
         <SummaryTile
           label="候補日時"
@@ -173,6 +176,13 @@ export default async function PlanDetailPage({
         />
         <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={`${planStatus} / リマインド: ${reminderOffsetLabel(reminderOffsetMinutes)}`} />
         <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))} detail={isConfirmed ? "確定済み" : "未確定"} />
+        <Card className="p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">清算</p>
+          <div className="mt-2">
+            <SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} />
+          </div>
+          <p className="mt-2 text-xs leading-5 text-ink/58">{isConfirmed ? settlementStatus.detail : "日程確定後に使います"}</p>
+        </Card>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.45fr_0.9fr]">

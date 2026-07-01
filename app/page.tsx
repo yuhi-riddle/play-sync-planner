@@ -2,9 +2,11 @@ import Link from "next/link";
 import { CalendarDays, CalendarPlus, ListChecks, Settings } from "lucide-react";
 
 import { HomeMonthCalendar } from "@/components/home-month-calendar";
+import { SettlementStatusBadge } from "@/components/settlement-status-badge";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { getSettlementStatusView } from "@/lib/domain/settlement";
 import { formatDateTimeRange } from "@/lib/format";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -21,6 +23,7 @@ type PlanRow = {
   id: string;
   title: string | null;
   status: string;
+  settlement_status: string | null;
   confirmed_start_at: string | null;
   confirmed_end_at: string | null;
   is_all_day?: boolean | null;
@@ -187,7 +190,7 @@ export default async function HomePage({
   const { data: plans } = await supabase
     .from("plans")
     .select(
-      "id, title, status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at, events(title, location_name), candidate_dates(id, start_at, end_at, is_all_day)"
+      "id, title, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at, events(title, location_name), candidate_dates(id, start_at, end_at, is_all_day)"
     )
     .eq("owner_user_id", user.id)
     .in("status", ["draft", "collecting_answers", "date_confirmed"])
@@ -255,13 +258,17 @@ export default async function HomePage({
             {confirmed.length > 0 ? (
               confirmed.slice(0, 5).map((plan) => {
                 const event = eventOf(plan);
+                const settlementStatus = getSettlementStatusView(plan.settlement_status);
                 return (
                   <Link
                     key={plan.id}
                     href={`/plans/${plan.id}`}
                     className="block rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
                   >
-                    <span className="block text-sm font-semibold text-ink">{event?.title ?? "イベント未設定"}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-ink">{event?.title ?? "イベント未設定"}</span>
+                      <SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} />
+                    </span>
                     <span className="mt-1 block text-sm text-ink/60">{formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}</span>
                   </Link>
                 );
@@ -277,16 +284,24 @@ export default async function HomePage({
         <h2 className="text-lg font-semibold text-ink">最近の予定</h2>
         <div className="mt-4 grid gap-3">
           {planRows.length > 0 ? (
-            planRows.slice(0, 8).map((plan) => (
-              <Link
-                key={plan.id}
-                href={`/plans/${plan.id}`}
-                className="rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
-              >
-                <span className="font-semibold text-ink">{plan.title ?? "日程調整"}</span>
-                <span className="ml-3 text-sm text-ink/60">{homeStatusLabels[plan.status] ?? plan.status}</span>
-              </Link>
-            ))
+            planRows.slice(0, 8).map((plan) => {
+              const settlementStatus = getSettlementStatusView(plan.settlement_status);
+              return (
+                <Link
+                  key={plan.id}
+                  href={`/plans/${plan.id}`}
+                  className="rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
+                >
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-ink">{plan.title ?? "日程調整"}</span>
+                    <span className="rounded-full bg-white/78 px-3 py-1 text-xs font-bold text-ink/62">
+                      {homeStatusLabels[plan.status] ?? plan.status}
+                    </span>
+                    {plan.status === "date_confirmed" ? <SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} /> : null}
+                  </span>
+                </Link>
+              );
+            })
           ) : (
             <EmptyState>まだ予定がありません。</EmptyState>
           )}

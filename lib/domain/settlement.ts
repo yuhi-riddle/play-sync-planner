@@ -50,6 +50,14 @@ export type SettlementOverview = {
   confirmedCount: number;
 };
 
+export type SettlementStatusTone = "muted" | "warning" | "active" | "done";
+
+export type SettlementStatusView = {
+  label: string;
+  detail: string;
+  tone: SettlementStatusTone;
+};
+
 export type SettlementPaymentRequest = {
   fromName: string;
   toName: string;
@@ -57,6 +65,34 @@ export type SettlementPaymentRequest = {
   paymentMethod?: string | null;
   paymentUrl?: string | null;
   memo?: string | null;
+};
+
+const settlementStatusViews: Record<string, SettlementStatusView> = {
+  not_started: {
+    label: "未開始",
+    detail: "日程確定後に使います",
+    tone: "muted"
+  },
+  not_needed: {
+    label: "清算なし",
+    detail: "支払い待ちはありません",
+    tone: "done"
+  },
+  needed: {
+    label: "清算待ち",
+    detail: "立替内容を確認してください",
+    tone: "warning"
+  },
+  settling: {
+    label: "清算中",
+    detail: "支払い記録の確認待ちです",
+    tone: "active"
+  },
+  settled: {
+    label: "清算済み",
+    detail: "支払いは完了しています",
+    tone: "done"
+  }
 };
 
 type SettlementInput = {
@@ -248,6 +284,16 @@ export function summarizeSettlementOverview(settlements: SettlementForOverview[]
       partiallyPaidCount: 0,
       paidCount: 0,
       confirmedCount: 0
+    }
+  );
+}
+
+export function getSettlementStatusView(status: string | null | undefined): SettlementStatusView {
+  return (
+    settlementStatusViews[status ?? ""] ?? {
+      label: "清算未設定",
+      detail: "清算画面で確認してください",
+      tone: "muted"
     }
   );
 }
