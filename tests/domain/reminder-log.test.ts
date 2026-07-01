@@ -24,6 +24,31 @@ describe("summarizeReminderLogs", () => {
 });
 
 describe("summarizeSettlementReminderLogs", () => {
+  it("uses the saved reminder type before reading the message", () => {
+    expect(
+      summarizeSettlementReminderLogs([
+        {
+          sent_at: "2026-07-05T10:00:00+09:00",
+          recipient_names: ["Alice"],
+          reminder_message: null,
+          reminder_type: "payment_request"
+        }
+      ])
+    ).toMatchObject({
+      paymentRequestCount: 1,
+      confirmationRequestCount: 0,
+      latestPaymentRequestSentAt: "2026-07-05T10:00:00+09:00",
+      latestConfirmationRequestSentAt: null,
+      recentLogs: [
+        {
+          sentAt: "2026-07-05T10:00:00+09:00",
+          recipientNames: ["Alice"],
+          kind: "payment_request"
+        }
+      ]
+    });
+  });
+
   it("separates payment requests and confirmation requests", () => {
     expect(
       summarizeSettlementReminderLogs([

@@ -10,6 +10,7 @@ describe("SettlementReminderCard", () => {
       <SettlementReminderCard
         recipientNames={["鈴木"]}
         message="鈴木さん、支払いをお願いします。"
+        reminderType="payment_request"
         markSentAction={vi.fn()}
         markSentLabel="依頼済みに記録"
       />
@@ -18,11 +19,25 @@ describe("SettlementReminderCard", () => {
     expect(screen.getByRole("button", { name: "依頼済みに記録" })).toBeInTheDocument();
   });
 
+  it("keeps the reminder type in a hidden field", () => {
+    render(
+      <SettlementReminderCard
+        recipientNames={["Alice"]}
+        message="Please pay."
+        markSentAction={vi.fn()}
+        reminderType="payment_request"
+      />
+    );
+
+    expect(document.querySelector('input[name="reminder_type"]')).toHaveAttribute("value", "payment_request");
+  });
+
   it("allows a custom empty message", () => {
     render(
       <SettlementReminderCard
         recipientNames={[]}
         message=""
+        reminderType="confirmation_request"
         markSentAction={vi.fn()}
         emptyText="確認待ちはありません。"
       />

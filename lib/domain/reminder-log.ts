@@ -2,18 +2,19 @@ export type ReminderLogRecord = {
   sent_at: string;
 };
 
+export type SettlementReminderKind = "payment_request" | "confirmation_request" | "other";
+
 export type SettlementReminderLogRecord = {
   sent_at: string;
   recipient_names: string[] | null;
   reminder_message: string | null;
+  reminder_type?: SettlementReminderKind | null;
 };
 
 export type ReminderLogSummary = {
   latestSentAt: string | null;
   totalCount: number;
 };
-
-export type SettlementReminderKind = "payment_request" | "confirmation_request" | "other";
 
 export type SettlementReminderLogView = {
   sentAt: string;
@@ -50,7 +51,7 @@ export function summarizeSettlementReminderLogs(logs: SettlementReminderLogRecor
   const recentLogs = [...logs]
     .sort((left, right) => right.sent_at.localeCompare(left.sent_at))
     .map<SettlementReminderLogView>((log) => {
-      const kind = inferSettlementReminderKind(log.reminder_message);
+      const kind = normalizeSettlementReminderKind(log.reminder_type) ?? inferSettlementReminderKind(log.reminder_message);
       return {
         sentAt: log.sent_at,
         recipientNames: log.recipient_names ?? [],
@@ -69,6 +70,14 @@ export function summarizeSettlementReminderLogs(logs: SettlementReminderLogRecor
     latestConfirmationRequestSentAt: confirmationRequestLogs[0]?.sentAt ?? null,
     recentLogs
   };
+}
+
+function normalizeSettlementReminderKind(kind: string | null | undefined): SettlementReminderKind | null {
+  if (kind === "payment_request" || kind === "confirmation_request" || kind === "other") {
+    return kind;
+  }
+
+  return null;
 }
 
 function inferSettlementReminderKind(message: string | null): SettlementReminderKind {

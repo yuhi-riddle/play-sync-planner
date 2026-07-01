@@ -284,6 +284,7 @@ proof_type 候補：
 | actor_user_id | uuid | no | 記録したユーザー |
 | recipient_names | text[] | yes | 送信先名 |
 | reminder_message | text | no | 送信した文面 |
+| reminder_type | text | yes | 支払い依頼・受け取り確認依頼・その他の種別 |
 | sent_at | timestamptz | yes | 送信記録日時 |
 | created_at | timestamptz | yes | 作成日時 |
 

@@ -5,10 +5,12 @@ import React, { useState } from "react";
 
 import { EmptyState } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
+import type { SettlementReminderKind } from "@/lib/domain/reminder-log";
 
 export function SettlementReminderCard({
   recipientNames,
   message,
+  reminderType,
   markSentAction,
   latestSentAt,
   sentCount = 0,
@@ -18,6 +20,7 @@ export function SettlementReminderCard({
 }: {
   recipientNames: string[];
   message: string;
+  reminderType: SettlementReminderKind;
   markSentAction: (formData: FormData) => void | Promise<void>;
   latestSentAt?: string | null;
   sentCount?: number;
@@ -65,6 +68,7 @@ export function SettlementReminderCard({
         <form action={markSentAction}>
           <input type="hidden" name="recipient_names" value={recipientNames.join("\n")} />
           <input type="hidden" name="reminder_message" value={message} />
+          <input type="hidden" name="reminder_type" value={reminderType} />
           <button
             type="submit"
             className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"

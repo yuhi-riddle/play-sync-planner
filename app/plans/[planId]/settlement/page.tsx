@@ -87,6 +87,7 @@ type ReminderLogRow = {
   sent_at: string;
   recipient_names: string[] | null;
   reminder_message: string | null;
+  reminder_type: "payment_request" | "confirmation_request" | "other" | null;
 };
 
 type ShareLinkRow = {
@@ -132,7 +133,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at, recipient_names, reminder_message)"
+      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name), expense_splits(id, participant_id, amount, participants(id, display_name))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name), to_participant:participants!settlements_to_participant_id_fkey(id, display_name), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
     )
     .eq("id", planId)
     .single();
@@ -302,6 +303,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
               <SettlementReminderCard
                 recipientNames={[...new Set(unpaidSettlements.map((settlement) => participantName(settlement.from_participant)))]}
                 message={paymentRequestMessage}
+                reminderType="payment_request"
                 markSentAction={markReminderSent}
                 latestSentAt={reminderLogSummary.latestPaymentRequestSentAt}
                 sentCount={reminderLogSummary.paymentRequestCount}
@@ -322,6 +324,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
               <SettlementReminderCard
                 recipientNames={[...new Set(settlementNextActions.confirmationWaiting.map((item) => item.participantName))]}
                 message={confirmationRequestMessage}
+                reminderType="confirmation_request"
                 markSentAction={markReminderSent}
                 latestSentAt={reminderLogSummary.latestConfirmationRequestSentAt}
                 sentCount={reminderLogSummary.confirmationRequestCount}

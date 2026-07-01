@@ -17,6 +17,7 @@ import {
   settlementPaymentSchema,
   type ExpenseFormValues
 } from "@/lib/validators";
+import type { SettlementReminderKind } from "@/lib/domain/reminder-log";
 
 type ParticipantRow = {
   id: string;
@@ -52,6 +53,14 @@ function namesFromFormData(value: FormDataEntryValue | null): string[] {
     .split(/\r?\n/)
     .map((name) => name.trim())
     .filter(Boolean);
+}
+
+function settlementReminderTypeFromFormData(value: FormDataEntryValue | null): SettlementReminderKind {
+  if (value === "payment_request" || value === "confirmation_request" || value === "other") {
+    return value;
+  }
+
+  return "other";
 }
 
 function assertParticipantIds(participantIds: Set<string>, values: string[]) {
@@ -599,12 +608,14 @@ export async function markSettlementReminderSentAction(planId: string, formData:
   const { supabase } = await assertPlanOwner(planId, userId);
   const recipientNames = namesFromFormData(formData.get("recipient_names"));
   const reminderMessage = optionalString(formData.get("reminder_message"));
+  const reminderType = settlementReminderTypeFromFormData(formData.get("reminder_type"));
 
   const { error } = await supabase.from("settlement_reminder_logs").insert({
     plan_id: planId,
     actor_user_id: userId,
     recipient_names: recipientNames,
-    reminder_message: reminderMessage
+    reminder_message: reminderMessage,
+    reminder_type: reminderType
   });
 
   if (error) {
