@@ -11,7 +11,11 @@ import {
   recordSettlementPaymentAction,
   updateExpenseAction
 } from "@/lib/actions/settlements";
-import { summarizeSettlementPaymentProgress, type SettlementPaymentProgress } from "@/lib/domain/settlement";
+import {
+  summarizeSettlementOverview,
+  summarizeSettlementPaymentProgress,
+  type SettlementPaymentProgress
+} from "@/lib/domain/settlement";
 import { formatDateTime, formatYen } from "@/lib/format";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
@@ -159,6 +163,15 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);
   const unpaidSettlements = settlements.filter((settlement) => settlementProgress(settlement).remainingAmount > 0);
   const settlementPaymentCount = settlements.reduce((total, settlement) => total + (settlement.settlement_payments ?? []).length, 0);
+  const settlementOverview = summarizeSettlementOverview(
+    settlements.map((settlement) => ({
+      amount: settlement.amount,
+      payments: (settlement.settlement_payments ?? []).map((payment) => ({
+        amount: payment.amount,
+        confirmedAt: payment.confirmed_at
+      }))
+    }))
+  );
   const reminderMessage = buildSettlementReminderMessage(settlements);
 
   return (
@@ -169,9 +182,14 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整へ戻る</SecondaryLink>}
       />
 
-      <section className="grid gap-3 md:grid-cols-3">
-        <SummaryTile label="支払い履歴" value={`${expenses.length}件`} detail={`合計 ${formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))}`} />
-        <SummaryTile label="未払い" value={`${unpaidSettlements.length}件`} detail={unpaidSettlements.length > 0 ? "リマインドできます" : "清算済みです"} />
+      <section className="grid gap-3 md:grid-cols-4">
+        <SummaryTile label="立替合計" value={formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))} detail={`${expenses.length}件の支払い履歴`} />
+        <SummaryTile label="清算残額" value={formatYen(settlementOverview.remainingAmount)} detail={unpaidSettlements.length > 0 ? `${unpaidSettlements.length}件の支払い待ち` : "清算済みです"} />
+        <SummaryTile
+          label="支払い済み"
+          value={formatYen(settlementOverview.paidAmount)}
+          detail={`確認済み ${formatYen(settlementOverview.confirmedAmount)}`}
+        />
         <SummaryTile
           label="参加者"
           value={`${participants.length}人`}
@@ -235,6 +253,14 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                         {settlementStatusLabels[progress.status]} / 支払い済み {formatYen(progress.paidAmount)} / 残り {formatYen(progress.remainingAmount)}
                       </p>
                       {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-ink/60">受け取り確認済み {formatYen(progress.confirmedAmount)}</p> : null}
+                      {settlement.amount > 0 ? (
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/72">
+                          <div
+                            className="h-full rounded-full bg-moss"
+                            style={{ width: `${Math.min(100, Math.round((progress.paidAmount / settlement.amount) * 100))}%` }}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                     <SettlementActions settlement={settlement} progress={progress} />
                   </div>
@@ -272,6 +298,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                         {expense.memo}
                       </p>
                     ) : null}
+                    {expense.payment_url ? <PaymentLink href={expense.payment_url} label="支払い・購入ページを開く" /> : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
                         <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
@@ -337,6 +364,19 @@ function SummaryTile({ label, value, detail }: { label: string; value: string; d
       <p className="mt-2 text-xl font-bold text-ink">{value}</p>
       <p className="mt-1 text-xs leading-5 text-ink/58">{detail}</p>
     </Card>
+  );
+}
+
+function PaymentLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      className="mt-3 inline-flex min-h-9 items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-1 text-xs font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {label}
+    </a>
   );
 }
 
@@ -411,9 +451,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                   <p className="leading-6">{[payment.payment_method, payment.memo].filter(Boolean).join(" / ")}</p>
                 ) : null}
                 {payment.payment_url ? (
-                  <a className="font-bold text-pine underline-offset-4 hover:underline" href={payment.payment_url} target="_blank" rel="noreferrer">
-                    支払いURL
-                  </a>
+                  <PaymentLink href={payment.payment_url} label="支払い先を開く" />
                 ) : null}
                 {!payment.confirmed_at ? (
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>

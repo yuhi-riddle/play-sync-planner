@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEqualExpenseSplits,
   calculateSettlementTransfers,
+  summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
   validateIndividualSplits
 } from "@/lib/domain/settlement";
@@ -150,5 +151,36 @@ describe("summarizeSettlementPaymentProgress", () => {
     expect(() => summarizeSettlementPaymentProgress(3000, [{ amount: 3001, confirmedAt: null }])).toThrow(
       "支払い済み金額が請求額を超えています"
     );
+  });
+});
+
+describe("summarizeSettlementOverview", () => {
+  it("summarizes total, paid, confirmed, remaining amounts and status counts", () => {
+    expect(
+      summarizeSettlementOverview([
+        {
+          amount: 3000,
+          payments: [{ amount: 1000, confirmedAt: null }]
+        },
+        {
+          amount: 2000,
+          payments: [{ amount: 2000, confirmedAt: "2026-07-01T00:00:00Z" }]
+        },
+        {
+          amount: 500,
+          payments: []
+        }
+      ])
+    ).toEqual({
+      settlementCount: 3,
+      totalAmount: 5500,
+      paidAmount: 3000,
+      confirmedAmount: 2000,
+      remainingAmount: 2500,
+      unpaidCount: 1,
+      partiallyPaidCount: 1,
+      paidCount: 0,
+      confirmedCount: 1
+    });
   });
 });

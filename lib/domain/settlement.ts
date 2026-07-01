@@ -33,6 +33,23 @@ export type SettlementPaymentProgress = {
   status: "unpaid" | "partially_paid" | "paid" | "confirmed";
 };
 
+export type SettlementForOverview = {
+  amount: number;
+  payments: SettlementPaymentForProgress[];
+};
+
+export type SettlementOverview = {
+  settlementCount: number;
+  totalAmount: number;
+  paidAmount: number;
+  confirmedAmount: number;
+  remainingAmount: number;
+  unpaidCount: number;
+  partiallyPaidCount: number;
+  paidCount: number;
+  confirmedCount: number;
+};
+
 type SettlementInput = {
   participants: SettlementParticipant[];
   expenses: ExpenseForSettlement[];
@@ -193,4 +210,35 @@ export function summarizeSettlementPaymentProgress(
     remainingAmount,
     status
   };
+}
+
+export function summarizeSettlementOverview(settlements: SettlementForOverview[]): SettlementOverview {
+  return settlements.reduce<SettlementOverview>(
+    (overview, settlement) => {
+      const progress = summarizeSettlementPaymentProgress(settlement.amount, settlement.payments);
+
+      return {
+        settlementCount: overview.settlementCount + 1,
+        totalAmount: overview.totalAmount + settlement.amount,
+        paidAmount: overview.paidAmount + progress.paidAmount,
+        confirmedAmount: overview.confirmedAmount + progress.confirmedAmount,
+        remainingAmount: overview.remainingAmount + progress.remainingAmount,
+        unpaidCount: overview.unpaidCount + (progress.status === "unpaid" ? 1 : 0),
+        partiallyPaidCount: overview.partiallyPaidCount + (progress.status === "partially_paid" ? 1 : 0),
+        paidCount: overview.paidCount + (progress.status === "paid" ? 1 : 0),
+        confirmedCount: overview.confirmedCount + (progress.status === "confirmed" ? 1 : 0)
+      };
+    },
+    {
+      settlementCount: 0,
+      totalAmount: 0,
+      paidAmount: 0,
+      confirmedAmount: 0,
+      remainingAmount: 0,
+      unpaidCount: 0,
+      partiallyPaidCount: 0,
+      paidCount: 0,
+      confirmedCount: 0
+    }
+  );
 }
