@@ -16,8 +16,10 @@ import {
 } from "@/lib/actions/settlements";
 import {
   buildSettlementPaymentRequestMessage,
+  summarizeSettlementNextActions,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
+  type SettlementNextActionItem,
   type SettlementPaymentProgress
 } from "@/lib/domain/settlement";
 import { buildPublicSettlementUrl } from "@/lib/domain/plans";
@@ -165,6 +167,17 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
       }))
     }))
   );
+  const settlementNextActions = summarizeSettlementNextActions(
+    settlements.map((settlement) => ({
+      fromName: participantName(settlement.from_participant),
+      toName: participantName(settlement.to_participant),
+      amount: settlement.amount,
+      payments: (settlement.settlement_payments ?? []).map((payment) => ({
+        amount: payment.amount,
+        confirmedAt: payment.confirmed_at
+      }))
+    }))
+  );
   const paymentRequestMessage = buildSettlementPaymentRequestMessage({
     title: event?.title,
     publicSettlementUrl,
@@ -203,6 +216,32 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           detail={participants.length > 0 ? "支払い対象にできます" : "共有リンクから参加者を追加してください"}
         />
       </section>
+
+      <Card>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">次にやること</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">支払い待ちと、受け取り確認待ちを分けて見ます。</p>
+          </div>
+          {settlementNextActions.isComplete ? (
+            <span className="inline-flex self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">清算完了</span>
+          ) : null}
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <NextActionList
+            title="支払い待ち"
+            emptyText="支払い待ちはありません。"
+            items={settlementNextActions.paymentWaiting}
+            description={(item) => `${item.participantName}さん → ${item.counterpartyName}さんへ ${formatYen(item.amount)}`}
+          />
+          <NextActionList
+            title="受け取り確認待ち"
+            emptyText="確認待ちはありません。"
+            items={settlementNextActions.confirmationWaiting}
+            description={(item) => `${item.participantName}さんが ${item.counterpartyName}さんの支払い ${formatYen(item.amount)} を確認`}
+          />
+        </div>
+      </Card>
 
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>
@@ -375,6 +414,35 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           )}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function NextActionList({
+  title,
+  emptyText,
+  items,
+  description
+}: {
+  title: string;
+  emptyText: string;
+  items: SettlementNextActionItem[];
+  description: (item: SettlementNextActionItem) => string;
+}) {
+  return (
+    <div className="rounded-lg border border-white/75 bg-white/58 p-4">
+      <h3 className="text-sm font-bold text-ink">{title}</h3>
+      {items.length > 0 ? (
+        <ul className="mt-3 grid gap-2">
+          {items.map((item) => (
+            <li key={`${item.participantName}-${item.counterpartyName}-${item.amount}`} className="rounded-lg border border-ink/8 bg-cream/68 px-3 py-2 text-sm leading-6 text-ink/72">
+              {description(item)}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 rounded-lg border border-dashed border-moss/24 bg-cream/54 px-3 py-2 text-sm text-ink/58">{emptyText}</p>
+      )}
     </div>
   );
 }

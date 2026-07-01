@@ -5,6 +5,7 @@ import {
   getSettlementStatusView,
   buildSettlementPaymentRequestMessage,
   calculateSettlementTransfers,
+  summarizeSettlementNextActions,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
   validateIndividualSplits
@@ -209,6 +210,71 @@ describe("getSettlementStatusView", () => {
       label: "清算未設定",
       detail: "清算画面で確認してください",
       tone: "muted"
+    });
+  });
+});
+
+describe("summarizeSettlementNextActions", () => {
+  it("separates payment waiting and confirmation waiting items", () => {
+    expect(
+      summarizeSettlementNextActions([
+        {
+          fromName: "田中",
+          toName: "鈴木",
+          amount: 3000,
+          payments: [{ amount: 1000, confirmedAt: null }]
+        },
+        {
+          fromName: "佐藤",
+          toName: "鈴木",
+          amount: 2000,
+          payments: [{ amount: 2000, confirmedAt: null }]
+        },
+        {
+          fromName: "山田",
+          toName: "鈴木",
+          amount: 500,
+          payments: [{ amount: 500, confirmedAt: "2026-07-01T00:00:00Z" }]
+        }
+      ])
+    ).toEqual({
+      paymentWaiting: [
+        {
+          participantName: "田中",
+          counterpartyName: "鈴木",
+          amount: 2000
+        }
+      ],
+      confirmationWaiting: [
+        {
+          participantName: "鈴木",
+          counterpartyName: "田中",
+          amount: 1000
+        },
+        {
+          participantName: "鈴木",
+          counterpartyName: "佐藤",
+          amount: 2000
+        }
+      ],
+      isComplete: false
+    });
+  });
+
+  it("marks the settlement actions as complete when nothing remains", () => {
+    expect(
+      summarizeSettlementNextActions([
+        {
+          fromName: "田中",
+          toName: "鈴木",
+          amount: 1000,
+          payments: [{ amount: 1000, confirmedAt: "2026-07-01T00:00:00Z" }]
+        }
+      ])
+    ).toEqual({
+      paymentWaiting: [],
+      confirmationWaiting: [],
+      isComplete: true
     });
   });
 });

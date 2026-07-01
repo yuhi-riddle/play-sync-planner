@@ -67,6 +67,25 @@ export type SettlementPaymentRequest = {
   memo?: string | null;
 };
 
+export type SettlementNextActionInput = {
+  fromName: string;
+  toName: string;
+  amount: number;
+  payments: SettlementPaymentForProgress[];
+};
+
+export type SettlementNextActionItem = {
+  participantName: string;
+  counterpartyName: string;
+  amount: number;
+};
+
+export type SettlementNextActions = {
+  paymentWaiting: SettlementNextActionItem[];
+  confirmationWaiting: SettlementNextActionItem[];
+  isComplete: boolean;
+};
+
 const settlementStatusViews: Record<string, SettlementStatusView> = {
   not_started: {
     label: "未開始",
@@ -296,6 +315,43 @@ export function getSettlementStatusView(status: string | null | undefined): Sett
       tone: "muted"
     }
   );
+}
+
+export function summarizeSettlementNextActions(settlements: SettlementNextActionInput[]): SettlementNextActions {
+  const actions = settlements.reduce<SettlementNextActions>(
+    (result, settlement) => {
+      const progress = summarizeSettlementPaymentProgress(settlement.amount, settlement.payments);
+      const confirmationWaitingAmount = progress.paidAmount - progress.confirmedAmount;
+
+      if (progress.remainingAmount > 0) {
+        result.paymentWaiting.push({
+          participantName: settlement.fromName,
+          counterpartyName: settlement.toName,
+          amount: progress.remainingAmount
+        });
+      }
+
+      if (confirmationWaitingAmount > 0) {
+        result.confirmationWaiting.push({
+          participantName: settlement.toName,
+          counterpartyName: settlement.fromName,
+          amount: confirmationWaitingAmount
+        });
+      }
+
+      return result;
+    },
+    {
+      paymentWaiting: [],
+      confirmationWaiting: [],
+      isComplete: false
+    }
+  );
+
+  return {
+    ...actions,
+    isComplete: actions.paymentWaiting.length === 0 && actions.confirmationWaiting.length === 0
+  };
 }
 
 export function buildSettlementPaymentRequestMessage({
