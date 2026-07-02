@@ -1,8 +1,9 @@
 import React from "react";
 
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
+import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { Card, EmptyState } from "@/components/ui";
-import { getPaymentInstructionView, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
+import { getPaymentInstructionView, summarizeSettlementNextActions, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
 
 export type PublicSettlementExpense = {
   id: string;
@@ -46,6 +47,14 @@ export function PublicSettlementSummary({
     }))
   );
   const unpaidSettlements = settlements.filter((settlement) => summarizeSettlementPaymentProgress(settlement.amount, settlement.payments).remainingAmount > 0);
+  const settlementNextActions = summarizeSettlementNextActions(
+    settlements.map((settlement) => ({
+      fromName: settlement.fromName,
+      toName: settlement.toName,
+      amount: settlement.amount,
+      payments: settlement.payments
+    }))
+  );
 
   return (
     <div className="space-y-6">
@@ -62,6 +71,18 @@ export function PublicSettlementSummary({
           <SummaryItem label="清算残額" value={formatYenText(overview.remainingAmount)} />
           <SummaryItem label="支払い済み" value={formatYenText(overview.paidAmount)} />
           <SummaryItem label="立替合計" value={formatYenText(expenses.reduce((total, expense) => total + expense.amount, 0))} />
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-ink">清算の進捗</h2>
+        <p className="mt-1 text-sm leading-6 text-ink/60">支払いと受け取り確認の状況を確認できます。</p>
+        <div className="mt-5">
+          <SettlementProgressSteps
+            paymentWaitingCount={settlementNextActions.paymentWaiting.length}
+            confirmationWaitingCount={settlementNextActions.confirmationWaiting.length}
+            isComplete={settlementNextActions.isComplete}
+          />
         </div>
       </Card>
 
