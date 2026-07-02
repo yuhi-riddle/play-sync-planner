@@ -110,11 +110,14 @@ export function PublicSettlementSummary({
                     {settlement.paymentUrl ? <PaymentDestinationLink href={settlement.paymentUrl} label={paymentView.linkLabel} /> : null}
                   </div>
                   {recordPaymentAction ? (
-                    <details className="mt-4 rounded-lg border border-ink/10 bg-cream/70 p-3">
+                    <details open className="mt-4 rounded-lg border border-ink/10 bg-cream/70 p-3">
                       <summary className="cursor-pointer text-sm font-bold text-ink">支払いを記録</summary>
                       <form action={recordPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
                         <label className="text-sm font-medium text-ink">
                           <span className="text-ink/72">支払い金額</span>
+                          <span id={`${settlement.id}-payment-amount-help`} className="mt-1 block text-xs leading-5 text-ink/58">
+                            一部だけ支払った場合は、支払った金額に変更できます。残り {formatYenText(progress.remainingAmount)}です。
+                          </span>
                           <input
                             name="amount"
                             type="number"
@@ -122,6 +125,8 @@ export function PublicSettlementSummary({
                             max={progress.remainingAmount}
                             step={1}
                             defaultValue={progress.remainingAmount}
+                            aria-describedby={`${settlement.id}-payment-amount-help`}
+                            inputMode="numeric"
                             required
                             className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                           />

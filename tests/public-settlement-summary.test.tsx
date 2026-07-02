@@ -69,8 +69,13 @@ describe("PublicSettlementSummary", () => {
       />
     );
 
-    expect(screen.getAllByText("支払いを記録").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("支払い金額")).toHaveValue(2600);
+    const paymentRecordLabels = screen.getAllByText("支払いを記録");
+    expect(paymentRecordLabels.length).toBeGreaterThan(0);
+    expect(screen.getByRole("spinbutton", { name: /支払い金額/ })).toHaveValue(2600);
+    expect(
+      screen.getByText((_, element) => element?.textContent === "一部だけ支払った場合は、支払った金額に変更できます。残り 2,600円です。")
+    ).toBeInTheDocument();
+    expect(paymentRecordLabels[0]?.closest("details")).toHaveAttribute("open");
     expect(screen.getByRole("button", { name: "支払いを記録" })).toBeInTheDocument();
   });
 });
