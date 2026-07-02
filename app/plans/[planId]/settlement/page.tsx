@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ExpenseForm } from "@/components/expense-form";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { ShareLinkCard } from "@/components/share-link-card";
+import { SettlementCompletionNotice } from "@/components/settlement-completion-notice";
 import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
@@ -293,6 +294,8 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           />
         </div>
       </Card>
+
+      <SettlementCompletionNotice isComplete={settlementNextActions.isComplete} settlementCount={settlementOverview.settlementCount} />
 
       <SettlementConfirmationQueue items={confirmationQueueItems} confirmPaymentAction={confirmSettlementPaymentAction} />
 
