@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ExpenseForm } from "@/components/expense-form";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { ShareLinkCard } from "@/components/share-link-card";
+import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
 import { Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import {
@@ -237,6 +238,18 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           detail={participants.length > 0 ? "支払い対象にできます" : "共有リンクから参加者を追加してください"}
         />
       </section>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-ink">清算の進捗</h2>
+        <p className="mt-1 text-sm leading-6 text-ink/60">今どこで止まっているかを確認します。</p>
+        <div className="mt-5">
+          <SettlementProgressSteps
+            paymentWaitingCount={settlementNextActions.paymentWaiting.length}
+            confirmationWaitingCount={settlementNextActions.confirmationWaiting.length}
+            isComplete={settlementNextActions.isComplete}
+          />
+        </div>
+      </Card>
 
       <Card>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
