@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ExpenseForm } from "@/components/expense-form";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { ShareLinkCard } from "@/components/share-link-card";
+import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
 import { Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
@@ -210,6 +211,22 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     settlementUrl: ownerSettlementUrl,
     requests: settlementNextActions.confirmationWaiting
   });
+  const confirmationQueueItems = settlements
+    .flatMap((settlement) =>
+      (settlement.settlement_payments ?? [])
+        .filter((payment) => !payment.confirmed_at)
+        .map((payment) => ({
+          id: payment.id,
+          fromName: participantName(payment.paid_by) || participantName(settlement.from_participant),
+          toName: participantName(settlement.to_participant),
+          amount: payment.amount,
+          paidAt: payment.paid_at,
+          paymentMethod: payment.payment_method,
+          paymentUrl: payment.payment_url,
+          memo: payment.memo
+        }))
+    )
+    .sort((a, b) => b.paidAt.localeCompare(a.paidAt));
 
   return (
     <div className="space-y-6">
@@ -276,6 +293,8 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           />
         </div>
       </Card>
+
+      <SettlementConfirmationQueue items={confirmationQueueItems} confirmPaymentAction={confirmSettlementPaymentAction} />
 
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>
