@@ -1,5 +1,6 @@
 import React from "react";
 
+import { PaymentMethodField } from "@/components/payment-method-field";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { Card, EmptyState, MadoiForm } from "@/components/ui";
@@ -24,8 +25,6 @@ export type PublicSettlementItem = {
   memo: string | null;
   payments: Array<{ amount: number; confirmedAt: string | null }>;
 };
-
-const paymentMethodOptions = ["PayPay", "銀行振込", "現金"];
 
 export function PublicSettlementSummary({
   eventTitle,
@@ -58,11 +57,6 @@ export function PublicSettlementSummary({
 
   return (
     <div className="space-y-6">
-      <datalist id="public-payment-method-options">
-        {paymentMethodOptions.map((method) => (
-          <option key={method} value={method} />
-        ))}
-      </datalist>
       <Card>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">予定</p>
         <h2 className="mt-2 text-2xl font-bold text-ink">{eventTitle}</h2>
@@ -111,7 +105,9 @@ export function PublicSettlementSummary({
                   </div>
                   {recordPaymentAction ? (
                     <details open className="mt-4 rounded-lg border border-ink/10 bg-cream/70 p-3">
-                      <summary className="cursor-pointer text-sm font-bold text-ink">支払いを記録</summary>
+                      <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay [&::-webkit-details-marker]:hidden">
+                        支払いを記録
+                      </summary>
                       <MadoiForm action={recordPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
                         <label className="text-sm font-medium text-ink">
                           <span className="text-ink/72">支払い金額</span>
@@ -133,15 +129,7 @@ export function PublicSettlementSummary({
                             className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                           />
                         </label>
-                        <label className="text-sm font-medium text-ink">
-                          <span className="text-ink/72">支払い方法</span>
-                          <input
-                            name="payment_method"
-                            list="public-payment-method-options"
-                            className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-                            placeholder="例: PayPay"
-                          />
-                        </label>
+                        <PaymentMethodField placeholder="例: PayPay" compact />
                         <label className="text-sm font-medium text-ink">
                           <span className="text-ink/72">支払い記録URL</span>
                           <input

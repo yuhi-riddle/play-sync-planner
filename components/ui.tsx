@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import React, { useRef, useState } from "react";
-import type { FormEvent, InvalidEvent, ReactNode } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import React, { useEffect, useId, useRef, useState } from "react";
+import type { FormEvent, InvalidEvent, KeyboardEvent, ReactNode } from "react";
 import { clsx } from "clsx";
 
 import { brand } from "@/lib/brand";
@@ -136,6 +137,14 @@ function focusFirstInvalidField(form: HTMLFormElement) {
     return;
   }
 
+  const customFocusId = firstInvalidField.dataset.madoiFocusId;
+  const customTarget = customFocusId ? document.getElementById(customFocusId) : null;
+  if (customTarget) {
+    customTarget.scrollIntoView({ block: "center", behavior: "smooth" });
+    customTarget.focus({ preventScroll: true });
+    return;
+  }
+
   firstInvalidField.scrollIntoView({ block: "center", behavior: "smooth" });
   firstInvalidField.focus({ preventScroll: true });
 }
@@ -189,7 +198,6 @@ export function TextField({
   helpText,
   step,
   min,
-  list,
   requiredMessage
 }: {
   label: string;
@@ -201,7 +209,6 @@ export function TextField({
   helpText?: string;
   step?: number;
   min?: number;
-  list?: string;
   requiredMessage?: string;
 }) {
   function handleInvalid(event: InvalidEvent<HTMLInputElement>) {
@@ -226,7 +233,6 @@ export function TextField({
         placeholder={placeholder}
         step={step}
         min={min}
-        list={list}
         onInvalid={handleInvalid}
         onInput={handleInput}
         data-field-label={label}
@@ -235,6 +241,165 @@ export function TextField({
       />
       {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
+  );
+}
+
+type SelectOption = { value: string; label: string; disabled?: boolean };
+
+export function MadoiSelect({
+  name,
+  value,
+  defaultValue,
+  options,
+  onValueChange,
+  required,
+  requiredMessage,
+  fieldLabel,
+  ariaLabel,
+  compact = false,
+  buttonRef
+}: {
+  name?: string;
+  value?: string;
+  defaultValue?: string;
+  options: SelectOption[];
+  onValueChange?: (value: string) => void;
+  required?: boolean;
+  requiredMessage?: string;
+  fieldLabel: string;
+  ariaLabel?: string;
+  compact?: boolean;
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const generatedId = useId();
+  const buttonId = `madoi-select-${generatedId}`;
+  const listboxId = `madoi-select-list-${generatedId}`;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+  const selectedValue = value ?? internalValue;
+  const selectedOption = options.find((option) => option.value === selectedValue);
+  const activeOptions = options.filter((option) => !option.disabled);
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function selectValue(nextValue: string) {
+    if (value === undefined) {
+      setInternalValue(nextValue);
+    }
+    onValueChange?.(nextValue);
+    setOpen(false);
+  }
+
+  function moveSelection(amount: number) {
+    if (activeOptions.length === 0) {
+      return;
+    }
+
+    const currentIndex = Math.max(0, activeOptions.findIndex((option) => option.value === selectedValue));
+    const nextIndex = (currentIndex + amount + activeOptions.length) % activeOptions.length;
+    selectValue(activeOptions[nextIndex].value);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      moveSelection(1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      moveSelection(-1);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      {name ? (
+        <input
+          className="pointer-events-none absolute left-3 top-3 h-px w-px opacity-0"
+          tabIndex={-1}
+          aria-hidden="true"
+          name={name}
+          value={selectedValue}
+          readOnly
+          required={required}
+          data-field-label={fieldLabel}
+          data-required-message={requiredMessage}
+          data-madoi-focus-id={buttonId}
+        />
+      ) : null}
+      <button
+        ref={buttonRef}
+        id={buttonId}
+        type="button"
+        aria-label={ariaLabel ?? fieldLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={handleKeyDown}
+        className={clsx(
+          "flex w-full items-center justify-between gap-3 rounded-lg border border-ink/10 bg-white/88 text-left text-base text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
+          compact ? "min-h-10 px-3 py-2" : "min-h-11 px-3 py-2"
+        )}
+      >
+        <span className={selectedOption ? "font-medium" : "text-ink/46"}>{selectedOption?.label ?? "選択してください"}</span>
+        <ChevronDown aria-hidden="true" className={clsx("h-4 w-4 shrink-0 text-moss transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <div
+          id={listboxId}
+          role="listbox"
+          className="absolute z-40 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-white/80 bg-cream p-2 shadow-soft"
+        >
+          {options.map((option) => {
+            const selected = option.value === selectedValue;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                disabled={option.disabled}
+                onClick={() => selectValue(option.value)}
+                className={clsx(
+                  "flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                  selected ? "bg-mist/55 text-pine" : "text-ink hover:bg-white/72",
+                  option.disabled && "pointer-events-none text-ink/35"
+                )}
+              >
+                <span>{option.label}</span>
+                {selected ? <Check aria-hidden="true" className="h-4 w-4 text-moss" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -302,35 +467,19 @@ export function SelectField({
   required?: boolean;
   requiredMessage?: string;
 }) {
-  function handleInvalid(event: InvalidEvent<HTMLSelectElement>) {
-    if (requiredMessage && event.currentTarget.validity.valueMissing) {
-      event.currentTarget.setCustomValidity(requiredMessage);
-    }
-  }
-
-  function handleInput(event: FormEvent<HTMLSelectElement>) {
-    event.currentTarget.setCustomValidity("");
-  }
-
   return (
     <label className="block text-sm font-medium text-ink">
       <span className="text-ink/72">{label}</span>
-      <select
-        className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-        name={name}
-        defaultValue={defaultValue}
-        required={required}
-        onInvalid={handleInvalid}
-        onInput={handleInput}
-        data-field-label={label}
-        data-required-message={requiredMessage}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="mt-2">
+        <MadoiSelect
+          name={name}
+          defaultValue={defaultValue}
+          options={options}
+          required={required}
+          requiredMessage={requiredMessage}
+          fieldLabel={label}
+        />
+      </div>
     </label>
   );
 }

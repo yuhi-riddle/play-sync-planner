@@ -4,16 +4,21 @@ import { describe, expect, it, vi } from "vitest";
 
 import { PlanForm } from "@/components/plan-form";
 
+function chooseOption(label: string, optionName: string) {
+  fireEvent.click(screen.getByLabelText(label));
+  fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: optionName }));
+}
+
 describe("PlanForm", () => {
   it("adds a candidate datetime and reaches the review step with a deadline", async () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
     await waitFor(() => expect(screen.getByLabelText("開始時")).toHaveFocus());
-    fireEvent.change(screen.getByLabelText("開始時"), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText("開始分"), { target: { value: "07" } });
-    fireEvent.change(screen.getByLabelText("終了時"), { target: { value: "12" } });
-    fireEvent.change(screen.getByLabelText("終了分"), { target: { value: "07" } });
+    chooseOption("開始時", "10");
+    chooseOption("開始分", "07");
+    chooseOption("終了時", "12");
+    chooseOption("終了分", "07");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
 
     expect(screen.getByText("候補 1")).toBeInTheDocument();
@@ -23,8 +28,8 @@ describe("PlanForm", () => {
 
     fireEvent.click(screen.getByLabelText(/7月14日.*を選択/));
     await waitFor(() => expect(screen.getByLabelText("回答期限時")).toHaveFocus());
-    fireEvent.change(screen.getByLabelText("回答期限時"), { target: { value: "22" } });
-    fireEvent.change(screen.getByLabelText("回答期限分"), { target: { value: "08" } });
+    chooseOption("回答期限時", "22");
+    chooseOption("回答期限分", "08");
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     expect(screen.getByRole("heading", { name: "内容を確認する" })).toBeInTheDocument();
@@ -38,16 +43,16 @@ describe("PlanForm", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    fireEvent.change(screen.getByLabelText("開始時"), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText("開始分"), { target: { value: "00" } });
-    fireEvent.change(screen.getByLabelText("終了時"), { target: { value: "12" } });
-    fireEvent.change(screen.getByLabelText("終了分"), { target: { value: "00" } });
+    chooseOption("開始時", "10");
+    chooseOption("開始分", "00");
+    chooseOption("終了時", "12");
+    chooseOption("終了分", "00");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    fireEvent.change(screen.getByLabelText("回答期限時"), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText("回答期限分"), { target: { value: "01" } });
+    chooseOption("回答期限時", "10");
+    chooseOption("回答期限分", "01");
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     expect(screen.getByText("回答期限は最初の候補日時より前にしてください。")).toBeInTheDocument();
@@ -59,20 +64,20 @@ describe("PlanForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "13:00〜" }));
 
-    expect(screen.getByLabelText("開始時")).toHaveValue("13");
-    expect(screen.getByLabelText("終了時")).toHaveValue("15");
+    expect(screen.getByLabelText("開始時")).toHaveTextContent("13");
+    expect(screen.getByLabelText("終了時")).toHaveTextContent("15");
   });
 
   it("adds a multi-day candidate by choosing a different end date", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    fireEvent.change(screen.getByLabelText("開始時"), { target: { value: "23" } });
-    fireEvent.change(screen.getByLabelText("開始分"), { target: { value: "00" } });
+    chooseOption("開始時", "23");
+    chooseOption("開始分", "00");
     fireEvent.click(screen.getByRole("button", { name: "終了日を変更" }));
     fireEvent.click(within(screen.getByRole("group", { name: "終了日を選択" })).getByLabelText(/7月16日.*を選択/));
-    fireEvent.change(screen.getByLabelText("終了時"), { target: { value: "01" } });
-    fireEvent.change(screen.getByLabelText("終了分"), { target: { value: "30" } });
+    chooseOption("終了時", "01");
+    chooseOption("終了分", "30");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
 
     expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T23:00");
@@ -103,12 +108,12 @@ describe("PlanForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
-    const reminderSelect = document.querySelector('select[name="reminder_offset_minutes"]');
-    expect(reminderSelect).toHaveValue("1440");
+    const reminderInput = document.querySelector('input[name="reminder_offset_minutes"]');
+    expect(reminderInput).toHaveValue("1440");
 
-    fireEvent.change(reminderSelect as Element, { target: { value: "180" } });
+    chooseOption("リマインド", "3時間前");
 
-    expect(reminderSelect).toHaveValue("180");
+    expect(reminderInput).toHaveValue("180");
   });
 
   it("shows a settings link when Google Calendar is not connected", () => {

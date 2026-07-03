@@ -2,7 +2,7 @@ import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MadoiForm, TextField } from "@/components/ui";
+import { MadoiForm, MadoiSelect, TextField } from "@/components/ui";
 
 describe("MadoiForm", () => {
   beforeEach(() => {
@@ -24,5 +24,29 @@ describe("MadoiForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("入力を確認してください。");
     expect(screen.getByText("予定名を入力してください")).toBeInTheDocument();
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it("stores the selected custom option in a form field", () => {
+    render(
+      <MadoiForm action={vi.fn()} className="grid gap-4">
+        <MadoiSelect
+          name="category"
+          fieldLabel="カテゴリ"
+          defaultValue=""
+          required
+          requiredMessage="カテゴリを選択してください"
+          options={[
+            { value: "", label: "選択してください", disabled: true },
+            { value: "meal", label: "食事" },
+            { value: "travel", label: "旅行" }
+          ]}
+        />
+      </MadoiForm>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "カテゴリ" }));
+    fireEvent.click(screen.getByRole("option", { name: "旅行" }));
+
+    expect(document.querySelector('input[name="category"]')).toHaveValue("travel");
   });
 });

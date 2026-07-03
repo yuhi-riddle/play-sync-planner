@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
 import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar-availability-panel";
-import { TextArea } from "@/components/ui";
+import { MadoiSelect, TextArea } from "@/components/ui";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/calendar";
 import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar-availability";
 import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib/format";
@@ -122,7 +122,7 @@ function TimeSelect({
 }: {
   time: string;
   onTimeChange: (value: string) => void;
-  hourRef?: RefObject<HTMLSelectElement | null>;
+  hourRef?: RefObject<HTMLButtonElement | null>;
   labelPrefix: string;
 }) {
   const [hour, minute] = time.split(":");
@@ -131,34 +131,28 @@ function TimeSelect({
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="text-sm font-medium text-ink">
         <span className="text-ink/72">時</span>
-        <select
-          ref={hourRef}
-          className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-          value={hour}
-          onChange={(event) => onTimeChange(`${event.target.value}:${minute}`)}
-          aria-label={`${labelPrefix}時`}
-        >
-          {hourOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div className="mt-2">
+          <MadoiSelect
+            value={hour}
+            onValueChange={(nextHour) => onTimeChange(`${nextHour}:${minute}`)}
+            options={hourOptions.map((option) => ({ value: option, label: option }))}
+            fieldLabel={`${labelPrefix}時`}
+            ariaLabel={`${labelPrefix}時`}
+            buttonRef={hourRef}
+          />
+        </div>
       </label>
       <label className="text-sm font-medium text-ink">
         <span className="text-ink/72">分</span>
-        <select
-          className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-          value={minute}
-          onChange={(event) => onTimeChange(`${hour}:${event.target.value}`)}
-          aria-label={`${labelPrefix}分`}
-        >
-          {minuteOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div className="mt-2">
+          <MadoiSelect
+            value={minute}
+            onValueChange={(nextMinute) => onTimeChange(`${hour}:${nextMinute}`)}
+            options={minuteOptions.map((option) => ({ value: option, label: option }))}
+            fieldLabel={`${labelPrefix}分`}
+            ariaLabel={`${labelPrefix}分`}
+          />
+        </div>
       </label>
     </div>
   );
@@ -223,33 +217,29 @@ function CalendarPicker({
         <div className="mb-3 grid gap-2 rounded-lg border border-moss/18 bg-cream/70 p-3 sm:grid-cols-2">
           <label className="text-sm font-medium text-ink">
             <span className="text-ink/72">年</span>
-            <select
-              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-              value={visibleMonth.getFullYear()}
-              onChange={(event) => onChangeMonth(new Date(Number(event.target.value), visibleMonth.getMonth(), 1))}
-              aria-label="年を選択"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}年
-                </option>
-              ))}
-            </select>
+            <div className="mt-2">
+              <MadoiSelect
+                value={String(visibleMonth.getFullYear())}
+                onValueChange={(year) => onChangeMonth(new Date(Number(year), visibleMonth.getMonth(), 1))}
+                options={yearOptions.map((year) => ({ value: String(year), label: `${year}年` }))}
+                fieldLabel="年"
+                ariaLabel="年を選択"
+                compact
+              />
+            </div>
           </label>
           <label className="text-sm font-medium text-ink">
             <span className="text-ink/72">月</span>
-            <select
-              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-              value={visibleMonth.getMonth()}
-              onChange={(event) => onChangeMonth(new Date(visibleMonth.getFullYear(), Number(event.target.value), 1))}
-              aria-label="月を選択"
-            >
-              {Array.from({ length: 12 }, (_, month) => (
-                <option key={month} value={month}>
-                  {month + 1}月
-                </option>
-              ))}
-            </select>
+            <div className="mt-2">
+              <MadoiSelect
+                value={String(visibleMonth.getMonth())}
+                onValueChange={(month) => onChangeMonth(new Date(visibleMonth.getFullYear(), Number(month), 1))}
+                options={Array.from({ length: 12 }, (_, month) => ({ value: String(month), label: `${month + 1}月` }))}
+                fieldLabel="月"
+                ariaLabel="月を選択"
+                compact
+              />
+            </div>
           </label>
         </div>
       ) : null}
@@ -326,8 +316,8 @@ export function PlanForm({
   const initialDeadlineValue = toDateTimeLocalValue(plan?.answer_deadline_at);
   const initialDeadline = splitDateTime(initialDeadlineValue, defaultDeadlineTime);
   const initialReminderOffset = initialReminderOffsetValue(plan?.plan_reminder_settings);
-  const candidateHourRef = useRef<HTMLSelectElement>(null);
-  const deadlineHourRef = useRef<HTMLSelectElement>(null);
+  const candidateHourRef = useRef<HTMLButtonElement>(null);
+  const deadlineHourRef = useRef<HTMLButtonElement>(null);
   const today = formatDateForInput(new Date());
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -646,19 +636,15 @@ export function PlanForm({
           <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
           <label className="text-sm font-medium text-ink">
             <span className="text-ink/72">リマインド</span>
-            <select
-              name="reminder_offset_minutes"
-              className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-              value={reminderOffsetMinutes}
-              onChange={(event) => setReminderOffsetMinutes(event.target.value)}
-              aria-label="リマインド"
-            >
-              {reminderOptions.map((option) => (
-                <option key={option.value || "none"} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="mt-2">
+              <MadoiSelect
+                value={reminderOffsetMinutes}
+                onValueChange={setReminderOffsetMinutes}
+                options={reminderOptions}
+                fieldLabel="リマインド"
+                ariaLabel="リマインド"
+              />
+            </div>
           </label>
           <p
             className={clsx(

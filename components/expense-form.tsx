@@ -3,7 +3,8 @@
 import { ReceiptText } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
-import { MadoiForm, TextArea, TextField } from "@/components/ui";
+import { PaymentMethodField } from "@/components/payment-method-field";
+import { MadoiForm, MadoiSelect, TextArea, TextField } from "@/components/ui";
 
 type ParticipantOption = {
   id: string;
@@ -22,8 +23,6 @@ type ExpenseFormInitialValues = {
   splitParticipantIds?: string[];
   individualAmounts?: Record<string, number>;
 };
-
-const paymentMethodOptions = ["PayPay", "銀行振込", "現金"];
 
 export function ExpenseForm({
   participants,
@@ -90,25 +89,19 @@ export function ExpenseForm({
 
       <label className="block text-sm font-medium text-ink">
         <span className="text-ink/72">支払った人</span>
-        <select
+        <div className="mt-2">
+          <MadoiSelect
           name="payer_participant_id"
-          required
-          className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-          onInvalid={(event) => event.currentTarget.setCustomValidity("支払った人を選択してください")}
-          onInput={(event) => event.currentTarget.setCustomValidity("")}
-          data-field-label="支払った人"
-          data-required-message="支払った人を選択してください"
           defaultValue={initialValues?.payerParticipantId ?? ""}
-        >
-          <option value="" disabled>
-            --- 選択してください ---
-          </option>
-          {participants.map((participant) => (
-            <option key={participant.id} value={participant.id}>
-              {participant.displayName}
-            </option>
-          ))}
-        </select>
+            required
+            requiredMessage="支払った人を選択してください"
+            fieldLabel="支払った人"
+            options={[
+              { value: "", label: "選択してください", disabled: true },
+              ...participants.map((participant) => ({ value: participant.id, label: participant.displayName }))
+            ]}
+          />
+        </div>
       </label>
 
       <fieldset className="grid gap-3 rounded-lg border border-white/75 bg-white/58 p-4">
@@ -184,20 +177,9 @@ export function ExpenseForm({
       </fieldset>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <TextField
-          label="支払い方法"
-          name="payment_method"
-          defaultValue={initialValues?.paymentMethod}
-          placeholder="例: PayPay、銀行振込、現金"
-          list="expense-payment-method-options"
-        />
+        <PaymentMethodField defaultValue={initialValues?.paymentMethod} />
         <TextField label="支払い用URL" name="payment_url" defaultValue={initialValues?.paymentUrl} placeholder="https://..." />
       </div>
-      <datalist id="expense-payment-method-options">
-        {paymentMethodOptions.map((method) => (
-          <option key={method} value={method} />
-        ))}
-      </datalist>
       <label className="flex items-start gap-3 rounded-lg border border-moss/18 bg-mist/30 p-3 text-sm text-ink">
         <input
           type="checkbox"

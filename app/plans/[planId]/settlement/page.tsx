@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { ExpenseForm } from "@/components/expense-form";
+import { PaymentMethodField } from "@/components/payment-method-field";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { SettlementCompletionNotice } from "@/components/settlement-completion-notice";
@@ -105,8 +106,6 @@ const settlementStatusLabels: Record<SettlementPaymentProgress["status"], string
   paid: "支払い済み",
   confirmed: "受け取り確認済み"
 };
-
-const paymentMethodOptions = ["PayPay", "銀行振込", "現金"];
 
 function firstParticipant(value: ParticipantRelation) {
   return Array.isArray(value) ? value[0] : value;
@@ -231,11 +230,6 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
 
   return (
     <div className="space-y-6">
-      <datalist id="settlement-payment-method-options">
-        {paymentMethodOptions.map((method) => (
-          <option key={method} value={method} />
-        ))}
-      </datalist>
       <PageHeader
         title="支払い・清算"
         description={event?.title ? `${event.title} の支払いと清算をまとめます。` : "支払いと清算をまとめます。"}
@@ -470,7 +464,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                 {settlementPaymentCount === 0 ? (
                   <div className="mt-4 flex flex-col gap-3 border-t border-white/75 pt-4">
                     <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-                      <summary className="cursor-pointer text-sm font-bold text-ink">内容を編集</summary>
+                      <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay [&::-webkit-details-marker]:hidden">
+                        内容を編集
+                      </summary>
                       <div className="mt-4">
                         <ExpenseForm
                           participants={participants.map((participant) => ({
@@ -584,18 +580,11 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
       </div>
 
       <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-        <summary className="cursor-pointer text-sm font-bold text-ink">受け取り方法を設定</summary>
+        <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay [&::-webkit-details-marker]:hidden">
+          受け取り方法を設定
+        </summary>
         <form action={updateSettlementPaymentInstructionAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
-          <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">支払い方法</span>
-            <input
-              name="payment_method"
-              list="settlement-payment-method-options"
-              defaultValue={settlement.payment_method ?? ""}
-              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-              placeholder="例: PayPay、銀行振込、現金"
-            />
-          </label>
+          <PaymentMethodField defaultValue={settlement.payment_method} compact />
           <label className="text-sm font-medium text-ink">
             <span className="text-ink/72">送金先URL</span>
             <input
@@ -626,7 +615,9 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
 
       {progress.remainingAmount > 0 ? (
         <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-          <summary className="cursor-pointer text-sm font-bold text-ink">支払った金額を記録</summary>
+          <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay [&::-webkit-details-marker]:hidden">
+            支払った金額を記録
+          </summary>
           <MadoiForm action={recordSettlementPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
             <label className="text-sm font-medium text-ink">
               <span className="text-ink/72">支払い金額</span>
@@ -643,15 +634,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                 className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
-            <label className="text-sm font-medium text-ink">
-              <span className="text-ink/72">支払い方法</span>
-              <input
-                name="payment_method"
-                list="settlement-payment-method-options"
-                className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-                placeholder="例: PayPay"
-              />
-            </label>
+            <PaymentMethodField placeholder="例: PayPay" compact />
             <label className="text-sm font-medium text-ink">
               <span className="text-ink/72">支払い記録URL</span>
               <input
