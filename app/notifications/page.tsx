@@ -1,9 +1,13 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/notifications";
 import { Card, EmptyState, PageHeader, SubmitButton } from "@/components/ui";
-import { onlyUnreadNotifications } from "@/lib/domain/site-notifications";
+import {
+  filterNotificationsByReadState,
+  type NotificationReadFilter
+} from "@/lib/domain/site-notifications";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +30,14 @@ const kindLabels: Record<string, string> = {
   confirmation_due: "受け取り確認"
 };
 
-export default async function NotificationsPage() {
+export default async function NotificationsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ status?: string }>;
+}) {
+  const query = (await searchParams) ?? {};
+  const activeFilter: NotificationReadFilter = query.status === "read" ? "read" : "unread";
+
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
@@ -57,8 +68,11 @@ export default async function NotificationsPage() {
     .order("created_at", { ascending: false })
     .limit(80);
 
-  const notifications = onlyUnreadNotifications((data ?? []) as NotificationRow[]);
-  const unreadCount = notifications.length;
+  const rows = (data ?? []) as NotificationRow[];
+  const unreadCount = filterNotificationsByReadState(rows, "unread").length;
+  const readCount = filterNotificationsByReadState(rows, "read").length;
+  const notifications = filterNotificationsByReadState(rows, activeFilter);
+  const countLabel = activeFilter === "read" ? `既読 ${readCount}件` : `未読 ${unreadCount}件`;
 
   return (
     <div className="space-y-6">
@@ -66,7 +80,7 @@ export default async function NotificationsPage() {
         title="通知"
         description="回答期限、未回答、清算、支払い確認など、対応が必要なことをまとめて確認します。"
         action={
-          unreadCount > 0 ? (
+          activeFilter === "unread" && unreadCount > 0 ? (
             <form action={markAllNotificationsReadAction}>
               <SubmitButton>
                 <CheckCheck aria-hidden="true" className="mr-2 h-4 w-4" />
@@ -78,10 +92,24 @@ export default async function NotificationsPage() {
       />
 
       <Card>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-ink">通知一覧</h2>
-          <span className="rounded-full bg-white/76 px-3 py-1 text-xs font-bold text-ink/60">未読 {unreadCount}件</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">通知一覧</h2>
+            <p className="mt-1 text-sm text-ink/60">
+              {activeFilter === "read" ? "既読にした通知を確認できます。" : "未読の通知だけを表示しています。"}
+            </p>
+          </div>
+          <span className="w-fit rounded-full bg-white/76 px-3 py-1 text-xs font-bold text-ink/60">{countLabel}</span>
         </div>
+
+        <nav className="mt-4 flex flex-wrap gap-2" aria-label="通知の表示切替">
+          <NotificationFilterLink href="/notifications" active={activeFilter === "unread"}>
+            未読 {unreadCount}
+          </NotificationFilterLink>
+          <NotificationFilterLink href="/notifications?status=read" active={activeFilter === "read"}>
+            既読 {readCount}
+          </NotificationFilterLink>
+        </nav>
 
         <div className="mt-4 space-y-3">
           {notifications.length > 0 ? (
@@ -102,9 +130,9 @@ export default async function NotificationsPage() {
                       <span className="rounded-full bg-cream/86 px-3 py-1 text-xs font-bold text-pine">
                         {kindLabels[notification.kind] ?? "通知"}
                       </span>
-                      {!notification.read_at ? (
-                        <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">未読</span>
-                      ) : null}
+                      <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">
+                        {notification.read_at ? "既読" : "未読"}
+                      </span>
                     </span>
                     <span className="mt-3 block text-base font-bold text-ink group-hover:text-pine">{notification.title}</span>
                     <span className="mt-1 block text-sm leading-6 text-ink/65">{notification.body}</span>
@@ -125,11 +153,35 @@ export default async function NotificationsPage() {
               </article>
             ))
           ) : (
-            <EmptyState>通知はまだありません。</EmptyState>
+            <EmptyState>{activeFilter === "read" ? "既読の通知はありません。" : "未読の通知はありません。"}</EmptyState>
           )}
         </div>
       </Card>
     </div>
+  );
+}
+
+function NotificationFilterLink({
+  href,
+  active,
+  children
+}: {
+  href: string;
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={
+        active
+          ? "inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          : "inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      }
+    >
+      {children}
+    </Link>
   );
 }
 

@@ -30,6 +30,8 @@ export type ReadableNotification = {
   readAt?: string | null;
 };
 
+export type NotificationReadFilter = "unread" | "read";
+
 const notificationTitles: Record<NotificationKind, string> = {
   answer_deadline: "回答期限が近づいています",
   unanswered: "未回答者がいます",
@@ -59,7 +61,17 @@ export function summarizeUnreadNotifications(notifications: NotificationCandidat
 }
 
 export function onlyUnreadNotifications<T extends ReadableNotification>(notifications: T[]): T[] {
-  return notifications.filter((notification) => !notification.read_at && !notification.readAt);
+  return filterNotificationsByReadState(notifications, "unread");
+}
+
+export function filterNotificationsByReadState<T extends ReadableNotification>(
+  notifications: T[],
+  filter: NotificationReadFilter
+): T[] {
+  return notifications.filter((notification) => {
+    const isRead = Boolean(notification.read_at ?? notification.readAt);
+    return filter === "read" ? isRead : !isRead;
+  });
 }
 
 function buildNotificationBody(input: NotificationCandidateInput) {

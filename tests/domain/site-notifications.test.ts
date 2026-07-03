@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildNotificationCandidate,
+  filterNotificationsByReadState,
   onlyUnreadNotifications,
   summarizeUnreadNotifications,
   type NotificationCandidate
@@ -87,5 +88,28 @@ describe("onlyUnreadNotifications", () => {
         { id: "read", read_at: "2026-07-03T00:00:00Z" }
       ])
     ).toEqual([{ id: "unread", read_at: null }]);
+  });
+});
+
+describe("filterNotificationsByReadState", () => {
+  const notifications = [
+    { id: "unread", read_at: null },
+    { id: "read", read_at: "2026-07-03T00:00:00Z" },
+    { id: "camel-unread", readAt: null },
+    { id: "camel-read", readAt: "2026-07-03T00:00:00Z" }
+  ];
+
+  it("keeps unread notifications when the unread filter is selected", () => {
+    expect(filterNotificationsByReadState(notifications, "unread").map((notification) => notification.id)).toEqual([
+      "unread",
+      "camel-unread"
+    ]);
+  });
+
+  it("keeps read notifications when the read filter is selected", () => {
+    expect(filterNotificationsByReadState(notifications, "read").map((notification) => notification.id)).toEqual([
+      "read",
+      "camel-read"
+    ]);
   });
 });
