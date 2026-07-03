@@ -103,6 +103,7 @@ npm run build
 - `docs/phase1-user-setup.md`: Phase 1 セットアップ手順
 - `docs/phase1-completion-checklist.md`: Phase 1 完了チェック
 - `docs/phase2-google-calendar-setup.md`: Google Calendar セットアップ手順
+- `docs/current-status.md`: 現在の実装状況、残件、リリース前チェックリスト
 
 ## Phase 2 Google Calendar 連携
 
