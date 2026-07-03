@@ -37,6 +37,8 @@ Madoi は、友人同士の遊びや公演参加の日程を合わせるため�
 - 支払いURLを開く導線
 - 支払い依頼文面コピー
 - 清算リマインド文面コピーと送信済み記録
+- サイト内通知
+- ホームとヘッダーでの未読通知表示
 
 ## 技術スタック
 
@@ -62,6 +64,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+CRON_SECRET=
 ```
 
 Supabase の SQL Editor で、マイグレーションを順番に実行します。
@@ -73,6 +76,9 @@ supabase/migrations/003_plan_reminder_settings.sql
 supabase/migrations/004_plan_reminder_logs.sql
 supabase/migrations/005_settlement_core.sql
 supabase/migrations/006_settlement_payments.sql
+supabase/migrations/007_expense_important_notes.sql
+supabase/migrations/008_settlement_reminder_type.sql
+supabase/migrations/009_site_notifications.sql
 ```
 
 Google Calendar 連携を使う場合は、次の手順も実施してください。
@@ -104,6 +110,7 @@ npm run build
 - `docs/phase1-completion-checklist.md`: Phase 1 完了チェック
 - `docs/phase2-google-calendar-setup.md`: Google Calendar セットアップ手順
 - `docs/current-status.md`: 現在の実装状況、残件、リリース前チェックリスト
+- `docs/release-checklist.md`: ローカル・本番公開前の確認手順
 
 ## Phase 2 Google Calendar 連携
 
@@ -195,3 +202,15 @@ npm run build
 - 支払い依頼の送信済み記録を残せる
 
 PayPayなどの外部決済API連携、支払い依頼の自動送信、入金確認の自動化はまだ行いません。
+
+## サイト内通知
+
+Madoi内で、未回答、回答期限、清算待ち、支払い待ち、受け取り確認待ちを通知として表示します。
+
+- ヘッダーに未読件数を表示する
+- ホームに対応が必要な通知を表示する
+- `/notifications` で通知一覧を確認する
+- 既読、すべて既読にできる
+- 通知生成APIを Vercel Cron から1時間ごとに実行する
+
+本番で通知生成APIを手動実行できないようにしたい場合は、`CRON_SECRET` を設定してください。未設定の場合、本番では Vercel Cron の User-Agent だけを許可します。
