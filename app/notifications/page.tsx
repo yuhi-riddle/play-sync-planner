@@ -3,6 +3,7 @@ import { Bell, CheckCheck } from "lucide-react";
 
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/notifications";
 import { Card, EmptyState, PageHeader, SubmitButton } from "@/components/ui";
+import { onlyUnreadNotifications } from "@/lib/domain/site-notifications";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -56,8 +57,8 @@ export default async function NotificationsPage() {
     .order("created_at", { ascending: false })
     .limit(80);
 
-  const notifications = (data ?? []) as NotificationRow[];
-  const unreadCount = notifications.filter((notification) => !notification.read_at).length;
+  const notifications = onlyUnreadNotifications((data ?? []) as NotificationRow[]);
+  const unreadCount = notifications.length;
 
   return (
     <div className="space-y-6">

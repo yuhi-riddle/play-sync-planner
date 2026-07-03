@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildNotificationCandidate,
+  onlyUnreadNotifications,
   summarizeUnreadNotifications,
   type NotificationCandidate
 } from "@/lib/domain/site-notifications";
@@ -75,5 +76,16 @@ describe("summarizeUnreadNotifications", () => {
       unreadCount: 2,
       latest: [notifications[1]]
     });
+  });
+});
+
+describe("onlyUnreadNotifications", () => {
+  it("keeps only notifications without read_at", () => {
+    expect(
+      onlyUnreadNotifications([
+        { id: "unread", read_at: null },
+        { id: "read", read_at: "2026-07-03T00:00:00Z" }
+      ])
+    ).toEqual([{ id: "unread", read_at: null }]);
   });
 });

@@ -25,6 +25,11 @@ export type NotificationSummary = {
   latest: NotificationCandidate[];
 };
 
+export type ReadableNotification = {
+  read_at?: string | null;
+  readAt?: string | null;
+};
+
 const notificationTitles: Record<NotificationKind, string> = {
   answer_deadline: "回答期限が近づいています",
   unanswered: "未回答者がいます",
@@ -51,6 +56,10 @@ export function summarizeUnreadNotifications(notifications: NotificationCandidat
       .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
       .slice(0, limit)
   };
+}
+
+export function onlyUnreadNotifications<T extends ReadableNotification>(notifications: T[]): T[] {
+  return notifications.filter((notification) => !notification.read_at && !notification.readAt);
 }
 
 function buildNotificationBody(input: NotificationCandidateInput) {
