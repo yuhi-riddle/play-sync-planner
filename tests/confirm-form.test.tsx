@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmForm } from "@/components/confirm-form";
@@ -66,5 +66,18 @@ describe("ConfirmForm", () => {
     expect(scope.getByLabelText("△ 1")).toBeInTheDocument();
     expect(scope.getByLabelText("× 0")).toBeInTheDocument();
     expect(scope.getByLabelText("未 0")).toBeInTheDocument();
+  });
+
+  it("opens an in-app confirmation dialog instead of the browser confirm dialog", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<ConfirmForm planId="plan-1" candidates={candidates} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "選んだ日程で確定する" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "日程を確定しますか？" })).toBeInTheDocument();
+
+    confirmSpy.mockRestore();
   });
 });

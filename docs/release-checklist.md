@@ -40,6 +40,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] Google Calendar 用 OAuth Client に `http://localhost:3000/api/google-calendar/callback` が登録されている。
 - [ ] Google Auth Platform のテストユーザーに、自分のGoogleアカウントが入っている。
 - [ ] Google Calendar のスコープに `https://www.googleapis.com/auth/calendar.events` が入っている。
+- [ ] 設定画面で「読み取り専用」の警告が出る場合は、`再連携する` からGoogle Calendarをつなぎ直している。
 
 ## 4. 通知
 
@@ -70,6 +71,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] 予定詳細で回答状況を確認する。
 - [ ] 候補日時を確定する。
 - [ ] Google Calendar に確定予定が追加される。
+  - 追加されない場合は、設定画面でGoogle Calendar連携が読み取り専用になっていないか確認する。
 - [ ] 立替支払いを追加する。
 - [ ] 清算結果を確認する。
 - [ ] 支払い依頼文面をコピーする。

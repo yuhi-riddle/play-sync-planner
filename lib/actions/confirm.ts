@@ -143,7 +143,7 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
         userId,
         integration: integration as CalendarIntegration
       });
-      await insertCalendarEvent({
+      const insertedEvent = await insertCalendarEvent({
         accessToken,
         calendarId: integration.calendar_id ?? "primary",
         event: buildConfirmedCalendarEvent({
@@ -155,6 +155,17 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
           isAllDay: candidate.is_all_day
         })
       });
+      if (insertedEvent.id) {
+        const { error: calendarEventIdError } = await supabase
+          .from("plans")
+          .update({ google_calendar_event_id: insertedEvent.id })
+          .eq("id", planId)
+          .eq("owner_user_id", userId);
+
+        if (calendarEventIdError) {
+          throw new Error(calendarEventIdError.message);
+        }
+      }
       calendarResult = "added";
     } catch {
       calendarResult = "failed";

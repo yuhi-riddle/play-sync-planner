@@ -1,6 +1,7 @@
 import { CalendarConnectionCard } from "@/components/calendar-connection-card";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { PageHeader } from "@/components/ui";
+import { CALENDAR_EVENTS_SCOPE } from "@/lib/google-calendar/oauth";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +38,11 @@ export default async function SettingsPage({
 
   const { data: calendarIntegration } = await supabase
     .from("calendar_integrations")
-    .select("account_email, updated_at")
+    .select("account_email, updated_at, scope")
     .eq("user_id", user.id)
     .eq("provider", "google")
     .maybeSingle();
+  const canWriteCalendarEvents = calendarIntegration?.scope?.split(" ").includes(CALENDAR_EVENTS_SCOPE) ?? false;
 
   return (
     <div className="space-y-6">
@@ -53,6 +55,7 @@ export default async function SettingsPage({
         connected={Boolean(calendarIntegration)}
         accountEmail={calendarIntegration?.account_email ?? null}
         updatedAt={calendarIntegration?.updated_at ?? null}
+        canWriteEvents={canWriteCalendarEvents}
         status={query.calendar}
       />
     </div>
