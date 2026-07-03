@@ -8,7 +8,7 @@ import { SettlementCompletionNotice } from "@/components/settlement-completion-n
 import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
-import { Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import { Card, EmptyState, MadoiForm, PageHeader, SecondaryLink } from "@/components/ui";
 import {
   confirmSettlementPaymentAction,
   createExpenseAction,
@@ -627,7 +627,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
       {progress.remainingAmount > 0 ? (
         <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
           <summary className="cursor-pointer text-sm font-bold text-ink">支払った金額を記録</summary>
-          <form action={recordSettlementPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
+          <MadoiForm action={recordSettlementPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
             <label className="text-sm font-medium text-ink">
               <span className="text-ink/72">支払い金額</span>
               <input
@@ -638,6 +638,8 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
                 step={1}
                 defaultValue={progress.remainingAmount}
                 required
+                data-field-label="支払い金額"
+                data-required-message="支払い金額を入力してください"
                 className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
@@ -672,7 +674,7 @@ function SettlementActions({ settlement, progress }: { settlement: SettlementRow
             >
               支払いを記録
             </button>
-          </form>
+          </MadoiForm>
         </details>
       ) : null}
 

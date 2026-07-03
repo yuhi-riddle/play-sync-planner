@@ -10,7 +10,7 @@ import {
   type AnswerCandidateDate
 } from "@/lib/domain/answer-calendar";
 import { formatDateTimeRange } from "@/lib/format";
-import { TextField } from "@/components/ui";
+import { MadoiForm, TextField } from "@/components/ui";
 
 type AnswerChoice = "yes" | "maybe" | "no";
 
@@ -154,7 +154,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
   }
 
   return (
-    <form action={action} className="grid gap-5">
+    <MadoiForm action={action} className="grid gap-5">
       <TextField label="名前" name="displayName" required requiredMessage="回答する人の名前を入力してください" />
       <div className="rounded-lg border border-white/80 bg-cream/86 p-4 shadow-soft">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -209,6 +209,8 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
                       name={`answer:${candidate.id}`}
                       value={choice.value}
                       required
+                      data-field-label={`候補 ${index + 1}`}
+                      data-required-message={`候補 ${index + 1} の回答を選択してください`}
                       checked={answers[candidate.id] === choice.value}
                       onChange={() => setAnswer(candidate.id, choice.value)}
                       aria-label={`候補${index + 1}に${choice.ariaText}と回答`}
@@ -238,6 +240,6 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
           回答する
         </button>
       </div>
-    </form>
+    </MadoiForm>
   );
 }

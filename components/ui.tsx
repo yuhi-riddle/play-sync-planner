@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
+import React, { useRef, useState } from "react";
 import type { FormEvent, InvalidEvent, ReactNode } from "react";
 import { clsx } from "clsx";
 
@@ -58,6 +58,127 @@ export function SecondaryLink({ href, children }: { href: string; children: Reac
   );
 }
 
+type MadoiFormError = {
+  key: string;
+  message: string;
+};
+
+type MadoiFormProps = Omit<React.ComponentPropsWithoutRef<"form">, "onSubmit" | "noValidate">;
+
+function isFormField(element: Element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLTextAreaElement
+  );
+}
+
+function getFieldLabel(field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+  return field.dataset.fieldLabel || field.getAttribute("aria-label") || field.name || "入力項目";
+}
+
+function getValidationMessage(field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+  const label = getFieldLabel(field);
+
+  if (field.validity.valueMissing) {
+    return field.dataset.requiredMessage || `${label}を入力してください。`;
+  }
+
+  if (field.validity.typeMismatch) {
+    return field.dataset.invalidMessage || `${label}の形式を確認してください。`;
+  }
+
+  if (field.validity.rangeUnderflow) {
+    return `${label}は${field.getAttribute("min")}以上で入力してください。`;
+  }
+
+  if (field.validity.rangeOverflow) {
+    return `${label}は${field.getAttribute("max")}以下で入力してください。`;
+  }
+
+  if (field.validity.stepMismatch) {
+    return `${label}は指定された単位で入力してください。`;
+  }
+
+  return field.dataset.invalidMessage || `${label}を確認してください。`;
+}
+
+function collectValidationErrors(form: HTMLFormElement) {
+  const handledRadioGroups = new Set<string>();
+
+  return Array.from(form.elements)
+    .filter((element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement => {
+      if (!isFormField(element) || !element.willValidate || element.checkValidity()) {
+        return false;
+      }
+
+      if (element instanceof HTMLInputElement && element.type === "radio" && element.name) {
+        if (handledRadioGroups.has(element.name)) {
+          return false;
+        }
+        handledRadioGroups.add(element.name);
+      }
+
+      return true;
+    })
+    .map((field, index) => ({
+      key: field.name || field.id || String(index),
+      message: getValidationMessage(field)
+    }));
+}
+
+function focusFirstInvalidField(form: HTMLFormElement) {
+  const firstInvalidField = Array.from(form.elements).find((element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement => {
+    return isFormField(element) && element.willValidate && !element.checkValidity();
+  });
+
+  if (!firstInvalidField) {
+    return;
+  }
+
+  firstInvalidField.scrollIntoView({ block: "center", behavior: "smooth" });
+  firstInvalidField.focus({ preventScroll: true });
+}
+
+export function MadoiForm({ children, className, action, ...props }: MadoiFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [errors, setErrors] = useState<MadoiFormError[]>([]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const form = event.currentTarget;
+    const nextErrors = collectValidationErrors(form);
+
+    if (nextErrors.length === 0) {
+      setErrors([]);
+      return;
+    }
+
+    event.preventDefault();
+    setErrors(nextErrors);
+    focusFirstInvalidField(form);
+  }
+
+  return (
+    <form ref={formRef} action={action} className={className} noValidate onSubmit={handleSubmit} {...props}>
+      {errors.length > 0 ? (
+        <div
+          className="rounded-lg border border-clay/24 bg-clay/10 p-4 text-sm text-ink"
+          role="alert"
+          aria-live="assertive"
+        >
+          <p className="font-bold">入力を確認してください。</p>
+          <ul className="mt-2 grid gap-1 leading-6">
+            {errors.map((error) => (
+              <li key={error.key}>{error.message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {children}
+    </form>
+  );
+}
+
 export function TextField({
   label,
   name,
@@ -108,6 +229,9 @@ export function TextField({
         list={list}
         onInvalid={handleInvalid}
         onInput={handleInput}
+        data-field-label={label}
+        data-required-message={requiredMessage}
+        data-invalid-message={type === "url" ? "URLの形式を確認してください。" : undefined}
       />
       {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
@@ -155,6 +279,8 @@ export function TextArea({
         placeholder={placeholder}
         onInvalid={handleInvalid}
         onInput={handleInput}
+        data-field-label={label}
+        data-required-message={requiredMessage}
       />
       {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
     </label>
@@ -196,6 +322,8 @@ export function SelectField({
         required={required}
         onInvalid={handleInvalid}
         onInput={handleInput}
+        data-field-label={label}
+        data-required-message={requiredMessage}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value} disabled={option.disabled}>

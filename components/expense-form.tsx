@@ -3,7 +3,7 @@
 import { ReceiptText } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
-import { TextArea, TextField } from "@/components/ui";
+import { MadoiForm, TextArea, TextField } from "@/components/ui";
 
 type ParticipantOption = {
   id: string;
@@ -65,7 +65,7 @@ export function ExpenseForm({
   }
 
   return (
-    <form action={action} className="grid gap-5">
+    <MadoiForm action={action} className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
         <TextField
           label="支払い内容"
@@ -96,6 +96,8 @@ export function ExpenseForm({
           className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
           onInvalid={(event) => event.currentTarget.setCustomValidity("支払った人を選択してください")}
           onInput={(event) => event.currentTarget.setCustomValidity("")}
+          data-field-label="支払った人"
+          data-required-message="支払った人を選択してください"
           defaultValue={initialValues?.payerParticipantId ?? ""}
         >
           <option value="" disabled>
@@ -217,6 +219,6 @@ export function ExpenseForm({
         <ReceiptText aria-hidden="true" className="h-4 w-4" />
         {submitLabel}
       </button>
-    </form>
+    </MadoiForm>
   );
 }

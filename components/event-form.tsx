@@ -1,5 +1,5 @@
 import { categoryLabels, EVENT_CATEGORIES } from "@/lib/constants";
-import { SubmitButton, SelectField, TextArea, TextField } from "@/components/ui";
+import { MadoiForm, SubmitButton, SelectField, TextArea, TextField } from "@/components/ui";
 
 type EventRecord = {
   category?: string;
@@ -25,7 +25,7 @@ export function EventForm({
   submitLabel: string;
 }) {
   return (
-    <form action={action} className="grid gap-5">
+    <MadoiForm action={action} className="grid gap-5">
       <SelectField
         label="カテゴリ"
         name="category"
@@ -56,6 +56,6 @@ export function EventForm({
       <div>
         <SubmitButton>{submitLabel}</SubmitButton>
       </div>
-    </form>
+    </MadoiForm>
   );
 }

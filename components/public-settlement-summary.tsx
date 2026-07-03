@@ -2,7 +2,7 @@ import React from "react";
 
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
-import { Card, EmptyState } from "@/components/ui";
+import { Card, EmptyState, MadoiForm } from "@/components/ui";
 import { getPaymentInstructionView, summarizeSettlementNextActions, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
 
 export type PublicSettlementExpense = {
@@ -112,7 +112,7 @@ export function PublicSettlementSummary({
                   {recordPaymentAction ? (
                     <details open className="mt-4 rounded-lg border border-ink/10 bg-cream/70 p-3">
                       <summary className="cursor-pointer text-sm font-bold text-ink">支払いを記録</summary>
-                      <form action={recordPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
+                      <MadoiForm action={recordPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
                         <label className="text-sm font-medium text-ink">
                           <span className="text-ink/72">支払い金額</span>
                           <span id={`${settlement.id}-payment-amount-help`} className="mt-1 block text-xs leading-5 text-ink/58">
@@ -128,6 +128,8 @@ export function PublicSettlementSummary({
                             aria-describedby={`${settlement.id}-payment-amount-help`}
                             inputMode="numeric"
                             required
+                            data-field-label="支払い金額"
+                            data-required-message="支払い金額を入力してください"
                             className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                           />
                         </label>
@@ -162,7 +164,7 @@ export function PublicSettlementSummary({
                         >
                           支払いを記録
                         </button>
-                      </form>
+                      </MadoiForm>
                     </details>
                   ) : null}
                 </article>

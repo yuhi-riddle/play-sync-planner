@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { confirmPlanAction } from "@/lib/actions/confirm";
 import type { CandidateAnswerSummary } from "@/lib/domain/confirmation";
 import { formatDateTimeRange } from "@/lib/format";
+import { MadoiForm } from "@/components/ui";
 
 function AnswerStat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
@@ -44,7 +45,7 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
   }
 
   return (
-    <form action={action} className="grid gap-4">
+    <MadoiForm action={action} className="grid gap-4">
       <div className="rounded-lg border border-moss/20 bg-mist/24 p-4">
         <p className="text-sm font-bold text-ink">候補を選んで確定します。</p>
         <p className="mt-1 text-sm leading-6 text-ink/64">
@@ -65,6 +66,8 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
               name="candidateDateId"
               value={candidate.id}
               required
+              data-field-label="確定する日程"
+              data-required-message="確定する日程を選択してください"
               checked={selectedCandidateId === candidate.id}
               onChange={() => setSelectedCandidateId(candidate.id)}
             />
@@ -157,6 +160,6 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
           </section>
         </div>
       ) : null}
-    </form>
+    </MadoiForm>
   );
 }
