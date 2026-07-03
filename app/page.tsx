@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CalendarPlus, ListChecks, Settings } from "lucide-react";
+import { Bell, CalendarDays, CalendarPlus, ListChecks, Settings } from "lucide-react";
 
 import { HomeMonthCalendar } from "@/components/home-month-calendar";
 import { SettlementStatusBadge } from "@/components/settlement-status-badge";
@@ -30,6 +30,14 @@ type PlanRow = {
   answer_deadline_at: string | null;
   events: { title: string | null; location_name: string | null } | { title: string | null; location_name: string | null }[] | null;
   candidate_dates?: CandidateDateRow[];
+};
+
+type NotificationRow = {
+  id: string;
+  title: string;
+  body: string;
+  href: string;
+  created_at: string;
 };
 
 const homeActions = [
@@ -197,7 +205,16 @@ export default async function HomePage({
     .order("created_at", { ascending: false })
     .limit(30);
 
+  const { data: notifications } = await supabase
+    .from("notifications")
+    .select("id, title, body, href, created_at")
+    .eq("user_id", user.id)
+    .is("read_at", null)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
   const planRows = (plans ?? []) as PlanRow[];
+  const unreadNotifications = (notifications ?? []) as NotificationRow[];
   const collecting = planRows.filter((plan) => plan.status === "collecting_answers");
   const confirmed = planRows.filter((plan) => plan.status === "date_confirmed");
   const calendarItems = toCalendarItems(planRows);
@@ -230,6 +247,33 @@ export default async function HomePage({
           </Link>
         ))}
       </section>
+
+      {unreadNotifications.length > 0 ? (
+        <Card>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+                <Bell aria-hidden="true" className="h-5 w-5 text-pine" />
+                対応が必要なこと
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-ink/60">期限や清算まわりで、見ておきたいものがあります。</p>
+            </div>
+            <SecondaryLink href="/notifications">通知を開く</SecondaryLink>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {unreadNotifications.map((notification) => (
+              <Link
+                key={notification.id}
+                href={safeInternalHref(notification.href)}
+                className="rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
+              >
+                <span className="block text-sm font-bold text-ink">{notification.title}</span>
+                <span className="mt-1 block text-sm leading-6 text-ink/62">{notification.body}</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       <HomeMonthCalendar month={currentMonth} selectedDateKey={selectedDateKey} initialItems={calendarItems} />
 
@@ -309,4 +353,8 @@ export default async function HomePage({
       </Card>
     </div>
   );
+}
+
+function safeInternalHref(value: string) {
+  return value.startsWith("/") ? value : "/";
 }

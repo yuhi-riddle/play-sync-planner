@@ -8,6 +8,7 @@
 
 html {
   background: #f7f0e4;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -72,5 +73,11 @@ body {
   .app-shell::before,
   .app-shell::after {
     opacity: 0.28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }

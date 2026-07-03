@@ -62,6 +62,16 @@ Phase 1 は完了済みです。
 - 受け取り確認依頼文面の生成
 - 清算リマインドの手動送信済みログ
 
+### サイト内通知
+
+- 通知一覧
+- ヘッダーの未読通知件数
+- ホームの対応事項表示
+- 未読、既読管理
+- 通知の重複作成防止
+- Vercel Cron 用の通知生成API
+- サイト全体のスムーススクロール
+
 ## 次の区切りまでに必要なこと
 
 今のビルドを「いったん普通に使える状態」と呼ぶために必要な作業です。
@@ -104,7 +114,6 @@ Phase 1 は完了済みです。
 
 - 外部決済 API 連携
 - 支払い依頼の自動送信
-- リマインドの自動送信
 - 証拠画像アップロード
 - 領収書やスクリーンショットの OCR
 - チケットサイト連携
@@ -158,6 +167,7 @@ Phase 1 は完了済みです。
 - [ ] `006_settlement_payments.sql` を適用済み。
 - [ ] `007_expense_important_notes.sql` を適用済み。
 - [ ] `008_settlement_reminder_type.sql` を適用済み。
+- [ ] `009_site_notifications.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。

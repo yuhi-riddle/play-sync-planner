@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut, Settings, UserRound } from "lucide-react";
+import { Bell, LogOut, Settings, UserRound } from "lucide-react";
 
 import { signOutAction } from "@/lib/actions/auth";
 import { getAuthNavState } from "@/lib/domain/auth-nav";
@@ -20,6 +20,12 @@ export async function AuthNav() {
     return <AuthLink href={state.primaryHref} label={state.primaryLabel} />;
   }
 
+  const { count: unreadCount } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user!.id)
+    .is("read_at", null);
+
   return (
     <div className="flex items-center gap-2 text-sm">
       <div className="hidden items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-1.5 text-ink/70 shadow-soft sm:flex">
@@ -28,6 +34,19 @@ export async function AuthNav() {
           {state.accountLabel}
         </span>
       </div>
+      <Link
+        href="/notifications"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/64 font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        aria-label={`通知${unreadCount ? ` 未読${unreadCount}件` : ""}`}
+        title="通知"
+      >
+        <Bell aria-hidden="true" className="h-4 w-4" />
+        {unreadCount ? (
+          <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-clay px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        ) : null}
+      </Link>
       <Link
         href={state.settingsHref}
         className="inline-flex min-h-10 items-center gap-2 rounded-full border border-ink/10 bg-white/64 px-3 py-2 text-sm font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
