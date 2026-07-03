@@ -1,4 +1,6 @@
-# 遊び予定の調整・清算管理アプリ DB設計 v1.0
+# 遊び予定の調整・清算管理アプリ DB設計 v1.1
+
+最終更新: 2026-07-03
 
 ## 1. DB設計方針
 
@@ -21,6 +23,7 @@ users
 │       ├─ settlement_reminder_logs
  │       ├─ reminders
  │       └─ share_links
+ ├─ notifications
  └─ calendar_integrations
 ```
 
@@ -330,6 +333,34 @@ proof_type 候補：
 | created_at | timestamptz | yes | 作成日時 |
 | updated_at | timestamptz | yes | 更新日時 |
 
+## notifications
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| id | uuid | yes | 通知ID |
+| user_id | uuid | yes | 通知対象ユーザー |
+| kind | text | yes | 通知種別 |
+| title | text | yes | 通知タイトル |
+| body | text | yes | 通知本文 |
+| href | text | yes | 通知クリック時の遷移先 |
+| dedupe_key | text | yes | 重複作成を防ぐキー |
+| read_at | timestamptz | no | 既読日時 |
+| created_at | timestamptz | yes | 作成日時 |
+| updated_at | timestamptz | yes | 更新日時 |
+
+kind 候補：
+
+- answer_deadline
+- unanswered
+- settlement_needed
+- payment_due
+- confirmation_due
+
+制約：
+
+- user_id + dedupe_key はユニーク
+- RLSにより、ユーザーは自分の通知だけを管理できる
+
 ## 4. 清算計算ロジック
 
 1. 参加者ごとに paid_total を計算する
@@ -368,6 +399,10 @@ Phase 3-B：
 
 - settlement_payments
 - expenses.is_important
+
+サイト内通知：
+
+- notifications
 
 後続Phase：
 

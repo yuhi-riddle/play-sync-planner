@@ -1,5 +1,8 @@
 # Codex依頼：PlaySync Planner Phase 1 実装
 
+> このファイルは、Phase 1 実装開始時の依頼文を履歴として残すための資料です。
+> 現在の仕様と残作業は、`docs/design/01_requirements.md`、`docs/current-status.md`、`docs/release-checklist.md` を正とします。
+
 ## 目的
 
 このプロジェクトに、遊び予定の調整・清算管理アプリ「PlaySync Planner」のPhase 1を実装してください。

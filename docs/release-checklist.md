@@ -46,8 +46,12 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] `009_site_notifications.sql` を適用済み。
 - [ ] ローカルで `http://localhost:3000/api/cron/notifications` を開いて、エラーにならない。
 - [ ] 通知が作られた場合、ヘッダーのベルに未読件数が表示される。
+- [ ] ホームの「対応が必要なこと」に未読通知が表示される。
 - [ ] `/notifications` で通知一覧が開ける。
+- [ ] `/notifications` の初期表示では未読通知だけが表示される。
+- [ ] `/notifications?status=read`、または画面上の「既読」切替で既読通知が表示される。
 - [ ] 通知を既読にできる。
+- [ ] すべて既読にしたあと、未読件数が0になる。
 
 本番では `vercel.json` により、1時間ごとに `/api/cron/notifications` を実行します。
 `CRON_SECRET` を設定した場合は、手動実行時に `Authorization: Bearer <CRON_SECRET>` が必要です。
@@ -74,6 +78,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] 主催者の清算ページで、受け取り確認待ちに表示される。
 - [ ] 主催者として受け取り確認する。
 - [ ] 全員分が終わると清算完了が表示される。
+- [ ] 通知画面で未読・既読を切り替えられる。
 
 ## 6. コマンド確認
 
@@ -92,5 +97,6 @@ npm.cmd run build
 - [ ] プライバシーポリシーの問い合わせ先を決める。
 - [ ] 本番の `NEXT_PUBLIC_SITE_URL` を決める。
 - [ ] 本番の Google OAuth redirect URI を追加する。
+- [ ] 本番の Vercel Cron で `CRON_SECRET` を使うか決める。
 - [ ] 外部決済API連携は、今回の公開範囲に含めないことを確認する。
 - [ ] メール、X、LINE、Discord への自動送信は、今回の公開範囲に含めないことを確認する。
