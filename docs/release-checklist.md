@@ -100,3 +100,25 @@ npm.cmd run build
 - [ ] 本番の Vercel Cron で `CRON_SECRET` を使うか決める。
 - [ ] 外部決済API連携は、今回の公開範囲に含めないことを確認する。
 - [ ] メール、X、LINE、Discord への自動送信は、今回の公開範囲に含めないことを確認する。
+
+## 8. 2026-07-03 Codex確認メモ
+
+確認済み:
+
+- `.env.local` に、ローカル確認に必要な環境変数が入っていることを確認した。値そのものは表示していない。
+- `npm.cmd test` が成功した。
+- `npm.cmd run build` が成功した。
+- `http://localhost:3000/` が表示できる。
+- `http://localhost:3000/login` が表示できる。
+- `http://localhost:3000/terms` が表示できる。
+- `http://localhost:3000/privacy` が表示できる。
+- 未ログイン状態の `http://localhost:3000/notifications` が案内表示になる。
+- 開発環境で `http://localhost:3000/api/cron/notifications` が `{ "created": 0 }` を返す。
+- 不正な共有リンクで、Madoi用の日本語404画面が表示される。
+
+未確認:
+
+- Googleログイン後のイベント作成から清算完了までの実操作。
+- Google Calendarへの予定登録。
+- ログイン後の通知未読・既読切替。
+- 本番環境のSupabase、Google OAuth、Vercel Cron設定。
