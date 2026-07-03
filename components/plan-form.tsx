@@ -80,6 +80,19 @@ function allDayRangeForDate(dateValue: string) {
   };
 }
 
+function focusWithSmoothScroll(ref: RefObject<HTMLElement | null>) {
+  window.setTimeout(() => {
+    const target = ref.current;
+    if (!target) {
+      return;
+    }
+
+    const reducedMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView?.({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    target.focus({ preventScroll: true });
+  }, 0);
+}
+
 function initialReminderOffsetValue(settings: PlanRecord["plan_reminder_settings"]) {
   const setting = Array.isArray(settings) ? settings[0] : settings;
   if (!setting) {
@@ -395,7 +408,7 @@ export function PlanForm({
     setCandidateDate(value);
     setCandidateEndDate((currentEndDate) => (currentEndDate === candidateDate || currentEndDate < value ? value : currentEndDate));
     setVisibleMonth(toMonthDate(value));
-    window.setTimeout(() => candidateHourRef.current?.focus(), 0);
+    focusWithSmoothScroll(candidateHourRef);
   }
 
   function updateCandidateEndDate(value: string) {
@@ -407,7 +420,7 @@ export function PlanForm({
   function updateDeadlineDate(value: string) {
     setDeadlineDate(value);
     setVisibleMonth(toMonthDate(value));
-    window.setTimeout(() => deadlineHourRef.current?.focus(), 0);
+    focusWithSmoothScroll(deadlineHourRef);
   }
 
   function addCandidateDate() {
@@ -447,7 +460,7 @@ export function PlanForm({
     setCandidateEndTime(end.time);
     setCandidateIsAllDay(false);
     setEndDatePickerOpen(false);
-    window.setTimeout(() => candidateHourRef.current?.focus(), 0);
+    focusWithSmoothScroll(candidateHourRef);
   }
 
   function moveToStep(step: number) {

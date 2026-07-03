@@ -32,5 +32,6 @@ Madoi の中だけで、未回答、期限間近、清算待ち、支払い待�
 
 ## Scroll
 
-- `html { scroll-behavior: smooth; }` を使う。
-- `prefers-reduced-motion: reduce` ではスムーススクロールを無効にする。
+- サイト全体にはスムーススクロールを適用しない。
+- 候補日時、回答期限のカレンダー日付選択後に、次の時間入力へ移る箇所だけスムーススクロールを使う。
+- `prefers-reduced-motion: reduce` では通常スクロールに戻す。
