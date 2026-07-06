@@ -136,6 +136,38 @@ describe("calendar event helpers", () => {
     );
   });
 
+  it("inserts a confirmed calendar event with attendee emails and sends updates", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: "google-event-1", htmlLink: "https://calendar.google.com/event" })
+    })) as unknown as typeof fetch;
+
+    await insertCalendarEvent({
+      accessToken: "access-token",
+      event: {
+        title: "土曜チーム - 謎解き公演",
+        location: "新宿",
+        start: "2026-07-01T10:00:00+09:00",
+        end: "2026-07-01T12:00:00+09:00",
+        attendeeEmails: ["a@example.com", "b@example.com"]
+      },
+      fetchImpl
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all",
+      expect.objectContaining({
+        body: JSON.stringify({
+          summary: "土曜チーム - 謎解き公演",
+          location: "新宿",
+          start: { dateTime: "2026-07-01T10:00:00+09:00" },
+          end: { dateTime: "2026-07-01T12:00:00+09:00" },
+          attendees: [{ email: "a@example.com" }, { email: "b@example.com" }]
+        })
+      })
+    );
+  });
+
   it("inserts an all-day confirmed calendar event with date fields", async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,

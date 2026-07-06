@@ -1,11 +1,11 @@
 # Madoi Phase 2 Google Calendar セットアップ手順
 
-この手順は、自分の Google Calendar の予定を見ながら候補日時を決め、確定した日程を Google Calendar に登録するための設定です。
+この手順は、自分の Google Calendar の予定を見ながら候補日時を決め、日程確定後にGoogle Calendarへ予定を作るための設定です。Google Calendar 連携は任意です。
 
 Madoi が扱う Google Calendar 情報は次の範囲です。
 
 - 候補日時作成時: 予定の開始・終了時刻、予定名、場所を取得します。
-- 日程確定時: 確定した日程を、連携中の Google Calendar に予定として作成します。
+- 日程確定後: 主催者のGoogle Calendarに予定を作成できます。Google Calendar連携済みの参加者がいれば、カレンダー招待も送ります。
 - 取得しない情報: 予定の説明、参加者、Meet URL、添付ファイル。
 - 保存しない情報: Google Calendar 上の予定名や場所などの予定詳細。
 
@@ -118,6 +118,7 @@ npm.cmd run dev
 4. Google の認可画面で許可します。
 5. `/settings?calendar=connected` に戻れば連携完了です。
 6. 候補日時の入力画面で、Google Calendar の予定名と場所が表示されることを確認します。
-7. 日程を確定し、Google Calendar に予定が追加されることを確認します。
+7. 日程を確定し、予定詳細の `Calendarに作成して招待` からGoogle Calendarに予定を作れることを確認します。
+8. 参加者がGoogle Calendar連携済みの場合、作成した予定の参加者にメールアドレスが入ることを確認します。
 
 うまくいかない場合は、表示されているURL、エラーメッセージ、どの手順で止まったかを共有してください。

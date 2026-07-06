@@ -112,8 +112,8 @@ Phase 2:
 
 - Google Calendar連携
 - 自分のGoogle Calendar予定を見ながら候補日時を決める
-- 確定日時をGoogle Calendarへ登録する
-- 終日候補の入力とGoogle Calendar登録
+- 確定日時をGoogle Calendarに追加しやすくする
+- 終日候補の入力とGoogle Calendar追加ボタン
 - 回答期限リマインドの設計
 
 Phase 3:

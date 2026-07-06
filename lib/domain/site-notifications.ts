@@ -31,6 +31,49 @@ export type ReadableNotification = {
 };
 
 export type NotificationReadFilter = "unread" | "read";
+export type NotificationActionFilter = "all" | "deadline" | "unanswered" | "settlement" | "payment" | "confirmation";
+
+export type ActionFilterableNotification = {
+  kind: NotificationKind | string;
+};
+
+export type NotificationActionCounts = Record<NotificationActionFilter, number>;
+
+export type PlanNotificationParticipant = {
+  display_name: string | null;
+  status: string | null;
+};
+
+export type PlanNotificationSettlementPayment = {
+  amount: number | null;
+  confirmed_at: string | null;
+};
+
+export type PlanNotificationSettlement = {
+  amount: number | null;
+  status: string | null;
+  from_participant_id: string | null;
+  participants?: { display_name: string | null } | { display_name: string | null }[] | null;
+  settlement_payments?: PlanNotificationSettlementPayment[];
+};
+
+export type PlanNotificationReminderSetting = {
+  reminder_offset_minutes: number | null;
+  reminder_offsets_minutes?: number[] | null;
+};
+
+export type PlanNotificationPlan = {
+  id: string;
+  owner_user_id: string;
+  title: string | null;
+  status: string;
+  settlement_status: string | null;
+  answer_deadline_at: string | null;
+  events: { title: string | null } | { title: string | null }[] | null;
+  participants?: PlanNotificationParticipant[];
+  settlements?: PlanNotificationSettlement[];
+  plan_reminder_settings?: PlanNotificationReminderSetting[] | PlanNotificationReminderSetting | null;
+};
 
 const notificationTitles: Record<NotificationKind, string> = {
   answer_deadline: "回答期限が近づいています",
@@ -72,6 +115,172 @@ export function filterNotificationsByReadState<T extends ReadableNotification>(
     const isRead = Boolean(notification.read_at ?? notification.readAt);
     return filter === "read" ? isRead : !isRead;
   });
+}
+
+export function filterNotificationsByActionFilter<T extends ActionFilterableNotification>(
+  notifications: T[],
+  filter: NotificationActionFilter
+): T[] {
+  if (filter === "all") {
+    return notifications;
+  }
+
+  return notifications.filter((notification) => actionFilterForKind(notification.kind) === filter);
+}
+
+export function countNotificationsByActionFilter<T extends ActionFilterableNotification>(
+  notifications: T[]
+): NotificationActionCounts {
+  return {
+    all: notifications.length,
+    deadline: filterNotificationsByActionFilter(notifications, "deadline").length,
+    unanswered: filterNotificationsByActionFilter(notifications, "unanswered").length,
+    settlement: filterNotificationsByActionFilter(notifications, "settlement").length,
+    payment: filterNotificationsByActionFilter(notifications, "payment").length,
+    confirmation: filterNotificationsByActionFilter(notifications, "confirmation").length
+  };
+}
+
+export function buildPlanNotificationInputs(plan: PlanNotificationPlan, now: Date): NotificationCandidateInput[] {
+  const title = planTitle(plan);
+  const inputs: NotificationCandidateInput[] = [];
+
+  if (plan.status === "collecting_answers") {
+    const pendingNames = (plan.participants ?? [])
+      .filter((participant) => participant.status === "invited")
+      .map((participant) => participant.display_name ?? "参加者");
+
+    if (pendingNames.length > 0) {
+      inputs.push({
+        userId: plan.owner_user_id,
+        kind: "unanswered",
+        planId: plan.id,
+        title,
+        href: `/plans/${plan.id}`,
+        participantNames: pendingNames
+      });
+    }
+
+    reminderDueKeys(plan.answer_deadline_at, reminderOffsets(plan.plan_reminder_settings), now).forEach((dueKey) => {
+      inputs.push({
+        userId: plan.owner_user_id,
+        kind: "answer_deadline",
+        planId: plan.id,
+        title,
+        href: `/plans/${plan.id}`,
+        dueAt: dueKey
+      });
+    });
+  }
+
+  if (plan.status === "date_confirmed" && plan.settlement_status === "needed") {
+    inputs.push({
+      userId: plan.owner_user_id,
+      kind: "settlement_needed",
+      planId: plan.id,
+      title,
+      href: `/plans/${plan.id}/settlement`
+    });
+  }
+
+  const unpaidNames = (plan.settlements ?? [])
+    .filter((settlement) => settlement.status !== "confirmed" && remainingAmount(settlement) > 0)
+    .map((settlement) => participantName(settlement))
+    .filter(Boolean);
+
+  if (unpaidNames.length > 0) {
+    inputs.push({
+      userId: plan.owner_user_id,
+      kind: "payment_due",
+      planId: plan.id,
+      title,
+      href: `/plans/${plan.id}/settlement`,
+      participantNames: uniqueNames(unpaidNames)
+    });
+  }
+
+  const confirmationNames = (plan.settlements ?? [])
+    .filter((settlement) => (settlement.settlement_payments ?? []).some((payment) => !payment.confirmed_at))
+    .map((settlement) => participantName(settlement))
+    .filter(Boolean);
+
+  if (confirmationNames.length > 0) {
+    inputs.push({
+      userId: plan.owner_user_id,
+      kind: "confirmation_due",
+      planId: plan.id,
+      title,
+      href: `/plans/${plan.id}/settlement`,
+      participantNames: uniqueNames(confirmationNames)
+    });
+  }
+
+  return inputs;
+}
+
+function actionFilterForKind(kind: string): NotificationActionFilter | null {
+  switch (kind) {
+    case "answer_deadline":
+      return "deadline";
+    case "unanswered":
+      return "unanswered";
+    case "settlement_needed":
+      return "settlement";
+    case "payment_due":
+      return "payment";
+    case "confirmation_due":
+      return "confirmation";
+    default:
+      return null;
+  }
+}
+
+function planTitle(plan: PlanNotificationPlan) {
+  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
+}
+
+function reminderOffsets(settings: PlanNotificationPlan["plan_reminder_settings"]) {
+  const setting = Array.isArray(settings) ? settings[0] : settings;
+  const offsets = setting?.reminder_offsets_minutes?.length
+    ? setting.reminder_offsets_minutes
+    : setting?.reminder_offset_minutes === null || setting?.reminder_offset_minutes === undefined
+      ? []
+      : [setting.reminder_offset_minutes];
+
+  return Array.from(new Set(offsets)).filter((offset) => Number.isFinite(offset) && offset > 0);
+}
+
+function reminderDueKeys(answerDeadlineAt: string | null, offsetsMinutes: number[], now: Date) {
+  if (!answerDeadlineAt) {
+    return [];
+  }
+
+  const deadlineTime = new Date(answerDeadlineAt).getTime();
+  const nowTime = now.getTime();
+  if (nowTime >= deadlineTime) {
+    return [];
+  }
+
+  return offsetsMinutes
+    .sort((a, b) => b - a)
+    .filter((offsetMinutes) => nowTime >= deadlineTime - offsetMinutes * 60 * 1000)
+    .map((offsetMinutes) => `${answerDeadlineAt}:${offsetMinutes}`);
+}
+
+function remainingAmount(settlement: PlanNotificationSettlement) {
+  const total = settlement.amount ?? 0;
+  const paid = (settlement.settlement_payments ?? []).reduce((sum, payment) => sum + (payment.amount ?? 0), 0);
+  return Math.max(total - paid, 0);
+}
+
+function participantName(settlement: PlanNotificationSettlement) {
+  const participant = Array.isArray(settlement.participants) ? settlement.participants[0] : settlement.participants;
+  return participant?.display_name?.trim() ?? "";
+}
+
+function uniqueNames(names: string[]) {
+  return Array.from(new Set(names));
 }
 
 function buildNotificationBody(input: NotificationCandidateInput) {

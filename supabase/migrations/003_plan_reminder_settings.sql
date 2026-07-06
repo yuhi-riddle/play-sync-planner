@@ -2,11 +2,17 @@ create table public.plan_reminder_settings (
   id uuid primary key default gen_random_uuid(),
   plan_id uuid not null references public.plans(id) on delete cascade,
   reminder_offset_minutes integer,
+  reminder_offsets_minutes integer[] not null default '{}'::integer[],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint plan_reminder_settings_plan_id_unique unique (plan_id),
   constraint plan_reminder_settings_offset_check check (
     reminder_offset_minutes is null or reminder_offset_minutes >= 0
+  ),
+  constraint plan_reminder_settings_offsets_check check (
+    reminder_offsets_minutes is not null
+    and array_position(reminder_offsets_minutes, null) is null
+    and 0 <= all (reminder_offsets_minutes)
   )
 );
 

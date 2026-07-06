@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildPlanNotificationInputs,
   buildNotificationCandidate,
+  countNotificationsByActionFilter,
+  filterNotificationsByActionFilter,
   filterNotificationsByReadState,
   onlyUnreadNotifications,
   summarizeUnreadNotifications,
+  type NotificationActionFilter,
   type NotificationCandidate
 } from "@/lib/domain/site-notifications";
 
@@ -111,5 +115,84 @@ describe("filterNotificationsByReadState", () => {
       "read",
       "camel-read"
     ]);
+  });
+});
+
+describe("filterNotificationsByActionFilter", () => {
+  const notifications = [
+    { id: "deadline", kind: "answer_deadline" },
+    { id: "unanswered", kind: "unanswered" },
+    { id: "settlement", kind: "settlement_needed" },
+    { id: "payment", kind: "payment_due" },
+    { id: "confirmation", kind: "confirmation_due" }
+  ];
+
+  it.each<[NotificationActionFilter, string[]]>([
+    ["all", ["deadline", "unanswered", "settlement", "payment", "confirmation"]],
+    ["deadline", ["deadline"]],
+    ["unanswered", ["unanswered"]],
+    ["settlement", ["settlement"]],
+    ["payment", ["payment"]],
+    ["confirmation", ["confirmation"]]
+  ])("keeps %s notifications", (filter, expectedIds) => {
+    expect(filterNotificationsByActionFilter(notifications, filter).map((notification) => notification.id)).toEqual(
+      expectedIds
+    );
+  });
+
+  it("counts notifications by action filter", () => {
+    expect(countNotificationsByActionFilter(notifications)).toEqual({
+      all: 5,
+      deadline: 1,
+      unanswered: 1,
+      settlement: 1,
+      payment: 1,
+      confirmation: 1
+    });
+  });
+});
+
+describe("buildPlanNotificationInputs", () => {
+  it("creates answer deadline notifications from multiple reminder offsets", () => {
+    const inputs = buildPlanNotificationInputs(
+      {
+        id: "plan-1",
+        owner_user_id: "user-1",
+        title: "土曜夜",
+        status: "collecting_answers",
+        settlement_status: null,
+        answer_deadline_at: "2026-07-10T21:00:00+09:00",
+        events: { title: "イベント" },
+        participants: [{ display_name: "鈴木", status: "invited" }],
+        plan_reminder_settings: [{ reminder_offset_minutes: 1440, reminder_offsets_minutes: [1440, 180] }],
+        settlements: []
+      },
+      new Date("2026-07-10T18:30:00+09:00")
+    );
+
+    expect(inputs.filter((input) => input.kind === "answer_deadline").map((input) => input.dueAt)).toEqual([
+      "2026-07-10T21:00:00+09:00:1440",
+      "2026-07-10T21:00:00+09:00:180"
+    ]);
+  });
+
+  it("does not create answer deadline notifications before the reminder timing", () => {
+    const inputs = buildPlanNotificationInputs(
+      {
+        id: "plan-1",
+        owner_user_id: "user-1",
+        title: "土曜夜",
+        status: "collecting_answers",
+        settlement_status: null,
+        answer_deadline_at: "2026-07-10T21:00:00+09:00",
+        events: { title: "イベント" },
+        participants: [],
+        plan_reminder_settings: [{ reminder_offset_minutes: null, reminder_offsets_minutes: [180] }],
+        settlements: []
+      },
+      new Date("2026-07-10T17:59:00+09:00")
+    );
+
+    expect(inputs.filter((input) => input.kind === "answer_deadline")).toHaveLength(0);
   });
 });

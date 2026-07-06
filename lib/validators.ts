@@ -31,6 +31,14 @@ const nullableReminderOffset = z.preprocess((value) => {
   return Number(normalized);
 }, z.number().int().nonnegative().nullable());
 
+const reminderOffsetList = z.preprocess((value) => {
+  const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
+  return values
+    .map((entry) => emptyToNull(entry))
+    .filter((entry): entry is string => entry !== null)
+    .map((entry) => Number(entry));
+}, z.array(z.number().int().positive("リマインドは1分以上で入力してください")).max(5, "リマインドは5件までにしてください"));
+
 const nullableDate = z.preprocess(emptyToNull, z.string().nullable());
 
 const nullableUrl = z.preprocess(
@@ -246,6 +254,7 @@ export const planSchema = z
       "回答期限は YYYY-MM-DDTHH:mm 形式で入力してください"
     ),
     reminder_offset_minutes: nullableReminderOffset.default(1440),
+    reminder_offsets_minutes: reminderOffsetList.default([]),
     memo: nullableText.default(null)
   })
   .superRefine((values, context) => {

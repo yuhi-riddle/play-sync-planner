@@ -15,7 +15,10 @@ import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib
 type PlanRecord = {
   title?: string | null;
   answer_deadline_at?: string | null;
-  plan_reminder_settings?: Array<{ reminder_offset_minutes: number | null }> | { reminder_offset_minutes: number | null } | null;
+  plan_reminder_settings?:
+    | Array<{ reminder_offset_minutes: number | null; reminder_offsets_minutes?: number[] | null }>
+    | { reminder_offset_minutes: number | null; reminder_offsets_minutes?: number[] | null }
+    | null;
   memo?: string | null;
   candidate_dates?: Array<{ start_at: string; end_at?: string | null; is_all_day?: boolean | null }>;
 };
@@ -26,6 +29,12 @@ type CandidateDraft = {
   isAllDay: boolean;
 };
 
+type ReminderDraft = {
+  id: string;
+  amount: string;
+  unit: string;
+};
+
 const steps = ["候補日時", "回答期限", "確認"];
 const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
@@ -34,12 +43,16 @@ const defaultReminderOffset = "1440";
 const hourOptions = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
 const minuteOptions = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
-const reminderOptions = [
-  { value: "", label: "設定しない" },
-  { value: "180", label: "3時間前" },
-  { value: "1440", label: "1日前" },
-  { value: "2880", label: "2日前" }
+const reminderUnitOptions = [
+  { value: "minutes", label: "分前" },
+  { value: "hours", label: "時間前" },
+  { value: "days", label: "日前" }
 ];
+const reminderUnitMultipliers: Record<string, number> = {
+  minutes: 1,
+  hours: 60,
+  days: 1440
+};
 
 function splitDateTime(value: string | null | undefined, fallbackTime: string) {
   if (!value) {
@@ -93,17 +106,66 @@ function focusWithSmoothScroll(ref: RefObject<HTMLElement | null>) {
   }, 0);
 }
 
-function initialReminderOffsetValue(settings: PlanRecord["plan_reminder_settings"]) {
-  const setting = Array.isArray(settings) ? settings[0] : settings;
-  if (!setting) {
-    return defaultReminderOffset;
+function reminderPartsFromMinutes(minutes: number) {
+  if (Number.isFinite(minutes) && minutes > 0 && minutes % reminderUnitMultipliers.days === 0) {
+    return { amount: String(minutes / reminderUnitMultipliers.days), unit: "days" };
   }
 
-  return setting.reminder_offset_minutes === null ? "" : String(setting.reminder_offset_minutes);
+  if (Number.isFinite(minutes) && minutes > 0 && minutes % reminderUnitMultipliers.hours === 0) {
+    return { amount: String(minutes / reminderUnitMultipliers.hours), unit: "hours" };
+  }
+
+  return { amount: Number.isFinite(minutes) && minutes > 0 ? String(minutes) : "1", unit: "minutes" };
 }
 
-function reminderOffsetLabel(value: string) {
-  return reminderOptions.find((option) => option.value === value)?.label ?? "設定しない";
+function initialReminderOffsetValues(settings: PlanRecord["plan_reminder_settings"]) {
+  const setting = Array.isArray(settings) ? settings[0] : settings;
+  if (!setting) {
+    return [Number(defaultReminderOffset)];
+  }
+
+  if (setting.reminder_offsets_minutes?.length) {
+    return setting.reminder_offsets_minutes;
+  }
+
+  return setting.reminder_offset_minutes === null ? [] : [setting.reminder_offset_minutes];
+}
+
+function initialReminderParts(settings: PlanRecord["plan_reminder_settings"]) {
+  const offsets = initialReminderOffsetValues(settings);
+  return {
+    enabled: offsets.length > 0,
+    drafts:
+      offsets.length > 0
+        ? offsets.map((minutes, index) => ({ id: `initial-${index}`, ...reminderPartsFromMinutes(minutes) }))
+        : [{ id: "initial-0", amount: "1", unit: "days" }]
+  };
+}
+
+function reminderDraftOffsetValue(draft: ReminderDraft) {
+  const normalizedAmount = Math.max(1, Math.floor(Number(draft.amount) || 0));
+  return normalizedAmount * (reminderUnitMultipliers[draft.unit] ?? 1);
+}
+
+function reminderOffsetValues(enabled: boolean, drafts: ReminderDraft[]) {
+  if (!enabled) {
+    return [];
+  }
+
+  return Array.from(new Set(drafts.map(reminderDraftOffsetValue))).sort((a, b) => b - a);
+}
+
+function reminderDraftLabel(draft: ReminderDraft) {
+  const unitLabel = reminderUnitOptions.find((option) => option.value === draft.unit)?.label ?? "分前";
+  return `${Math.max(1, Math.floor(Number(draft.amount) || 0))}${unitLabel}`;
+}
+
+function reminderOffsetLabel(enabled: boolean, drafts: ReminderDraft[]) {
+  if (!enabled) {
+    return "設定しない";
+  }
+
+  return drafts.map(reminderDraftLabel).join(" / ");
 }
 
 function formatDateLabel(value: string) {
@@ -315,9 +377,12 @@ export function PlanForm({
   );
   const initialDeadlineValue = toDateTimeLocalValue(plan?.answer_deadline_at);
   const initialDeadline = splitDateTime(initialDeadlineValue, defaultDeadlineTime);
-  const initialReminderOffset = initialReminderOffsetValue(plan?.plan_reminder_settings);
+  const initialReminder = initialReminderParts(plan?.plan_reminder_settings);
   const candidateHourRef = useRef<HTMLButtonElement>(null);
   const deadlineHourRef = useRef<HTMLButtonElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const skipInitialStepScroll = useRef(true);
+  const reminderDraftSequence = useRef(initialReminder.drafts.length);
   const today = formatDateForInput(new Date());
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -331,7 +396,8 @@ export function PlanForm({
   const [candidateDates, setCandidateDates] = useState<CandidateDraft[]>(initialCandidateDates);
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
-  const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState(initialReminderOffset);
+  const [reminderEnabled, setReminderEnabled] = useState(initialReminder.enabled);
+  const [reminderDrafts, setReminderDrafts] = useState<ReminderDraft[]>(initialReminder.drafts);
   const [message, setMessage] = useState("");
   const [busyRanges, setBusyRanges] = useState<CalendarEventRange[]>([]);
   const [busyLoading, setBusyLoading] = useState(false);
@@ -348,6 +414,7 @@ export function PlanForm({
   const selectedCandidateStart = candidateIsAllDay ? selectedAllDayRange.start : toDateTimeLocalValueFromParts(candidateDate, candidateStartTime);
   const selectedCandidateEnd = candidateIsAllDay ? selectedAllDayRange.end : toDateTimeLocalValueFromParts(candidateEndDate, candidateEndTime);
   const selectedDeadline = toDateTimeLocalValueFromParts(deadlineDate, deadlineTime);
+  const reminderOffsetsMinutes = reminderOffsetValues(reminderEnabled, reminderDrafts);
   const firstCandidate = candidateDates[0]?.start;
   const deadlineIsTooLate =
     Boolean(firstCandidate) && new Date(selectedDeadline).getTime() >= new Date(firstCandidate ?? "").getTime();
@@ -393,6 +460,24 @@ export function PlanForm({
       cancelled = true;
     };
   }, [calendarConnected, visibleMonthKey]);
+
+  useEffect(() => {
+    if (skipInitialStepScroll.current) {
+      skipInitialStepScroll.current = false;
+      return;
+    }
+
+    window.setTimeout(() => {
+      const target = stepHeadingRef.current;
+      if (!target) {
+        return;
+      }
+
+      const reducedMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView?.({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+      target.focus({ preventScroll: true });
+    }, 0);
+  }, [currentStep]);
 
   function updateCandidateDate(value: string) {
     setCandidateDate(value);
@@ -453,6 +538,24 @@ export function PlanForm({
     focusWithSmoothScroll(candidateHourRef);
   }
 
+  function updateReminderDraft(id: string, values: Partial<Pick<ReminderDraft, "amount" | "unit">>) {
+    setReminderDrafts((current) => current.map((draft) => (draft.id === id ? { ...draft, ...values } : draft)));
+  }
+
+  function addReminderDraft() {
+    const nextId = reminderDraftSequence.current;
+    reminderDraftSequence.current += 1;
+    setReminderDrafts((current) => [...current, { id: `reminder-${nextId}`, amount: "1", unit: "hours" }]);
+    setReminderEnabled(true);
+  }
+
+  function removeReminderDraft(id: string) {
+    setReminderDrafts((current) => {
+      const nextDrafts = current.filter((draft) => draft.id !== id);
+      return nextDrafts.length > 0 ? nextDrafts : [{ id: "fallback-0", amount: "1", unit: "days" }];
+    });
+  }
+
   function moveToStep(step: number) {
     if (step === 1 && candidateDates.length === 0) {
       setMessage("候補日時を1つ以上追加してください。");
@@ -484,7 +587,10 @@ export function PlanForm({
         </React.Fragment>
       ))}
       <input type="hidden" name="answer_deadline_at" value={selectedDeadline} />
-      <input type="hidden" name="reminder_offset_minutes" value={reminderOffsetMinutes} />
+      <input type="hidden" name="reminder_offset_minutes" value={reminderOffsetsMinutes[0] ?? ""} />
+      {reminderOffsetsMinutes.map((offsetMinutes) => (
+        <input key={offsetMinutes} type="hidden" name="reminder_offsets_minutes" value={String(offsetMinutes)} />
+      ))}
 
       <ol className="grid gap-2 sm:grid-cols-3">
         {steps.map((step, index) => (
@@ -508,7 +614,9 @@ export function PlanForm({
       {currentStep === 0 ? (
         <section className="grid gap-5">
           <div>
-            <h2 className="text-xl font-bold text-ink">候補日時を選ぶ</h2>
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
+              候補日時を選ぶ
+            </h2>
           </div>
           {eventCategory === "nazotoki" ? (
             <div className="rounded-lg border border-moss/20 bg-mist/24 p-3">
@@ -622,7 +730,9 @@ export function PlanForm({
       {currentStep === 1 ? (
         <section className="grid gap-5">
           <div>
-            <h2 className="text-xl font-bold text-ink">回答期限を選ぶ</h2>
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
+              回答期限を選ぶ
+            </h2>
             <p className="mt-1 text-sm leading-6 text-ink/60">参加者に回答してほしい締め切りを選びます。</p>
           </div>
           <CalendarPicker
@@ -634,18 +744,66 @@ export function PlanForm({
             minDate={today}
           />
           <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
-          <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">リマインド</span>
-            <div className="mt-2">
-              <MadoiSelect
-                value={reminderOffsetMinutes}
-                onValueChange={setReminderOffsetMinutes}
-                options={reminderOptions}
-                fieldLabel="リマインド"
-                ariaLabel="リマインド"
+          <div className="rounded-lg border border-white/75 bg-white/58 p-4">
+            <label className="flex items-center gap-3 text-sm font-bold text-ink">
+              <input
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(event) => setReminderEnabled(event.currentTarget.checked)}
+                className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
               />
+              回答期限前にリマインドする
+            </label>
+            <div className={clsx("mt-3 grid gap-3", !reminderEnabled && "opacity-45")}>
+              {reminderDrafts.map((draft, index) => (
+                <div key={draft.id} className="grid gap-3 rounded-lg border border-white/70 bg-white/54 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <label className="text-sm font-medium text-ink">
+                    <span className="text-ink/72">リマインド {index + 1}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={draft.amount}
+                      disabled={!reminderEnabled}
+                      onChange={(event) => updateReminderDraft(draft.id, { amount: event.currentTarget.value.replace(/[^\d]/g, "") })}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20 disabled:bg-white/40"
+                      aria-label={`リマインド ${index + 1} 数値`}
+                    />
+                  </label>
+                  <label className="text-sm font-medium text-ink">
+                    <span className="text-ink/72">単位</span>
+                    <div className="mt-2">
+                      <MadoiSelect
+                        value={draft.unit}
+                        onValueChange={(unit) => updateReminderDraft(draft.id, { unit })}
+                        options={reminderUnitOptions}
+                        fieldLabel={`リマインド ${index + 1} 単位`}
+                        ariaLabel={`リマインド ${index + 1} 単位`}
+                        compact
+                      />
+                    </div>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeReminderDraft(draft.id)}
+                    disabled={!reminderEnabled || reminderDrafts.length === 1}
+                    className="inline-flex min-h-11 items-center justify-center self-end rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addReminderDraft}
+                disabled={!reminderEnabled}
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                リマインドを追加
+              </button>
             </div>
-          </label>
+          </div>
           <p
             className={clsx(
               "rounded-lg border p-3 text-sm",
@@ -661,14 +819,16 @@ export function PlanForm({
       {currentStep === 2 ? (
         <section className="grid gap-5">
           <div>
-            <h2 className="text-xl font-bold text-ink">内容を確認する</h2>
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
+              内容を確認する
+            </h2>
             <p className="mt-1 text-sm leading-6 text-ink/60">候補日時と回答期限を確認して、共有リンクを作ります。</p>
           </div>
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
           <div className="rounded-lg border border-moss/20 bg-mist/28 p-4">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">回答期限</p>
             <p className="mt-2 text-base font-bold text-ink">{formatDateTime(selectedDeadline)}</p>
-            <p className="mt-1 text-sm text-ink/60">リマインド: {reminderOffsetLabel(reminderOffsetMinutes)}</p>
+            <p className="mt-1 text-sm text-ink/60">リマインド: {reminderOffsetLabel(reminderEnabled, reminderDrafts)}</p>
           </div>
           <TextArea label="メモ" name="memo" defaultValue={plan?.memo} placeholder="集合場所や補足があれば入力します。" />
         </section>

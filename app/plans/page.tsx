@@ -1,12 +1,9 @@
-import Link from "next/link";
-import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
 
-import { AdjustmentMonthPicker } from "@/components/adjustment-month-picker";
-import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
+import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
+import { ButtonLink, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { planStatusLabels } from "@/lib/constants";
-import { buildAdjustmentCalendar, toDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
-import { formatDateTimeRange } from "@/lib/format";
+import { toDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -49,11 +46,6 @@ function monthParam(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
-function moveMonth(year: number, month: number, amount: number) {
-  const date = new Date(year, month - 1 + amount, 1);
-  return { year: date.getFullYear(), month: date.getMonth() + 1 };
-}
-
 function defaultSelectedDate(year: number, month: number) {
   const today = new Date();
   if (today.getFullYear() === year && today.getMonth() + 1 === month) {
@@ -61,53 +53,6 @@ function defaultSelectedDate(year: number, month: number) {
   }
 
   return `${year}-${String(month).padStart(2, "0")}-01`;
-}
-
-function formatMonthLabel(year: number, month: number) {
-  return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(year, month - 1, 1));
-}
-
-function formatDateLabel(dateKey: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short"
-  }).format(new Date(`${dateKey}T00:00:00`));
-}
-
-function weekdayTextClass(dayIndex: number) {
-  if (dayIndex === 0) {
-    return "text-clay";
-  }
-
-  if (dayIndex === 6) {
-    return "text-sky-700";
-  }
-
-  return "text-ink/50";
-}
-
-function dayCellTone(day: { date: Date; isCurrentMonth: boolean; isSelected: boolean }) {
-  const dayIndex = day.date.getDay();
-
-  if (day.isSelected) {
-    return "border-pine bg-moss/18 text-ink";
-  }
-
-  if (!day.isCurrentMonth) {
-    return "border-white/70 bg-white/38 text-ink/30 hover:border-moss/35";
-  }
-
-  if (dayIndex === 0) {
-    return "border-white/70 bg-clay/8 text-clay hover:border-clay/45";
-  }
-
-  if (dayIndex === 6) {
-    return "border-white/70 bg-skywash/55 text-sky-800 hover:border-sky-300";
-  }
-
-  return "border-white/70 bg-white/58 text-ink hover:border-moss/45";
 }
 
 function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCandidate {
@@ -133,10 +78,6 @@ function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCand
   };
 }
 
-function buildSearchHref(dateKey: string) {
-  return `/plans?month=${dateKey.slice(0, 7)}&date=${dateKey}`;
-}
-
 export default async function PlansPage({
   searchParams
 }: {
@@ -144,9 +85,8 @@ export default async function PlansPage({
 }) {
   const query = (await searchParams) ?? {};
   const { year, month } = parseMonth(query.month);
+  const currentMonth = monthParam(year, month);
   const selectedDateKey = query.date ?? defaultSelectedDate(year, month);
-  const previous = moveMonth(year, month, -1);
-  const next = moveMonth(year, month, 1);
 
   if (!hasSupabaseEnv()) {
     return (
@@ -181,7 +121,6 @@ export default async function PlansPage({
   const candidates = ((plans ?? []) as PlanRow[]).flatMap((plan) =>
     (plan.candidate_dates ?? []).map((candidate) => toCandidate(plan, candidate))
   );
-  const calendar = buildAdjustmentCalendar({ year, month, selectedDateKey, candidates });
 
   return (
     <div className="space-y-7">
@@ -196,98 +135,7 @@ export default async function PlansPage({
         }
       />
 
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href={`/plans?month=${monthParam(previous.year, previous.month)}&date=${defaultSelectedDate(previous.year, previous.month)}`}
-            scroll={false}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-            aria-label="前の月"
-          >
-            <ChevronLeft aria-hidden="true" className="h-5 w-5" />
-          </Link>
-          <AdjustmentMonthPicker currentMonth={monthParam(year, month)} label={formatMonthLabel(year, month)} />
-          <Link
-            href={`/plans?month=${monthParam(next.year, next.month)}&date=${defaultSelectedDate(next.year, next.month)}`}
-            scroll={false}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-            aria-label="次の月"
-          >
-            <ChevronRight aria-hidden="true" className="h-5 w-5" />
-          </Link>
-        </div>
-
-        <div className="mt-5 grid grid-cols-7 gap-1 text-center text-xs font-bold">
-          {["日", "月", "火", "水", "木", "金", "土"].map((label, index) => (
-            <div key={label} className={["py-2", weekdayTextClass(index)].join(" ")}>
-              {label}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {calendar.weeks.flat().map((day) => (
-            <Link
-              key={day.dateKey}
-              href={buildSearchHref(day.dateKey)}
-              scroll={false}
-              className={[
-                "min-h-20 rounded-lg border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                dayCellTone(day)
-              ].join(" ")}
-              aria-label={`${day.dateKey}の候補を表示`}
-              aria-current={day.isSelected ? "date" : undefined}
-            >
-              <span className="text-sm font-bold">{day.day}</span>
-              {day.candidateCount > 0 ? (
-                <span className="mt-2 flex flex-wrap gap-1">
-                  <span className="rounded-full bg-pine px-2 py-0.5 text-[11px] font-bold text-white">{day.candidateCount}</span>
-                  {day.hasOverlap ? <span className="rounded-full bg-clay px-2 py-0.5 text-[11px] font-bold text-white">重</span> : null}
-                  {day.hasConfirmed ? <span className="rounded-full bg-honey px-2 py-0.5 text-[11px] font-bold text-ink">確</span> : null}
-                </span>
-              ) : null}
-            </Link>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">Timeline</p>
-            <h2 className="mt-1 text-xl font-bold text-ink">{formatDateLabel(calendar.selectedDateKey)}</h2>
-          </div>
-          <p className="text-sm text-ink/58">○ 行ける / △ 微妙 / × 行けない</p>
-        </div>
-
-        <div className="mt-5 space-y-3">
-          {calendar.selectedCandidates.length > 0 ? (
-            calendar.selectedCandidates.map((candidate) => (
-              <Link
-                key={candidate.id}
-                href={`/plans/${candidate.planId}`}
-                className="block rounded-lg border border-ink/8 bg-white/62 p-4 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-pine">{formatDateTimeRange(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}</p>
-                    <h3 className="mt-1 text-base font-bold text-ink">{candidate.eventTitle}</h3>
-                    <p className="mt-1 text-sm text-ink/60">{candidate.planTitle ?? "日程調整"}</p>
-                  </div>
-                  <div className="text-sm font-semibold text-ink/68">
-                    {planStatusLabels[candidate.status as keyof typeof planStatusLabels] ?? candidate.status}
-                  </div>
-                </div>
-                <p className="mt-3 text-sm text-ink/64">
-                  ○ {candidate.yes} / △ {candidate.maybe} / × {candidate.no} / 未回答 {candidate.unanswered}
-                </p>
-              </Link>
-            ))
-          ) : (
-            <EmptyState>この日の候補はありません。</EmptyState>
-          )}
-        </div>
-      </Card>
+      <AdjustmentCalendarView month={currentMonth} selectedDateKey={selectedDateKey} candidates={candidates} />
     </div>
   );
 }

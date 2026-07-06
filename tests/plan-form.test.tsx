@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PlanForm } from "@/components/plan-form";
 
@@ -8,6 +8,10 @@ function chooseOption(label: string, optionName: string) {
   fireEvent.click(screen.getByLabelText(label));
   fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: optionName }));
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("PlanForm", () => {
   it("adds a candidate datetime and reaches the review step with a deadline", async () => {
@@ -101,7 +105,7 @@ describe("PlanForm", () => {
     expect(document.querySelector('input[name="candidateAllDays"]')).toHaveAttribute("value", "true");
   });
 
-  it("stores the selected reminder offset", () => {
+  it("stores a custom reminder offset", () => {
     render(<PlanForm action={vi.fn()} submitLabel="蜈ｱ譛峨Μ繝ｳ繧ｯ繧剃ｽ懈・" />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
@@ -110,10 +114,48 @@ describe("PlanForm", () => {
 
     const reminderInput = document.querySelector('input[name="reminder_offset_minutes"]');
     expect(reminderInput).toHaveValue("1440");
+    expect(document.querySelectorAll('input[name="reminder_offsets_minutes"]')).toHaveLength(1);
 
-    chooseOption("リマインド", "3時間前");
+    fireEvent.change(screen.getByLabelText("リマインド 1 数値"), { target: { value: "6" } });
+    chooseOption("リマインド 1 単位", "時間前");
 
-    expect(reminderInput).toHaveValue("180");
+    expect(reminderInput).toHaveValue("360");
+  });
+
+  it("stores multiple reminder offsets", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    fireEvent.click(screen.getByRole("button", { name: "リマインドを追加" }));
+    fireEvent.change(screen.getByLabelText("リマインド 2 数値"), { target: { value: "3" } });
+    chooseOption("リマインド 2 単位", "時間前");
+
+    const reminderInputs = Array.from(document.querySelectorAll('input[name="reminder_offsets_minutes"]')).map((input) =>
+      input.getAttribute("value")
+    );
+    expect(reminderInputs).toEqual(["1440", "180"]);
+    expect(document.querySelector('input[name="reminder_offset_minutes"]')).toHaveAttribute("value", "1440");
+  });
+
+  it("scrolls to the top of the next step", async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView
+    });
+
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    });
   });
 
   it("shows a settings link when Google Calendar is not connected", () => {

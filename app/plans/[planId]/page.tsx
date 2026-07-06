@@ -1,10 +1,12 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { CalendarShareLink } from "@/components/calendar-share-link";
 import { ReminderMessageCard } from "@/components/reminder-message-card";
 import { SettlementStatusBadge } from "@/components/settlement-status-badge";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
 import { markReminderSentAction } from "@/lib/actions/reminders";
 import { planStatusLabels } from "@/lib/constants";
 import {
@@ -12,6 +14,7 @@ import {
   summarizeParticipantProgress,
   type CandidateAnswerSummary
 } from "@/lib/domain/confirmation";
+import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
 import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
 import { getSettlementStatusView } from "@/lib/domain/settlement";
@@ -40,6 +43,7 @@ type ParticipantRow = {
 
 type ReminderSettingRow = {
   reminder_offset_minutes: number | null;
+  reminder_offsets_minutes?: number[] | null;
 };
 
 type ReminderLogRow = {
@@ -71,24 +75,6 @@ function reminderOffsetLabel(value: number | null | undefined) {
   return `${value}分前`;
 }
 
-function calendarNotice(status: string | undefined) {
-  if (status === "added") {
-    return {
-      title: "Google Calendarに登録しました",
-      body: "確定した日程を、連携中のGoogle Calendarへ予定として追加しました。"
-    };
-  }
-
-  if (status === "failed") {
-    return {
-      title: "Google Calendarには登録できませんでした",
-      body: "Madoi側の日程確定は完了しています。Google Calendar連携を確認して、必要なら手動で予定を追加してください。"
-    };
-  }
-
-  return null;
-}
-
 export default async function PlanDetailPage({
   params,
   searchParams
@@ -97,12 +83,12 @@ export default async function PlanDetailPage({
   searchParams?: Promise<{ calendar?: string }>;
 }) {
   const { planId } = await params;
-  const query = searchParams ? await searchParams : {};
+  const query = (await searchParams) ?? {};
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "*, events(id, title), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at), plan_reminder_settings(reminder_offset_minutes), plan_reminder_logs(sent_at)"
+      "*, events(id, title, location_name), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at), plan_reminder_settings(reminder_offset_minutes, reminder_offsets_minutes), plan_reminder_logs(sent_at)"
     )
     .eq("id", planId)
     .single();
@@ -127,12 +113,18 @@ export default async function PlanDetailPage({
     ? plan.plan_reminder_settings[0]
     : plan.plan_reminder_settings) as ReminderSettingRow | null | undefined;
   const reminderOffsetMinutes = reminderSetting?.reminder_offset_minutes ?? null;
+  const reminderOffsetsMinutes = reminderSetting?.reminder_offsets_minutes?.length
+    ? reminderSetting.reminder_offsets_minutes
+    : reminderOffsetMinutes === null
+      ? []
+      : [reminderOffsetMinutes];
   const reminderMessage = buildReminderMessage({
     eventTitle: event?.title,
     planTitle: plan.title,
     pendingNames,
     answerDeadlineAt: plan.answer_deadline_at,
     reminderOffsetMinutes,
+    reminderOffsetsMinutes,
     shareUrl
   });
   const reminderLogSummary = summarizeReminderLogs((plan.plan_reminder_logs ?? []) as ReminderLogRow[]);
@@ -145,7 +137,19 @@ export default async function PlanDetailPage({
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
   const settlementStatus = getSettlementStatusView(plan.settlement_status);
   const isConfirmed = plan.status === "date_confirmed";
-  const notice = calendarNotice(query.calendar);
+  const { data: calendarIntegration } = isConfirmed
+    ? await supabase.from("calendar_integrations").select("id").eq("user_id", plan.owner_user_id).eq("provider", "google").maybeSingle()
+    : { data: null };
+  const createCalendarEventAction = createGoogleCalendarEventForPlanAction.bind(null, plan.id);
+  const calendarShareUrl =
+    plan.confirmed_start_at && plan.confirmed_end_at
+      ? buildGoogleCalendarShareUrl({
+          title: [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" - ") || "Madoiの予定",
+          location: event?.location_name,
+          start: plan.confirmed_start_at,
+          end: plan.confirmed_end_at
+        })
+      : null;
 
   return (
     <div className="space-y-6">
@@ -156,15 +160,40 @@ export default async function PlanDetailPage({
           <div className="flex flex-wrap gap-3">
             {!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : null}
             {isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/settlement`}>支払い・清算へ</SecondaryLink> : null}
+            {calendarShareUrl ? <CalendarShareLink href={calendarShareUrl} /> : null}
           </div>
         }
       />
 
-      {notice ? (
-        <div className="rounded-lg border border-moss/20 bg-mist/32 p-4">
-          <p className="font-bold text-ink">{notice.title}</p>
-          <p className="mt-1 text-sm leading-6 text-ink/66">{notice.body}</p>
-        </div>
+      {isConfirmed ? (
+        <Card className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Google Calendar</h2>
+              <p className="mt-1 text-sm leading-6 text-ink/60">
+                主催者のGoogle Calendarに予定を作成します。Google連携済みの参加者がいれば、カレンダー招待も送ります。
+              </p>
+              {query.calendar === "created" ? <p className="mt-2 text-sm font-bold text-pine">Google Calendarに作成しました。</p> : null}
+              {query.calendar === "already-created" ? <p className="mt-2 text-sm font-bold text-pine">Google Calendarには作成済みです。</p> : null}
+            </div>
+            {plan.google_calendar_event_id ? (
+              <span className="inline-flex min-h-10 items-center justify-center rounded-full bg-mist/55 px-4 py-2 text-sm font-bold text-pine">
+                作成済み
+              </span>
+            ) : calendarIntegration ? (
+              <form action={createCalendarEventAction}>
+                <button
+                  type="submit"
+                  className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                >
+                  Calendarに作成して招待
+                </button>
+              </form>
+            ) : (
+              <SecondaryLink href="/settings">Google Calendarを連携</SecondaryLink>
+            )}
+          </div>
+        </Card>
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-5">

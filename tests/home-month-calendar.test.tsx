@@ -56,4 +56,21 @@ describe("HomeMonthCalendar", () => {
     });
     expect(screen.getByText("新宿")).toBeInTheDocument();
   });
+
+  it("explains that the month view compares Madoi and Google Calendar schedules", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ connected: false, busy: [] })
+      })
+    );
+
+    render(<HomeMonthCalendar month="2026-07" selectedDateKey="2026-07-12" initialItems={[]} />);
+
+    expect(screen.getByText("MadoiとGoogle Calendarの予定を月単位で見比べられます。")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Google Calendarは未連携です")).toBeInTheDocument();
+    });
+  });
 });

@@ -226,6 +226,7 @@ export function HomeMonthCalendar({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">Calendar</p>
           <h2 className="mt-1 text-xl font-bold text-ink">{monthLabel(month)}</h2>
+          <p className="mt-1 text-sm leading-6 text-ink/60">MadoiとGoogle Calendarの予定を月単位で見比べられます。</p>
         </div>
         <div className="flex items-center gap-2">
           <Link

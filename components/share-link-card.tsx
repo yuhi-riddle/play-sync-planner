@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Copy, ExternalLink } from "lucide-react";
+import React from "react";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/ui";
@@ -42,6 +43,12 @@ export function ShareLinkCard({ shareUrl }: { shareUrl: string | null }) {
         {copied ? <Check aria-hidden="true" className="mr-2 h-4 w-4" /> : <Copy aria-hidden="true" className="mr-2 h-4 w-4" />}
         {copied ? "コピーしました" : "リンクをコピー"}
       </button>
+      <a
+        href={shareUrl}
+        className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      >
+        自分も回答する
+      </a>
     </div>
   );
 }

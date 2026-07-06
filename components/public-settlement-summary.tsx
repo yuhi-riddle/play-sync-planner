@@ -1,6 +1,7 @@
 import React from "react";
 
 import { PaymentMethodField } from "@/components/payment-method-field";
+import { isPayPayMethod, PayPayActionPanel } from "@/components/paypay-action-panel";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { Card, EmptyState, MadoiForm } from "@/components/ui";
@@ -102,6 +103,9 @@ export function PublicSettlementSummary({
                       {settlement.memo ? <p className="mt-1 text-sm text-ink/70">メモ: {settlement.memo}</p> : null}
                     </div>
                     {settlement.paymentUrl ? <PaymentDestinationLink href={settlement.paymentUrl} label={paymentView.linkLabel} /> : null}
+                    {isPayPayMethod(settlement.paymentMethod) ? (
+                      <PayPayActionPanel amount={progress.remainingAmount} className="mt-3" />
+                    ) : null}
                   </div>
                   {recordPaymentAction ? (
                     <details open className="mt-4 rounded-lg border border-ink/10 bg-cream/70 p-3">

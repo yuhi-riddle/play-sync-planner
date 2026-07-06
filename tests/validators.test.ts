@@ -177,6 +177,20 @@ describe("planSchema", () => {
     expect(result.reminder_offset_minutes).toBe(1440);
   });
 
+  it("parses multiple reminder offsets in minutes", () => {
+    const result = planSchema.parse({
+      title: "",
+      participantNames: "",
+      candidateDates: "2026-07-15T10:00",
+      candidateEndDates: "2026-07-15T12:00",
+      answer_deadline_at: "2026-07-14T22:00",
+      reminder_offsets_minutes: ["1440", "360"],
+      memo: ""
+    });
+
+    expect(result.reminder_offsets_minutes).toEqual([1440, 360]);
+  });
+
   it("rejects a negative reminder offset", () => {
     expect(() =>
       planSchema.parse({
@@ -186,6 +200,20 @@ describe("planSchema", () => {
         candidateEndDates: "2026-07-15T12:00",
         answer_deadline_at: "2026-07-14T22:00",
         reminder_offset_minutes: "-1",
+        memo: ""
+      })
+    ).toThrow();
+  });
+
+  it("rejects a negative reminder offset in a list", () => {
+    expect(() =>
+      planSchema.parse({
+        title: "",
+        participantNames: "",
+        candidateDates: "2026-07-15T10:00",
+        candidateEndDates: "2026-07-15T12:00",
+        answer_deadline_at: "2026-07-14T22:00",
+        reminder_offsets_minutes: ["1440", "-1"],
         memo: ""
       })
     ).toThrow();

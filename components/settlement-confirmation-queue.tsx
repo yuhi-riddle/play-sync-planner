@@ -12,6 +12,7 @@ export type SettlementConfirmationQueueItem = {
   paymentMethod: string | null;
   paymentUrl: string | null;
   memo: string | null;
+  canConfirm?: boolean;
 };
 
 export function SettlementConfirmationQueue({
@@ -40,6 +41,7 @@ export function SettlementConfirmationQueue({
                   ) : null}
                   {item.paymentUrl ? <PaymentDestinationLink href={item.paymentUrl} label="支払い記録を開く" className="mt-3" /> : null}
                 </div>
+                {item.canConfirm ?? true ? (
                 <form action={confirmPaymentAction.bind(null, item.id)}>
                   <button
                     type="submit"
@@ -48,6 +50,11 @@ export function SettlementConfirmationQueue({
                     受け取り確認する
                   </button>
                 </form>
+                ) : (
+                  <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/68 px-4 py-2 text-sm font-bold text-ink/58">
+                    受け取り側の確認待ち
+                  </span>
+                )}
               </div>
             </article>
           ))

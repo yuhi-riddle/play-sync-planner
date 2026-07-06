@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 
 import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/availability";
-import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { resolveAnswerParticipantForSubmission } from "@/lib/domain/participant-identity";
+import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CandidateRow = {
   id: string;
@@ -12,6 +13,11 @@ type CandidateRow = {
 
 export async function submitAvailabilityAnswersAction(token: string, formData: FormData) {
   const supabase = createSupabaseAdminClient();
+  const serverSupabase = await createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await serverSupabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
   const { data: link, error: linkError } = await supabase
     .from("share_links")
     .select("plan_id, expires_at, plans(id, answer_deadline_at)")
@@ -51,28 +57,42 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     }))
   });
 
-  const { data: existingParticipant } = await supabase
+  const { data: existingParticipants, error: participantsError } = await supabase
     .from("participants")
-    .select("id")
-    .eq("plan_id", link.plan_id)
-    .eq("display_name", normalized.displayName)
-    .maybeSingle();
+    .select("id, display_name, user_id")
+    .eq("plan_id", link.plan_id);
+
+  if (participantsError) {
+    throw new Error(participantsError.message);
+  }
+
+  const participantResolution = resolveAnswerParticipantForSubmission({
+    participants: (existingParticipants ?? []).map((participant) => ({
+      id: participant.id,
+      displayName: participant.display_name,
+      userId: participant.user_id
+    })),
+    displayName: normalized.displayName,
+    userId: currentUserId
+  });
 
   const participantId =
-    existingParticipant?.id ??
-    (
-      await supabase
-        .from("participants")
-        .insert({
-          plan_id: link.plan_id,
-          display_name: normalized.displayName,
-          participant_type: "guest",
-          status: "answered",
-          is_organizer: false
-        })
-        .select("id")
-        .single()
-    ).data?.id;
+    participantResolution.kind === "existing"
+      ? participantResolution.participantId
+      : (
+          await supabase
+            .from("participants")
+            .insert({
+              plan_id: link.plan_id,
+              user_id: participantResolution.userId,
+              display_name: participantResolution.displayName,
+              participant_type: participantResolution.participantType,
+              status: "answered",
+              is_organizer: false
+            })
+            .select("id")
+            .single()
+        ).data?.id;
 
   if (!participantId) {
     throw new Error("参加者を保存できませんでした");
@@ -93,10 +113,12 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     throw new Error(answersError.message);
   }
 
-  const { error: participantError } = await supabase
-    .from("participants")
-    .update({ status: "answered" })
-    .eq("id", participantId);
+  const participantUpdate =
+    participantResolution.kind === "existing" && participantResolution.userIdToLink
+      ? { status: "answered", user_id: participantResolution.userIdToLink, participant_type: "registered" }
+      : { status: "answered" };
+
+  const { error: participantError } = await supabase.from("participants").update(participantUpdate).eq("id", participantId);
 
   if (participantError) {
     throw new Error(participantError.message);

@@ -1,6 +1,6 @@
 # Madoi リリース前チェックリスト
 
-最終更新: 2026-07-03
+最終更新: 2026-07-06
 
 このドキュメントは、Madoi を「いったん使える状態」として確認するための手順です。
 新機能を増やすための一覧ではなく、公開前に詰まりやすいところを潰すために使います。
@@ -30,6 +30,8 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] `supabase/migrations/007_expense_important_notes.sql`
 - [ ] `supabase/migrations/008_settlement_reminder_type.sql`
 - [ ] `supabase/migrations/009_site_notifications.sql`
+- [ ] `supabase/migrations/010_participant_user_identity.sql`
+- [ ] `supabase/migrations/011_plan_multiple_reminders.sql`
 
 途中でエラーが出た場合は、実行したファイル名とエラー全文を控えます。
 
@@ -40,12 +42,12 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] Google Calendar 用 OAuth Client に `http://localhost:3000/api/google-calendar/callback` が登録されている。
 - [ ] Google Auth Platform のテストユーザーに、自分のGoogleアカウントが入っている。
 - [ ] Google Calendar のスコープに `https://www.googleapis.com/auth/calendar.events` が入っている。
-- [ ] 設定画面で「読み取り専用」の警告が出る場合は、`再連携する` からGoogle Calendarをつなぎ直している。
 
 ## 4. 通知
 
 - [ ] `009_site_notifications.sql` を適用済み。
 - [ ] ローカルで `http://localhost:3000/api/cron/notifications` を開いて、エラーにならない。
+- [ ] 複数リマインドを設定した参加予定で、回答期限前通知が設定時刻ごとに作られる。
 - [ ] 通知が作られた場合、ヘッダーのベルに未読件数が表示される。
 - [ ] ホームの「対応が必要なこと」に未読通知が表示される。
 - [ ] `/notifications` で通知一覧が開ける。
@@ -66,14 +68,17 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] イベントに参加予定を作成する。
 - [ ] 候補日時を複数追加する。
 - [ ] 候補日時を選ぶ画面で Google Calendar の予定が見える。
+- [ ] 調整カレンダーで Madoi の候補と Google Calendar の予定が同じタイムラインに表示される。
+- [ ] スマホ幅の調整カレンダーで、日付一覧を横スクロールでき、選択日のタイムラインが読める。
 - [ ] 共有回答リンクを別ブラウザ、またはシークレットウィンドウで開く。
+- [ ] 予定詳細の「自分も回答する」から主催者として回答できる。
 - [ ] 日程回答を送信する。
 - [ ] 予定詳細で回答状況を確認する。
 - [ ] 候補日時を確定する。
-- [ ] Google Calendar に確定予定が追加される。
-  - 追加されない場合は、設定画面でGoogle Calendar連携が読み取り専用になっていないか確認する。
+- [ ] 予定詳細の `Calendarに作成して招待` から、主催者のGoogle Calendarに予定を作れる。
 - [ ] 立替支払いを追加する。
 - [ ] 清算結果を確認する。
+- [ ] スマホ幅の清算画面で、支払い先リンク、PayPayボタン、支払い記録ボタンが押しやすい。
 - [ ] 支払い依頼文面をコピーする。
 - [ ] 公開清算リンクを開く。
 - [ ] 一部支払いを記録する。
@@ -121,6 +126,6 @@ npm.cmd run build
 未確認:
 
 - Googleログイン後のイベント作成から清算完了までの実操作。
-- Google Calendarへの予定登録。
+- `Calendarに作成して招待` から予定を作れること。
 - ログイン後の通知未読・既読切替。
 - 本番環境のSupabase、Google OAuth、Vercel Cron設定。

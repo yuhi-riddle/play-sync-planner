@@ -13,6 +13,7 @@ export function buildReminderMessage({
   pendingNames,
   answerDeadlineAt,
   reminderOffsetMinutes,
+  reminderOffsetsMinutes,
   shareUrl
 }: {
   eventTitle: string | null | undefined;
@@ -20,6 +21,7 @@ export function buildReminderMessage({
   pendingNames: string[];
   answerDeadlineAt: string | null | undefined;
   reminderOffsetMinutes?: number | null;
+  reminderOffsetsMinutes?: number[] | null;
   shareUrl: string | null;
 }) {
   const addressedNames = pendingNames.length > 0 ? pendingNames.map(toPoliteName).join("、") : "みなさん";
@@ -33,9 +35,9 @@ export function buildReminderMessage({
     ""
   ];
 
-  const reminderTime = formatReminderTime(answerDeadlineAt, reminderOffsetMinutes);
-  if (reminderTime) {
-    lines.splice(4, 0, `繝ｪ繝槭う繝ｳ繝・ ${reminderTime}`, "");
+  const reminderTimes = formatReminderTimes(answerDeadlineAt, reminderOffsetsMinutes ?? singleOffset(reminderOffsetMinutes));
+  if (reminderTimes.length > 0) {
+    lines.splice(4, 0, `リマインド: ${reminderTimes.join("、")}`, "");
   }
 
   if (shareUrl) {
@@ -91,4 +93,16 @@ function formatReminderTime(value: string | null | undefined, offsetMinutes: num
   const date = new Date(value);
   date.setMinutes(date.getMinutes() - offsetMinutes);
   return formatReminderDeadline(date.toISOString());
+}
+
+function formatReminderTimes(value: string | null | undefined, offsetMinutesList: number[]) {
+  return Array.from(new Set(offsetMinutesList))
+    .filter((offsetMinutes) => Number.isFinite(offsetMinutes) && offsetMinutes > 0)
+    .sort((a, b) => b - a)
+    .map((offsetMinutes) => formatReminderTime(value, offsetMinutes))
+    .filter((reminderTime): reminderTime is string => Boolean(reminderTime));
+}
+
+function singleOffset(offsetMinutes: number | null | undefined) {
+  return offsetMinutes === null || offsetMinutes === undefined ? [] : [offsetMinutes];
 }

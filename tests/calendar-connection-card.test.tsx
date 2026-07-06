@@ -9,11 +9,14 @@ describe("CalendarConnectionCard", () => {
     render(<CalendarConnectionCard connected={false} accountEmail={null} updatedAt={null} />);
 
     expect(screen.getByText("未連携")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Google Calendarを連携" })).toHaveAttribute("href", "/api/google-calendar/connect");
+    expect(screen.getByRole("link", { name: "Google Calendarを連携" })).toHaveAttribute(
+      "href",
+      "/api/google-calendar/connect"
+    );
   });
 
   it("shows connected account and disconnect button", () => {
-    render(<CalendarConnectionCard connected accountEmail="me@example.com" updatedAt="2026-06-29T10:00:00+09:00" canWriteEvents />);
+    render(<CalendarConnectionCard connected accountEmail="me@example.com" updatedAt="2026-06-29T10:00:00+09:00" />);
 
     expect(screen.getByText("連携済み")).toBeInTheDocument();
     expect(screen.getByText("me@example.com")).toBeInTheDocument();
@@ -26,7 +29,7 @@ describe("CalendarConnectionCard", () => {
     expect(screen.getByText("Google Calendarと接続できませんでした。もう一度試してください。")).toBeInTheDocument();
   });
 
-  it("asks for reconnection when the existing scope cannot create calendar events", () => {
+  it("does not ask for reconnection when calendar event creation is handled by share links", () => {
     render(
       <CalendarConnectionCard
         connected
@@ -36,7 +39,6 @@ describe("CalendarConnectionCard", () => {
       />
     );
 
-    expect(screen.getByText("今の連携は予定の読み取り専用です。確定した日程をGoogle Calendarへ登録するには、再連携してください。")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "再連携する" })).toHaveAttribute("href", "/api/google-calendar/connect");
+    expect(screen.queryByRole("link", { name: "再連携する" })).not.toBeInTheDocument();
   });
 });

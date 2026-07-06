@@ -12,7 +12,9 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
     .from("plans")
-    .select("*, events(category), participants(display_name), candidate_dates(start_at, end_at, is_all_day), plan_reminder_settings(reminder_offset_minutes)")
+    .select(
+      "*, events(category), participants(display_name), candidate_dates(start_at, end_at, is_all_day), plan_reminder_settings(reminder_offset_minutes, reminder_offsets_minutes)"
+    )
     .eq("id", planId)
     .single();
   const {

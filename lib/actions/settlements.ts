@@ -9,6 +9,8 @@ import {
   summarizeSettlementPaymentProgress,
   validateIndividualSplits
 } from "@/lib/domain/settlement";
+import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
+import { canConfirmSettlementPayment } from "@/lib/domain/participant-identity";
 import { formDataToObject } from "@/lib/form-data";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import {
@@ -39,6 +41,73 @@ type SettlementPaymentRow = {
   amount: number;
   confirmed_at: string | null;
 };
+
+type NotificationParticipantRelation =
+  | { display_name: string | null; user_id?: string | null }
+  | Array<{ display_name: string | null; user_id?: string | null }>
+  | null;
+
+function firstNotificationParticipant(value: NotificationParticipantRelation) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function notificationParticipantName(value: NotificationParticipantRelation) {
+  return firstNotificationParticipant(value)?.display_name?.trim() || "参加者";
+}
+
+function notificationPlanTitle(plan: { title?: string | null; events?: { title: string | null } | { title: string | null }[] | null }) {
+  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "予定";
+}
+
+async function notifySettlementConfirmationDue({
+  settlementId,
+  paymentId
+}: {
+  settlementId: string;
+  paymentId: string;
+}) {
+  const admin = createSupabaseAdminClient();
+  const { data: settlement, error } = await admin
+    .from("settlements")
+    .select(
+      "id, plan_id, plans(title, events(title)), from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name, user_id)"
+    )
+    .eq("id", settlementId)
+    .single();
+
+  if (error || !settlement) {
+    return;
+  }
+
+  const receiver = firstNotificationParticipant(settlement.to_participant as NotificationParticipantRelation);
+  if (!receiver?.user_id) {
+    return;
+  }
+
+  const plan = Array.isArray(settlement.plans) ? settlement.plans[0] : settlement.plans;
+  const candidate = buildNotificationCandidate({
+    userId: receiver.user_id,
+    kind: "confirmation_due",
+    planId: settlement.plan_id,
+    title: notificationPlanTitle(plan ?? {}),
+    href: `/plans/${settlement.plan_id}/settlement#confirmation`,
+    dueAt: `payment:${paymentId}`,
+    participantNames: [notificationParticipantName(settlement.from_participant as NotificationParticipantRelation)]
+  });
+
+  await admin.from("notifications").upsert(
+    {
+      user_id: candidate.userId,
+      kind: candidate.kind,
+      title: candidate.title,
+      body: candidate.body,
+      href: candidate.href,
+      dedupe_key: candidate.dedupeKey
+    },
+    { onConflict: "user_id,dedupe_key", ignoreDuplicates: true }
+  );
+}
 
 function optionalString(value: FormDataEntryValue | null) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -394,14 +463,18 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
     throw new Error("支払い金額が残額を超えています");
   }
 
-  const { error: insertError } = await supabase.from("settlement_payments").insert({
-    settlement_id: settlementId,
-    paid_by_participant_id: settlement.from_participant_id,
-    amount: values.amount,
-    payment_method: values.payment_method,
-    payment_url: values.payment_url,
-    memo: values.memo
-  });
+  const { data: insertedPayment, error: insertError } = await supabase
+    .from("settlement_payments")
+    .insert({
+      settlement_id: settlementId,
+      paid_by_participant_id: settlement.from_participant_id,
+      amount: values.amount,
+      payment_method: values.payment_method,
+      payment_url: values.payment_url,
+      memo: values.memo
+    })
+    .select("id")
+    .single();
 
   if (insertError) {
     throw new Error(insertError.message);
@@ -424,6 +497,9 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
     .eq("id", settlementId);
 
   await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
+  if (insertedPayment?.id) {
+    await notifySettlementConfirmationDue({ settlementId, paymentId: insertedPayment.id });
+  }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);
@@ -466,14 +542,18 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
     throw new Error("支払い金額が残額を超えています");
   }
 
-  const { error: insertError } = await supabase.from("settlement_payments").insert({
-    settlement_id: settlement.id,
-    paid_by_participant_id: settlement.from_participant_id,
-    amount: values.amount,
-    payment_method: values.payment_method,
-    payment_url: values.payment_url,
-    memo: values.memo
-  });
+  const { data: insertedPayment, error: insertError } = await supabase
+    .from("settlement_payments")
+    .insert({
+      settlement_id: settlement.id,
+      paid_by_participant_id: settlement.from_participant_id,
+      amount: values.amount,
+      payment_method: values.payment_method,
+      payment_url: values.payment_url,
+      memo: values.memo
+    })
+    .select("id")
+    .single();
 
   if (insertError) {
     throw new Error(insertError.message);
@@ -496,6 +576,9 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
     .eq("id", settlement.id);
 
   await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
+  if (insertedPayment?.id) {
+    await notifySettlementConfirmationDue({ settlementId: settlement.id, paymentId: insertedPayment.id });
+  }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);
@@ -509,16 +592,25 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     redirect("/login");
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data: payment, error } = await supabase
     .from("settlement_payments")
-    .select("id, settlement_id, settlements(id, plan_id, amount, settlement_payments(id, amount, confirmed_at), plans(owner_user_id))")
+    .select(
+      "id, settlement_id, settlements(id, plan_id, amount, to_participant:participants!settlements_to_participant_id_fkey(user_id), settlement_payments(id, amount, confirmed_at), plans(owner_user_id))"
+    )
     .eq("id", paymentId)
     .single();
 
   const settlement = Array.isArray(payment?.settlements) ? payment?.settlements[0] : payment?.settlements;
   const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
-  if (error || !payment || !settlement || plan?.owner_user_id !== userId) {
+  const receiver = Array.isArray(settlement?.to_participant) ? settlement?.to_participant[0] : settlement?.to_participant;
+  if (
+    error ||
+    !payment ||
+    !settlement ||
+    !plan ||
+    !canConfirmSettlementPayment({ currentUserId: userId, receiverUserId: receiver?.user_id ?? null })
+  ) {
     throw new Error("主催者だけが受け取り確認できます");
   }
 
@@ -558,6 +650,13 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     .from("plans")
     .update({ settlement_status: (openSettlements ?? []).length === 0 ? "settled" : "settling" })
     .eq("id", settlement.plan_id);
+
+  await supabase
+    .from("notifications")
+    .update({ read_at: confirmedAt })
+    .eq("user_id", userId)
+    .eq("dedupe_key", `confirmation_due:${settlement.plan_id}:payment:${paymentId}`)
+    .is("read_at", null);
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);

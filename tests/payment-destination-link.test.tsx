@@ -18,6 +18,8 @@ describe("PaymentDestinationLink", () => {
     expect(link).toHaveAttribute("href", "https://example.com/pay");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noreferrer");
+    expect(link).toHaveClass("w-full");
+    expect(link).toHaveClass("sm:w-auto");
     expect(screen.getByText("外部決済ページを開いて支払えます")).toBeInTheDocument();
   });
 

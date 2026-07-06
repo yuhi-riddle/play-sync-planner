@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Bell, CalendarDays, CalendarPlus, ListChecks, Settings } from "lucide-react";
 
-import { HomeMonthCalendar } from "@/components/home-month-calendar";
-import { SettlementStatusBadge } from "@/components/settlement-status-badge";
+import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
-import { getSettlementStatusView } from "@/lib/domain/settlement";
-import { formatDateTimeRange } from "@/lib/format";
+import {
+  countNotificationsByActionFilter,
+  filterNotificationsByActionFilter,
+  type NotificationActionFilter
+} from "@/lib/domain/site-notifications";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,7 @@ type PlanRow = {
 
 type NotificationRow = {
   id: string;
+  kind: string;
   title: string;
   body: string;
   href: string;
@@ -67,58 +70,38 @@ const homeActions = [
   }
 ];
 
-const homeStatusLabels: Record<string, string> = {
-  draft: "下書き",
-  collecting_answers: "回答受付中",
-  date_confirmed: "日程確定",
-  ticket_purchased: "チケット購入済み",
-  settling: "清算中",
-  settled: "清算済み",
-  participated: "参加済み",
-  cancelled: "中止",
-  skipped: "見送り"
-};
-
-function parseMonth(value: string | undefined) {
-  const match = /^(\d{4})-(\d{2})$/.exec(value ?? "");
-  const today = new Date();
-
-  if (!match) {
-    return { year: today.getFullYear(), month: today.getMonth() + 1 };
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  if (month < 1 || month > 12) {
-    return { year: today.getFullYear(), month: today.getMonth() + 1 };
-  }
-
-  return { year, month };
-}
-
-function monthParam(year: number, month: number) {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
+const actionFilterOptions: Array<{ value: NotificationActionFilter; label: string }> = [
+  { value: "all", label: "すべて" },
+  { value: "deadline", label: "期限" },
+  { value: "unanswered", label: "未回答" },
+  { value: "settlement", label: "清算" },
+  { value: "payment", label: "支払い" },
+  { value: "confirmation", label: "確認待ち" }
+];
 
 function toDateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 }
 
-function defaultSelectedDate(year: number, month: number) {
-  const today = new Date();
-  if (today.getFullYear() === year && today.getMonth() + 1 === month) {
-    return toDateKey(today);
-  }
-
-  return `${monthParam(year, month)}-01`;
-}
-
-function normalizeSelectedDate(value: string | undefined, year: number, month: number) {
+function normalizeBaseDate(value: string | undefined) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value ?? "")) {
     return value as string;
   }
 
-  return defaultSelectedDate(year, month);
+  return toDateKey(new Date());
+}
+
+function normalizeActionFilter(value: string | undefined): NotificationActionFilter {
+  return actionFilterOptions.some((option) => option.value === value) ? (value as NotificationActionFilter) : "all";
+}
+
+function homeFilterHref(date: string, filter: NotificationActionFilter) {
+  const params = new URLSearchParams({ date });
+  if (filter !== "all") {
+    params.set("action", filter);
+  }
+
+  return `/?${params.toString()}`;
 }
 
 function eventOf(plan: PlanRow) {
@@ -165,12 +148,11 @@ function toCalendarItems(plans: PlanRow[]): HomeCalendarItem[] {
 export default async function HomePage({
   searchParams
 }: {
-  searchParams?: Promise<{ month?: string; date?: string }>;
+  searchParams?: Promise<{ date?: string; action?: string }>;
 }) {
   const query = (await searchParams) ?? {};
-  const { year, month } = parseMonth(query.month);
-  const currentMonth = monthParam(year, month);
-  const selectedDateKey = normalizeSelectedDate(query.date, year, month);
+  const baseDateKey = normalizeBaseDate(query.date);
+  const activeActionFilter = normalizeActionFilter(query.action);
 
   if (!hasSupabaseEnv()) {
     return (
@@ -207,23 +189,23 @@ export default async function HomePage({
 
   const { data: notifications } = await supabase
     .from("notifications")
-    .select("id, title, body, href, created_at")
+    .select("id, kind, title, body, href, created_at")
     .eq("user_id", user.id)
     .is("read_at", null)
     .order("created_at", { ascending: false })
-    .limit(3);
+    .limit(80);
 
   const planRows = (plans ?? []) as PlanRow[];
   const unreadNotifications = (notifications ?? []) as NotificationRow[];
-  const collecting = planRows.filter((plan) => plan.status === "collecting_answers");
-  const confirmed = planRows.filter((plan) => plan.status === "date_confirmed");
+  const notificationCounts = countNotificationsByActionFilter(unreadNotifications);
+  const filteredNotifications = filterNotificationsByActionFilter(unreadNotifications, activeActionFilter).slice(0, 5);
   const calendarItems = toCalendarItems(planRows);
 
   return (
     <div className="space-y-7">
       <PageHeader
         title="ホーム"
-        description="調整中の日程、確定済みの予定、Google Calendarの予定を月で見ます。"
+        description="選んだ日の予定と、対応が必要なことだけを確認します。"
         action={
           <ButtonLink href="/events/new">
             <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
@@ -248,20 +230,39 @@ export default async function HomePage({
         ))}
       </section>
 
-      {unreadNotifications.length > 0 ? (
-        <Card>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-                <Bell aria-hidden="true" className="h-5 w-5 text-pine" />
-                対応が必要なこと
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-ink/60">期限や清算まわりで、見ておきたいものがあります。</p>
-            </div>
-            <SecondaryLink href="/notifications">通知を開く</SecondaryLink>
+      <Card>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+              <Bell aria-hidden="true" className="h-5 w-5 text-pine" />
+              対応が必要なこと
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">期限、未回答、清算まわりを絞り込んで確認できます。</p>
           </div>
-          <div className="mt-4 grid gap-3">
-            {unreadNotifications.map((notification) => (
+          <SecondaryLink href="/notifications">通知を開く</SecondaryLink>
+        </div>
+
+        <nav className="mt-4 flex flex-wrap gap-2" aria-label="対応が必要なことの絞り込み">
+          {actionFilterOptions.map((option) => (
+            <Link
+              key={option.value}
+              href={homeFilterHref(baseDateKey, option.value)}
+              scroll={false}
+              aria-current={activeActionFilter === option.value ? "page" : undefined}
+              className={
+                activeActionFilter === option.value
+                  ? "inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                  : "inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              }
+            >
+              {option.label} {notificationCounts[option.value]}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="mt-4 grid gap-3">
+          {filteredNotifications.length > 0 ? (
+            filteredNotifications.map((notification) => (
               <Link
                 key={notification.id}
                 href={safeInternalHref(notification.href)}
@@ -270,87 +271,14 @@ export default async function HomePage({
                 <span className="block text-sm font-bold text-ink">{notification.title}</span>
                 <span className="mt-1 block text-sm leading-6 text-ink/62">{notification.body}</span>
               </Link>
-            ))}
-          </div>
-        </Card>
-      ) : null}
-
-      <HomeMonthCalendar month={currentMonth} selectedDateKey={selectedDateKey} initialItems={calendarItems} />
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <h2 className="text-lg font-semibold text-ink">回答受付中</h2>
-          <div className="mt-4 space-y-3">
-            {collecting.length > 0 ? (
-              collecting.slice(0, 5).map((plan) => {
-                const event = eventOf(plan);
-                return (
-                  <SecondaryLink key={plan.id} href={`/plans/${plan.id}`}>
-                    {(event?.title ?? "イベント未設定") + " / " + (plan.title ?? "日程調整")}
-                  </SecondaryLink>
-                );
-              })
-            ) : (
-              <EmptyState>回答受付中の予定はありません。</EmptyState>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="text-lg font-semibold text-ink">確定済み</h2>
-          <div className="mt-4 space-y-3">
-            {confirmed.length > 0 ? (
-              confirmed.slice(0, 5).map((plan) => {
-                const event = eventOf(plan);
-                const settlementStatus = getSettlementStatusView(plan.settlement_status);
-                return (
-                  <Link
-                    key={plan.id}
-                    href={`/plans/${plan.id}`}
-                    className="block rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
-                  >
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-ink">{event?.title ?? "イベント未設定"}</span>
-                      <SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} />
-                    </span>
-                    <span className="mt-1 block text-sm text-ink/60">{formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}</span>
-                  </Link>
-                );
-              })
-            ) : (
-              <EmptyState>確定済みの予定はありません。</EmptyState>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <h2 className="text-lg font-semibold text-ink">最近の予定</h2>
-        <div className="mt-4 grid gap-3">
-          {planRows.length > 0 ? (
-            planRows.slice(0, 8).map((plan) => {
-              const settlementStatus = getSettlementStatusView(plan.settlement_status);
-              return (
-                <Link
-                  key={plan.id}
-                  href={`/plans/${plan.id}`}
-                  className="rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
-                >
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-ink">{plan.title ?? "日程調整"}</span>
-                    <span className="rounded-full bg-white/78 px-3 py-1 text-xs font-bold text-ink/62">
-                      {homeStatusLabels[plan.status] ?? plan.status}
-                    </span>
-                    {plan.status === "date_confirmed" ? <SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} /> : null}
-                  </span>
-                </Link>
-              );
-            })
+            ))
           ) : (
-            <EmptyState>まだ予定がありません。</EmptyState>
+            <EmptyState>この条件で対応が必要なものはありません。</EmptyState>
           )}
         </div>
       </Card>
+
+      <HomeSelectedDateAgenda selectedDateKey={baseDateKey} initialItems={calendarItems} />
     </div>
   );
 }

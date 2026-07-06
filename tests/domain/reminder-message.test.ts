@@ -58,15 +58,42 @@ describe("buildReminderMessage", () => {
   });
 
   it("includes the manual reminder timing when a reminder offset is set", () => {
+    const message = buildReminderMessage({
+      eventTitle: "Event",
+      planTitle: "Plan",
+      pendingNames: ["Haru"],
+      answerDeadlineAt: "2026-07-01T21:00:00+09:00",
+      reminderOffsetMinutes: 1440,
+      shareUrl: "https://example.com/s/token/answer"
+    } as Parameters<typeof buildReminderMessage>[0] & { reminderOffsetMinutes: number });
+
+    expect(message).toContain("リマインド: 2026/06/30 21:00");
+    expect(message).not.toContain("繝");
+  });
+
+  it("formats custom reminder offsets", () => {
     expect(
       buildReminderMessage({
         eventTitle: "Event",
         planTitle: "Plan",
         pendingNames: ["Haru"],
         answerDeadlineAt: "2026-07-01T21:00:00+09:00",
-        reminderOffsetMinutes: 1440,
+        reminderOffsetMinutes: 360,
         shareUrl: "https://example.com/s/token/answer"
       } as Parameters<typeof buildReminderMessage>[0] & { reminderOffsetMinutes: number })
-    ).toContain("2026/06/30 21:00");
+    ).toContain("リマインド: 2026/07/01 15:00");
+  });
+
+  it("formats multiple reminder offsets", () => {
+    const message = buildReminderMessage({
+      eventTitle: "Event",
+      planTitle: "Plan",
+      pendingNames: ["Haru"],
+      answerDeadlineAt: "2026-07-01T21:00:00+09:00",
+      reminderOffsetsMinutes: [1440, 180],
+      shareUrl: "https://example.com/s/token/answer"
+    });
+
+    expect(message).toContain("リマインド: 2026/06/30 21:00、2026/07/01 18:00");
   });
 });

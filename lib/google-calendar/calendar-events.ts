@@ -122,21 +122,29 @@ export async function insertCalendarEvent({
   event: ConfirmedCalendarEvent;
   fetchImpl?: typeof fetch;
 }): Promise<GoogleCalendarInsertResponse> {
+  const attendeeEmails = [...new Set(event.attendeeEmails ?? [])].filter((email) => email.trim().length > 0);
+  const attendees = attendeeEmails.length > 0 ? { attendees: attendeeEmails.map((email) => ({ email })) } : {};
   const eventBody = event.isAllDay
     ? {
         summary: event.title,
         ...(event.location ? { location: event.location } : {}),
         start: { date: event.start.slice(0, 10) },
-        end: { date: event.end.slice(0, 10) }
+        end: { date: event.end.slice(0, 10) },
+        ...attendees
       }
     : {
         summary: event.title,
         ...(event.location ? { location: event.location } : {}),
         start: { dateTime: event.start },
-        end: { dateTime: event.end }
+        end: { dateTime: event.end },
+        ...attendees
       };
+  const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
+  if (attendeeEmails.length > 0) {
+    url.searchParams.set("sendUpdates", "all");
+  }
 
-  const response = await fetchImpl(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
+  const response = await fetchImpl(url.toString(), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

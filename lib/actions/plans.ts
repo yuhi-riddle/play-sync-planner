@@ -12,6 +12,17 @@ function toIsoDateTime(value: string): string {
   return new Date(value).toISOString();
 }
 
+function normalizeReminderOffsets(values: { reminder_offset_minutes: number | null; reminder_offsets_minutes: number[] }) {
+  const offsets =
+    values.reminder_offsets_minutes.length > 0
+      ? values.reminder_offsets_minutes
+      : values.reminder_offset_minutes === null
+        ? []
+        : [values.reminder_offset_minutes];
+
+  return Array.from(new Set(offsets)).sort((a, b) => b - a);
+}
+
 export async function createPlanAction(eventId: string, formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -56,9 +67,11 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   }));
 
   const shareLink = buildAnswerShareLink(plan.id, values.answer_deadline_at);
+  const reminderOffsets = normalizeReminderOffsets(values);
   const reminderSetting = {
     plan_id: plan.id,
-    reminder_offset_minutes: values.reminder_offset_minutes
+    reminder_offset_minutes: reminderOffsets[0] ?? null,
+    reminder_offsets_minutes: reminderOffsets
   };
 
   const [{ error: participantsError }, { error: datesError }, { error: linkError }, { error: reminderError }] = await Promise.all([
@@ -131,9 +144,11 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     is_all_day: values.candidateAllDays[index] ?? false,
     sort_order: index
   }));
+  const reminderOffsets = normalizeReminderOffsets(values);
   const reminderSetting = {
     plan_id: planId,
-    reminder_offset_minutes: values.reminder_offset_minutes
+    reminder_offset_minutes: reminderOffsets[0] ?? null,
+    reminder_offsets_minutes: reminderOffsets
   };
 
   const [{ error: participantsError }, { error: datesError }, { error: reminderError }] = await Promise.all([

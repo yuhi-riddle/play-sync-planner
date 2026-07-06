@@ -15,7 +15,7 @@ describe("google calendar oauth", () => {
     const url = new URL(buildGoogleCalendarAuthUrl({ state: "state-1" }));
 
     expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
-    expect(url.searchParams.get("scope")).toBe(CALENDAR_EVENTS_SCOPE);
+    expect(url.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/calendar.events");
     expect(url.searchParams.get("access_type")).toBe("offline");
     expect(url.searchParams.get("prompt")).toBe("consent");
   });

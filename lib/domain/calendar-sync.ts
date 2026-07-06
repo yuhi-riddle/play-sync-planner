@@ -4,6 +4,15 @@ export type ConfirmedCalendarEvent = {
   start: string;
   end: string;
   isAllDay?: boolean;
+  attendeeEmails?: string[];
+};
+
+type GoogleCalendarShareInput = {
+  title: string;
+  location?: string | null;
+  start: string;
+  end: string;
+  details?: string | null;
 };
 
 function addHours(value: string, hours: number) {
@@ -52,4 +61,25 @@ export function buildConfirmedCalendarEvent({
     end: endAt || addHours(startAt, 2),
     ...(isAllDay ? { isAllDay } : {})
   };
+}
+
+function formatGoogleCalendarDate(value: string) {
+  return new Date(value).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+export function buildGoogleCalendarShareUrl({ title, location, start, end, details }: GoogleCalendarShareInput) {
+  const url = new URL("https://calendar.google.com/calendar/render");
+  url.searchParams.set("action", "TEMPLATE");
+  url.searchParams.set("text", title);
+  url.searchParams.set("dates", `${formatGoogleCalendarDate(start)}/${formatGoogleCalendarDate(end)}`);
+
+  if (location?.trim()) {
+    url.searchParams.set("location", location.trim());
+  }
+
+  if (details?.trim()) {
+    url.searchParams.set("details", details.trim());
+  }
+
+  return url.toString();
 }
