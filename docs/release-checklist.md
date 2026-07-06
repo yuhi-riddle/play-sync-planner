@@ -32,6 +32,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] `supabase/migrations/009_site_notifications.sql`
 - [ ] `supabase/migrations/010_participant_user_identity.sql`
 - [ ] `supabase/migrations/011_plan_multiple_reminders.sql`
+- [ ] `supabase/migrations/012_answer_received_notifications.sql`
 
 途中でエラーが出た場合は、実行したファイル名とエラー全文を控えます。
 
@@ -73,6 +74,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] 共有回答リンクを別ブラウザ、またはシークレットウィンドウで開く。
 - [ ] 予定詳細の「自分も回答する」から主催者として回答できる。
 - [ ] 日程回答を送信する。
+- [ ] 参加者が日程回答を送信したあと、主催者に「日程回答が届きました」通知が出る。
 - [ ] 予定詳細で回答状況を確認する。
 - [ ] 候補日時を確定する。
 - [ ] 予定詳細の `Calendarに作成して招待` から、主催者のGoogle Calendarに予定を作れる。

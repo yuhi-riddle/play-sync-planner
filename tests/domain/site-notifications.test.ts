@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildAnswerReceivedNotificationInput,
   buildPlanNotificationInputs,
   buildNotificationCandidate,
   countNotificationsByActionFilter,
@@ -50,6 +51,27 @@ describe("buildNotificationCandidate", () => {
       body: "ボドゲ会 で 田中さん、佐藤さん の支払い待ちがあります。",
       href: "/plans/plan-1/settlement",
       dedupeKey: "payment_due:plan-1:田中|佐藤"
+    });
+  });
+
+  it("builds an answer received notification", () => {
+    expect(
+      buildNotificationCandidate(
+        buildAnswerReceivedNotificationInput({
+          ownerUserId: "user-1",
+          planId: "plan-1",
+          title: "ボードゲーム会 / 土曜夜",
+          participantId: "participant-1",
+          participantName: "鈴木"
+        })
+      )
+    ).toEqual({
+      userId: "user-1",
+      kind: "answer_received",
+      title: "日程回答が届きました",
+      body: "ボードゲーム会 / 土曜夜 に鈴木さんが回答しました。",
+      href: "/plans/plan-1",
+      dedupeKey: "answer_received:plan-1:participant-1"
     });
   });
 });

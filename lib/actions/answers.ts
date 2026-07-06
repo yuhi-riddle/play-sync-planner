@@ -4,11 +4,20 @@ import { redirect } from "next/navigation";
 
 import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/availability";
 import { resolveAnswerParticipantForSubmission } from "@/lib/domain/participant-identity";
+import { buildAnswerReceivedNotificationInput, buildNotificationCandidate } from "@/lib/domain/site-notifications";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CandidateRow = {
   id: string;
   plan_id: string;
+};
+
+type AnswerPlanRow = {
+  id: string;
+  title: string | null;
+  owner_user_id: string;
+  answer_deadline_at: string | null;
+  events?: { title: string | null } | { title: string | null }[] | null;
 };
 
 export async function submitAvailabilityAnswersAction(token: string, formData: FormData) {
@@ -20,7 +29,7 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
   const currentUserId = user?.id ?? null;
   const { data: link, error: linkError } = await supabase
     .from("share_links")
-    .select("plan_id, expires_at, plans(id, answer_deadline_at)")
+    .select("plan_id, expires_at, plans(id, title, owner_user_id, answer_deadline_at, events(title))")
     .eq("token", token)
     .eq("purpose", "answer")
     .single();
@@ -29,7 +38,7 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     throw new Error("共有リンクが見つかりません");
   }
 
-  const plan = Array.isArray(link.plans) ? link.plans[0] : link.plans;
+  const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as AnswerPlanRow | null;
   if (!canAnswerPlan(plan?.answer_deadline_at ?? null, new Date())) {
     throw new Error("回答期限を過ぎています");
   }
@@ -124,5 +133,38 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     throw new Error(participantError.message);
   }
 
+  if (plan && currentUserId !== plan.owner_user_id) {
+    const notification = buildNotificationCandidate(
+      buildAnswerReceivedNotificationInput({
+        ownerUserId: plan.owner_user_id,
+        planId: plan.id,
+        title: answerNotificationTitle(plan),
+        participantId,
+        participantName: normalized.displayName
+      })
+    );
+
+    const { error: notificationError } = await supabase.from("notifications").upsert(
+      {
+        user_id: notification.userId,
+        kind: notification.kind,
+        title: notification.title,
+        body: notification.body,
+        href: notification.href,
+        dedupe_key: notification.dedupeKey
+      },
+      { onConflict: "user_id,dedupe_key", ignoreDuplicates: true }
+    );
+
+    if (notificationError) {
+      throw new Error(notificationError.message);
+    }
+  }
+
   redirect(`/s/${token}/answer/complete`);
+}
+
+function answerNotificationTitle(plan: AnswerPlanRow) {
+  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
 }

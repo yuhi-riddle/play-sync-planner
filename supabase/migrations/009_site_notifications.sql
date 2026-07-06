@@ -10,7 +10,7 @@ create table public.notifications (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint notifications_kind_check check (
-    kind in ('answer_deadline', 'unanswered', 'settlement_needed', 'payment_due', 'confirmation_due')
+    kind in ('answer_deadline', 'unanswered', 'answer_received', 'settlement_needed', 'payment_due', 'confirmation_due')
   ),
   constraint notifications_dedupe_unique unique (user_id, dedupe_key)
 );

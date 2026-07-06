@@ -1,4 +1,10 @@
-export type NotificationKind = "answer_deadline" | "unanswered" | "settlement_needed" | "payment_due" | "confirmation_due";
+export type NotificationKind =
+  | "answer_deadline"
+  | "unanswered"
+  | "answer_received"
+  | "settlement_needed"
+  | "payment_due"
+  | "confirmation_due";
 
 export type NotificationCandidateInput = {
   userId: string;
@@ -78,6 +84,7 @@ export type PlanNotificationPlan = {
 const notificationTitles: Record<NotificationKind, string> = {
   answer_deadline: "回答期限が近づいています",
   unanswered: "未回答者がいます",
+  answer_received: "日程回答が届きました",
   settlement_needed: "清算の準備が必要です",
   payment_due: "支払い待ちがあります",
   confirmation_due: "受け取り確認待ちがあります"
@@ -138,6 +145,30 @@ export function countNotificationsByActionFilter<T extends ActionFilterableNotif
     settlement: filterNotificationsByActionFilter(notifications, "settlement").length,
     payment: filterNotificationsByActionFilter(notifications, "payment").length,
     confirmation: filterNotificationsByActionFilter(notifications, "confirmation").length
+  };
+}
+
+export function buildAnswerReceivedNotificationInput({
+  ownerUserId,
+  planId,
+  title,
+  participantId,
+  participantName
+}: {
+  ownerUserId: string;
+  planId: string;
+  title: string;
+  participantId: string;
+  participantName: string;
+}): NotificationCandidateInput {
+  return {
+    userId: ownerUserId,
+    kind: "answer_received",
+    planId,
+    title,
+    href: `/plans/${planId}`,
+    dueAt: participantId,
+    participantNames: [participantName]
   };
 }
 
@@ -224,6 +255,8 @@ function actionFilterForKind(kind: string): NotificationActionFilter | null {
       return "deadline";
     case "unanswered":
       return "unanswered";
+    case "answer_received":
+      return "unanswered";
     case "settlement_needed":
       return "settlement";
     case "payment_due":
@@ -291,6 +324,8 @@ function buildNotificationBody(input: NotificationCandidateInput) {
       return `${input.title} の回答期限を確認してください。`;
     case "unanswered":
       return participantText ? `${input.title} で ${participantText} が未回答です。` : `${input.title} に未回答者がいます。`;
+    case "answer_received":
+      return participantText ? `${input.title} に${participantText}が回答しました。` : `${input.title} に回答が届きました。`;
     case "settlement_needed":
       return `${input.title} の清算内容を確認してください。`;
     case "payment_due":
