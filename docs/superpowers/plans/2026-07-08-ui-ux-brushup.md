@@ -127,6 +127,16 @@ git add <変更ファイル> docs/superpowers/plans/2026-07-08-ui-ux-brushup-fin
 git commit -m "fix: <画面名> <修正内容の要約>"
 ```
 
+#### Task 3 の具体タスク(2026-07-08 合意反映: 高+中の11件)
+
+各タスクの問題詳細と修正案は `2026-07-08-ui-ux-brushup-findings.md` の該当 ID を参照。全タスクは上の「修正タスクの型」に従う。
+
+- [ ] **Task 3.1: 用語統一(G-CM-1 + G-F-1)** — 「イベント(箱)/日程調整(候補集め)」の2語に統一し「予定」を画面文言から排除。「確認待ち」は「受け取り確認」に統一。対象: `app/page.tsx`, `app/events/page.tsx`, `app/events/new/page.tsx`, `app/events/[eventId]/edit/page.tsx`, `app/notifications/page.tsx` ほか文言参照箇所と追従が必要なテスト
+- [ ] **Task 3.2: 回答フォームの送信ヘルプ(G-D-1)** — 未回答が残るとき送信ボタン直前に「残り{n}件の候補に回答すると送信できます。」を aria-live で表示し、未回答カードの枠を強調。対象: `components/answer-form.tsx`, `tests/answer-form.test.tsx`
+- [ ] **Task 3.3: 公開清算の自分ごと化+PayPay補足(G-E-1 + G-E-4)** — 支払い先一覧に案内文を追加し fromName を強調。PayPayボタンに補足文を追加。対象: `components/public-settlement-summary.tsx`, `components/paypay-action-panel.tsx`, 対応テスト
+- [ ] **Task 3.4: 主催者清算ページの情報整理(G-E-2 + G-E-3 + G-E-5)** — 立替0件時は導入カード+ExpenseForm のみ表示。主催者ツールをグルーピングし上部を進捗/次アクション/清算結果に絞る。非主催者に公開清算リンク導線を出す。対象: `app/plans/[planId]/settlement/page.tsx`
+- [ ] **Task 3.5: 小修正まとめ(G-C-1 + G-CM-2 + G-B-1)** — ステップ表示のグリッド修正、主要操作のタップ領域 44px 化、イベント詳細の Link 化+一覧へ戻る導線。対象: `components/plan-form.tsx`, `components/auth-nav.tsx`, `components/ui.tsx`, `components/home-month-calendar.tsx`, `components/adjustment-calendar-view.tsx`, `app/events/[eventId]/page.tsx`
+
 ### Task 4: 実機確認(visual-qa)
 
 **Files:**
