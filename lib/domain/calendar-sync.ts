@@ -52,7 +52,7 @@ export function buildConfirmedCalendarEvent({
   const title =
     normalizedPlanTitle && normalizedEventTitle
       ? `${normalizedPlanTitle} - ${normalizedEventTitle}`
-      : normalizedPlanTitle || normalizedEventTitle || "Madoiの予定";
+      : normalizedPlanTitle || normalizedEventTitle || "Madoiの日程調整";
 
   return {
     title,

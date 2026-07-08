@@ -57,7 +57,7 @@ function notificationParticipantName(value: NotificationParticipantRelation) {
 
 function notificationPlanTitle(plan: { title?: string | null; events?: { title: string | null } | { title: string | null }[] | null }) {
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
-  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "予定";
+  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
 }
 
 async function notifySettlementConfirmationDue({
@@ -135,7 +135,7 @@ function settlementReminderTypeFromFormData(value: FormDataEntryValue | null): S
 function assertParticipantIds(participantIds: Set<string>, values: string[]) {
   values.forEach((participantId) => {
     if (!participantIds.has(participantId)) {
-      throw new Error("この予定の参加者だけを選択してください");
+      throw new Error("このイベントの参加者だけを選択してください");
     }
   });
 }
@@ -281,7 +281,7 @@ export async function createExpenseAction(planId: string, formData: FormData) {
   const participantIds = new Set(participants.map((participant) => participant.id));
 
   if (!participantIds.has(values.payer_participant_id)) {
-    throw new Error("支払った人はこの予定の参加者から選んでください");
+    throw new Error("支払った人はこのイベントの参加者から選んでください");
   }
 
   await assertExpenseCanChange({ supabase, planId });
@@ -356,7 +356,7 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
   const splits = splitsFromValues(values);
 
   if (!participantIds.has(values.payer_participant_id)) {
-    throw new Error("支払った人はこの予定の参加者から選んでください");
+    throw new Error("支払った人はこのイベントの参加者から選んでください");
   }
   assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 

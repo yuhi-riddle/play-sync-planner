@@ -423,7 +423,7 @@ export function buildSettlementPaymentRequestMessage({
     return "";
   }
 
-  const lines = ["清算のお願いです。", "", `${title?.trim() || "予定"} の清算をお願いします。`, ""];
+  const lines = ["清算のお願いです。", "", `${title?.trim() || "日程調整"} の清算をお願いします。`, ""];
 
   activeRequests.forEach((request, index) => {
     if (index > 0) {
@@ -473,7 +473,7 @@ export function buildSettlementConfirmationRequestMessage({
     return result;
   }, new Map());
 
-  const lines = ["受け取り確認のお願いです。", "", `${title?.trim() || "予定"} の清算で、支払い記録があります。`, ""];
+  const lines = ["受け取り確認のお願いです。", "", `${title?.trim() || "日程調整"} の清算で、支払い記録があります。`, ""];
 
   Array.from(grouped.entries()).forEach(([participantName, items], index) => {
     if (index > 0) {

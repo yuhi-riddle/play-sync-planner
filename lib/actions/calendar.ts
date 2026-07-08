@@ -78,7 +78,7 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
     .single();
 
   if (planError || !plan) {
-    throw new Error("予定が見つかりません");
+    throw new Error("日程調整が見つかりません");
   }
 
   const planRow = plan as PlanCalendarRow;
