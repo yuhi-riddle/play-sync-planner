@@ -275,7 +275,7 @@ export function AdjustmentCalendarView({
           </span>
         </div>
 
-        <div aria-label="調整カレンダーの日付一覧" className="-mx-2 mt-5 overflow-x-auto px-2 pb-2">
+        <div aria-label="日程調整カレンダーの日付一覧" className="-mx-2 mt-5 overflow-x-auto px-2 pb-2">
           <div className="min-w-[24rem]">
             <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold">
               {["日", "月", "火", "水", "木", "金", "土"].map((label, index) => (

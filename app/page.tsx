@@ -58,7 +58,7 @@ const homeActions = [
   },
   {
     href: "/plans",
-    title: "調整カレンダー",
+    title: "日程調整カレンダー",
     description: "候補日時の重なりを月表示で見ます。",
     icon: ListChecks
   },
@@ -76,7 +76,7 @@ const actionFilterOptions: Array<{ value: NotificationActionFilter; label: strin
   { value: "unanswered", label: "未回答" },
   { value: "settlement", label: "清算" },
   { value: "payment", label: "支払い" },
-  { value: "confirmation", label: "確認待ち" }
+  { value: "confirmation", label: "受け取り確認" }
 ];
 
 function toDateKey(value: Date) {
@@ -157,7 +157,7 @@ export default async function HomePage({
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="ホーム" description="日程調整中の予定や、確定した予定をまとめて確認します。" />
+        <PageHeader title="ホーム" description="日程調整中のイベントや、日程が確定したイベントをまとめて確認します。" />
         <SetupPanel />
       </div>
     );

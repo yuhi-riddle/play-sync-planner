@@ -68,7 +68,7 @@ function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCand
   return {
     id: candidate.id,
     planId: plan.id,
-    eventTitle: event?.title ?? "予定未設定",
+    eventTitle: event?.title ?? "イベント未設定",
     planTitle: plan.title,
     startAt: candidate.start_at,
     endAt: candidate.end_at,
@@ -91,7 +91,7 @@ export default async function PlansPage({
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="調整カレンダー" />
+        <PageHeader title="日程調整カレンダー" />
         <SetupPanel />
       </div>
     );
@@ -105,7 +105,7 @@ export default async function PlansPage({
   if (!user) {
     return (
       <div className="space-y-6">
-        <PageHeader title="調整カレンダー" />
+        <PageHeader title="日程調整カレンダー" />
         <LoginPanel />
       </div>
     );
@@ -125,12 +125,12 @@ export default async function PlansPage({
   return (
     <div className="space-y-7">
       <PageHeader
-        title="調整カレンダー"
+        title="日程調整カレンダー"
         description="同時進行の候補日時を月ごとに見比べます。重なりがある日は、下のタイムラインで優先順位を決めやすくしています。"
         action={
           <ButtonLink href="/events/new">
             <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-            予定を作る
+            イベントを作る
           </ButtonLink>
         }
       />

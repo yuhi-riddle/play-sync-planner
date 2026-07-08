@@ -98,7 +98,7 @@ export default async function PublicSettlementPage({
   const calendarShareUrl =
     plan.confirmed_start_at && plan.confirmed_end_at
       ? buildGoogleCalendarShareUrl({
-          title: [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" - ") || "Madoiの予定",
+          title: [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" - ") || "Madoiの日程調整",
           location: event?.location_name,
           start: plan.confirmed_start_at,
           end: plan.confirmed_end_at
@@ -130,14 +130,14 @@ export default async function PublicSettlementPage({
     <div className="space-y-6">
       <PageHeader
         title="支払い・清算"
-        description="共有された予定の立替内容と、支払い先を確認できます。"
+        description="共有された日程調整の立替内容と、支払い先を確認できます。"
       />
       {query.paid === "1" ? <PaymentRecordedNotice /> : null}
       {calendarShareUrl ? (
         <Card>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-ink">確定した予定</h2>
+              <h2 className="text-lg font-semibold text-ink">確定した日程</h2>
               <p className="mt-1 text-sm leading-6 text-ink/64">
                 {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
               </p>
@@ -152,7 +152,7 @@ export default async function PublicSettlementPage({
         </Card>
       ) : (
         <PublicSettlementSummary
-          eventTitle={event?.title ?? "予定"}
+          eventTitle={event?.title ?? "イベント"}
           planTitle={plan.title}
           expenses={expenses}
           settlements={settlements}

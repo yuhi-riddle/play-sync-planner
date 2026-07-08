@@ -75,7 +75,7 @@ describe("AdjustmentCalendarView", () => {
 
     render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />);
 
-    expect(screen.getByLabelText("調整カレンダーの日付一覧")).toHaveClass("overflow-x-auto");
+    expect(screen.getByLabelText("日程調整カレンダーの日付一覧")).toHaveClass("overflow-x-auto");
     await waitFor(() => {
       expect(screen.getByText("Google Calendarは未連携です")).toBeInTheDocument();
     });

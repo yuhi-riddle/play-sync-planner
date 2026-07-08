@@ -73,7 +73,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="予定一覧" />
+        <PageHeader title="イベント一覧" />
         <SetupPanel />
       </div>
     );
@@ -87,7 +87,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   if (!user) {
     return (
       <div className="space-y-6">
-        <PageHeader title="予定一覧" />
+        <PageHeader title="イベント一覧" />
         <LoginPanel />
       </div>
     );
@@ -111,11 +111,11 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
 
   return (
     <div className="space-y-6">
-      <PageHeader title="予定一覧" description="日程調整の元になる予定を管理します。" action={<ButtonLink href="/events/new">予定作成</ButtonLink>} />
+      <PageHeader title="イベント一覧" description="日程調整の元になるイベントを管理します。" action={<ButtonLink href="/events/new">イベント作成</ButtonLink>} />
       <Card className="grid gap-4">
         <div>
           <h2 className="text-base font-bold text-ink">絞り込み</h2>
-          <p className="mt-1 text-sm text-ink/58">カテゴリと状態で予定を探せます。</p>
+          <p className="mt-1 text-sm text-ink/58">カテゴリと状態でイベントを探せます。</p>
         </div>
         <div className="grid gap-3">
           <div>
@@ -174,7 +174,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs font-bold text-ink/70">
                     <span className="rounded-full bg-mist px-3 py-1">{eventStatusLabels[event.status as keyof typeof eventStatusLabels]}</span>
-                    <span className="rounded-full bg-cream/82 px-3 py-1">調整 {event.plans?.length ?? 0}件</span>
+                    <span className="rounded-full bg-cream/82 px-3 py-1">日程調整 {event.plans?.length ?? 0}件</span>
                   </div>
                 </div>
               </Card>
@@ -182,7 +182,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           ))}
         </div>
       ) : (
-        <EmptyState>条件に合う予定はありません。絞り込みを変えるか、「予定作成」から新しく作成してください。</EmptyState>
+        <EmptyState>条件に合うイベントはありません。絞り込みを変えるか、「イベント作成」から新しく作成してください。</EmptyState>
       )}
     </div>
   );

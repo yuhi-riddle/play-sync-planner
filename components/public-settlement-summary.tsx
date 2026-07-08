@@ -59,7 +59,7 @@ export function PublicSettlementSummary({
   return (
     <div className="space-y-6">
       <Card>
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">予定</p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">イベント</p>
         <h2 className="mt-2 text-2xl font-bold text-ink">{eventTitle}</h2>
         {planTitle ? <p className="mt-1 text-sm text-ink/60">{planTitle}</p> : null}
         <div className="mt-5 grid gap-3 sm:grid-cols-3">

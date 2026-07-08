@@ -144,7 +144,7 @@ export default async function PlanDetailPage({
   const calendarShareUrl =
     plan.confirmed_start_at && plan.confirmed_end_at
       ? buildGoogleCalendarShareUrl({
-          title: [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" - ") || "Madoiの予定",
+          title: [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" - ") || "Madoiの日程調整",
           location: event?.location_name,
           start: plan.confirmed_start_at,
           end: plan.confirmed_end_at
@@ -278,11 +278,11 @@ export default async function PlanDetailPage({
       </section>
 
       <Card>
-        <h2 className="text-lg font-semibold text-ink">調整メモ</h2>
+        <h2 className="text-lg font-semibold text-ink">日程調整メモ</h2>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70">{plan.memo?.trim() ? plan.memo : "メモはまだありません。"}</p>
         <div className="mt-5 flex flex-wrap gap-3">
-          {event?.id ? <SecondaryLink href={`/events/${event.id}`}>予定詳細へ</SecondaryLink> : null}
-          <SecondaryLink href="/plans">調整カレンダーへ</SecondaryLink>
+          {event?.id ? <SecondaryLink href={`/events/${event.id}`}>イベント詳細へ</SecondaryLink> : null}
+          <SecondaryLink href="/plans">日程調整カレンダーへ</SecondaryLink>
         </div>
       </Card>
     </div>

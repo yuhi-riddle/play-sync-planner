@@ -38,12 +38,12 @@ export function EventForm({
         ]}
       />
       <TextField
-        label="予定名"
+        label="イベント名"
         name="title"
         defaultValue={event?.title}
         required
-        requiredMessage="予定名を入力してください"
-        placeholder="例: 友人との予定 / 週末のお出かけ"
+        requiredMessage="イベント名を入力してください"
+        placeholder="例: 友人とのイベント / 週末のお出かけ"
       />
       <TextField label="URL" name="url" type="url" defaultValue={event?.url} />
       <TextField

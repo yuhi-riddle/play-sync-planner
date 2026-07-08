@@ -15,7 +15,7 @@ export function LoginPanel() {
   return (
     <Card>
       <h2 className="text-lg font-semibold text-ink">ログインしてください</h2>
-      <p className="mt-2 text-sm leading-6 text-ink/70">予定作成と日程確定にはログインが必要です。</p>
+      <p className="mt-2 text-sm leading-6 text-ink/70">イベント作成と日程確定にはログインが必要です。</p>
       <div className="mt-4">
         <ButtonLink href="/login">ログインへ</ButtonLink>
       </div>

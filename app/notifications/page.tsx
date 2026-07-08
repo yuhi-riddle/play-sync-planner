@@ -56,7 +56,7 @@ export default async function NotificationsPage({
     return (
       <div className="space-y-6">
         <PageHeader title="通知" description="通知を見るにはログインしてください。" />
-        <EmptyState>ログインすると、対応が必要な予定や清算をここで確認できます。</EmptyState>
+        <EmptyState>ログインすると、対応が必要な日程調整や清算をここで確認できます。</EmptyState>
       </div>
     );
   }
