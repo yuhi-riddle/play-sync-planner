@@ -225,7 +225,7 @@ export function TextField({
     <label className="block text-sm font-medium text-ink">
       <span className="text-ink/72">{label}</span>
       <input
-        className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 min-h-11 w-full rounded-lg border border-moss/18 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-ink/34 focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         type={type}
         defaultValue={defaultValue ?? ""}
@@ -363,7 +363,7 @@ export function MadoiSelect({
         onClick={() => setOpen((current) => !current)}
         onKeyDown={handleKeyDown}
         className={clsx(
-          "flex w-full items-center justify-between gap-3 rounded-lg border border-ink/10 bg-white/88 text-left text-base text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
+          "flex w-full items-center justify-between gap-3 rounded-lg border border-moss/18 bg-cream/90 text-left text-base text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
           compact ? "min-h-10 px-3 py-2" : "min-h-11 px-3 py-2"
         )}
       >
@@ -388,7 +388,7 @@ export function MadoiSelect({
                 onClick={() => selectValue(option.value)}
                 className={clsx(
                   "flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                  selected ? "bg-mist/55 text-pine" : "text-ink hover:bg-white/72",
+                  selected ? "bg-mist/55 text-pine" : "text-ink hover:bg-cream/72",
                   option.disabled && "pointer-events-none text-ink/35"
                 )}
               >
@@ -436,7 +436,7 @@ export function TextArea({
     <label className="block text-sm font-medium text-ink">
       <span className="text-ink/72">{label}</span>
       <textarea
-        className="mt-2 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 w-full rounded-lg border border-moss/18 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-ink/34 focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         defaultValue={defaultValue ?? ""}
         rows={rows}
@@ -496,5 +496,5 @@ export function SubmitButton({ children }: { children: ReactNode }) {
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="rounded-lg border border-dashed border-moss/28 bg-white/58 p-6 text-sm text-ink/68">{children}</div>;
+  return <div className="rounded-lg border border-dashed border-moss/28 bg-cream/58 p-6 text-sm text-ink/68">{children}</div>;
 }

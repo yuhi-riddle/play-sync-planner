@@ -1,12 +1,75 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { categoryLabels, eventStatusLabels } from "@/lib/constants";
+import { categoryLabels, eventStatusLabels, EVENT_CATEGORIES, EVENT_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function EventsPage() {
+type EventFilterQuery = {
+  category?: string;
+  status?: string;
+};
+
+type EventCategoryFilter = "all" | (typeof EVENT_CATEGORIES)[number];
+type EventStatusFilter = "all" | (typeof EVENT_STATUSES)[number];
+
+function normalizeCategory(value: string | undefined) {
+  return EVENT_CATEGORIES.includes(value as (typeof EVENT_CATEGORIES)[number])
+    ? (value as (typeof EVENT_CATEGORIES)[number])
+    : "all";
+}
+
+function normalizeStatus(value: string | undefined) {
+  return EVENT_STATUSES.includes(value as (typeof EVENT_STATUSES)[number])
+    ? (value as (typeof EVENT_STATUSES)[number])
+    : "all";
+}
+
+function filterHref(category: EventCategoryFilter, status: EventStatusFilter) {
+  const params = new URLSearchParams();
+  if (category !== "all") {
+    params.set("category", category);
+  }
+  if (status !== "all") {
+    params.set("status", status);
+  }
+  const query = params.toString();
+  return query ? `/events?${query}` : "/events";
+}
+
+function FilterChip({
+  href,
+  active,
+  children
+}: {
+  href: string;
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={
+        active
+          ? "inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          : "inline-flex min-h-10 items-center justify-center rounded-full border border-moss/16 bg-cream/82 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      }
+    >
+      {children}
+    </Link>
+  );
+}
+
+export default async function EventsPage({ searchParams }: { searchParams?: Promise<EventFilterQuery> }) {
+  const query = (await searchParams) ?? {};
+  const activeCategory = normalizeCategory(query.category);
+  const activeStatus = normalizeStatus(query.status);
+
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
@@ -30,19 +93,71 @@ export default async function EventsPage() {
     );
   }
 
-  const { data: events } = await supabase
+  let eventsQuery = supabase
     .from("events")
     .select("id, title, category, start_date, end_date, location_name, status, plans(id)")
     .eq("owner_user_id", user.id)
     .order("created_at", { ascending: false });
 
+  if (activeCategory !== "all") {
+    eventsQuery = eventsQuery.eq("category", activeCategory);
+  }
+
+  if (activeStatus !== "all") {
+    eventsQuery = eventsQuery.eq("status", activeStatus);
+  }
+
+  const { data: events } = await eventsQuery;
+
   return (
     <div className="space-y-6">
       <PageHeader title="予定一覧" description="日程調整の元になる予定を管理します。" action={<ButtonLink href="/events/new">予定作成</ButtonLink>} />
+      <Card className="grid gap-4">
+        <div>
+          <h2 className="text-base font-bold text-ink">絞り込み</h2>
+          <p className="mt-1 text-sm text-ink/58">カテゴリと状態で予定を探せます。</p>
+        </div>
+        <div className="grid gap-3">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-moss">カテゴリ</p>
+            <div className="flex flex-wrap gap-2">
+              <FilterChip href={filterHref("all", activeStatus)} active={activeCategory === "all"}>
+                すべて
+              </FilterChip>
+              {EVENT_CATEGORIES.map((category) => (
+                <FilterChip
+                  key={category}
+                  href={filterHref(category, activeStatus)}
+                  active={activeCategory === category}
+                >
+                  {categoryLabels[category]}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-moss">状態</p>
+            <div className="flex flex-wrap gap-2">
+              <FilterChip href={filterHref(activeCategory, "all")} active={activeStatus === "all"}>
+                すべて
+              </FilterChip>
+              {EVENT_STATUSES.map((status) => (
+                <FilterChip
+                  key={status}
+                  href={filterHref(activeCategory, status)}
+                  active={activeStatus === status}
+                >
+                  {eventStatusLabels[status]}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
       {(events ?? []).length > 0 ? (
         <div className="grid gap-4">
           {(events ?? []).map((event) => (
-            <a key={event.id} href={`/events/${event.id}`} className="block">
+            <Link key={event.id} href={`/events/${event.id}`} className="block">
               <Card className="transition-colors hover:border-moss/45">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -59,15 +174,15 @@ export default async function EventsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs font-bold text-ink/70">
                     <span className="rounded-full bg-mist px-3 py-1">{eventStatusLabels[event.status as keyof typeof eventStatusLabels]}</span>
-                    <span className="rounded-full bg-white/80 px-3 py-1">予定 {event.plans?.length ?? 0}件</span>
+                    <span className="rounded-full bg-cream/82 px-3 py-1">調整 {event.plans?.length ?? 0}件</span>
                   </div>
                 </div>
               </Card>
-            </a>
+            </Link>
           ))}
         </div>
       ) : (
-        <EmptyState>まだ予定がありません。まずは「予定作成」から日程調整の箱を作ります。</EmptyState>
+        <EmptyState>条件に合う予定はありません。絞り込みを変えるか、「予定作成」から新しく作成してください。</EmptyState>
       )}
     </div>
   );

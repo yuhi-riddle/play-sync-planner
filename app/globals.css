@@ -37,7 +37,7 @@ body {
 .app-shell::before {
   position: fixed;
   z-index: -1;
-  right: max(18px, calc((100vw - 1120px) / 2));
+  right: max(18px, calc((100vw - 1440px) / 2));
   bottom: 72px;
   width: min(360px, 42vw);
   height: 180px;
@@ -55,7 +55,7 @@ body {
 .app-shell::after {
   position: fixed;
   z-index: -1;
-  left: max(18px, calc((100vw - 1120px) / 2));
+  left: max(18px, calc((100vw - 1440px) / 2));
   top: 92px;
   width: 154px;
   height: 118px;

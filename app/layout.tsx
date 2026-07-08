@@ -21,7 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <div className="app-shell min-h-screen">
           <header className="border-b border-white/80 bg-cream/80 backdrop-blur-md">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+            <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-10">
               <Link href="/" className="group flex items-center gap-3 text-lg font-bold tracking-normal text-ink">
                 <span className="relative inline-flex h-10 w-12 items-end justify-center rounded-lg border border-white/70 bg-skywash/70 shadow-soft">
                   <span className="absolute right-2 top-2 h-3 w-3 rounded-full bg-honey" />
@@ -35,11 +35,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <AuthNav />
             </div>
           </header>
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+          <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8 xl:px-10">
             <HomeReturnLink />
             <main>{children}</main>
           </div>
-          <footer className="mx-auto max-w-6xl px-4 pb-8 text-sm text-ink/55">
+          <footer className="mx-auto max-w-[1440px] px-4 pb-8 text-sm text-ink/55 sm:px-6 lg:px-8 xl:px-10">
             <div className="flex flex-wrap gap-4 border-t border-white/70 pt-5">
               <Link href="/terms" className="font-semibold hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay">
                 利用規約

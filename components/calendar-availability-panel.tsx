@@ -48,7 +48,7 @@ export function CalendarAvailabilityPanel({
   const conflict = hasBusyConflict({ start: candidateStart, end: candidateEnd }, busyRanges);
 
   return (
-    <div className="rounded-lg border border-white/75 bg-white/58 p-4">
+    <div className="rounded-lg border border-moss/16 bg-cream/72 p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-sm font-bold text-ink">Google Calendarの予定</h3>
         <p className="text-xs text-ink/50">{selectedDate}</p>

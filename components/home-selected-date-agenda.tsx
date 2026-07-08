@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { type FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, MapPin, Search } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home-agenda";
@@ -37,6 +36,17 @@ function monthParam(dateKey: string) {
   return dateKey.slice(0, 7);
 }
 
+function startOfWeek(value: Date) {
+  const date = new Date(value);
+  date.setDate(date.getDate() - date.getDay());
+  return date;
+}
+
+function weekDaysFor(dateKey: string) {
+  const start = startOfWeek(dateFromKey(dateKey));
+  return Array.from({ length: 7 }, (_, index) => toDateKey(addDays(start, index)));
+}
+
 function selectedDateLabel(dateKey: string) {
   return new Intl.DateTimeFormat("ja-JP", {
     month: "long",
@@ -53,6 +63,28 @@ function nextWeekendDateKey() {
   }
 
   return toDateKey(addDays(today, 6 - day));
+}
+
+function shortDateLabel(dateKey: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric"
+  }).format(dateFromKey(dateKey));
+}
+
+function weekdayLabel(dateKey: string) {
+  return new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(dateFromKey(dateKey));
+}
+
+function weekdayTone(dateKey: string) {
+  const day = dateFromKey(dateKey).getDay();
+  if (day === 0) {
+    return "text-clay";
+  }
+  if (day === 6) {
+    return "text-sky-700";
+  }
+  return "text-ink/58";
 }
 
 function googleItemsFromResponse(response: GoogleCalendarResponse): HomeAgendaItem[] {
@@ -158,19 +190,16 @@ export function HomeSelectedDateAgenda({
   selectedDateKey: string;
   initialItems: HomeAgendaItem[];
 }) {
-  const router = useRouter();
-  const [dateInput, setDateInput] = useState(selectedDateKey);
   const [googleItems, setGoogleItems] = useState<HomeAgendaItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
   const todayKey = useMemo(() => toDateKey(new Date()), []);
   const tomorrowKey = useMemo(() => toDateKey(addDays(new Date(), 1)), []);
   const weekendKey = useMemo(() => nextWeekendDateKey(), []);
+  const weekDays = useMemo(() => weekDaysFor(selectedDateKey), [selectedDateKey]);
+  const previousWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), -7));
+  const nextWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), 7));
   const items = useMemo(() => [...initialItems, ...googleItems], [googleItems, initialItems]);
   const agenda = buildHomeAgendaDay({ selectedDate: dateFromKey(selectedDateKey), items });
-
-  useEffect(() => {
-    setDateInput(selectedDateKey);
-  }, [selectedDateKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,14 +232,6 @@ export function HomeSelectedDateAgenda({
     };
   }, [selectedDateKey]);
 
-  function handleDateSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-      return;
-    }
-    router.push(`/?date=${dateInput}`, { scroll: false });
-  }
-
   return (
     <section className="rounded-lg border border-white/80 bg-cream/88 p-4 shadow-soft backdrop-blur sm:p-5" aria-label="選択日の予定">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -229,7 +250,7 @@ export function HomeSelectedDateAgenda({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mt-4 grid gap-3">
         <nav className="flex flex-wrap gap-2" aria-label="表示する日付">
           <DateShortcut href={`/?date=${todayKey}`} active={selectedDateKey === todayKey}>
             今日
@@ -242,30 +263,56 @@ export function HomeSelectedDateAgenda({
           </DateShortcut>
         </nav>
 
-        <form className="flex flex-col gap-2 sm:flex-row sm:items-center" onSubmit={handleDateSubmit}>
-          <label className="text-sm font-bold text-ink/68" htmlFor="home-agenda-date">
-            日付を選ぶ
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="home-agenda-date"
-              type="date"
-              value={dateInput}
-              onChange={(event) => setDateInput(event.currentTarget.value)}
-              className="min-h-10 rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-            />
-            <button
-              type="submit"
-              className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-            >
-              <Search aria-hidden="true" className="mr-2 h-4 w-4" />
-              表示
-            </button>
+        <div className="rounded-lg border border-moss/16 bg-mist/18 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-bold text-ink">日付を選ぶ</p>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/?date=${previousWeekKey}`}
+                scroll={false}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                aria-label="前の週"
+              >
+                <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+              </Link>
+              <Link
+                href={`/?date=${nextWeekKey}`}
+                scroll={false}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                aria-label="次の週"
+              >
+                <ChevronRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
-        </form>
+          <div className="mt-3 grid grid-cols-7 gap-1">
+            {weekDays.map((dateKey) => {
+              const active = dateKey === selectedDateKey;
+              return (
+                <Link
+                  key={dateKey}
+                  href={`/?date=${dateKey}`}
+                  scroll={false}
+                  aria-current={active ? "date" : undefined}
+                  className={clsx(
+                    "grid min-h-16 place-items-center rounded-lg border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                    active
+                      ? "border-pine bg-ink text-white shadow-soft"
+                      : "border-white/70 bg-cream/72 text-ink hover:border-moss/45 hover:bg-cream/92"
+                  )}
+                >
+                  <span className={clsx("text-[11px] font-bold", active ? "text-white/72" : weekdayTone(dateKey))}>
+                    {weekdayLabel(dateKey)}
+                  </span>
+                  <span className="mt-1 text-sm font-bold">{shortDateLabel(dateKey)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-white/70 bg-white/46 p-4">
+      <div className="mt-5 rounded-lg border border-moss/14 bg-cream/70 p-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">Timeline</p>
@@ -278,7 +325,7 @@ export function HomeSelectedDateAgenda({
           {agenda.items.length > 0 ? (
             agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)
           ) : (
-            <div className="rounded-lg border border-dashed border-moss/28 bg-white/52 p-5 text-sm text-ink/62">
+            <div className="rounded-lg border border-dashed border-moss/28 bg-cream/55 p-5 text-sm text-ink/62">
               この日の予定はまだありません。
             </div>
           )}

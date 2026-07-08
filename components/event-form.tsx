@@ -43,14 +43,14 @@ export function EventForm({
         defaultValue={event?.title}
         required
         requiredMessage="予定名を入力してください"
-        placeholder="例: 7月の謎解き会"
+        placeholder="例: 友人との予定 / 週末のお出かけ"
       />
       <TextField label="URL" name="url" type="url" defaultValue={event?.url} />
       <TextField
         label="場所メモ"
         name="location_name"
         defaultValue={event?.location_name}
-        placeholder="例: 新宿周辺 / 東京ミステリーサーカス / 未定"
+        placeholder="例: 新宿駅周辺 / お店未定 / オンライン"
       />
       <TextArea label="メモ" name="memo" defaultValue={event?.memo} />
       <div>

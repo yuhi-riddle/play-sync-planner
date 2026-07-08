@@ -35,7 +35,7 @@ type ReminderDraft = {
   unit: string;
 };
 
-const steps = ["候補日時", "回答期限", "確認"];
+const steps = ["候補日時", "回答期限", "リマインド", "確認"];
 const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
@@ -160,6 +160,10 @@ function reminderDraftLabel(draft: ReminderDraft) {
   return `${Math.max(1, Math.floor(Number(draft.amount) || 0))}${unitLabel}`;
 }
 
+function reminderTimingTitle(draft: ReminderDraft) {
+  return `回答期限の${reminderDraftLabel(draft)}`;
+}
+
 function reminderOffsetLabel(enabled: boolean, drafts: ReminderDraft[]) {
   if (!enabled) {
     return "設定しない";
@@ -227,7 +231,11 @@ function CalendarPicker({
   onSelectDate,
   onChangeMonth,
   minDate,
-  busyCounts = {}
+  busyCounts = {},
+  rangeStartDate,
+  rangeEndDate,
+  onSelectRange,
+  onSelectComplete
 }: {
   label?: string;
   selectedDate: string;
@@ -236,18 +244,27 @@ function CalendarPicker({
   onChangeMonth: (value: Date) => void;
   minDate?: string;
   busyCounts?: Record<string, number>;
+  rangeStartDate?: string;
+  rangeEndDate?: string;
+  onSelectRange?: (start: string, end: string) => void;
+  onSelectComplete?: () => void;
 }) {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [dragStartDate, setDragStartDate] = useState<string | null>(null);
+  const [dragEndDate, setDragEndDate] = useState<string | null>(null);
+  const dragMovedRef = useRef(false);
   const cells = useMemo(() => buildMonthCalendar(visibleMonth.getFullYear(), visibleMonth.getMonth()), [visibleMonth]);
   const monthLabel = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(visibleMonth);
   const yearOptions = Array.from({ length: 11 }, (_, index) => visibleMonth.getFullYear() - 5 + index);
+  const activeRangeStart = dragStartDate && dragEndDate ? minDateValue(dragStartDate, dragEndDate) : rangeStartDate;
+  const activeRangeEnd = dragStartDate && dragEndDate ? maxDateValue(dragStartDate, dragEndDate) : rangeEndDate;
 
   function moveMonth(amount: number) {
     onChangeMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1));
   }
 
   return (
-    <div role="group" aria-label={label} className="rounded-lg border border-white/75 bg-white/58 p-3">
+    <div role="group" aria-label={label} className="rounded-lg border border-moss/16 bg-cream/72 p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
         <button
           type="button"
@@ -316,6 +333,8 @@ function CalendarPicker({
       <div className="grid grid-cols-7 gap-1">
         {cells.map((cell) => {
           const selected = cell.date === selectedDate;
+          const inRange = Boolean(activeRangeStart && activeRangeEnd && cell.date >= activeRangeStart && cell.date <= activeRangeEnd);
+          const rangeEdge = Boolean(inRange && (cell.date === activeRangeStart || cell.date === activeRangeEnd));
           const holidayColor = cell.isHoliday || cell.dayOfWeek === 0;
           const saturdayColor = cell.dayOfWeek === 6;
           const disabled = Boolean(minDate && cell.date < minDate);
@@ -323,16 +342,57 @@ function CalendarPicker({
             <button
               key={cell.date}
               type="button"
-              onClick={() => onSelectDate(cell.date)}
+              onClick={() => {
+                if (disabled) {
+                  return;
+                }
+                if (onSelectRange) {
+                  if (dragMovedRef.current) {
+                    dragMovedRef.current = false;
+                    return;
+                  }
+                  onSelectRange(cell.date, cell.date);
+                  onSelectComplete?.();
+                  return;
+                }
+                onSelectDate(cell.date);
+              }}
+              onPointerDown={(event) => {
+                if (!onSelectRange || disabled) {
+                  return;
+                }
+                setDragStartDate(cell.date);
+                setDragEndDate(cell.date);
+                dragMovedRef.current = false;
+                onSelectRange(cell.date, cell.date);
+              }}
+              onPointerEnter={() => {
+                if (!onSelectRange || !dragStartDate || disabled) {
+                  return;
+                }
+                if (cell.date !== dragStartDate) {
+                  dragMovedRef.current = true;
+                }
+                setDragEndDate(cell.date);
+                onSelectRange(minDateValue(dragStartDate, cell.date), maxDateValue(dragStartDate, cell.date));
+              }}
+              onPointerUp={() => {
+                if (!onSelectRange || !dragStartDate) {
+                  return;
+                }
+                setDragStartDate(null);
+                setDragEndDate(null);
+                onSelectComplete?.();
+              }}
               disabled={disabled}
               className={clsx(
                 "relative flex aspect-square min-h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                selected ? "bg-ink text-white shadow-soft" : "bg-cream/70 text-ink hover:bg-mist/60",
-                !selected && holidayColor && "text-red-700",
-                !selected && !holidayColor && saturdayColor && "text-blue-700",
-                !cell.isCurrentMonth && !selected && "text-ink/30",
-                cell.isToday && !selected && "ring-1 ring-moss/40",
-                disabled && "pointer-events-none bg-white/36 text-ink/20 line-through"
+                rangeEdge || selected ? "bg-ink text-white shadow-soft" : inRange ? "bg-mist/62 text-ink ring-1 ring-moss/18" : "bg-cream/70 text-ink hover:bg-mist/60",
+                !selected && !rangeEdge && holidayColor && "text-red-700",
+                !selected && !rangeEdge && !holidayColor && saturdayColor && "text-blue-700",
+                !cell.isCurrentMonth && !selected && !rangeEdge && "text-ink/30",
+                cell.isToday && !selected && !rangeEdge && "ring-1 ring-moss/40",
+                disabled && "pointer-events-none bg-cream/35 text-ink/20 line-through"
               )}
               aria-pressed={selected}
               aria-label={`${formatDateLabel(cell.date)}を選択`}
@@ -347,6 +407,14 @@ function CalendarPicker({
       </div>
     </div>
   );
+}
+
+function minDateValue(left: string, right: string) {
+  return left <= right ? left : right;
+}
+
+function maxDateValue(left: string, right: string) {
+  return left >= right ? left : right;
 }
 
 export function PlanForm({
@@ -392,7 +460,6 @@ export function PlanForm({
   const [candidateEndDate, setCandidateEndDate] = useState(initialCandidateEnd.date);
   const [candidateEndTime, setCandidateEndTime] = useState(initialCandidateEnd.time);
   const [candidateIsAllDay, setCandidateIsAllDay] = useState(initialCandidateDates[0]?.isAllDay ?? false);
-  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   const [candidateDates, setCandidateDates] = useState<CandidateDraft[]>(initialCandidateDates);
   const [deadlineDate, setDeadlineDate] = useState(initialDeadline.date);
   const [deadlineTime, setDeadlineTime] = useState(initialDeadline.time);
@@ -486,10 +553,10 @@ export function PlanForm({
     focusWithSmoothScroll(candidateHourRef);
   }
 
-  function updateCandidateEndDate(value: string) {
-    setCandidateEndDate(value);
-    setVisibleMonth(toMonthDate(value));
-    setEndDatePickerOpen(false);
+  function updateCandidateRange(start: string, end: string) {
+    setCandidateDate(start);
+    setCandidateEndDate(end);
+    setVisibleMonth(toMonthDate(start));
   }
 
   function updateDeadlineDate(value: string) {
@@ -534,7 +601,6 @@ export function PlanForm({
     setCandidateEndDate(end.date);
     setCandidateEndTime(end.time);
     setCandidateIsAllDay(false);
-    setEndDatePickerOpen(false);
     focusWithSmoothScroll(candidateHourRef);
   }
 
@@ -611,7 +677,7 @@ export function PlanForm({
         ))}
       </ol>
 
-      {currentStep === 0 ? (
+        {currentStep === 0 ? (
         <section className="grid gap-5">
           <div>
             <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
@@ -643,6 +709,10 @@ export function PlanForm({
             onChangeMonth={setVisibleMonth}
             minDate={today}
             busyCounts={busyCounts}
+            rangeStartDate={candidateDate}
+            rangeEndDate={candidateEndDate}
+            onSelectRange={updateCandidateRange}
+            onSelectComplete={() => focusWithSmoothScroll(candidateHourRef)}
           />
           <CalendarAvailabilityPanel
             connected={calendarConnected}
@@ -653,17 +723,14 @@ export function PlanForm({
             candidateEnd={selectedCandidateEnd}
             busyRanges={selectedDayBusyRanges}
           />
-          <label className="flex items-center gap-3 rounded-lg border border-white/75 bg-white/58 px-4 py-3 text-sm font-bold text-ink">
+          <label className="flex items-center gap-3 rounded-lg border border-moss/16 bg-cream/72 px-4 py-3 text-sm font-bold text-ink">
             <input
               type="checkbox"
               aria-label="終日"
-              checked={candidateIsAllDay}
-              onChange={(event) => {
-                setCandidateIsAllDay(event.target.checked);
-                if (event.target.checked) {
-                  setEndDatePickerOpen(false);
-                }
-              }}
+                checked={candidateIsAllDay}
+                onChange={(event) => {
+                  setCandidateIsAllDay(event.target.checked);
+                }}
               className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
             />
             終日
@@ -676,32 +743,8 @@ export function PlanForm({
             <div>
               <p className="text-sm font-bold text-ink">終了時間</p>
               <TimeSelect time={candidateEndTime} onTimeChange={setCandidateEndTime} labelPrefix="終了" />
-              <button
-                type="button"
-                onClick={() => {
-                  setEndDatePickerOpen((open) => !open);
-                  setVisibleMonth(toMonthDate(candidateEndDate));
-                }}
-                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                aria-expanded={endDatePickerOpen}
-              >
-                終了日を変更
-              </button>
             </div>
           </div>
-          {endDatePickerOpen ? (
-            <div className="grid gap-2">
-              <p className="text-sm font-bold text-ink">終了日</p>
-              <CalendarPicker
-                label="終了日を選択"
-                selectedDate={candidateEndDate}
-                visibleMonth={visibleMonth}
-                onSelectDate={updateCandidateEndDate}
-                onChangeMonth={setVisibleMonth}
-                minDate={candidateDate}
-              />
-            </div>
-          ) : null}
           {candidateIsPast ? (
             <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
               過去の日時は候補にできません。
@@ -721,17 +764,19 @@ export function PlanForm({
               <Plus aria-hidden="true" className="h-4 w-4" />
               候補に追加
             </button>
-            <p className="text-sm text-ink/60">選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd, candidateIsAllDay)}</p>
+            <p className="rounded-full bg-mist/38 px-3 py-2 text-sm font-bold text-pine">
+              選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd, candidateIsAllDay)}
+            </p>
           </div>
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
         </section>
       ) : null}
 
-      {currentStep === 1 ? (
-        <section className="grid gap-5">
-          <div>
-            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
-              回答期限を選ぶ
+        {currentStep === 1 ? (
+          <section className="grid gap-5">
+            <div>
+              <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
+                回答期限を選ぶ
             </h2>
             <p className="mt-1 text-sm leading-6 text-ink/60">参加者に回答してほしい締め切りを選びます。</p>
           </div>
@@ -744,66 +789,6 @@ export function PlanForm({
             minDate={today}
           />
           <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
-          <div className="rounded-lg border border-white/75 bg-white/58 p-4">
-            <label className="flex items-center gap-3 text-sm font-bold text-ink">
-              <input
-                type="checkbox"
-                checked={reminderEnabled}
-                onChange={(event) => setReminderEnabled(event.currentTarget.checked)}
-                className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
-              />
-              回答期限前にリマインドする
-            </label>
-            <div className={clsx("mt-3 grid gap-3", !reminderEnabled && "opacity-45")}>
-              {reminderDrafts.map((draft, index) => (
-                <div key={draft.id} className="grid gap-3 rounded-lg border border-white/70 bg-white/54 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                  <label className="text-sm font-medium text-ink">
-                    <span className="text-ink/72">リマインド {index + 1}</span>
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={draft.amount}
-                      disabled={!reminderEnabled}
-                      onChange={(event) => updateReminderDraft(draft.id, { amount: event.currentTarget.value.replace(/[^\d]/g, "") })}
-                      className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20 disabled:bg-white/40"
-                      aria-label={`リマインド ${index + 1} 数値`}
-                    />
-                  </label>
-                  <label className="text-sm font-medium text-ink">
-                    <span className="text-ink/72">単位</span>
-                    <div className="mt-2">
-                      <MadoiSelect
-                        value={draft.unit}
-                        onValueChange={(unit) => updateReminderDraft(draft.id, { unit })}
-                        options={reminderUnitOptions}
-                        fieldLabel={`リマインド ${index + 1} 単位`}
-                        ariaLabel={`リマインド ${index + 1} 単位`}
-                        compact
-                      />
-                    </div>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeReminderDraft(draft.id)}
-                    disabled={!reminderEnabled || reminderDrafts.length === 1}
-                    className="inline-flex min-h-11 items-center justify-center self-end rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40"
-                  >
-                    削除
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addReminderDraft}
-                disabled={!reminderEnabled}
-                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                リマインドを追加
-              </button>
-            </div>
-          </div>
           <p
             className={clsx(
               "rounded-lg border p-3 text-sm",
@@ -820,15 +805,94 @@ export function PlanForm({
         <section className="grid gap-5">
           <div>
             <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
+              リマインドを決める
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">回答していない人に、回答期限前の通知を作ります。</p>
+          </div>
+          <div className="rounded-lg border border-moss/16 bg-cream/72 p-4">
+            <label className="flex items-center gap-3 text-sm font-bold text-ink">
+              <input
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(event) => setReminderEnabled(event.currentTarget.checked)}
+                className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
+              />
+              回答期限前にリマインドする
+            </label>
+            <div className={clsx("mt-3 grid gap-3", !reminderEnabled && "opacity-45")}>
+              {reminderDrafts.map((draft, index) => (
+                <div key={draft.id} className="grid gap-3 rounded-lg border border-moss/12 bg-cream/72 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <label className="text-sm font-medium text-ink">
+                    <span className="text-ink/72">{reminderTimingTitle(draft)}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={draft.amount}
+                      disabled={!reminderEnabled}
+                      onChange={(event) => updateReminderDraft(draft.id, { amount: event.currentTarget.value.replace(/[^\d]/g, "") })}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20 disabled:bg-cream/45"
+                      aria-label={`${reminderTimingTitle(draft)} 数値`}
+                    />
+                  </label>
+                  <label className="text-sm font-medium text-ink">
+                    <span className="text-ink/72">単位</span>
+                    <div className="mt-2">
+                      <MadoiSelect
+                        value={draft.unit}
+                        onValueChange={(unit) => updateReminderDraft(draft.id, { unit })}
+                        options={reminderUnitOptions}
+                        fieldLabel={`${reminderTimingTitle(draft)} 単位`}
+                        ariaLabel={`${reminderTimingTitle(draft)} 単位`}
+                        compact
+                      />
+                    </div>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeReminderDraft(draft.id)}
+                    disabled={!reminderEnabled || reminderDrafts.length === 1}
+                    className="inline-flex h-11 w-11 items-center justify-center self-end rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40"
+                    aria-label={`${reminderTimingTitle(draft)} を削除`}
+                    title="削除"
+                  >
+                    <Trash2 aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addReminderDraft}
+                disabled={!reminderEnabled}
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-cream/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                リマインドを追加
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {currentStep === 3 ? (
+        <section className="grid gap-5">
+          <div>
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
               内容を確認する
             </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">候補日時と回答期限を確認して、共有リンクを作ります。</p>
+            <p className="mt-1 text-sm leading-6 text-ink/60">共有リンクを作る前に、候補日時、回答期限、リマインドを確認します。</p>
           </div>
-          <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
-          <div className="rounded-lg border border-moss/20 bg-mist/28 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">回答期限</p>
-            <p className="mt-2 text-base font-bold text-ink">{formatDateTime(selectedDeadline)}</p>
-            <p className="mt-1 text-sm text-ink/60">リマインド: {reminderOffsetLabel(reminderEnabled, reminderDrafts)}</p>
+          <div className="grid gap-3">
+            <ReviewBlock title="候補日時" actionLabel="候補日時を修正" onEdit={() => moveToStep(0)}>
+              <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
+            </ReviewBlock>
+            <ReviewBlock title="回答期限" actionLabel="回答期限を修正" onEdit={() => moveToStep(1)}>
+              <p className="text-base font-bold text-ink">{formatDateTime(selectedDeadline)}</p>
+            </ReviewBlock>
+            <ReviewBlock title="リマインド" actionLabel="リマインドを修正" onEdit={() => moveToStep(2)}>
+              <p className="text-base font-bold text-ink">{reminderOffsetLabel(reminderEnabled, reminderDrafts)}</p>
+              <p className="mt-1 text-sm text-ink/58">イベント開始前の通知は、日程確定後に扱います。</p>
+            </ReviewBlock>
           </div>
           <TextArea label="メモ" name="memo" defaultValue={plan?.memo} placeholder="集合場所や補足があれば入力します。" />
         </section>
@@ -851,7 +915,7 @@ export function PlanForm({
           戻る
         </button>
 
-        {currentStep < 2 ? (
+        {currentStep < 3 ? (
           <button
             type="button"
             onClick={() => moveToStep(currentStep + 1)}
@@ -886,7 +950,7 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
   return (
     <div className="grid gap-2">
       {candidates.map((candidate, index) => (
-        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-lg border border-white/72 bg-white/70 px-4 py-3">
+        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-lg border border-moss/12 bg-cream/72 px-4 py-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">候補 {index + 1}</p>
             <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
@@ -894,7 +958,7 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
           <button
             type="button"
             onClick={() => onRemove(candidate.start)}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-white/76 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label={`候補 ${index + 1} を削除`}
             title="削除"
           >
@@ -903,5 +967,33 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
         </div>
       ))}
     </div>
+  );
+}
+
+function ReviewBlock({
+  title,
+  actionLabel,
+  onEdit,
+  children
+}: {
+  title: string;
+  actionLabel: string;
+  onEdit: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-moss/16 bg-cream/72 p-4">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">{title}</p>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex min-h-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+        >
+          {actionLabel}
+        </button>
+      </div>
+      {children}
+    </section>
   );
 }

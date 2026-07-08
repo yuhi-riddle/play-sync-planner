@@ -7,3 +7,4 @@ dev-server.log
 dev-server.err
 dev-server-*.log
 .playwright-mcp/
+.superpowers/

@@ -36,6 +36,9 @@ describe("PlanForm", () => {
     chooseOption("回答期限分", "08");
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
+    expect(screen.getByRole("heading", { name: "リマインドを決める" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
     expect(screen.getByRole("heading", { name: "内容を確認する" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "共有リンクを作成" })).toBeEnabled();
     expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T10:07");
@@ -72,14 +75,14 @@ describe("PlanForm", () => {
     expect(screen.getByLabelText("終了時")).toHaveTextContent("15");
   });
 
-  it("adds a multi-day candidate by choosing a different end date", () => {
+  it("adds a multi-day candidate by dragging across dates", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 
-    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.pointerDown(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.pointerEnter(screen.getByLabelText(/7月16日.*を選択/));
+    fireEvent.pointerUp(screen.getByLabelText(/7月16日.*を選択/));
     chooseOption("開始時", "23");
     chooseOption("開始分", "00");
-    fireEvent.click(screen.getByRole("button", { name: "終了日を変更" }));
-    fireEvent.click(within(screen.getByRole("group", { name: "終了日を選択" })).getByLabelText(/7月16日.*を選択/));
     chooseOption("終了時", "01");
     chooseOption("終了分", "30");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
@@ -111,13 +114,14 @@ describe("PlanForm", () => {
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     const reminderInput = document.querySelector('input[name="reminder_offset_minutes"]');
     expect(reminderInput).toHaveValue("1440");
     expect(document.querySelectorAll('input[name="reminder_offsets_minutes"]')).toHaveLength(1);
 
-    fireEvent.change(screen.getByLabelText("リマインド 1 数値"), { target: { value: "6" } });
-    chooseOption("リマインド 1 単位", "時間前");
+    fireEvent.change(screen.getByLabelText("回答期限の1日前 数値"), { target: { value: "6" } });
+    chooseOption("回答期限の6日前 単位", "時間前");
 
     expect(reminderInput).toHaveValue("360");
   });
@@ -128,10 +132,10 @@ describe("PlanForm", () => {
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     fireEvent.click(screen.getByRole("button", { name: "リマインドを追加" }));
-    fireEvent.change(screen.getByLabelText("リマインド 2 数値"), { target: { value: "3" } });
-    chooseOption("リマインド 2 単位", "時間前");
+    fireEvent.change(screen.getByLabelText("回答期限の1時間前 数値"), { target: { value: "3" } });
 
     const reminderInputs = Array.from(document.querySelectorAll('input[name="reminder_offsets_minutes"]')).map((input) =>
       input.getAttribute("value")
