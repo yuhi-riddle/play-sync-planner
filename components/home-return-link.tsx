@@ -15,7 +15,7 @@ export function HomeReturnLink() {
     <div className="mb-5">
       <Link
         href="/"
-        className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/80 bg-cream/86 px-4 py-2 text-sm font-bold text-pine shadow-soft transition-colors hover:bg-white/78 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/80 bg-cream/86 px-4 py-2 text-sm font-bold text-pine shadow-soft transition-colors hover:bg-white/78 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
       >
         <Home aria-hidden="true" className="h-4 w-4" />
         ホームへ

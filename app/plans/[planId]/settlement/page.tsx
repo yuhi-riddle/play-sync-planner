@@ -490,7 +490,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                     <form action={deleteExpenseAction.bind(null, expense.id)}>
                       <button
                         type="submit"
-                        className="inline-flex min-h-10 w-full items-center justify-center rounded-full border border-clay/45 bg-white/80 px-4 py-2 text-sm font-bold text-clay transition-colors hover:bg-clay hover:text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-clay/45 bg-white/80 px-4 py-2 text-sm font-bold text-clay transition-colors hover:bg-clay hover:text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
                       >
                         この支払いを削除
                       </button>
@@ -719,7 +719,7 @@ function SettlementActions({
           </label>
           <button
             type="submit"
-            className="inline-flex min-h-10 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
           >
             受け取り方法を保存
           </button>
@@ -767,7 +767,7 @@ function SettlementActions({
             </label>
             <button
               type="submit"
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
             >
               支払いを記録
             </button>

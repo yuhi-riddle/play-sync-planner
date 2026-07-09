@@ -45,7 +45,7 @@ export function SettlementConfirmationQueue({
                 <form action={confirmPaymentAction.bind(null, item.id)}>
                   <button
                     type="submit"
-                    className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 lg:w-auto"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 lg:w-auto"
                   >
                     受け取り確認する
                   </button>

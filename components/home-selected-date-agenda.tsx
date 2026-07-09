@@ -141,7 +141,7 @@ function DateShortcut({
       scroll={false}
       aria-current={active ? "date" : undefined}
       className={clsx(
-        "inline-flex min-h-10 items-center justify-center rounded-full px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
+        "inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
         active
           ? "bg-ink text-white shadow-soft"
           : "border border-ink/10 bg-white/78 text-ink/70 hover:border-moss hover:text-pine"

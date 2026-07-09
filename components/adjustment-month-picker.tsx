@@ -21,7 +21,7 @@ export function AdjustmentMonthPicker({ currentMonth, label }: { currentMonth: s
 
   return (
     <details className="group relative">
-      <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-ink/10 bg-white/75 px-3 py-2 text-base font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:px-4 sm:text-xl [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-ink/10 bg-white/75 px-3 py-2 text-base font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:px-4 sm:text-xl [&::-webkit-details-marker]:hidden">
         <CalendarDays aria-hidden="true" className="h-4 w-4 text-pine sm:h-5 sm:w-5" />
         {label}
       </summary>
@@ -40,7 +40,7 @@ export function AdjustmentMonthPicker({ currentMonth, label }: { currentMonth: s
         </label>
         <button
           type="submit"
-          className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         >
           この月を見る
         </button>

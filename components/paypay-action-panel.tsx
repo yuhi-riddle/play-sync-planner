@@ -43,7 +43,7 @@ export function PayPayActionPanel({
         <button
           type="button"
           onClick={copyAmount}
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
         >
           <Copy aria-hidden="true" className="mr-2 h-4 w-4" />
           {copied ? "コピーしました" : `${formatYen(amount)}円をコピー`}
@@ -51,7 +51,7 @@ export function PayPayActionPanel({
         <button
           type="button"
           onClick={openPayPay}
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
         >
           <ExternalLink aria-hidden="true" className="mr-2 h-4 w-4" />
           PayPayを開く
