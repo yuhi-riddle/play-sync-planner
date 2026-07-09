@@ -83,6 +83,7 @@ export function PublicSettlementSummary({
 
       <Card>
         <h2 className="text-lg font-semibold text-ink">支払い先</h2>
+        <p className="mt-1 text-sm leading-6 text-ink/60">矢印の左が支払う人、右が受け取る人です。自分の名前の行から支払ってください。</p>
         <div className="mt-4 grid gap-3">
           {unpaidSettlements.length > 0 ? (
             unpaidSettlements.map((settlement) => {
@@ -93,7 +94,7 @@ export function PublicSettlementSummary({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-bold text-ink">
-                        {settlement.fromName} → {settlement.toName}
+                        <span className="text-pine">{settlement.fromName}</span> → {settlement.toName}
                       </p>
                       <p className="mt-1 text-sm text-ink/60">
                         残り {formatYenText(progress.remainingAmount)}

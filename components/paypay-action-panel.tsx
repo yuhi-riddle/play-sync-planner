@@ -57,6 +57,7 @@ export function PayPayActionPanel({
           PayPayを開く
         </button>
       </div>
+      <p className="mt-2 text-xs leading-5 text-ink/50">スマホのPayPayアプリがある場合に開きます。</p>
     </div>
   );
 }

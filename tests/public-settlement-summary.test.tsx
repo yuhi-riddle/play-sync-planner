@@ -39,7 +39,10 @@ describe("PublicSettlementSummary", () => {
     expect(screen.getByText("土曜午後")).toBeInTheDocument();
     expect(screen.getByText("チケット代")).toBeInTheDocument();
     expect(screen.getByText("予約番号 ABC-123")).toBeInTheDocument();
-    expect(screen.getByText("田中 → 鈴木")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.tagName.toLowerCase() === "p" && element?.textContent === "田中 → 鈴木")
+    ).toBeInTheDocument();
+    expect(screen.getByText("矢印の左が支払う人、右が受け取る人です。自分の名前の行から支払ってください。")).toBeInTheDocument();
     expect(screen.getByText("残り 2,600円")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "清算の進捗" })).toBeInTheDocument();
     expect(screen.getByText("受け取り確認待ち").closest("li")).toHaveAttribute("aria-current", "step");
