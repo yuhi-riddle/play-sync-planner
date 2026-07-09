@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
@@ -54,18 +55,22 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
         {(event.plans as EventPlan[] | undefined)?.length ? (
           <div className="grid gap-3">
             {((event.plans ?? []) as EventPlan[]).map((plan) => (
-              <a key={plan.id} href={`/plans/${plan.id}`} className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft hover:border-moss">
+              <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft hover:border-moss">
                 <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
                 <span className="mt-1 block text-sm text-ink/60">
                   {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
         ) : (
           <EmptyState>日程調整はまだありません。「日程調整を始める」から候補日時を入力します。</EmptyState>
         )}
       </section>
+
+      <div className="flex flex-wrap gap-3">
+        <SecondaryLink href="/events">イベント一覧へ</SecondaryLink>
+      </div>
     </div>
   );
 }

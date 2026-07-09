@@ -41,7 +41,7 @@ export function ButtonLink({ href, children }: { href: string; children: ReactNo
   return (
     <Link
       href={href}
-      className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
     >
       {children}
     </Link>
@@ -52,7 +52,7 @@ export function SecondaryLink({ href, children }: { href: string; children: Reac
   return (
     <Link
       href={href}
-      className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
     >
       {children}
     </Link>
@@ -364,7 +364,7 @@ export function MadoiSelect({
         onKeyDown={handleKeyDown}
         className={clsx(
           "flex w-full items-center justify-between gap-3 rounded-lg border border-moss/18 bg-cream/90 text-left text-base text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
-          compact ? "min-h-10 px-3 py-2" : "min-h-11 px-3 py-2"
+          compact ? "min-h-11 px-3 py-2" : "min-h-11 px-3 py-2"
         )}
       >
         <span className={selectedOption ? "font-medium" : "text-ink/46"}>{selectedOption?.label ?? "選択してください"}</span>
@@ -387,7 +387,7 @@ export function MadoiSelect({
                 disabled={option.disabled}
                 onClick={() => selectValue(option.value)}
                 className={clsx(
-                  "flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
                   selected ? "bg-mist/55 text-pine" : "text-ink hover:bg-cream/72",
                   option.disabled && "pointer-events-none text-ink/35"
                 )}

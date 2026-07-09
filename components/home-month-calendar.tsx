@@ -232,7 +232,7 @@ export function HomeMonthCalendar({
           <Link
             href={`/?month=${previousMonth}&date=${defaultDateForMonth(previousMonth)}`}
             scroll={false}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="前の月"
           >
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
@@ -240,7 +240,7 @@ export function HomeMonthCalendar({
           <Link
             href={`/?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
             scroll={false}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="次の月"
           >
             <ChevronRight aria-hidden="true" className="h-5 w-5" />

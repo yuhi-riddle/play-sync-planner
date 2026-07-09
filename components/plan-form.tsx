@@ -269,7 +269,7 @@ function CalendarPicker({
         <button
           type="button"
           onClick={() => moveMonth(-1)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
           aria-label="前の月"
         >
           <ChevronLeft aria-hidden="true" className="h-5 w-5" />
@@ -277,7 +277,7 @@ function CalendarPicker({
         <button
           type="button"
           onClick={() => setMonthPickerOpen((open) => !open)}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-base font-bold text-ink transition-colors hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-bold text-ink transition-colors hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay"
           aria-expanded={monthPickerOpen}
         >
           <CalendarDays aria-hidden="true" className="h-5 w-5 text-moss" />
@@ -286,7 +286,7 @@ function CalendarPicker({
         <button
           type="button"
           onClick={() => moveMonth(1)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
           aria-label="次の月"
         >
           <ChevronRight aria-hidden="true" className="h-5 w-5" />
@@ -658,7 +658,7 @@ export function PlanForm({
         <input key={offsetMinutes} type="hidden" name="reminder_offsets_minutes" value={String(offsetMinutes)} />
       ))}
 
-      <ol className="grid gap-2 sm:grid-cols-3">
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
           <li
             key={step}
@@ -864,7 +864,7 @@ export function PlanForm({
                 type="button"
                 onClick={addReminderDraft}
                 disabled={!reminderEnabled}
-                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-cream/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-cream/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
                 リマインドを追加
@@ -958,7 +958,7 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
           <button
             type="button"
             onClick={() => onRemove(candidate.start)}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label={`候補 ${index + 1} を削除`}
             title="削除"
           >
