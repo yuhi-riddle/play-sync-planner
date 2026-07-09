@@ -239,7 +239,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
       </div>
       <div>
         <p aria-live="polite" className="mb-2 text-sm text-clay">
-          {allAnswered ? "" : `残り${remainingCount}件の候補に回答すると送信できます。`}
+          {remainingCount > 0 ? `残り${remainingCount}件の候補に回答すると送信できます。` : ""}
         </p>
         <button
           type="submit"
