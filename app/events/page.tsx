@@ -56,8 +56,8 @@ function FilterChip({
       aria-current={active ? "page" : undefined}
       className={
         active
-          ? "inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-          : "inline-flex min-h-10 items-center justify-center rounded-full border border-moss/16 bg-cream/82 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          ? "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          : "inline-flex min-h-11 items-center justify-center rounded-full border border-moss/16 bg-cream/82 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
       }
     >
       {children}
