@@ -240,13 +240,50 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     )
     .sort((a, b) => b.paidAt.localeCompare(a.paidAt));
 
+  const pageHeader = (
+    <PageHeader
+      title="支払い・清算"
+      description={event?.title ? `${event.title} の支払いと清算をまとめます。` : "支払いと清算をまとめます。"}
+      action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整に戻る</SecondaryLink>}
+    />
+  );
+
+  // 立替が0件のとき(G-E-2): 進捗・清算結果などの空カードは出さず、
+  // まず立替を追加する導入だけを見せる。
+  if (expenses.length === 0) {
+    return (
+      <div className="space-y-6">
+        {pageHeader}
+        {isOwner ? (
+          <Card>
+            <h2 className="text-lg font-semibold text-ink">まず立替支払いを追加しましょう</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">
+              チケット代や立替分を1件追加すると、清算結果や進捗をここに表示します。
+            </p>
+            <div className="mt-5">
+              {participants.length > 0 ? (
+                <ExpenseForm
+                  participants={participants.map((participant) => ({
+                    id: participant.id,
+                    displayName: participant.display_name
+                  }))}
+                  action={createExpense}
+                />
+              ) : (
+                <EmptyState>まだ参加者がいません。共有リンクから回答してもらうと、参加者として追加されます。</EmptyState>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <NonOwnerSettlementNotice publicSettlementUrl={publicSettlementUrl} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="支払い・清算"
-        description={event?.title ? `${event.title} の支払いと清算をまとめます。` : "支払いと清算をまとめます。"}
-        action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整に戻る</SecondaryLink>}
-      />
+      {pageHeader}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryTile label="立替合計" value={formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))} detail={`${expenses.length}件の支払い履歴`} />
@@ -307,8 +344,10 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         <SettlementConfirmationQueue items={confirmationQueueItems} confirmPaymentAction={confirmSettlementPaymentAction} />
       </div>
 
+      {!isOwner ? <NonOwnerSettlementNotice publicSettlementUrl={publicSettlementUrl} /> : null}
+
       {isOwner ? (
-      <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-5 sm:grid-cols-2">
         <Card>
           <h2 className="text-lg font-semibold text-ink">支払いを追加</h2>
           <p className="mt-1 text-sm leading-6 text-ink/60">チケット代や立替分を追加すると、清算結果を自動で出します。</p>
@@ -335,72 +374,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           </div>
         </Card>
 
-        <Card>
-          <h2 className="text-lg font-semibold text-ink">支払い依頼文面</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
-          {hasMissingPaymentInstructions ? (
-            <p className="mt-3 rounded-lg border border-honey/35 bg-honey/14 p-3 text-sm leading-6 text-ink/70">
-              受け取り方法が未設定の清算があります。必要なら「清算結果」で送金先を入力してから文面をコピーしてください。
-            </p>
-          ) : null}
-          <div className="mt-5">
-            {paymentRequestMessage ? (
-              <SettlementReminderCard
-                recipientNames={[...new Set(unpaidSettlements.map((settlement) => participantName(settlement.from_participant)))]}
-                message={paymentRequestMessage}
-                reminderType="payment_request"
-                markSentAction={markReminderSent}
-                latestSentAt={reminderLogSummary.latestPaymentRequestSentAt}
-                sentCount={reminderLogSummary.paymentRequestCount}
-                textareaLabel="支払い依頼文面"
-                markSentLabel="依頼済みに記録"
-              />
-            ) : (
-              <EmptyState>未払いの清算はありません。</EmptyState>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="text-lg font-semibold text-ink">受け取り確認依頼文面</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">支払い記録がある人に、受け取り確認をお願いする文面です。</p>
-          <div className="mt-5">
-            {confirmationRequestMessage ? (
-              <SettlementReminderCard
-                recipientNames={[...new Set(settlementNextActions.confirmationWaiting.map((item) => item.participantName))]}
-                message={confirmationRequestMessage}
-                reminderType="confirmation_request"
-                markSentAction={markReminderSent}
-                latestSentAt={reminderLogSummary.latestConfirmationRequestSentAt}
-                sentCount={reminderLogSummary.confirmationRequestCount}
-                textareaLabel="受け取り確認依頼文面"
-                markSentLabel="確認依頼済みに記録"
-                emptyText="確認待ちはありません。"
-              />
-            ) : (
-              <EmptyState>確認待ちはありません。</EmptyState>
-            )}
-          </div>
-        </Card>
       </section>
-      ) : null}
-
-      {isOwner ? (
-      <Card>
-        <h2 className="text-lg font-semibold text-ink">送信記録</h2>
-        <p className="mt-1 text-sm leading-6 text-ink/60">支払い依頼と確認依頼を分けて確認できます。</p>
-        <div className="mt-5">
-          {reminderLogSummary.recentLogs.length > 0 ? (
-            <div className="grid gap-2">
-              {reminderLogSummary.recentLogs.slice(0, 6).map((log) => (
-                <SettlementReminderLogItem key={`${log.sentAt}-${log.label}-${log.recipientNames.join(",")}`} log={log} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState>送信記録はまだありません。</EmptyState>
-          )}
-        </div>
-      </Card>
       ) : null}
 
       <Card>
@@ -531,7 +505,109 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           )}
         </div>
       </Card>
+
+      {isOwner ? (
+      <details className="rounded-2xl border border-ink/10 bg-white/55 p-5 shadow-soft">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">参加者に依頼する</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">依頼文面のコピーと、送信の記録をまとめています。</p>
+          </div>
+          <span className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-1 text-sm font-bold text-ink">
+            開く / 閉じる
+          </span>
+        </summary>
+        <div className="mt-5 grid gap-5">
+          <Card>
+            <h2 className="text-lg font-semibold text-ink">支払い依頼文面</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
+            {hasMissingPaymentInstructions ? (
+              <p className="mt-3 rounded-lg border border-honey/35 bg-honey/14 p-3 text-sm leading-6 text-ink/70">
+                受け取り方法が未設定の清算があります。必要なら「清算結果」で送金先を入力してから文面をコピーしてください。
+              </p>
+            ) : null}
+            <div className="mt-5">
+              {paymentRequestMessage ? (
+                <SettlementReminderCard
+                  recipientNames={[...new Set(unpaidSettlements.map((settlement) => participantName(settlement.from_participant)))]}
+                  message={paymentRequestMessage}
+                  reminderType="payment_request"
+                  markSentAction={markReminderSent}
+                  latestSentAt={reminderLogSummary.latestPaymentRequestSentAt}
+                  sentCount={reminderLogSummary.paymentRequestCount}
+                  textareaLabel="支払い依頼文面"
+                  markSentLabel="依頼済みに記録"
+                />
+              ) : (
+                <EmptyState>未払いの清算はありません。</EmptyState>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="text-lg font-semibold text-ink">受け取り確認依頼文面</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">支払い記録がある人に、受け取り確認をお願いする文面です。</p>
+            <div className="mt-5">
+              {confirmationRequestMessage ? (
+                <SettlementReminderCard
+                  recipientNames={[...new Set(settlementNextActions.confirmationWaiting.map((item) => item.participantName))]}
+                  message={confirmationRequestMessage}
+                  reminderType="confirmation_request"
+                  markSentAction={markReminderSent}
+                  latestSentAt={reminderLogSummary.latestConfirmationRequestSentAt}
+                  sentCount={reminderLogSummary.confirmationRequestCount}
+                  textareaLabel="受け取り確認依頼文面"
+                  markSentLabel="確認依頼済みに記録"
+                  emptyText="確認待ちはありません。"
+                />
+              ) : (
+                <EmptyState>確認待ちはありません。</EmptyState>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="text-lg font-semibold text-ink">送信記録</h2>
+            <p className="mt-1 text-sm leading-6 text-ink/60">支払い依頼と確認依頼を分けて確認できます。</p>
+            <div className="mt-5">
+              {reminderLogSummary.recentLogs.length > 0 ? (
+                <div className="grid gap-2">
+                  {reminderLogSummary.recentLogs.slice(0, 6).map((log) => (
+                    <SettlementReminderLogItem key={`${log.sentAt}-${log.label}-${log.recipientNames.join(",")}`} log={log} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState>送信記録はまだありません。</EmptyState>
+              )}
+            </div>
+          </Card>
+        </div>
+      </details>
+      ) : null}
     </div>
+  );
+}
+
+function NonOwnerSettlementNotice({ publicSettlementUrl }: { publicSettlementUrl: string | null }) {
+  return (
+    <Card>
+      <h2 className="text-lg font-semibold text-ink">支払いの記録について</h2>
+      <p className="mt-1 text-sm leading-6 text-ink/60">
+        支払いの記録は、参加者向けの清算リンクから行えます。このページは主催者が清算をまとめるための画面です。
+      </p>
+      {publicSettlementUrl ? (
+        <a
+          href={publicSettlementUrl}
+          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        >
+          参加者向け清算ページを開く
+        </a>
+      ) : (
+        <p className="mt-3 text-sm leading-6 text-ink/58">
+          清算リンクがまだ発行されていません。主催者に共有を依頼してください。
+        </p>
+      )}
+    </Card>
   );
 }
 
