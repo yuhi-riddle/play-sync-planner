@@ -89,6 +89,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
     [answers, candidateDates]
   );
   const allAnswered = candidateDates.length > 0 && answeredCount === candidateDates.length;
+  const remainingCount = candidateDates.length - answeredCount;
   const progressPercent = candidateDates.length === 0 ? 0 : Math.round((answeredCount / candidateDates.length) * 100);
   const candidateHints = useMemo(
     () => buildCandidateCalendarHints({ candidates: candidateDates, busyRanges: calendarEvents }),
@@ -193,8 +194,13 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
         {candidateDates.map((candidate, index) => {
           const conflictingEvents = candidateHints[candidate.id]?.events ?? [];
 
+          const isUnanswered = !answers[candidate.id];
+
           return (
-            <fieldset key={candidate.id} className="rounded-lg border border-white/80 bg-white/68 p-4">
+            <fieldset
+              key={candidate.id}
+              className={`rounded-lg border bg-white/68 p-4 ${isUnanswered ? "border-clay/60" : "border-white/80"}`}
+            >
               <legend className="px-1 text-sm font-semibold text-ink">
                 候補{index + 1} {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
               </legend>
@@ -232,6 +238,9 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
         })}
       </div>
       <div>
+        <p aria-live="polite" className="mb-2 text-sm text-clay">
+          {allAnswered ? "" : `残り${remainingCount}件の候補に回答すると送信できます。`}
+        </p>
         <button
           type="submit"
           disabled={!allAnswered}

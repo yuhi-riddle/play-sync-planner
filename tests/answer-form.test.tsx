@@ -52,6 +52,25 @@ describe("AnswerForm", () => {
     });
   });
 
+  it("shows a help message about remaining answers and hides it once all are answered", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ connected: false, busy: [] })
+      })
+    );
+    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+
+    expect(screen.getByText("残り2件の候補に回答すると送信できます。")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("候補1に行けると回答"));
+    expect(screen.getByText("残り1件の候補に回答すると送信できます。")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("候補2に行けないと回答"));
+    expect(screen.queryByText(/件の候補に回答すると送信できます。/)).not.toBeInTheDocument();
+  });
+
   it("can apply one answer to every candidate", async () => {
     vi.stubGlobal(
       "fetch",
