@@ -6,8 +6,15 @@ import {
   exchangeGoogleCalendarCode,
   refreshGoogleCalendarAccessToken
 } from "@/lib/google-calendar/oauth";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 describe("google calendar oauth", () => {
+  it("keeps only an internal return path", () => {
+    expect(safeNextPath("/invites/token-1")).toBe("/invites/token-1");
+    expect(safeNextPath("https://example.com")).toBe("/");
+    expect(safeNextPath("//example.com")).toBe("/");
+  });
+
   it("builds an OAuth URL with offline access and Calendar events write scope", () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = "client-id";
     process.env.GOOGLE_CALENDAR_REDIRECT_URI = "http://localhost:3000/api/google-calendar/callback";
