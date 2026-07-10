@@ -8,4 +8,5 @@ dev-server.err
 dev-server-*.log
 .playwright-mcp/
 .superpowers/
+.worktrees/
 tsconfig.tsbuildinfo
