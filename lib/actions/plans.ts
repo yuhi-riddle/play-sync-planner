@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { formDataToObject } from "@/lib/form-data";
+import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/validators";
@@ -31,6 +32,27 @@ export async function createPlanAction(eventId: string, formData: FormData) {
 
   const values = planSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
+  const { data: eventMembers, error: membersError } = await supabase
+    .from("event_members")
+    .select("event_id, user_id, display_name, role, status")
+    .eq("event_id", eventId)
+    .eq("status", "joined");
+
+  if (membersError) {
+    throw new Error(membersError.message);
+  }
+
+  const members = (eventMembers ?? []).map((member) => ({
+    eventId: member.event_id,
+    userId: member.user_id,
+    displayName: member.display_name,
+    role: member.role,
+    status: member.status
+  })) as EventMember[];
+  if (!canStartPlanFromMembers(members)) {
+    throw new Error("主催者を含む参加者を集めてから日程調整を作成してください。");
+  }
+
   const { data: plan, error: planError } = await supabase
     .from("plans")
     .insert({
@@ -50,13 +72,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     throw new Error(planError.message);
   }
 
-  const participants = values.participantNames.map((displayName) => ({
-    plan_id: plan.id,
-    display_name: displayName,
-    participant_type: "guest",
-    status: "invited",
-    is_organizer: false
-  }));
+  const participants = buildPlanParticipantsFromMembers(members, plan.id);
 
   const candidateDates = values.candidateDates.map((candidateDate, index) => ({
     plan_id: plan.id,

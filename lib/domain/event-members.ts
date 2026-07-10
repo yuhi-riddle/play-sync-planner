@@ -32,3 +32,5 @@ export function snapshotEventMembersForPlan(members: EventMember[], planId: stri
       is_organizer: member.role === "organizer"
     }));
 }
+
+export const buildPlanParticipantsFromMembers = snapshotEventMembersForPlan;
