@@ -34,6 +34,10 @@ body {
   isolation: isolate;
 }
 
+main {
+  scroll-margin-top: 6rem;
+}
+
 .app-shell::before {
   position: fixed;
   z-index: -1;

@@ -1,56 +1,53 @@
-import { Card, PageHeader } from "@/components/ui";
+import { Card, PageHeader, SecondaryLink } from "@/components/ui";
 
 const sections = [
   {
-    title: "1. この規約について",
-    body:
-      "この利用規約は、Madoi を使うときの基本的なルールを定めるものです。Madoi は、謎解きや公演などの日程調整をしやすくするためのサービスです。"
+    title: "1. 適用",
+    body: "この利用規約は、Madoi を利用するすべての方に適用されます。Madoi を利用した時点で、この規約に同意したものとします。"
   },
   {
     title: "2. アカウント",
-    body:
-      "ログインには Google アカウントを使います。利用者は、自分のアカウントを安全に管理してください。第三者による不正利用に気づいた場合は、できるだけ早く運営者へ連絡してください。"
+    body: "Madoi の利用には Google アカウントでのログインが必要です。アカウントは利用者自身の責任で管理し、他人に使わせないでください。"
   },
   {
-    title: "3. 入力する情報",
-    body:
-      "利用者は、イベント名、カテゴリ、場所メモ、候補日時、回答内容、支払い履歴、清算メモ、支払い先URLなどを入力できます。共有リンクを知っている人は、ログインせずに回答や清算状況の確認ができる場合があります。共有リンクの扱いには注意してください。"
+    title: "3. 利用者が入力する情報",
+    body: "利用者は、イベント名、場所メモ、候補日時、回答内容、支払いに関する記録やメモなどを入力できます。入力内容は、イベントの参加者に表示される場合があります。"
   },
   {
     title: "4. 禁止事項",
-    body:
-      "他人になりすます行為、不正アクセス、サービスの妨害、法令や公序良俗に反する投稿、第三者の権利を侵害する行為は禁止します。"
+    body: "法令に違反する行為、他者の権利や安全を損なう行為、不正なアクセス、サービスの運営を妨げる行為、他人の情報を無断で入力・公開する行為を禁止します。"
   },
   {
-    title: "5. サービスの変更・停止",
-    body:
-      "Madoi は開発中のサービスです。機能の追加、変更、停止が発生することがあります。重要な内容は、必要に応じて別の方法でも控えてください。"
+    title: "5. サービスの変更",
+    body: "Madoi は、必要に応じて機能の追加、変更、停止を行うことがあります。重要な変更がある場合は、サービス上でお知らせします。"
   },
   {
     title: "6. 免責",
-    body:
-      "Madoi は、日程調整と清算状況の整理を補助するためのサービスです。入力内容の正確性、日程調整の成立、支払いの完了、外部サービスの状態について、運営者は保証しません。実際の送金や支払いは、利用者同士の責任で行ってください。"
+    body: "Madoi は日程調整やイベント管理を補助するサービスです。利用者同士の連絡、参加、支払いなどから生じた問題について、Madoi は責任を負いません。"
   },
   {
-    title: "7. 規約の変更",
-    body:
-      "必要に応じて、この規約を変更することがあります。重要な変更がある場合は、サービス上で分かるように案内します。"
+    title: "7. 利用規約の変更",
+    body: "この規約は、必要に応じて変更することがあります。変更後の規約は、このページに掲載した時点から適用されます。"
   },
   {
-    title: "8. 問い合わせ",
-    body:
-      "問い合わせ先は正式公開前に設定します。公開開始時には、連絡先メールアドレスまたは問い合わせフォームをこのページに掲載します。"
+    title: "8. お問い合わせ",
+    body: "規約に関するお問い合わせは、正式な問い合わせ窓口の公開後、その窓口から受け付けます。"
   }
 ];
 
-export default function TermsPage() {
+export default async function TermsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
+  const { from } = await searchParams;
+  const returnHref = from === "login" ? "/login" : "/";
+
   return (
     <div className="space-y-6">
-      <PageHeader title="利用規約" description="Madoi を使うときの基本ルールです。" />
+      <PageHeader
+        title="利用規約"
+        description="Madoi を使うときの基本ルールです。"
+        action={<SecondaryLink href={returnHref}>{from === "login" ? "ログインへ戻る" : "ホームへ戻る"}</SecondaryLink>}
+      />
       <Card>
-        <p className="text-sm leading-7 text-ink/64">
-          このページはドラフトです。正式公開前に、運用実態と法務観点に合わせて見直してください。
-        </p>
+        <p className="text-sm leading-7 text-ink/64">施行日: 2026年7月10日</p>
         <div className="mt-6 space-y-6">
           {sections.map((section) => (
             <section key={section.title}>

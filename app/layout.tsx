@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AuthNav } from "@/components/auth-nav";
 import { HomeReturnLink } from "@/components/home-return-link";
+import { MobileEventFab } from "@/components/mobile-event-fab";
 import { brand } from "@/lib/brand";
 
 import "./globals.css";
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="ja">
       <body>
         <div className="app-shell min-h-screen">
-          <header className="border-b border-white/80 bg-cream/80 backdrop-blur-md">
+          <header className="sticky top-0 z-50 border-b border-white/80 bg-cream/80 backdrop-blur-md">
             <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-10">
               <Link href="/" className="group flex items-center gap-3 text-lg font-bold tracking-normal text-ink">
                 <span className="relative inline-flex h-10 w-12 items-end justify-center rounded-lg border border-white/70 bg-skywash/70 shadow-soft">
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <AuthNav />
             </div>
           </header>
-          <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8 xl:px-10">
+          <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:px-8 xl:px-10">
             <HomeReturnLink />
             <main>{children}</main>
           </div>
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </Link>
             </div>
           </footer>
+          <MobileEventFab />
         </div>
       </body>
     </html>
