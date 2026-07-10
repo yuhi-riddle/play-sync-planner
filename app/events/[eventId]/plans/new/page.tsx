@@ -30,6 +30,7 @@ export default async function NewPlanPage({ params }: { params: Promise<{ eventI
       <Card>
         <PlanForm
           action={action}
+          eventId={eventId}
           submitLabel="共有リンクを作成"
           eventCategory={event.category}
           calendarAvailability={{ enabled: Boolean(calendarIntegration) }}
