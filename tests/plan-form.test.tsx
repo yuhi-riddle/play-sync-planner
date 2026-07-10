@@ -15,7 +15,8 @@ afterEach(() => {
 
 describe("PlanForm", () => {
   it("adds a candidate datetime and reaches the review step with a deadline", async () => {
-    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+    const props = { action: vi.fn(), submitLabel: "この内容で日程調整を始める", participantCount: 3 };
+    render(<PlanForm {...props} />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
     await waitFor(() => expect(screen.getByLabelText("開始時")).toHaveFocus());
@@ -40,7 +41,9 @@ describe("PlanForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     expect(screen.getByRole("heading", { name: "内容を確認する" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "共有リンクを作成" })).toBeEnabled();
+    expect(screen.getByText("参加者 3人")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "候補 1 を削除" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "この内容で日程調整を始める" })).toBeEnabled();
     expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T10:07");
     expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-15T12:07");
     expect(document.querySelector('input[name="answer_deadline_at"]')).toHaveAttribute("value", "2026-07-14T22:08");

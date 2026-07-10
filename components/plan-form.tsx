@@ -433,6 +433,7 @@ export function PlanForm({
   submitLabel,
   eventCategory,
   eventId,
+  participantCount,
   calendarAvailability
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -440,6 +441,7 @@ export function PlanForm({
   submitLabel: string;
   eventCategory?: string | null;
   eventId?: string;
+  participantCount?: number;
   calendarAvailability?: { enabled: boolean };
 }) {
   const initialCandidateDates = plan?.candidate_dates?.length
@@ -906,12 +908,18 @@ export function PlanForm({
             <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
               内容を確認する
             </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">共有リンクを作る前に、候補日時、回答期限、リマインドを確認します。</p>
+            <p className="mt-1 text-sm leading-6 text-ink/60">開始前に、参加者、候補日時、回答期限、リマインドを確認します。</p>
           </div>
           <div className="grid gap-3">
             <ReviewBlock title="候補日時" actionLabel="候補日時を修正" onEdit={() => moveToStep(0)}>
-              <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
+              <SelectedCandidates candidates={candidateDates} />
             </ReviewBlock>
+            {participantCount !== undefined ? (
+              <ReviewBlock title="参加者">
+                <p className="text-base font-bold text-ink">参加者 {participantCount}人</p>
+                <p className="mt-1 text-sm text-ink/58">参加受付を閉じた後は、参加者の追加はできません。</p>
+              </ReviewBlock>
+            ) : null}
             <ReviewBlock title="回答期限" actionLabel="回答期限を修正" onEdit={() => moveToStep(1)}>
               <p className="text-base font-bold text-ink">{formatDateTime(selectedDeadline)}</p>
             </ReviewBlock>
@@ -964,7 +972,7 @@ export function PlanForm({
   );
 }
 
-function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDraft[]; onRemove: (value: string) => void }) {
+function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDraft[]; onRemove?: (value: string) => void }) {
   if (candidates.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-moss/30 bg-white/54 p-4 text-sm text-ink/62">
@@ -981,15 +989,17 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">候補 {index + 1}</p>
             <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => onRemove(candidate.start)}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
-            aria-label={`候補 ${index + 1} を削除`}
-            title="削除"
-          >
-            <Trash2 aria-hidden="true" className="h-4 w-4" />
-          </button>
+          {onRemove ? (
+            <button
+              type="button"
+              onClick={() => onRemove(candidate.start)}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
+              aria-label={`候補 ${index + 1} を削除`}
+              title="削除"
+            >
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
       ))}
     </div>
@@ -1003,21 +1013,23 @@ function ReviewBlock({
   children
 }: {
   title: string;
-  actionLabel: string;
-  onEdit: () => void;
+  actionLabel?: string;
+  onEdit?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-lg border border-moss/16 bg-cream/72 p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">{title}</p>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex min-h-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-        >
-          {actionLabel}
-        </button>
+        {actionLabel && onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex min-h-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+          >
+            {actionLabel}
+          </button>
+        ) : null}
       </div>
       {children}
     </section>
