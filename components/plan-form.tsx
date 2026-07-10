@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
 import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar-availability-panel";
+import { GroupAvailabilityCalendar } from "@/components/group-availability-calendar";
 import { MadoiSelect, TextArea } from "@/components/ui";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/calendar";
 import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar-availability";
@@ -232,6 +233,7 @@ function CalendarPicker({
   onChangeMonth,
   minDate,
   busyCounts = {},
+  availabilityByDate = {},
   rangeStartDate,
   rangeEndDate,
   onSelectRange,
@@ -244,6 +246,7 @@ function CalendarPicker({
   onChangeMonth: (value: Date) => void;
   minDate?: string;
   busyCounts?: Record<string, number>;
+  availabilityByDate?: Record<string, { averageAvailableCount: number; participantCount: number }>;
   rangeStartDate?: string;
   rangeEndDate?: string;
   onSelectRange?: (start: string, end: string) => void;
@@ -338,6 +341,13 @@ function CalendarPicker({
           const holidayColor = cell.isHoliday || cell.dayOfWeek === 0;
           const saturdayColor = cell.dayOfWeek === 6;
           const disabled = Boolean(minDate && cell.date < minDate);
+          const dailyAvailability = availabilityByDate[cell.date];
+          const availabilityRatio = dailyAvailability ? dailyAvailability.averageAvailableCount / dailyAvailability.participantCount : 0;
+          const availabilityTone =
+            availabilityRatio >= 0.8 ? "bg-moss/20" : availabilityRatio >= 0.5 ? "bg-skywash/72" : availabilityRatio > 0 ? "bg-clay/12" : null;
+          const availabilityLabel = dailyAvailability
+            ? `、平均 空き ${dailyAvailability.averageAvailableCount}/${dailyAvailability.participantCount}人`
+            : "";
           return (
             <button
               key={cell.date}
@@ -387,7 +397,7 @@ function CalendarPicker({
               disabled={disabled}
               className={clsx(
                 "relative flex aspect-square min-h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                rangeEdge || selected ? "bg-ink text-white shadow-soft" : inRange ? "bg-mist/62 text-ink ring-1 ring-moss/18" : "bg-cream/70 text-ink hover:bg-mist/60",
+                rangeEdge || selected ? "bg-ink text-white shadow-soft" : inRange ? "bg-mist/62 text-ink ring-1 ring-moss/18" : availabilityTone ?? "bg-cream/70 text-ink hover:bg-mist/60",
                 !selected && !rangeEdge && holidayColor && "text-red-700",
                 !selected && !rangeEdge && !holidayColor && saturdayColor && "text-blue-700",
                 !cell.isCurrentMonth && !selected && !rangeEdge && "text-ink/30",
@@ -395,7 +405,7 @@ function CalendarPicker({
                 disabled && "pointer-events-none bg-cream/35 text-ink/20 line-through"
               )}
               aria-pressed={selected}
-              aria-label={`${formatDateLabel(cell.date)}を選択`}
+              aria-label={`${formatDateLabel(cell.date)}を選択${availabilityLabel}`}
             >
               {cell.day}
               {busyCounts[cell.date] ? (
@@ -422,12 +432,14 @@ export function PlanForm({
   plan,
   submitLabel,
   eventCategory,
+  eventId,
   calendarAvailability
 }: {
   action: (formData: FormData) => void | Promise<void>;
   plan?: PlanRecord;
   submitLabel: string;
   eventCategory?: string | null;
+  eventId?: string;
   calendarAvailability?: { enabled: boolean };
 }) {
   const initialCandidateDates = plan?.candidate_dates?.length
@@ -469,9 +481,13 @@ export function PlanForm({
   const [busyRanges, setBusyRanges] = useState<CalendarEventRange[]>([]);
   const [busyLoading, setBusyLoading] = useState(false);
   const [busyError, setBusyError] = useState(false);
+  const [groupAvailabilityByDate, setGroupAvailabilityByDate] = useState<
+    Record<string, { averageAvailableCount: number; participantCount: number }>
+  >({});
 
   const visibleMonthKey = `${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, "0")}`;
   const calendarConnected = Boolean(calendarAvailability?.enabled);
+  const showPersonalAvailability = calendarConnected && !eventId;
   const busyCounts = useMemo(() => busyCountByDate(busyRanges), [busyRanges]);
   const selectedDayBusyRanges = useMemo(
     () => busyRangesForDate(busyRanges, candidateDate),
@@ -490,7 +506,7 @@ export function PlanForm({
   const canReview = candidateDates.length > 0 && selectedDeadline.length > 0 && !deadlineIsTooLate;
 
   useEffect(() => {
-    if (!calendarConnected) {
+    if (!showPersonalAvailability) {
       setBusyRanges([]);
       return;
     }
@@ -526,7 +542,7 @@ export function PlanForm({
     return () => {
       cancelled = true;
     };
-  }, [calendarConnected, visibleMonthKey]);
+  }, [showPersonalAvailability, visibleMonthKey]);
 
   useEffect(() => {
     if (skipInitialStepScroll.current) {
@@ -709,20 +725,30 @@ export function PlanForm({
             onChangeMonth={setVisibleMonth}
             minDate={today}
             busyCounts={busyCounts}
+            availabilityByDate={groupAvailabilityByDate}
             rangeStartDate={candidateDate}
             rangeEndDate={candidateEndDate}
             onSelectRange={updateCandidateRange}
             onSelectComplete={() => focusWithSmoothScroll(candidateHourRef)}
           />
-          <CalendarAvailabilityPanel
-            connected={calendarConnected}
-            loading={busyLoading}
-            error={busyError}
-            selectedDate={candidateDate}
-            candidateStart={selectedCandidateStart}
-            candidateEnd={selectedCandidateEnd}
-            busyRanges={selectedDayBusyRanges}
-          />
+          {eventId ? (
+            <GroupAvailabilityCalendar
+              eventId={eventId}
+              visibleMonth={visibleMonthKey}
+              selectedRange={{ start: selectedCandidateStart, end: selectedCandidateEnd }}
+              onAvailabilityByDate={setGroupAvailabilityByDate}
+            />
+          ) : (
+            <CalendarAvailabilityPanel
+              connected={calendarConnected}
+              loading={busyLoading}
+              error={busyError}
+              selectedDate={candidateDate}
+              candidateStart={selectedCandidateStart}
+              candidateEnd={selectedCandidateEnd}
+              busyRanges={selectedDayBusyRanges}
+            />
+          )}
           <label className="flex items-center gap-3 rounded-lg border border-moss/16 bg-cream/72 px-4 py-3 text-sm font-bold text-ink">
             <input
               type="checkbox"

@@ -15,6 +15,15 @@ describe("CalendarConnectionCard", () => {
     );
   });
 
+  it("keeps the requested return path when opening Calendar connection", () => {
+    render(<CalendarConnectionCard connected={false} accountEmail={null} updatedAt={null} nextPath="/invites/token-1" />);
+
+    expect(screen.getByRole("link", { name: "Google Calendarを連携" })).toHaveAttribute(
+      "href",
+      "/api/google-calendar/connect?next=%2Finvites%2Ftoken-1"
+    );
+  });
+
   it("shows connected account and disconnect button", () => {
     render(<CalendarConnectionCard connected accountEmail="me@example.com" updatedAt="2026-06-29T10:00:00+09:00" />);
 

@@ -8,14 +8,18 @@ export function CalendarConnectionCard({
   connected,
   accountEmail,
   updatedAt,
-  status
+  status,
+  nextPath
 }: {
   connected: boolean;
   accountEmail: string | null;
   updatedAt: string | null;
   canWriteEvents?: boolean;
   status?: string;
+  nextPath?: string;
 }) {
+  const connectHref = nextPath ? `/api/google-calendar/connect?next=${encodeURIComponent(nextPath)}` : "/api/google-calendar/connect";
+
   return (
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -66,7 +70,7 @@ export function CalendarConnectionCard({
           </form>
         ) : (
           <a
-            href="/api/google-calendar/connect"
+            href={connectHref}
             className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           >
             Google Calendarを連携

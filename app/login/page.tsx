@@ -1,12 +1,24 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { Card, PageHeader, SubmitButton } from "@/components/ui";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-async function signInWithGoogle() {
+async function signInWithGoogle(formData: FormData) {
   "use server";
+
+  const nextPath = safeNextPath(formData.get("next")?.toString());
+  const cookieStore = await cookies();
+  cookieStore.set("madoi_login_next", nextPath, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 10 * 60
+  });
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -25,19 +37,22 @@ async function signInWithGoogle() {
   }
 }
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
+  const nextPath = safeNextPath(next);
+
   return (
     <div className="space-y-6">
-      <PageHeader title="ログイン" description="イベント作成と日程確定にはログインが必要です。共有リンクの回答は未ログインでも使えます。" />
+      <PageHeader title="ログイン" description="Madoi の利用には Google ログインが必要です。" />
       <Card className="max-w-xl">
         {hasSupabaseEnv() ? (
           <form action={signInWithGoogle}>
-            <SubmitButton>Googleでログイン</SubmitButton>
+            <input type="hidden" name="next" value={nextPath} />
+            <SubmitButton>Google でログイン</SubmitButton>
           </form>
         ) : (
           <p className="text-sm leading-6 text-ink/70">
-            Supabaseの環境変数が未設定です。`.env.local` に `NEXT_PUBLIC_SUPABASE_URL` と
-            `NEXT_PUBLIC_SUPABASE_ANON_KEY` を設定してください。
+            Supabase の環境変数が未設定です。`.env.local` に `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` を設定してください。
           </p>
         )}
       </Card>

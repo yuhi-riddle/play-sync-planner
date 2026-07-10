@@ -1,25 +1,35 @@
 import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { buildGoogleCalendarAuthUrl } from "@/lib/google-calendar/oauth";
 import { getCurrentUser } from "@/lib/supabase/server";
 
-export async function GET() {
+function calendarConnectPath(nextPath: string) {
+  return `/api/google-calendar/connect?next=${encodeURIComponent(nextPath)}`;
+}
+
+export async function GET(request: NextRequest) {
+  const requestedNext = request.nextUrl.searchParams.get("next");
+  const nextPath = requestedNext ? safeNextPath(requestedNext) : "/settings";
   const user = await getCurrentUser();
+
   if (!user) {
-    return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"));
+    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(calendarConnectPath(nextPath))}`, request.url));
   }
 
   const state = randomUUID();
   const cookieStore = await cookies();
-  cookieStore.set("madoi_calendar_oauth_state", state, {
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 10 * 60
-  });
+  };
+  cookieStore.set("madoi_calendar_oauth_state", state, cookieOptions);
+  cookieStore.set("madoi_calendar_next", nextPath, cookieOptions);
 
   return NextResponse.redirect(buildGoogleCalendarAuthUrl({ state }));
 }
