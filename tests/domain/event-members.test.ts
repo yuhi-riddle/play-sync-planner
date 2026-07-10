@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildEventInviteUrl,
   canJoinWithInvite,
   canStartPlanFromMembers,
   snapshotEventMembersForPlan,
@@ -62,5 +63,9 @@ describe("event members", () => {
         is_organizer: false
       }
     ]);
+  });
+
+  it("builds an invite URL outside the Server Actions module", () => {
+    expect(buildEventInviteUrl("https://madoi.example", "invite-1")).toBe("https://madoi.example/invites/invite-1");
   });
 });

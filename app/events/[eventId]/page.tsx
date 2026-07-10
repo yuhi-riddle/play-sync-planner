@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { EventMemberInviteCard } from "@/components/event-member-invite-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
 import { categoryLabels, eventStatusLabels, planStatusLabels } from "@/lib/constants";
+import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import { formatDateTime } from "@/lib/format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +17,11 @@ type EventPlan = {
   status: string;
   confirmed_start_at: string | null;
   answer_deadline_at: string | null;
+};
+
+type Invite = {
+  token: string;
+  status: "open" | "closed" | "revoked";
 };
 
 export default async function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -29,26 +37,64 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
     notFound();
   }
 
+  const [{ count: memberCount }, { data: invite }, currentUserId] = await Promise.all([
+    supabase.from("event_members").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "joined"),
+    supabase
+      .from("event_invite_links")
+      .select("token, status")
+      .eq("event_id", eventId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getCurrentUserId()
+  ]);
+  const typedInvite = invite as Invite | null;
+  const isOwner = currentUserId === event.owner_user_id;
+  const canStartAdjustment = typedInvite?.status === "closed";
+  const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={event.title}
-        description="基本情報、日程調整、回答状況をここで確認します。"
-        action={<ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink>}
+        description="イベントの基本情報、参加者、日程調整をここで管理します。"
+        action={isOwner && canStartAdjustment ? <ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink> : null}
       />
 
       <Card>
         <dl className="grid gap-3 sm:grid-cols-2">
           <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
-          <Info label="進行状況" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
+          <Info label="ステータス" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
           <Info label="場所メモ" value={event.location_name ?? "未設定"} />
           <Info label="URL" value={event.url ?? "未設定"} />
           <Info label="メモ" value={event.memo ?? "未設定"} />
         </dl>
         <div className="mt-5">
-          <SecondaryLink href={`/events/${event.id}/edit`}>基本情報を編集</SecondaryLink>
+          <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
         </div>
       </Card>
+
+      {isOwner ? (
+        <Card>
+          <EventMemberInviteCard
+            memberCount={memberCount ?? 0}
+            inviteUrl={inviteUrl}
+            status={typedInvite?.status ?? null}
+            closeInviteAction={closeEventInvitesAction.bind(null, event.id)}
+            reissueInviteAction={revokeAndCreateEventInviteAction.bind(null, event.id)}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-ink">参加者</h2>
+              <p className="mt-2 text-sm text-ink/65">参加済み {memberCount ?? 0}人</p>
+            </div>
+            {canStartAdjustment ? <span className="text-sm font-bold text-pine">日程調整の準備中</span> : <span className="text-sm font-bold text-ink/60">参加者を募集中</span>}
+          </div>
+        </Card>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-ink">日程調整</h2>
@@ -64,7 +110,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
             ))}
           </div>
         ) : (
-          <EmptyState>日程調整はまだありません。「日程調整を始める」から候補日時を入力します。</EmptyState>
+          <EmptyState>
+            {canStartAdjustment ? "日程調整を始めると、候補日時を入力できます。" : "参加者を集めたら、参加受付を終了して日程調整へ進みます。"}
+          </EmptyState>
         )}
       </section>
 

@@ -16,6 +16,10 @@ export function canStartPlanFromMembers(members: EventMember[]) {
   return members.some((member) => member.role === "organizer" && member.status === "joined");
 }
 
+export function buildEventInviteUrl(siteUrl: string, token: string) {
+  return new URL(`/invites/${token}`, siteUrl).toString();
+}
+
 export function snapshotEventMembersForPlan(members: EventMember[], planId: string) {
   return members
     .filter((member) => member.status === "joined")
