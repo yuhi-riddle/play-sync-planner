@@ -5,12 +5,14 @@ import { Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
 import React from "react";
 
-const hiddenPaths = new Set(["/events/new", "/terms", "/privacy", "/login", "/consent"]);
+function isFabVisiblePath(pathname: string) {
+  return pathname === "/" || pathname === "/events" || pathname === "/plans" || pathname.startsWith("/plans/");
+}
 
 export function MobileEventFab() {
   const pathname = usePathname();
 
-  if (hiddenPaths.has(pathname) || pathname.endsWith("/edit")) {
+  if (!isFabVisiblePath(pathname)) {
     return null;
   }
 

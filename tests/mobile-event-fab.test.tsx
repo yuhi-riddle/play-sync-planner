@@ -25,4 +25,12 @@ describe("MobileEventFab", () => {
 
     expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
   });
+
+  it("hides on pages outside the event workflow", () => {
+    vi.mocked(usePathname).mockReturnValue("/settings");
+
+    render(<MobileEventFab />);
+
+    expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
+  });
 });
