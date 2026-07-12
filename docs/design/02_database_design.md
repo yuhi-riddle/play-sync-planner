@@ -1,6 +1,6 @@
-# 遊び予定の調整・清算管理アプリ DB設計 v1.1
+# 遊び予定の調整・清算管理アプリ DB設計 v1.2
 
-最終更新: 2026-07-03
+最終更新: 2026-07-13
 
 ## 1. DB設計方針
 
@@ -12,6 +12,10 @@
 ```text
 users
  ├─ events
+ │   ├─ event_members
+ │   ├─ event_invite_links
+ │   ├─ event_user_invitations
+ │   └─ event_messages
  │   └─ plans
  │       ├─ candidate_dates
  │       │   └─ availability_answers
@@ -24,6 +28,9 @@ users
  │       ├─ reminders
  │       └─ share_links
  ├─ notifications
+ ├─ user_connections
+ ├─ user_blocks
+ ├─ user_favorites
  └─ calendar_integrations
 ```
 
@@ -333,6 +340,77 @@ proof_type 候補：
 | created_at | timestamptz | yes | 作成日時 |
 | updated_at | timestamptz | yes | 更新日時 |
 
+## event_members
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| id | uuid | yes | イベント参加者ID |
+| event_id | uuid | yes | イベントID |
+| user_id | uuid | yes | 参加ユーザーID |
+| display_name | text | yes | 表示名 |
+| role | text | yes | organizer または member |
+| status | text | yes | joined または removed |
+| created_at | timestamptz | yes | 作成日時 |
+| updated_at | timestamptz | yes | 更新日時 |
+
+イベントの閲覧やチャット参加は、`status = 'joined'` の参加者に限る。
+
+## user_connections
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| follower_user_id | uuid | yes | フォローするユーザーID |
+| followed_user_id | uuid | yes | フォローされるユーザーID |
+| created_at | timestamptz | yes | 作成日時 |
+
+`follower_user_id` と `followed_user_id` の組み合わせを主キーとし、自分自身は登録できない。本人が自分のフォローだけを管理でき、両者に参加済みの共通イベントがあり、どちらからもブロックされていない場合だけ追加できる。
+
+## user_blocks
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| blocker_user_id | uuid | yes | ブロックしたユーザーID |
+| blocked_user_id | uuid | yes | ブロックされたユーザーID |
+| created_at | timestamptz | yes | 作成日時 |
+
+自分自身はブロックできない。ブロック判定は両方向を確認し、フォローとお気に入りの追加を止める。ブロック操作では、アプリ側で両方向のフォローとお気に入りも削除する。
+
+## user_favorites
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| user_id | uuid | yes | お気に入りに登録するユーザーID |
+| favorite_user_id | uuid | yes | お気に入り対象のユーザーID |
+| created_at | timestamptz | yes | 作成日時 |
+
+`user_id` と `favorite_user_id` の組み合わせを主キーとし、自分自身は登録できない。本人だけが管理でき、共通イベントがあり、相互ブロックがない場合だけ追加できる。
+
+## event_user_invitations
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| id | uuid | yes | 招待ID |
+| event_id | uuid | yes | 招待先イベントID |
+| inviter_user_id | uuid | yes | 招待したイベントオーナーID |
+| invitee_user_id | uuid | yes | 招待されたユーザーID |
+| status | text | yes | pending / accepted / declined / revoked |
+| created_at | timestamptz | yes | 作成日時 |
+| responded_at | timestamptz | no | 承諾・辞退日時 |
+
+同じイベントと招待先には、`pending` の招待を1件だけ保持する。イベントオーナーが作成・取り消し・削除を管理し、招待された本人だけが保留中の招待を承諾または辞退できる。作成できるのは、招待者と招待先に参加済みの共通イベントがあり、どちらからもブロックされていない場合だけとする。招待先・招待者・イベントは、承諾や辞退の更新時に変更できない。
+
+## event_messages
+
+| カラム名 | 型 | 必須 | 説明 |
+|---|---|---:|---|
+| id | uuid | yes | メッセージID |
+| event_id | uuid | yes | イベントID |
+| author_user_id | uuid | yes | 投稿者ユーザーID |
+| body | text | yes | 本文。前後の空白を除いて1文字以上、2,000文字以下 |
+| created_at | timestamptz | yes | 投稿日時 |
+
+`event_id, created_at` で古い順に取得する。読み取りと投稿は、対象イベントに参加済みのユーザーだけが行える。
+
 ## notifications
 
 | カラム名 | 型 | 必須 | 説明 |
@@ -352,9 +430,12 @@ kind 候補：
 
 - answer_deadline
 - unanswered
+- answer_received
 - settlement_needed
 - payment_due
 - confirmation_due
+- event_invitation
+- event_message
 
 制約：
 
@@ -403,6 +484,14 @@ Phase 3-B：
 サイト内通知：
 
 - notifications
+
+つながり・招待・チャット：
+
+- user_connections
+- user_blocks
+- user_favorites
+- event_user_invitations
+- event_messages
 
 後続Phase：
 
