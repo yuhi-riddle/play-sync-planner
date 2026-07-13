@@ -128,7 +128,7 @@ npm run build
 - `docs/phase2-google-calendar-setup.md`: Google Calendar セットアップ手順
 - `docs/current-status.md`: 現在の実装状況、残件、リリース前チェックリスト
 - `docs/release-checklist.md`: ローカル・本番公開前の確認手順
-- `docs/closed-beta-test-setup.md`: 外部テスター向けの公開テスト準備
+- `docs/closed-beta-test-setup.md`: 現在の環境をそのまま本番公開するための準備手順
 
 ## Phase 2 Google Calendar 連携
 
