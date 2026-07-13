@@ -1,7 +1,7 @@
 import { AccountEmailCard } from "@/components/account-email-card";
 import { CalendarConnectionCard } from "@/components/calendar-connection-card";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, SecondaryLink } from "@/components/ui";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +47,13 @@ export default async function SettingsPage({
     <div className="space-y-6">
       <PageHeader title="設定" description="アカウント情報と外部サービス連携を管理できます。" />
       <AccountEmailCard email={user.email} />
+      <section className="rounded-lg border border-white/80 bg-cream/88 p-5 shadow-soft">
+        <h2 className="text-xl font-semibold text-ink">つながり</h2>
+        <p className="mt-2 text-sm text-ink/65">一緒に参加した人のフォローやお気に入りを管理できます。</p>
+        <div className="mt-4">
+          <SecondaryLink href="/connections">つながりを開く</SecondaryLink>
+        </div>
+      </section>
       <CalendarConnectionCard
         connected={Boolean(calendarIntegration)}
         accountEmail={calendarIntegration?.account_email ?? null}

@@ -2,12 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { EventMemberInviteCard } from "@/components/event-member-invite-card";
+import { EventInviteCandidates } from "@/components/event-invite-candidates";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
+import { createEventUserInvitationsAction } from "@/lib/actions/connections";
 import { categoryLabels, eventStatusLabels, planStatusLabels } from "@/lib/constants";
+import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import { formatDateTime } from "@/lib/format";
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,13 @@ type EventPlan = {
 type Invite = {
   token: string;
   status: "open" | "closed" | "revoked";
+};
+
+type EventMemberRow = {
+  event_id: string;
+  user_id: string;
+  display_name: string;
+  created_at: string;
 };
 
 export default async function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -50,6 +60,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
   ]);
   const typedInvite = invite as Invite | null;
   const isOwner = currentUserId === event.owner_user_id;
+  const inviteCandidates = isOwner && currentUserId ? await loadInviteCandidates(eventId, currentUserId) : [];
   const canStartAdjustment = typedInvite?.status === "closed";
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
 
@@ -96,6 +107,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
         </Card>
       )}
 
+      {isOwner ? (
+        <Card>
+          <EventInviteCandidates candidates={inviteCandidates} action={createEventUserInvitationsAction.bind(null, eventId)} />
+        </Card>
+      ) : null}
+
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-ink">日程調整</h2>
         {(event.plans as EventPlan[] | undefined)?.length ? (
@@ -121,6 +138,80 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       </div>
     </div>
   );
+}
+
+async function loadInviteCandidates(eventId: string, currentUserId: string): Promise<ConnectionCandidate[]> {
+  const admin = createSupabaseAdminClient();
+  const { data: currentMemberships, error: currentMembershipsError } = await admin
+    .from("event_members")
+    .select("event_id")
+    .eq("user_id", currentUserId)
+    .eq("status", "joined");
+
+  if (currentMembershipsError || !currentMemberships?.length) {
+    return [];
+  }
+
+  const sharedEventIds = currentMemberships.map((membership) => membership.event_id);
+  const [membersResult, existingMembersResult, followingResult, followedByResult, favoritesResult, blocksResult] = await Promise.all([
+    admin.from("event_members").select("event_id, user_id, display_name, created_at").in("event_id", sharedEventIds).eq("status", "joined"),
+    admin.from("event_members").select("user_id").eq("event_id", eventId).eq("status", "joined"),
+    admin.from("user_connections").select("followed_user_id").eq("follower_user_id", currentUserId),
+    admin.from("user_connections").select("follower_user_id").eq("followed_user_id", currentUserId),
+    admin.from("user_favorites").select("favorite_user_id").eq("user_id", currentUserId),
+    admin
+      .from("user_blocks")
+      .select("blocker_user_id, blocked_user_id")
+      .or(`blocker_user_id.eq.${currentUserId},blocked_user_id.eq.${currentUserId}`)
+  ]);
+
+  if (
+    membersResult.error ||
+    existingMembersResult.error ||
+    followingResult.error ||
+    followedByResult.error ||
+    favoritesResult.error ||
+    blocksResult.error
+  ) {
+    throw new Error("招待候補を読み込めませんでした。");
+  }
+
+  const existingMemberIds = new Set((existingMembersResult.data ?? []).map((member) => member.user_id));
+  const blockedUserIds = new Set(
+    (blocksResult.data ?? []).map((block) => (block.blocker_user_id === currentUserId ? block.blocked_user_id : block.blocker_user_id))
+  );
+  const followingUserIds = new Set((followingResult.data ?? []).map((connection) => connection.followed_user_id));
+  const followedByUserIds = new Set((followedByResult.data ?? []).map((connection) => connection.follower_user_id));
+  const favoriteUserIds = new Set((favoritesResult.data ?? []).map((favorite) => favorite.favorite_user_id));
+  const people = new Map<string, ConnectionCandidate>();
+
+  for (const member of (membersResult.data ?? []) as EventMemberRow[]) {
+    if (member.user_id === currentUserId || existingMemberIds.has(member.user_id) || blockedUserIds.has(member.user_id)) {
+      continue;
+    }
+
+    const existing = people.get(member.user_id);
+    if (!existing) {
+      people.set(member.user_id, {
+        userId: member.user_id,
+        displayName: member.display_name,
+        sharedEventCount: 1,
+        latestSharedAt: member.created_at,
+        isFollowing: followingUserIds.has(member.user_id),
+        isFollowedBy: followedByUserIds.has(member.user_id),
+        isFavorite: favoriteUserIds.has(member.user_id)
+      });
+      continue;
+    }
+
+    existing.sharedEventCount += 1;
+    if (member.created_at > existing.latestSharedAt) {
+      existing.latestSharedAt = member.created_at;
+      existing.displayName = member.display_name;
+    }
+  }
+
+  return sortInviteCandidates([...people.values()]);
 }
 
 function Info({ label, value }: { label: string; value: string }) {

@@ -383,7 +383,7 @@ proof_type 候補：
 | favorite_user_id | uuid | yes | お気に入り対象のユーザーID |
 | created_at | timestamptz | yes | 作成日時 |
 
-`user_id` と `favorite_user_id` の組み合わせを主キーとし、自分自身は登録できない。本人だけが管理でき、共通イベントがあり、相互ブロックがない場合だけ追加できる。
+`user_id` と `favorite_user_id` の組み合わせを主キーとし、自分自身は登録できない。本人だけが管理でき、対象をフォロー済みで、共通イベントがあり、相互ブロックがない場合だけ追加できる。
 
 ## event_user_invitations
 
