@@ -100,11 +100,11 @@ OAuth Clientを作る前に、Google側でアプリ名などを登録します�
 7. Developer contact information の Email addresses に自分のメールアドレスを入れます。
 8. `Save and Continue` を押します。
 9. Scopes画面では、まず何も追加せず `Save and Continue` を押します。
-10. Test users画面が出たら、ログインに使う自分のGoogleアカウントを追加します。
+10. Test users画面が出たら、何も追加しません。
 11. `Save and Continue` を押します。
 12. Summary画面で内容を確認して完了します。
 
-最初は公開申請しなくて大丈夫です。テストユーザーに自分を入れて、開発中のログイン確認に使います。
+無料公開では、`External` と `In production` を使い、テストユーザーは追加しません。Google Calendar連携には未確認アプリの警告と新規ユーザー100人の上限があるため、独自ドメインを取得してOAuth審査を通すまでは少人数で使います。
 
 ### 6-4. OAuth Clientを作る
 

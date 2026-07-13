@@ -41,7 +41,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] Supabase Auth の Google Provider が有効になっている。
 - [ ] Google Cloud の OAuth Client に Supabase Auth callback が登録されている。
 - [ ] Google Calendar 用 OAuth Client に `http://localhost:3000/api/google-calendar/callback` が登録されている。
-- [ ] Google Auth Platform のテストユーザーに、自分のGoogleアカウントが入っている。
+- [ ] Google Auth Platform を `External` / `In production` に設定し、テストユーザーを追加していない。
 - [ ] Google Calendar のスコープに `https://www.googleapis.com/auth/calendar.events` が入っている。
 
 ## 4. 通知
@@ -57,7 +57,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] 通知を既読にできる。
 - [ ] すべて既読にしたあと、未読件数が0になる。
 
-本番では `vercel.json` により、1時間ごとに `/api/cron/notifications` を実行します。
+無料のVercel Hobbyプランでは、`vercel.json` により毎日 `00:00 UTC`（日本時間の午前9時台）に `/api/cron/notifications` を実行します。毎時・毎分の実行は有料プランが必要です。
 `CRON_SECRET` を設定した場合は、手動実行時に `Authorization: Bearer <CRON_SECRET>` が必要です。
 
 ## 5. 手動確認シナリオ

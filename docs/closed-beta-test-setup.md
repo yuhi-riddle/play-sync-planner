@@ -1,6 +1,6 @@
-# Madoi 本番公開手順
+# Madoi 独自ドメイン・OAuth審査手順
 
-この手順では、現在使っているSupabaseプロジェクトをそのまま本番として運用します。別のテスト環境は作りません。公開前にテストデータだけを削除し、Madoiの本番URLを `https://madoi.app` に統一します。
+この手順は、無料URLでの公開を始めたあとに、独自ドメイン `madoi.app` とGoogle OAuth審査へ移行するためのものです。先に [無料公開手順](./free-release-setup.md) を完了してください。
 
 > [!WARNING]
 > Google Calendarの権限を、誰でも警告なしで使えるようにするにはGoogleのOAuth審査が必要です。審査前でもGoogleログインは公開できますが、Calendar連携には警告が出て、新規連携ユーザーは合計100人までです。

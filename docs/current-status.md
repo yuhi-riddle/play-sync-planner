@@ -208,7 +208,7 @@ Phase 1 は完了済みです。
 - [ ] Google Calendar client secret を設定済み。
 - [ ] Google Calendar redirect URI を設定済み。
 - [ ] Calendar token encryption key を設定済み。
-- [ ] Google OAuth のテストユーザーを設定済み。
+- [ ] Google OAuth を `External` / `In production` に設定し、テストユーザーを追加していない。
 - [ ] Google OAuth のリダイレクト URI にローカル用 callback を登録済み。
 - [ ] Google ログインと Calendar 連携で同じ OAuth Client を使う場合、Supabase auth callback も登録済み。
 - [ ] Vercel Cron を使う場合、`CRON_SECRET` の設定方針を決めている。
