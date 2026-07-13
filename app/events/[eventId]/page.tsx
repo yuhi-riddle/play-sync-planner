@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 
 import { EventMemberInviteCard } from "@/components/event-member-invite-card";
 import { EventInviteCandidates } from "@/components/event-invite-candidates";
+import { EventChat } from "@/components/event-chat";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
+import { createEventMessageAction } from "@/lib/actions/event-messages";
 import { createEventUserInvitationsAction } from "@/lib/actions/connections";
 import { categoryLabels, eventStatusLabels, planStatusLabels } from "@/lib/constants";
+import type { EventMessage } from "@/lib/domain/event-chat";
 import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import { formatDateTime } from "@/lib/format";
@@ -31,6 +34,13 @@ type EventMemberRow = {
   event_id: string;
   user_id: string;
   display_name: string;
+  created_at: string;
+};
+
+type EventMessageRow = {
+  id: string;
+  author_user_id: string;
+  body: string;
   created_at: string;
 };
 
@@ -61,6 +71,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
   const typedInvite = invite as Invite | null;
   const isOwner = currentUserId === event.owner_user_id;
   const inviteCandidates = isOwner && currentUserId ? await loadInviteCandidates(eventId, currentUserId) : [];
+  const chat = currentUserId ? await loadEventChat(eventId, currentUserId) : { isJoined: false, messages: [] };
   const canStartAdjustment = typedInvite?.status === "closed";
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
 
@@ -113,6 +124,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
         </Card>
       ) : null}
 
+      <Card>
+        <EventChat
+          messages={chat.messages}
+          action={createEventMessageAction.bind(null, eventId)}
+          canPost={chat.isJoined && event.status !== "cancelled"}
+          unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
+        />
+      </Card>
+
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-ink">日程調整</h2>
         {(event.plans as EventPlan[] | undefined)?.length ? (
@@ -138,6 +158,58 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       </div>
     </div>
   );
+}
+
+async function loadEventChat(eventId: string, currentUserId: string): Promise<{ isJoined: boolean; messages: EventMessage[] }> {
+  const admin = createSupabaseAdminClient();
+  const { data: membership, error: membershipError } = await admin
+    .from("event_members")
+    .select("user_id")
+    .eq("event_id", eventId)
+    .eq("user_id", currentUserId)
+    .eq("status", "joined")
+    .maybeSingle();
+
+  if (membershipError) {
+    throw new Error("チャットの参加状態を確認できませんでした");
+  }
+
+  if (!membership) {
+    return { isJoined: false, messages: [] };
+  }
+
+  const { data: rows, error: messagesError } = await admin
+    .from("event_messages")
+    .select("id, author_user_id, body, created_at")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (messagesError) {
+    throw new Error("チャットを読み込めませんでした");
+  }
+
+  const messages = (rows ?? []) as EventMessageRow[];
+  const authorIds = [...new Set(messages.map((message) => message.author_user_id))];
+  const { data: members, error: membersError } = authorIds.length
+    ? await admin.from("event_members").select("user_id, display_name").eq("event_id", eventId).in("user_id", authorIds)
+    : { data: [], error: null };
+
+  if (membersError) {
+    throw new Error("チャット参加者を読み込めませんでした");
+  }
+
+  const names = new Map((members ?? []).map((member) => [member.user_id, member.display_name]));
+  return {
+    isJoined: true,
+    messages: messages.reverse().map((message) => ({
+      id: message.id,
+      authorName: names.get(message.author_user_id) ?? "参加者",
+      body: message.body,
+      createdAt: message.created_at,
+      isOwn: message.author_user_id === currentUserId
+    }))
+  };
 }
 
 async function loadInviteCandidates(eventId: string, currentUserId: string): Promise<ConnectionCandidate[]> {

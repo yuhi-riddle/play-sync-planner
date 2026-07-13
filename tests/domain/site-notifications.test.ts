@@ -14,6 +14,25 @@ import {
 } from "@/lib/domain/site-notifications";
 
 describe("buildNotificationCandidate", () => {
+  it("builds an event message notification without message contents", () => {
+    expect(
+      buildNotificationCandidate({
+        userId: "user-1",
+        kind: "event_message",
+        planId: "event-1",
+        title: "夏のバーベキュー",
+        href: "/events/event-1#chat"
+      })
+    ).toEqual({
+      userId: "user-1",
+      kind: "event_message",
+      title: "イベントに新しいメッセージがあります",
+      body: "夏のバーベキューに新しいメッセージがあります。",
+      href: "/events/event-1#chat",
+      dedupeKey: "event_message:event-1"
+    });
+  });
+
   it("builds a stable answer deadline notification", () => {
     expect(
       buildNotificationCandidate({

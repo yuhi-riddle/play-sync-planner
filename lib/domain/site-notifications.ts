@@ -4,7 +4,8 @@ export type NotificationKind =
   | "answer_received"
   | "settlement_needed"
   | "payment_due"
-  | "confirmation_due";
+  | "confirmation_due"
+  | "event_message";
 
 export type NotificationCandidateInput = {
   userId: string;
@@ -87,7 +88,8 @@ const notificationTitles: Record<NotificationKind, string> = {
   answer_received: "日程回答が届きました",
   settlement_needed: "清算の準備が必要です",
   payment_due: "支払い待ちがあります",
-  confirmation_due: "受け取り確認待ちがあります"
+  confirmation_due: "受け取り確認待ちがあります",
+  event_message: "イベントに新しいメッセージがあります"
 };
 
 export function buildNotificationCandidate(input: NotificationCandidateInput): NotificationCandidate {
@@ -332,6 +334,8 @@ function buildNotificationBody(input: NotificationCandidateInput) {
       return participantText ? `${input.title} で ${participantText} の支払い待ちがあります。` : `${input.title} で支払い待ちがあります。`;
     case "confirmation_due":
       return participantText ? `${input.title} で ${participantText} の受け取り確認待ちがあります。` : `${input.title} で受け取り確認待ちがあります。`;
+    case "event_message":
+      return `${input.title}に新しいメッセージがあります。`;
   }
 }
 

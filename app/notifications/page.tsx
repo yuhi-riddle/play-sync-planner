@@ -27,7 +27,9 @@ const kindLabels: Record<string, string> = {
   unanswered: "未回答",
   settlement_needed: "清算",
   payment_due: "支払い",
-  confirmation_due: "受け取り確認"
+  confirmation_due: "受け取り確認",
+  event_invitation: "招待",
+  event_message: "チャット"
 };
 
 export default async function NotificationsPage({
@@ -78,7 +80,7 @@ export default async function NotificationsPage({
     <div className="space-y-6">
       <PageHeader
         title="通知"
-        description="回答期限、未回答、清算、支払い確認など、対応が必要なことをまとめて確認します。"
+        description="回答期限、未回答、招待、チャット、清算などをまとめて確認します。"
         action={
           activeFilter === "unread" && unreadCount > 0 ? (
             <form action={markAllNotificationsReadAction}>
