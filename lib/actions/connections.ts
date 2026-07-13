@@ -365,46 +365,34 @@ export async function respondToEventUserInvitationAction(
   }
 
   if (response === "accepted") {
-    if (membershipResult.data?.status === "joined" && claimedInvitation) {
-      throw new Error("このイベントにはすでに参加しています。");
-    }
+    if (membershipResult.data?.status !== "joined") {
+      const { error: memberError } = await admin.from("event_members").upsert(
+        {
+          event_id: invitation.event_id,
+          user_id: user.id,
+          display_name: displayNameForUser(user),
+          role: "member",
+          status: "joined"
+        },
+        { onConflict: "event_id,user_id" }
+      );
 
-    const { error: memberError } = await admin.from("event_members").upsert(
-      {
-        event_id: invitation.event_id,
-        user_id: user.id,
-        display_name: displayNameForUser(user),
-        role: "member",
-        status: "joined"
-      },
-      { onConflict: "event_id,user_id" }
-    );
+      if (memberError) {
+        if (claimedInvitation) {
+          const { error: rollbackError } = await admin
+            .from("event_user_invitations")
+            .update({ status: "pending", responded_at: null })
+            .eq("id", invitation.id)
+            .eq("status", "accepted");
 
-    if (memberError) {
-      if (claimedInvitation) {
-        const { error: rollbackError } = await admin
-          .from("event_user_invitations")
-          .update({ status: "pending", responded_at: null })
-          .eq("id", invitation.id)
-          .eq("status", "accepted");
-
-        if (rollbackError) {
-          await admin.from("event_user_invitations").delete().eq("id", invitation.id).eq("status", "accepted");
+          if (rollbackError) {
+            await admin.from("event_user_invitations").delete().eq("id", invitation.id).eq("status", "accepted");
+          }
         }
+
+        throw new Error("イベントへの参加を確定できませんでした。");
       }
-
-      throw new Error("イベントへの参加を確定できませんでした。");
     }
-  }
-
-  const { error: updateError } = await admin
-    .from("event_user_invitations")
-    .update({ status: response, responded_at: new Date().toISOString() })
-    .eq("id", invitation.id)
-    .eq("status", "pending");
-
-  if (updateError) {
-    throw new Error("招待への返答を保存できませんでした。");
   }
 
   revalidateConnections(invitation.event_id);
