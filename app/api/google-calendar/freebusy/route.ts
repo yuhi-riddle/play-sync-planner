@@ -57,7 +57,18 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ connected: true, busy });
-  } catch {
-    return NextResponse.json({ connected: true, busy: [] }, { status: 502 });
+  } catch (error) {
+    // 握り潰すと 502 の原因が追えなくなる（トークン失効か復号失敗かの区別がつかない）
+    console.error("[google-calendar/freebusy] failed", error);
+
+    return NextResponse.json(
+      {
+        connected: true,
+        busy: [],
+        // 原因は開発時だけ返す。本番でクライアントに内部エラーを晒さない
+        ...(process.env.NODE_ENV === "production" ? {} : { debug: String(error) })
+      },
+      { status: 502 }
+    );
   }
 }

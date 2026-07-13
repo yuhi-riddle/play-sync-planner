@@ -31,12 +31,12 @@ export function ConnectionList({ favorites, mutualFollows = [], following, candi
 
 function ConnectionSection({ title, people, emptyMessage }: { title: string; people: ConnectionCandidate[]; emptyMessage: string }) {
   return (
-    <section aria-labelledby={`connection-${title}`} className="rounded-lg border border-white/80 bg-cream/88 p-5 shadow-soft">
+    <section aria-labelledby={`connection-${title}`} className="rounded-control border border-line bg-surface p-5 shadow-soft">
       <h2 id={`connection-${title}`} className="text-xl font-semibold text-ink">
         {title}
       </h2>
       <div className="mt-4 space-y-3">
-        {people.length > 0 ? people.map((person) => <ConnectionRow key={person.userId} person={person} />) : <p className="text-sm text-ink/65">{emptyMessage}</p>}
+        {people.length > 0 ? people.map((person) => <ConnectionRow key={person.userId} person={person} />) : <p className="text-sm text-muted">{emptyMessage}</p>}
       </div>
     </section>
   );
@@ -59,11 +59,11 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
   }
 
   return (
-    <article className="rounded-lg border border-ink/8 bg-white/66 p-4">
+    <article className="rounded-control border border-line bg-surface p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-semibold text-ink">{person.displayName}</p>
-          <p className="mt-1 text-sm text-ink/60">
+          <p className="mt-1 text-sm text-muted">
             一緒だったイベント {person.sharedEventCount}件
             {isMutualFollow(person) ? "・相互フォロー" : person.isFollowing ? "・フォロー中" : ""}
           </p>
@@ -87,9 +87,9 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
         </div>
       </div>
       {confirmingBlock ? (
-        <div className="mt-4 rounded-lg border border-clay/25 bg-clay/10 p-3" aria-live="polite">
+        <div className="mt-4 rounded-control border border-clay/25 bg-clay/10 p-3" aria-live="polite">
           <p className="text-sm font-semibold text-ink">{person.displayName}さんをブロックしますか？</p>
-          <p className="mt-1 text-sm text-ink/70">相互のフォローとお気に入りも解除されます。</p>
+          <p className="mt-1 text-sm text-muted">相互のフォローとお気に入りも解除されます。</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -103,14 +103,14 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
               type="button"
               disabled={isPending}
               onClick={() => setConfirmingBlock(false)}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
             >
               やめる
             </button>
           </div>
         </div>
       ) : null}
-      {error ? <p className="mt-3 text-sm font-semibold text-clay" role="alert">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm font-semibold text-clay-ink" role="alert">{error}</p> : null}
     </article>
   );
 }
@@ -141,10 +141,10 @@ function ActionButton({
       onClick={onClick}
       className={
         danger
-          ? "inline-flex h-11 w-11 items-center justify-center rounded-full border border-clay/30 bg-white text-clay focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          ? "inline-flex h-11 w-11 items-center justify-center rounded-full border border-clay/30 bg-white text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           : active
-            ? "inline-flex h-11 w-11 items-center justify-center rounded-full bg-clay/12 text-clay focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            : "inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white text-ink hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            ? "inline-flex h-11 w-11 items-center justify-center rounded-full bg-clay/12 text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            : "inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white text-ink hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       }
     >
       <Icon aria-hidden="true" className="h-4 w-4" />

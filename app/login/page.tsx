@@ -56,12 +56,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
-      <PageHeader title="はじめに確認してください" description="Madoi を使うには、利用規約とプライバシーポリシーへの同意、Google ログインが必要です。" />
+      <PageHeader eyebrow="Welcome" title="はじめに確認してください" description="Madoi を使うには、利用規約とプライバシーポリシーへの同意、Google ログインが必要です。" />
       <Card className="max-w-xl">
         {hasSupabaseEnv() ? (
           <LoginConsentForm action={signInWithGoogle} nextPath={nextPath} />
         ) : (
-          <p className="text-sm leading-6 text-ink/70">
+          <p className="text-sm leading-6 text-muted">
             Supabase の環境変数が未設定です。`.env.local` に `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` を設定してください。
           </p>
         )}

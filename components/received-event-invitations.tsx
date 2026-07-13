@@ -15,7 +15,7 @@ export function ReceivedEventInvitations({ invitations }: { invitations: Receive
   if (invitations.length === 0) return null;
 
   return (
-    <section aria-labelledby="received-event-invitations-heading" className="rounded-lg border border-white/80 bg-cream/88 p-5 shadow-soft">
+    <section aria-labelledby="received-event-invitations-heading" className="rounded-control border border-line bg-surface p-5 shadow-soft">
       <h2 id="received-event-invitations-heading" className="text-xl font-semibold text-ink">届いた招待</h2>
       <div className="mt-4 space-y-3">
         {invitations.map((invitation) => <ReceivedEventInvitationRow key={invitation.id} invitation={invitation} />)}
@@ -43,12 +43,12 @@ function ReceivedEventInvitationRow({ invitation }: { invitation: ReceivedEventI
   }
 
   return (
-    <article className="rounded-lg border border-ink/8 bg-white/66 p-4">
+    <article className="rounded-control border border-line bg-surface p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-semibold text-ink">{invitation.eventTitle}</p>
-          <p className="mt-1 text-sm text-ink/60">主催者: {invitation.organizerName}</p>
-          <time className="mt-1 block text-sm text-ink/60" dateTime={invitation.createdAt}>
+          <p className="mt-1 text-sm text-muted">主催者: {invitation.organizerName}</p>
+          <time className="mt-1 block text-sm text-muted" dateTime={invitation.createdAt}>
             {new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "numeric", day: "numeric" }).format(new Date(invitation.createdAt))}
           </time>
         </div>
@@ -56,13 +56,13 @@ function ReceivedEventInvitationRow({ invitation }: { invitation: ReceivedEventI
           <button type="button" disabled={isPending || message !== null} onClick={() => respond("accepted")} className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
             参加する
           </button>
-          <button type="button" disabled={isPending || message !== null} onClick={() => respond("declined")} className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="button" disabled={isPending || message !== null} onClick={() => respond("declined")} className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
             今回は見送る
           </button>
         </div>
       </div>
       {message ? <p className="mt-3 text-sm font-semibold text-pine" role="status">{message}</p> : null}
-      {error ? <p className="mt-3 text-sm font-semibold text-clay" role="alert">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm font-semibold text-clay-ink" role="alert">{error}</p> : null}
     </article>
   );
 }

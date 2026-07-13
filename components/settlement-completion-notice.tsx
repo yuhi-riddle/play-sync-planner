@@ -20,7 +20,7 @@ export function SettlementCompletionNotice({
         <CheckCircle2 aria-hidden="true" className="h-6 w-6 shrink-0 text-pine" />
         <div>
           <h2 className="text-lg font-semibold text-ink">清算完了</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/64">支払いと受け取り確認がすべて完了しています。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">支払いと受け取り確認がすべて完了しています。</p>
         </div>
       </div>
     </Card>

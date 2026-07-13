@@ -25,19 +25,19 @@ export function SettlementConfirmationQueue({
   return (
     <Card>
       <h2 className="text-lg font-semibold text-ink">受け取り確認待ち</h2>
-      <p className="mt-1 text-sm leading-6 text-ink/60">支払い記録が入ったものを確認します。</p>
+      <p className="mt-1 text-sm leading-6 text-muted">支払い記録が入ったものを確認します。</p>
       <div className="mt-5 grid gap-3">
         {items.length > 0 ? (
           items.map((item) => (
-            <article key={item.id} className="rounded-lg border border-white/75 bg-white/62 p-4">
+            <article key={item.id} className="rounded-control border border-line bg-surface p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="font-bold text-ink">
                     {item.fromName}さんから{item.toName}さんへ {formatYenText(item.amount)} の支払い記録があります。
                   </p>
-                  <p className="mt-1 text-xs text-ink/54">記録 {formatDateTime(item.paidAt)}</p>
+                  <p className="mt-1 text-xs text-muted">記録 {formatDateTime(item.paidAt)}</p>
                   {[item.paymentMethod, item.memo].filter(Boolean).length > 0 ? (
-                    <p className="mt-3 text-sm leading-6 text-ink/70">{[item.paymentMethod, item.memo].filter(Boolean).join(" / ")}</p>
+                    <p className="mt-3 text-sm leading-6 text-muted">{[item.paymentMethod, item.memo].filter(Boolean).join(" / ")}</p>
                   ) : null}
                   {item.paymentUrl ? <PaymentDestinationLink href={item.paymentUrl} label="支払い記録を開く" className="mt-3" /> : null}
                 </div>
@@ -51,7 +51,7 @@ export function SettlementConfirmationQueue({
                   </button>
                 </form>
                 ) : (
-                  <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-ink/10 bg-white/68 px-4 py-2 text-sm font-bold text-ink/58">
+                  <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-muted">
                     受け取り側の確認待ち
                   </span>
                 )}

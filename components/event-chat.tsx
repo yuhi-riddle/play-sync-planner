@@ -38,17 +38,17 @@ export function EventChat({
     <section id="chat" aria-labelledby="event-chat-heading" className="space-y-4">
       <div>
         <h2 id="event-chat-heading" className="text-xl font-semibold text-ink">参加者チャット</h2>
-        <p className="mt-2 text-sm text-ink/65">イベント参加者だけが閲覧・投稿できます。</p>
+        <p className="mt-2 text-sm text-muted">イベント参加者だけが閲覧・投稿できます。</p>
       </div>
 
       {messages.length ? (
         <ol className="space-y-3" aria-label="チャットメッセージ">
           {messages.map((message) => (
             <li key={message.id} className={message.isOwn ? "ml-auto max-w-xl" : "mr-auto max-w-xl"}>
-              <article className={message.isOwn ? "rounded-lg bg-mist p-4" : "rounded-lg bg-white/70 p-4"}>
+              <article className={message.isOwn ? "rounded-control bg-mist p-4" : "rounded-control bg-surface p-4"}>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <p className="font-semibold text-ink">{message.isOwn ? "あなた" : message.authorName}</p>
-                  <time className="text-xs text-ink/55" dateTime={message.createdAt}>
+                  <time className="text-xs text-muted" dateTime={message.createdAt}>
                     {new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" }).format(new Date(message.createdAt))}
                   </time>
                 </div>
@@ -58,11 +58,11 @@ export function EventChat({
           ))}
         </ol>
       ) : (
-        <p className="rounded-lg border border-dashed border-moss/28 bg-cream/58 p-6 text-sm text-ink/68">まだメッセージはありません。最初のひとことを送ってみましょう。</p>
+        <p className="rounded-control border border-line bg-sunken p-6 text-sm text-muted">まだメッセージはありません。最初のひとことを送ってみましょう。</p>
       )}
 
       {canPost ? (
-        <form onSubmit={submit} className="space-y-3 rounded-lg border border-ink/10 bg-white/66 p-4">
+        <form onSubmit={submit} className="space-y-3 rounded-control border border-line bg-surface p-4">
           <label className="block text-sm font-medium text-ink" htmlFor="event-chat-message">
             メッセージ
           </label>
@@ -72,10 +72,10 @@ export function EventChat({
             rows={4}
             maxLength={2000}
             placeholder="参加者にメッセージを送る"
-            className="w-full rounded-lg border border-moss/18 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-ink/34 focus:border-moss focus:ring-2 focus:ring-moss/20"
+            className="w-full rounded-control border border-moss/18 bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-ink/55">2,000文字まで</p>
+            <p className="text-xs text-muted">2,000文字まで</p>
             <button
               type="submit"
               disabled={isPending}
@@ -86,12 +86,12 @@ export function EventChat({
           </div>
         </form>
       ) : (
-        <p className="rounded-lg border border-dashed border-moss/28 bg-cream/58 p-4 text-sm text-ink/68">
+        <p className="rounded-control border border-line bg-sunken p-4 text-sm text-muted">
           {unavailableReason ?? "このチャットはイベント参加者のみ利用できます。"}
         </p>
       )}
 
-      {error ? <p aria-live="polite" className="text-sm font-semibold text-clay">{error}</p> : null}
+      {error ? <p aria-live="polite" className="text-sm font-semibold text-clay-ink">{error}</p> : null}
     </section>
   );
 }

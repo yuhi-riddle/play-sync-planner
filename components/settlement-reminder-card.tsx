@@ -50,7 +50,7 @@ export function SettlementReminderCard({
         ))}
       </div>
       <textarea
-        className="min-h-36 w-full resize-y rounded-lg border border-ink/10 bg-white/82 p-3 text-sm leading-6 text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="min-h-36 w-full resize-y rounded-control border border-line bg-surface p-3 text-sm leading-6 text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
         value={message}
         readOnly
         aria-label={textareaLabel}
@@ -59,7 +59,7 @@ export function SettlementReminderCard({
         <button
           type="button"
           onClick={copyMessage}
-          className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           aria-live="polite"
         >
           {copied ? <Check aria-hidden="true" className="mr-2 h-4 w-4" /> : <Copy aria-hidden="true" className="mr-2 h-4 w-4" />}
@@ -77,7 +77,7 @@ export function SettlementReminderCard({
           </button>
         </form>
       </div>
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         {latestSentAt ? `前回: ${formatDateTime(latestSentAt)}` : "まだ送信記録はありません。"} / 記録済み {sentCount}回
       </p>
     </div>

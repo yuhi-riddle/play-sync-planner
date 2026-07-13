@@ -44,15 +44,15 @@ function CalendarNotice({
   state: "idle" | "loading" | "ready" | "disconnected" | "error";
 }) {
   if (state === "loading") {
-    return <p className="mt-3 text-xs text-ink/55">Google Calendarを確認中です。</p>;
+    return <p className="mt-3 text-xs text-muted">Google Calendarを確認中です。</p>;
   }
 
   if (state === "disconnected") {
-    return <p className="mt-3 text-xs text-ink/55">Google Calendar未連携のため、候補日の重なり確認は表示していません。</p>;
+    return <p className="mt-3 text-xs text-muted">Google Calendar未連携のため、候補日の重なり確認は表示していません。</p>;
   }
 
   if (state === "error") {
-    return <p className="mt-3 text-xs text-clay">Google Calendarを取得できませんでした。回答はこのまま送信できます。</p>;
+    return <p className="mt-3 text-xs text-clay-ink">Google Calendarを取得できませんでした。回答はこのまま送信できます。</p>;
   }
 
   return null;
@@ -64,14 +64,14 @@ function CandidateCalendarWarning({ events }: { events: AnswerCalendarEvent[] })
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-clay/24 bg-clay/8 p-3">
+    <div className="mt-3 rounded-control border border-clay/24 bg-clay/8 p-3">
       <p className="text-sm font-bold text-ink">Google予定と重なっています</p>
       <ul className="mt-2 grid gap-2">
         {events.map((event) => (
-          <li key={`${event.start}-${event.end}-${event.title ?? ""}`} className="rounded-lg bg-white/62 px-3 py-2 text-sm text-ink">
+          <li key={`${event.start}-${event.end}-${event.title ?? ""}`} className="rounded-control bg-surface px-3 py-2 text-sm text-ink">
             <p className="font-bold">{event.title || "予定あり"}</p>
-            <p className="mt-1 text-xs text-ink/60">{formatDateTimeRange(event.start, event.end)}</p>
-            {event.location ? <p className="mt-1 text-xs text-ink/60">{event.location}</p> : null}
+            <p className="mt-1 text-xs text-muted">{formatDateTimeRange(event.start, event.end)}</p>
+            {event.location ? <p className="mt-1 text-xs text-muted">{event.location}</p> : null}
           </li>
         ))}
       </ul>
@@ -157,13 +157,13 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
   return (
     <MadoiForm action={action} className="grid gap-5">
       <TextField label="名前" name="displayName" required requiredMessage="回答する人の名前を入力してください" />
-      <div className="rounded-lg border border-white/80 bg-cream/86 p-4 shadow-soft">
+      <div className="rounded-control border border-line bg-surface p-4 shadow-soft">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-bold text-ink">
               回答済み {answeredCount}/{candidateDates.length}
             </p>
-            <p className="mt-1 text-xs leading-5 text-ink/60">候補が多いときは一括入力して、違う日だけ直せます。</p>
+            <p className="mt-1 text-xs leading-5 text-muted">候補が多いときは一括入力して、違う日だけ直せます。</p>
             <CalendarNotice state={calendarState} />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
               <button
                 key={choice.value}
                 type="button"
-                className="inline-flex min-h-9 items-center justify-center rounded-full border border-ink/10 bg-white/84 px-3 py-1.5 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                className="inline-flex min-h-9 items-center justify-center rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
                 onClick={() => applyAll(choice.value)}
               >
                 全部{choice.shortLabel}
@@ -180,7 +180,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
           </div>
         </div>
         <div
-          className="mt-4 h-2 rounded-full bg-white/86"
+          className="mt-4 h-2 rounded-full bg-surface"
           aria-label="回答進捗"
           role="progressbar"
           aria-valuemin={0}
@@ -199,7 +199,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
           return (
             <fieldset
               key={candidate.id}
-              className={`rounded-lg border bg-white/68 p-4 ${isUnanswered ? "border-clay/60" : "border-white/80"}`}
+              className={`rounded-control border bg-surface p-4 ${isUnanswered ? "border-clay/60" : "border-line"}`}
             >
               <legend className="px-1 text-sm font-semibold text-ink">
                 候補{index + 1} {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
@@ -208,7 +208,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
                 {choices.map((choice) => (
                   <label
                     key={choice.value}
-                    className="flex items-center gap-2 rounded-full border border-ink/10 bg-cream/80 px-3 py-2 text-sm font-semibold"
+                    className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-sm font-semibold"
                   >
                     <input
                       type="radio"
@@ -229,7 +229,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
               <label className="mt-3 block text-sm font-medium text-ink">
                 <span>コメント</span>
                 <input
-                  className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
+                  className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
                   name={`comment:${candidate.id}`}
                 />
               </label>
@@ -238,7 +238,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
         })}
       </div>
       <div>
-        <p aria-live="polite" className="mb-2 text-sm text-clay">
+        <p aria-live="polite" className="mb-2 text-sm text-clay-ink">
           {remainingCount > 0 ? `残り${remainingCount}件の候補に回答すると送信できます。` : ""}
         </p>
         <button

@@ -43,10 +43,10 @@ export function EventMemberInviteCard({
               参加者
             </h2>
           </div>
-          <p className="mt-2 text-sm text-ink/65">Google ログインと Google Calendar 連携を済ませた人が参加できます。</p>
+          <p className="mt-2 text-sm text-muted">Google ログインと Google Calendar 連携を済ませた人が参加できます。</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={isOpen ? "rounded-full bg-skywash px-3 py-1.5 text-sm font-bold text-pine" : "rounded-full bg-ink/7 px-3 py-1.5 text-sm font-bold text-ink/65"}>
+          <span className={isOpen ? "rounded-full bg-skywash px-3 py-1.5 text-sm font-bold text-pine" : "rounded-full bg-ink/7 px-3 py-1.5 text-sm font-bold text-muted"}>
             {isOpen ? "参加受付中" : "参加受付終了"}
           </span>
           <span className="rounded-full bg-moss/12 px-3 py-1.5 text-sm font-bold text-pine">参加済み {memberCount}人</span>
@@ -54,14 +54,14 @@ export function EventMemberInviteCard({
       </div>
 
       {inviteUrl && isOpen ? (
-        <div className="space-y-3 rounded-lg border border-moss/25 bg-moss/5 p-4">
+        <div className="space-y-3 rounded-control border border-moss/25 bg-moss/5 p-4">
           <p className="text-sm font-semibold text-ink">招待リンクを送って参加者を集めましょう。</p>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <code className="min-w-0 flex-1 break-all rounded-md bg-white/85 px-3 py-2 text-sm text-ink">{inviteUrl}</code>
+            <code className="min-w-0 flex-1 break-all rounded-control bg-surface px-3 py-2 text-sm text-ink">{inviteUrl}</code>
             <button
               type="button"
               onClick={copyInviteUrl}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
               aria-live="polite"
             >
               {copied ? <Check aria-hidden="true" className="mr-2 h-4 w-4" /> : <Copy aria-hidden="true" className="mr-2 h-4 w-4" />}
@@ -80,7 +80,7 @@ export function EventMemberInviteCard({
             <form action={reissueInviteAction}>
               <button
                 type="submit"
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
               >
                 <Link2 aria-hidden="true" className="mr-2 h-4 w-4" />
                 新しいリンクを発行
@@ -89,12 +89,12 @@ export function EventMemberInviteCard({
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border border-ink/10 bg-white/65 p-4 text-sm text-ink/70">
+        <div className="rounded-control border border-line bg-surface p-4 text-sm text-muted">
           {status === "closed" ? "参加受付は終了しています。参加者を追加する場合は、新しい招待リンクを発行してください。" : "招待リンクを準備しています。"}
           <form action={reissueInviteAction} className="mt-3">
             <button
               type="submit"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
             >
               <Link2 aria-hidden="true" className="mr-2 h-4 w-4" />
               新しいリンクを発行

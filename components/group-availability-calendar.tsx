@@ -119,7 +119,7 @@ export function GroupAvailabilityCalendar({
   }, [availabilityByDate, onAvailabilityByDate]);
 
   return (
-    <section className="rounded-lg border border-moss/20 bg-mist/24 p-4" aria-labelledby="group-availability-heading">
+    <section className="rounded-control border border-moss/20 bg-mist/24 p-4" aria-labelledby="group-availability-heading">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -128,13 +128,13 @@ export function GroupAvailabilityCalendar({
               参加者全体の空きやすさ
             </h3>
           </div>
-          <p className="mt-1 text-sm leading-6 text-ink/62">予定の名前・場所・個別の空き時間は表示しません。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">予定の名前・場所・個別の空き時間は表示しません。</p>
         </div>
         {error !== accessDeniedMessage ? (
           <button
             type="button"
             onClick={refresh}
-            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:self-auto"
+            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:self-auto"
             aria-label="空き状況を更新"
           >
             <RefreshCw aria-hidden="true" className="h-4 w-4" />
@@ -144,9 +144,9 @@ export function GroupAvailabilityCalendar({
       </div>
 
       <div className="mt-4" aria-live="polite">
-        {loading ? <p className="text-sm text-ink/60">空き状況を集計しています。</p> : null}
+        {loading ? <p className="text-sm text-muted">空き状況を集計しています。</p> : null}
         {error ? (
-          <div className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink">
+          <div className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink">
             <p>{error}</p>
             {errorCode === "calendar_reconnect_required" ? (
               <a href={`/api/google-calendar/connect?next=${encodeURIComponent(`/events/${eventId}/plans/new`)}`} className="mt-2 inline-flex font-bold text-pine underline underline-offset-4">
@@ -157,9 +157,9 @@ export function GroupAvailabilityCalendar({
         ) : null}
         {!loading && !error && availability ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/82 px-3 py-1.5 text-sm font-bold text-pine">参加者 {availability.participantCount}人</span>
+            <span className="rounded-full bg-surface px-3 py-1.5 text-sm font-bold text-pine">参加者 {availability.participantCount}人</span>
             {selectedAvailableCount === null ? (
-              <span className="text-sm text-ink/60">日時を選ぶと、その候補で空いている人数を表示します。</span>
+              <span className="text-sm text-muted">日時を選ぶと、その候補で空いている人数を表示します。</span>
             ) : (
               <span className="rounded-full bg-moss/12 px-3 py-1.5 text-sm font-bold text-pine">
                 選択中: 空き {selectedAvailableCount}/{availability.participantCount}人以上

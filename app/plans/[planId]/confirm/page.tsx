@@ -39,7 +39,7 @@ export default async function ConfirmPlanPage({ params }: { params: Promise<{ pl
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader eyebrow="Schedule"
         title="日程確定"
         description={plan.title ? `${plan.title} の候補から、確定する日程を選びます。` : "候補から、確定する日程を選びます。"}
       />

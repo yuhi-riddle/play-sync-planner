@@ -8,7 +8,7 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      <PageHeader title="利用を開始する前に" description="Madoi を使うために、利用規約とプライバシーポリシーへの同意をお願いします。" />
+      <PageHeader eyebrow="Welcome" title="利用を開始する前に" description="Madoi を使うために、利用規約とプライバシーポリシーへの同意をお願いします。" />
       <Card className="max-w-xl">
         <LoginConsentForm action={acceptLegalDocumentsAction} nextPath={safeNextPath(next)} submitLabel="同意して続ける" />
       </Card>

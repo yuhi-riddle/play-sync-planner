@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AuthNav } from "@/components/auth-nav";
-import { HomeReturnLink } from "@/components/home-return-link";
 import { MobileEventFab } from "@/components/mobile-event-fab";
+import { PrimaryNav } from "@/components/primary-nav";
 import { brand } from "@/lib/brand";
 
 import "./globals.css";
@@ -21,15 +21,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="ja">
       <body>
         <div className="app-shell min-h-screen">
-          <header className="sticky top-0 z-50 border-b border-white/80 bg-cream/80 backdrop-blur-md">
+          <header className="sticky top-0 z-50 border-b border-line bg-surface/85 backdrop-blur-md">
             <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-10">
               <Link href="/" className="group flex items-center gap-3 text-lg font-bold tracking-normal text-ink">
-                <span className="relative inline-flex h-10 w-12 items-end justify-center rounded-lg border border-white/70 bg-skywash/70 shadow-soft">
+                <span className="relative inline-flex h-10 w-12 items-end justify-center rounded-control border border-line bg-skywash/70 shadow-raise">
                   <span className="absolute right-2 top-2 h-3 w-3 rounded-full bg-honey" />
                   <span className="absolute bottom-2 left-2 h-4 w-5 bg-pine [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
                   <span className="absolute bottom-2 right-2 h-6 w-6 bg-moss [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
                   <span className="absolute bottom-2 right-3 h-3 w-3 bg-cream [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
-                  <span className="absolute bottom-2 left-1.5 h-1.5 w-9 rounded-full bg-cream/80" />
+                  <span className="absolute bottom-2 left-1.5 h-1.5 w-9 rounded-full bg-surface" />
                 </span>
                 <span>{brand.name}</span>
               </Link>
@@ -37,11 +37,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </div>
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:px-8 xl:px-10">
-            <HomeReturnLink />
+            <PrimaryNav />
             <main>{children}</main>
           </div>
-          <footer className="mx-auto max-w-[1440px] px-4 pb-8 text-sm text-ink/55 sm:px-6 lg:px-8 xl:px-10">
-            <div className="flex flex-wrap gap-4 border-t border-white/70 pt-5">
+          <footer className="mx-auto max-w-[1440px] px-4 pb-8 text-body text-muted sm:px-6 lg:px-8 xl:px-10">
+            <div className="flex flex-wrap gap-4 border-t border-line pt-5">
               <Link href="/terms" className="font-semibold hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay">
                 利用規約
               </Link>

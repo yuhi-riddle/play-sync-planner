@@ -5,8 +5,13 @@ import { Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
 import React from "react";
 
+/**
+ * 一覧系の画面だけに出す。
+ * 日程調整の詳細では主要アクションが「リンクを配る」「日程を確定」であり、
+ * FAB がそれらのボタンに重なって邪魔をする。
+ */
 function isFabVisiblePath(pathname: string) {
-  return pathname === "/" || pathname === "/events" || pathname === "/plans" || pathname.startsWith("/plans/");
+  return pathname === "/" || pathname === "/events" || pathname === "/plans";
 }
 
 export function MobileEventFab() {

@@ -69,7 +69,7 @@ export default async function PublicSettlementPage({
   if (!hasSupabaseAdminEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="支払い・清算" />
+        <PageHeader eyebrow="Settlement" title="支払い・清算" />
         <SetupPanel />
       </div>
     );
@@ -128,7 +128,7 @@ export default async function PublicSettlementPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader eyebrow="Settlement"
         title="支払い・清算"
         description="共有された日程調整の立替内容と、支払い先を確認できます。"
       />
@@ -138,7 +138,7 @@ export default async function PublicSettlementPage({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-ink">確定した日程</h2>
-              <p className="mt-1 text-sm leading-6 text-ink/64">
+              <p className="mt-1 text-sm leading-6 text-muted">
                 {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
               </p>
             </div>
@@ -148,7 +148,7 @@ export default async function PublicSettlementPage({
       ) : null}
       {expenses.length === 0 && settlements.length === 0 ? (
         <Card>
-          <p className="text-sm leading-6 text-ink/70">まだ清算内容は登録されていません。</p>
+          <p className="text-sm leading-6 text-muted">まだ清算内容は登録されていません。</p>
         </Card>
       ) : (
         <PublicSettlementSummary

@@ -27,17 +27,17 @@ export function ShareLinkCard({ shareUrl }: { shareUrl: string | null }) {
     <div className="space-y-3">
       <a
         href={shareUrl}
-        className="flex items-center justify-between gap-3 rounded-lg border border-ink/8 bg-skywash/60 p-3 text-sm font-semibold text-ink transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
+        className="flex items-center justify-between gap-3 rounded-control border border-line bg-skywash/60 p-3 text-sm font-semibold text-ink transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
         target="_blank"
         rel="noreferrer"
       >
         <span className="min-w-0 break-all">{shareUrl}</span>
-        <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0 text-ink/55" />
+        <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
       </a>
       <button
         type="button"
         onClick={copyShareUrl}
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         aria-live="polite"
       >
         {copied ? <Check aria-hidden="true" className="mr-2 h-4 w-4" /> : <Copy aria-hidden="true" className="mr-2 h-4 w-4" />}

@@ -48,12 +48,12 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
         action={<SecondaryLink href={returnHref}>{from === "login" ? "ログインへ戻る" : "ホームへ戻る"}</SecondaryLink>}
       />
       <Card>
-        <p className="text-sm leading-7 text-ink/64">施行日: 2026年7月10日</p>
+        <p className="text-sm leading-7 text-muted">施行日: 2026年7月10日</p>
         <div className="mt-6 space-y-6">
           {sections.map((section) => (
             <section key={section.title}>
               <h2 className="text-lg font-bold text-ink">{section.title}</h2>
-              <p className="mt-2 text-sm leading-7 text-ink/68">{section.body}</p>
+              <p className="mt-2 text-sm leading-7 text-muted">{section.body}</p>
             </section>
           ))}
         </div>

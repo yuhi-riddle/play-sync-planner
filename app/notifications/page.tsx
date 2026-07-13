@@ -43,7 +43,7 @@ export default async function NotificationsPage({
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="通知" description="Supabase の設定後に通知を確認できます。" />
+        <PageHeader eyebrow="Notifications" title="通知" description="Supabase の設定後に通知を確認できます。" />
         <EmptyState>環境変数がまだ設定されていません。</EmptyState>
       </div>
     );
@@ -57,7 +57,7 @@ export default async function NotificationsPage({
   if (!user) {
     return (
       <div className="space-y-6">
-        <PageHeader title="通知" description="通知を見るにはログインしてください。" />
+        <PageHeader eyebrow="Notifications" title="通知" description="通知を見るにはログインしてください。" />
         <EmptyState>ログインすると、対応が必要な日程調整や清算をここで確認できます。</EmptyState>
       </div>
     );
@@ -78,7 +78,7 @@ export default async function NotificationsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader eyebrow="Notifications"
         title="通知"
         description="回答期限、未回答、招待、チャット、清算などをまとめて確認します。"
         action={
@@ -97,11 +97,11 @@ export default async function NotificationsPage({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-ink">通知一覧</h2>
-            <p className="mt-1 text-sm text-ink/60">
+            <p className="mt-1 text-sm text-muted">
               {activeFilter === "read" ? "既読にした通知を確認できます。" : "未読の通知だけを表示しています。"}
             </p>
           </div>
-          <span className="w-fit rounded-full bg-white/76 px-3 py-1 text-xs font-bold text-ink/60">{countLabel}</span>
+          <span className="w-fit rounded-full bg-surface px-3 py-1 text-xs font-bold text-muted">{countLabel}</span>
         </div>
 
         <nav className="mt-4 flex flex-wrap gap-2" aria-label="通知の表示切替">
@@ -118,7 +118,7 @@ export default async function NotificationsPage({
             notifications.map((notification) => (
               <article
                 key={notification.id}
-                className="rounded-lg border border-ink/8 bg-white/66 p-4 transition-colors hover:border-moss/45"
+                className="rounded-control border border-line bg-surface p-4 transition-colors hover:border-moss/45"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <Link
@@ -129,23 +129,23 @@ export default async function NotificationsPage({
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-mist/55 text-pine">
                         <Bell aria-hidden="true" className="h-4 w-4" />
                       </span>
-                      <span className="rounded-full bg-cream/86 px-3 py-1 text-xs font-bold text-pine">
+                      <span className="rounded-full bg-surface px-3 py-1 text-xs font-bold text-pine">
                         {kindLabels[notification.kind] ?? "通知"}
                       </span>
-                      <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">
+                      <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay-ink">
                         {notification.read_at ? "既読" : "未読"}
                       </span>
                     </span>
                     <span className="mt-3 block text-base font-bold text-ink group-hover:text-pine">{notification.title}</span>
-                    <span className="mt-1 block text-sm leading-6 text-ink/65">{notification.body}</span>
-                    <span className="mt-2 block text-xs font-bold text-ink/45">{formatCreatedAt(notification.created_at)}</span>
+                    <span className="mt-1 block text-sm leading-6 text-muted">{notification.body}</span>
+                    <span className="mt-2 block text-xs font-bold text-muted">{formatCreatedAt(notification.created_at)}</span>
                   </Link>
 
                   {!notification.read_at ? (
                     <form action={markNotificationReadAction.bind(null, notification.id)}>
                       <button
                         type="submit"
-                        className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                        className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
                       >
                         既読にする
                       </button>
@@ -179,7 +179,7 @@ function NotificationFilterLink({
       className={
         active
           ? "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-          : "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          : "inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
       }
     >
       {children}

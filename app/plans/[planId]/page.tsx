@@ -1,11 +1,24 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
+import { clsx } from "clsx";
 
 import { CalendarShareLink } from "@/components/calendar-share-link";
 import { ReminderMessageCard } from "@/components/reminder-message-card";
 import { SettlementStatusBadge } from "@/components/settlement-status-badge";
 import { ShareLinkCard } from "@/components/share-link-card";
-import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  EmptyState,
+  PageHeader,
+  Progress,
+  SecondaryLink,
+  SectionHeading,
+  Stat,
+  type BadgeTone
+} from "@/components/ui";
 import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
 import { restartPlanAdjustmentAction } from "@/lib/actions/plans";
 import { markReminderSentAction } from "@/lib/actions/reminders";
@@ -59,6 +72,34 @@ const participantStatusLabels: Record<string, string> = {
   waitlisted: "保留",
   cancelled: "キャンセル"
 };
+
+const participantStatusTones: Record<string, BadgeTone> = {
+  invited: "warn",
+  answered: "accent",
+  confirmed: "done",
+  declined: "neutral",
+  waitlisted: "info",
+  cancelled: "neutral"
+};
+
+type DeadlineState = "none" | "open" | "soon" | "closed";
+
+/**
+ * 期限が過ぎたあとも警告色のままだと、直しようのない警告を出し続けることになる。
+ * 超過後は neutral に落とし「受付終了」として扱う。
+ */
+function deadlineStateOf(answerDeadlineAt: string | null | undefined, now: Date): DeadlineState {
+  if (!answerDeadlineAt) {
+    return "none";
+  }
+
+  const remainingMs = new Date(answerDeadlineAt).getTime() - now.getTime();
+  if (remainingMs <= 0) {
+    return "closed";
+  }
+
+  return remainingMs <= 24 * 60 * 60 * 1000 ? "soon" : "open";
+}
 
 function reminderOffsetLabel(value: number | null | undefined) {
   if (value === null || value === undefined) {
@@ -135,8 +176,14 @@ export default async function PlanDetailPage({
     ((plan.candidate_dates ?? []) as CandidateDateRow[]).sort((a, b) => a.start_at.localeCompare(b.start_at)),
     participantProgress.total
   );
-  const recommendedCandidate = candidateSummaries[0];
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
+  const deadlineState = deadlineStateOf(plan.answer_deadline_at, new Date());
+  const progressSummaryLine = buildProgressSummaryLine({
+    total: participantProgress.total,
+    pending: participantProgress.pending,
+    deadlineState,
+    answerDeadlineAt: plan.answer_deadline_at
+  });
   const settlementStatus = getSettlementStatusView(plan.settlement_status);
   const isConfirmed = plan.status === "date_confirmed";
   const isPlanOwner = currentUserId === plan.owner_user_id;
@@ -158,8 +205,9 @@ export default async function PlanDetailPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={plan.title ?? "日程調整"}
-        description={event?.title ? `${event.title} の日程を調整しています。` : "候補日時と回答状況を確認します。"}
+        eyebrow="Schedule"
+        title={event?.title?.trim() || plan.title || "日程調整"}
+        description={event?.title && plan.title ? `${plan.title} の候補日時と回答状況を確認します。` : "候補日時と回答状況を確認します。"}
         action={
           <div className="flex flex-wrap gap-3">
             {!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : null}
@@ -173,28 +221,30 @@ export default async function PlanDetailPage({
         <Card className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-ink">Google Calendar</h2>
-              <p className="mt-1 text-sm leading-6 text-ink/60">
-                主催者のGoogle Calendarに予定を作成します。Google連携済みの参加者がいれば、カレンダー招待も送ります。
+              <h2 className="text-title text-ink">Google カレンダー</h2>
+              <p className="mt-1 text-body text-muted">
+                主催者の Google カレンダーに予定を作成します。連携済みの参加者がいれば、カレンダー招待も送ります。
               </p>
-              {query.calendar === "created" ? <p className="mt-2 text-sm font-bold text-pine">Google Calendarに作成しました。</p> : null}
-              {query.calendar === "already-created" ? <p className="mt-2 text-sm font-bold text-pine">Google Calendarには作成済みです。</p> : null}
+              {query.calendar === "created" ? <p className="mt-2 text-body font-bold text-pine">Google カレンダーに作成しました。</p> : null}
+              {query.calendar === "already-created" ? (
+                <p className="mt-2 text-body font-bold text-pine">Google カレンダーには作成済みです。</p>
+              ) : null}
             </div>
             {plan.google_calendar_event_id ? (
-              <span className="inline-flex min-h-10 items-center justify-center rounded-full bg-mist/55 px-4 py-2 text-sm font-bold text-pine">
+              <Badge tone="done" dot>
                 作成済み
-              </span>
+              </Badge>
             ) : calendarIntegration ? (
               <form action={createCalendarEventAction}>
                 <button
                   type="submit"
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
                 >
-                  Calendarに作成して招待
+                  カレンダーに作成して招待
                 </button>
               </form>
             ) : (
-              <SecondaryLink href="/settings">Google Calendarを連携</SecondaryLink>
+              <SecondaryLink href="/settings">Google カレンダーを連携</SecondaryLink>
             )}
           </div>
         </Card>
@@ -203,14 +253,14 @@ export default async function PlanDetailPage({
       {isConfirmed && isPlanOwner ? (
         <Card className="p-4">
           <details>
-            <summary className="cursor-pointer text-sm font-bold text-ink">再調整を始める</summary>
-            <p className="mt-3 text-sm leading-6 text-ink/70">
+            <summary className="cursor-pointer text-body font-bold text-ink">再調整を始める</summary>
+            <p className="mt-3 text-body text-muted">
               確定済みの予定を回答受付中に戻します。参加者の回答は削除され、もう一度回答を集めます。
             </p>
             <form action={restartPlanAdjustment} className="mt-4">
               <button
                 type="submit"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-clay px-4 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-clay-ink px-4 py-2 text-body font-bold text-white transition-colors hover:bg-clay focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
               >
                 再調整を始める
               </button>
@@ -219,33 +269,72 @@ export default async function PlanDetailPage({
         </Card>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-5">
-        <SummaryTile label="回答状況" value={`${participantProgress.responded}/${participantProgress.total}人`} detail={`未回答 ${participantProgress.pending}人`} />
-        <SummaryTile
-          label="候補日時"
-          value={`${candidateSummaries.length}件`}
-          detail={recommendedCandidate ? `おすすめ: ${formatDateTimeRange(recommendedCandidate.start_at, recommendedCandidate.end_at, Boolean(recommendedCandidate.is_all_day))}` : "候補を追加できます"}
-        />
-        <SummaryTile label="回答期限" value={formatDateTime(plan.answer_deadline_at)} detail={`${planStatus} / リマインド: ${reminderOffsetLabel(reminderOffsetMinutes)}`} />
-        <SummaryTile label="確定日時" value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))} detail={isConfirmed ? "確定済み" : "未確定"} />
-        <Card className="p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">清算</p>
-          <div className="mt-2">
-            <SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} />
+      {/* この画面の主役は「誰が答えたか」。他の4項目はメタ情報に落として主従をはっきりさせる */}
+      <Card>
+        <div className="grid gap-6 lg:grid-cols-[minmax(190px,240px)_1fr] lg:items-center">
+          <div>
+            <Stat
+              label="回答状況"
+              value={`${participantProgress.responded}/${participantProgress.total}人`}
+              emphasis="primary"
+            />
+            {/* 参加者0人のとき 0% のバーを出すと、壊れて見えるだけで何も伝わらない */}
+            {participantProgress.total > 0 ? (
+              <div className="mt-3">
+                <Progress value={participantProgress.responded} max={participantProgress.total} label="回答状況" />
+              </div>
+            ) : null}
+            <p className="mt-2 text-caption text-muted">{progressSummaryLine}</p>
           </div>
-          <p className="mt-2 text-xs leading-5 text-ink/58">{isConfirmed ? settlementStatus.detail : "日程確定後に使います"}</p>
-        </Card>
-      </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.45fr_0.9fr]">
-        <Card>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-ink">候補ランキング</h2>
-              <p className="mt-1 text-sm leading-6 text-ink/60">○が多く、×と未回答が少ない候補を上に並べています。</p>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-control border border-line bg-line sm:grid-cols-4">
+              <MetaCell label="候補" value={`${candidateSummaries.length}件`} />
+              <MetaCell
+                label="回答期限"
+                value={plan.answer_deadline_at ? formatDateTime(plan.answer_deadline_at) : "未設定"}
+                tone={deadlineState === "soon" ? "warn" : deadlineState === "closed" ? "muted" : undefined}
+              />
+              <MetaCell
+                label="確定日時"
+                value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
+                tone={isConfirmed ? undefined : "muted"}
+              />
+              <MetaCell label="清算" value={<SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} />} />
             </div>
-            {!isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/edit`}>候補を編集</SecondaryLink> : null}
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/*
+                期限切れなのに「回答受付中」を並べると矛盾して見える。
+                締め切り済みのときは受付終了だけを出し、ステータスバッジは重ねない。
+              */}
+              {deadlineState === "closed" && !isConfirmed ? (
+                <Badge tone="neutral">受付終了</Badge>
+              ) : (
+                <>
+                  {deadlineState === "soon" ? (
+                    <Badge tone="warn" dot>
+                      期限が近い
+                    </Badge>
+                  ) : null}
+                  <Badge tone={isConfirmed ? "done" : "info"} dot>
+                    {planStatus}
+                  </Badge>
+                </>
+              )}
+              <span className="text-caption text-muted">リマインド: {reminderOffsetLabel(reminderOffsetMinutes)}</span>
+            </div>
           </div>
+        </div>
+      </Card>
+
+      <section className="grid items-start gap-5 lg:grid-cols-[1.45fr_0.9fr]">
+        <Card>
+          <SectionHeading
+            title="候補ランキング"
+            description="○が多く、×と未回答が少ない候補を上に並べています。"
+            action={!isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/edit`}>候補を編集</SecondaryLink> : undefined}
+          />
 
           <div className="mt-5 grid gap-3">
             {candidateSummaries.length > 0 ? (
@@ -257,17 +346,27 @@ export default async function PlanDetailPage({
         </Card>
 
         <div className="grid gap-5">
-          <Card>
-            <h2 className="text-lg font-semibold text-ink">共有リンク</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">このリンクを送ると、未ログインの人も回答できます。</p>
+          {/* この画面で最も取られるアクションはリンクを配ること。確定後は役目を終えるので通常カードに戻す */}
+          <Card className={isConfirmed ? undefined : "border-line-strong bg-gradient-to-b from-mist to-surface shadow-soft"}>
+            {isConfirmed ? (
+              <SectionHeading title="共有リンク" description="このリンクから回答内容を確認できます。" />
+            ) : (
+              <div>
+                <p className="text-eyebrow uppercase text-pine">いま一番効くこと</p>
+                <h2 className="mt-1 text-title text-ink">リンクを配る</h2>
+                <p className="mt-1 text-caption text-muted">未ログインの人もそのまま回答できます。</p>
+              </div>
+            )}
             <div className="mt-4">
               <ShareLinkCard shareUrl={shareUrl} />
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-ink">未回答者</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">まだ回答していない人に送る文面をコピーできます。</p>
+            <SectionHeading
+              title={pendingNames.length > 0 ? `未回答 ${pendingNames.length}人` : "未回答者"}
+              description={pendingNames.length > 0 ? "まだ回答していない人に送る文面をコピーできます。" : undefined}
+            />
             <div className="mt-4">
               <ReminderMessageCard
                 pendingNames={pendingNames}
@@ -281,15 +380,18 @@ export default async function PlanDetailPage({
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-ink">参加者</h2>
+            <SectionHeading title={participants.length > 0 ? `参加者 ${participants.length}人` : "参加者"} />
             <div className="mt-4 grid gap-2">
               {participants.length > 0 ? (
                 participants.map((participant) => (
-                  <div key={participant.id} className="flex items-center justify-between rounded-lg border border-ink/8 bg-white/58 px-3 py-2 text-sm">
-                    <span className="font-medium text-ink">{participant.display_name}</span>
-                    <span className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
+                  <div
+                    key={participant.id}
+                    className="flex items-center justify-between gap-3 rounded-control border border-line bg-sunken px-3 py-2"
+                  >
+                    <span className="text-body font-medium text-ink">{participant.display_name}</span>
+                    <Badge tone={participantStatusTones[participant.status] ?? "neutral"}>
                       {participantStatusLabels[participant.status] ?? participant.status}
-                    </span>
+                    </Badge>
                   </div>
                 ))
               ) : (
@@ -301,8 +403,8 @@ export default async function PlanDetailPage({
       </section>
 
       <Card>
-        <h2 className="text-lg font-semibold text-ink">日程調整メモ</h2>
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70">{plan.memo?.trim() ? plan.memo : "メモはまだありません。"}</p>
+        <SectionHeading title="日程調整メモ" />
+        <p className="mt-3 whitespace-pre-wrap text-body text-muted">{plan.memo?.trim() ? plan.memo : "メモはまだありません。"}</p>
         <div className="mt-5 flex flex-wrap gap-3">
           {event?.id ? <SecondaryLink href={`/events/${event.id}`}>イベント詳細へ</SecondaryLink> : null}
           <SecondaryLink href="/plans">日程調整カレンダーへ</SecondaryLink>
@@ -312,63 +414,116 @@ export default async function PlanDetailPage({
   );
 }
 
-function SummaryTile({ label, value, detail }: { label: string; value: string; detail: string }) {
+/** 数字だけ見せても次の行動が決まらないので、「あと何人・いつまで」まで書く。 */
+function buildProgressSummaryLine({
+  total,
+  pending,
+  deadlineState,
+  answerDeadlineAt
+}: {
+  total: number;
+  pending: number;
+  deadlineState: DeadlineState;
+  answerDeadlineAt: string | null;
+}) {
+  if (total === 0) {
+    return "まだ誰も招待していません。共有リンクを配ってください。";
+  }
+
+  if (pending === 0) {
+    return "全員から回答が届いています。日程を確定できます。";
+  }
+
+  if (deadlineState === "closed") {
+    return `あと${pending}人。回答は締め切りました。`;
+  }
+
+  if (answerDeadlineAt) {
+    return `あと${pending}人。期限は${formatDateTime(answerDeadlineAt)}。`;
+  }
+
+  return `あと${pending}人。`;
+}
+
+function MetaCell({ label, value, tone }: { label: string; value: ReactNode; tone?: "warn" | "muted" }) {
   return (
-    <Card className="p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">{label}</p>
-      <p className="mt-2 text-xl font-bold text-ink">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-ink/58">{detail}</p>
-    </Card>
+    <div className="flex flex-col gap-1 bg-sunken px-3 py-2.5">
+      <span className="text-eyebrow uppercase text-muted">{label}</span>
+      <span
+        className={clsx(
+          "text-body font-bold tabular-nums",
+          tone === "warn" && "text-clay-ink",
+          tone === "muted" && "text-muted",
+          !tone && "text-ink"
+        )}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
 function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
-  const answeredPercent = candidate.totalParticipants > 0 ? Math.round((candidate.answered / candidate.totalParticipants) * 100) : 0;
-
   return (
-    <article className="rounded-lg border border-white/75 bg-white/62 p-4">
+    <article
+      className={clsx(
+        "rounded-control border p-4",
+        // 1位だけ面を持ち上げる。全部同じ見た目だとランキングの意味が消える
+        candidate.recommended ? "border-moss bg-surface shadow-raise" : "border-line bg-sunken"
+      )}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">{candidate.rank}位</span>
-            {candidate.recommended ? <span className="rounded-full bg-honey/28 px-3 py-1 text-xs font-bold text-ink">おすすめ</span> : null}
-            {candidate.hasPendingAnswers ? <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">未回答あり</span> : null}
-            <span className="rounded-full bg-mist/42 px-3 py-1 text-xs font-bold text-pine">スコア {candidate.score}</span>
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-ink px-2 text-caption font-bold tabular-nums text-white">
+              {candidate.rank}
+            </span>
+            {candidate.recommended ? (
+              <Badge tone="done" dot>
+                おすすめ
+              </Badge>
+            ) : null}
+            {candidate.hasPendingAnswers ? <Badge tone="warn">未回答あり</Badge> : null}
+            <span className="text-caption tabular-nums text-muted">スコア {candidate.score}</span>
           </div>
-          <h3 className="mt-3 font-semibold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}</h3>
-          <p className="mt-2 text-sm text-ink/60">
+          <h3 className="mt-3 text-title tabular-nums text-ink">
+            {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
+          </h3>
+          <p className="mt-1 text-caption tabular-nums text-muted">
             回答済み {candidate.answered}/{candidate.totalParticipants}人
           </p>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold">
-          <AnswerCount label="○" value={candidate.yes} tone="text-pine" />
-          <AnswerCount label="△" value={candidate.maybe} tone="text-moss" />
-          <AnswerCount label="×" value={candidate.no} tone="text-clay" />
-          <AnswerCount label="未" value={candidate.unanswered} tone="text-ink/55" />
+        <div className="grid grid-cols-4 gap-2">
+          <AnswerCount label="○" value={candidate.yes} tone="yes" />
+          <AnswerCount label="△" value={candidate.maybe} tone="maybe" />
+          <AnswerCount label="×" value={candidate.no} tone="no" />
+          <AnswerCount label="未" value={candidate.unanswered} tone="pending" />
         </div>
       </div>
-      <div
-        className="mt-4 h-2 overflow-hidden rounded-full bg-ink/8"
-        aria-label={`回答率 ${answeredPercent}%`}
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={candidate.totalParticipants}
-        aria-valuenow={candidate.answered}
-      >
-        <div className="h-full rounded-full bg-moss" style={{ width: `${answeredPercent}%` }} />
-      </div>
+      {candidate.totalParticipants > 0 ? (
+        <div className="mt-4">
+          <Progress value={candidate.answered} max={candidate.totalParticipants} label="回答率" />
+        </div>
+      ) : null}
       {!candidate.recommended && candidate.hasPendingAnswers ? (
-        <p className="mt-3 text-xs leading-5 text-ink/55">未回答者がいるため、必要なら回答を待ってから確定してください。</p>
+        <p className="mt-3 text-caption text-muted">未回答者がいるため、必要なら回答を待ってから確定してください。</p>
       ) : null}
     </article>
   );
 }
 
-function AnswerCount({ label, value, tone }: { label: string; value: number; tone: string }) {
+const answerCountTones = {
+  yes: "border-moss/40 bg-mist text-pine",
+  maybe: "border-line bg-surface text-muted",
+  no: "border-clay/35 bg-clay/10 text-clay-ink",
+  pending: "border-line bg-surface text-muted"
+} as const;
+
+function AnswerCount({ label, value, tone }: { label: string; value: number; tone: keyof typeof answerCountTones }) {
   return (
-    <div className="min-w-12 rounded-lg border border-ink/8 bg-cream/70 px-2 py-2" aria-label={`${label} ${value}`}>
-      <p className={tone}>{label}</p>
-      <p className="mt-1 text-ink">{value}</p>
+    <div className={clsx("min-w-12 rounded-control border px-2 py-2 text-center", answerCountTones[tone])} aria-label={`${label} ${value}`}>
+      <p className="text-caption font-bold">{label}</p>
+      <p className="mt-0.5 text-body font-bold tabular-nums">{value}</p>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default async function ConnectionsPage() {
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="つながり" />
+        <PageHeader eyebrow="Connections" title="つながり" />
         <SetupPanel />
       </div>
     );
@@ -43,7 +43,7 @@ export default async function ConnectionsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
+      <PageHeader eyebrow="Connections" title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
       <ReceivedEventInvitations invitations={invitations} />
       <ConnectionList favorites={favorites} mutualFollows={mutualFollows} following={following} candidates={recent} />
     </div>

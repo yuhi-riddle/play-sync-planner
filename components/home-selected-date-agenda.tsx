@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home-agenda";
 import { formatDateTimeRange } from "@/lib/format";
+import { Badge, Card, EmptyState, SectionHeading, type BadgeTone } from "@/components/ui";
 
 type GoogleCalendarResponse = {
   connected: boolean;
@@ -79,12 +80,12 @@ function weekdayLabel(dateKey: string) {
 function weekdayTone(dateKey: string) {
   const day = dateFromKey(dateKey).getDay();
   if (day === 0) {
-    return "text-clay";
+    return "text-clay-ink";
   }
   if (day === 6) {
-    return "text-sky-700";
+    return "text-pine";
   }
-  return "text-ink/58";
+  return "text-muted";
 }
 
 function googleItemsFromResponse(response: GoogleCalendarResponse): HomeAgendaItem[] {
@@ -102,28 +103,29 @@ function googleItemsFromResponse(response: GoogleCalendarResponse): HomeAgendaIt
   }));
 }
 
-function itemBadgeClass(kind: HomeAgendaItem["kind"]) {
+function itemBadge(kind: HomeAgendaItem["kind"]): { label: string; tone: BadgeTone } {
   if (kind === "collecting") {
-    return "bg-honey/72 text-ink";
+    return { label: "調整中", tone: "info" };
   }
 
   if (kind === "confirmed") {
-    return "bg-moss text-white";
+    return { label: "確定済み", tone: "done" };
   }
 
-  return "bg-skywash text-sky-900";
+  return { label: "Google Calendar", tone: "neutral" };
 }
 
-function itemKindLabel(kind: HomeAgendaItem["kind"]) {
+/** 確定は moss、調整中は honey で左端に色を出し、一覧を流し読みできるようにする。 */
+function itemAccentClass(kind: HomeAgendaItem["kind"]) {
   if (kind === "collecting") {
-    return "調整中";
+    return "border-l-honey";
   }
 
   if (kind === "confirmed") {
-    return "確定済み";
+    return "border-l-moss";
   }
 
-  return "Google Calendar";
+  return "border-l-line-strong";
 }
 
 function DateShortcut({
@@ -141,10 +143,8 @@ function DateShortcut({
       scroll={false}
       aria-current={active ? "date" : undefined}
       className={clsx(
-        "inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
-        active
-          ? "bg-ink text-white shadow-soft"
-          : "border border-ink/10 bg-white/78 text-ink/70 hover:border-moss hover:text-pine"
+        "inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
+        active ? "bg-ink text-white shadow-soft" : "border border-line-strong bg-surface text-muted hover:border-moss hover:text-pine"
       )}
     >
       {children}
@@ -153,18 +153,27 @@ function DateShortcut({
 }
 
 function AgendaItem({ item }: { item: HomeAgendaItem }) {
+  const badge = itemBadge(item.kind);
+
   const content = (
-    <div className="rounded-lg border border-ink/8 bg-white/68 p-3 transition-colors hover:border-moss/45">
+    <div
+      className={clsx(
+        "rounded-control border border-l-4 border-line bg-sunken p-3 transition-colors hover:border-moss",
+        itemAccentClass(item.kind)
+      )}
+    >
       <div className="flex flex-wrap items-center gap-2">
-        <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-bold", itemBadgeClass(item.kind))}>
-          {itemKindLabel(item.kind)}
+        <Badge tone={badge.tone} dot>
+          {badge.label}
+        </Badge>
+        <span className="text-body font-bold tabular-nums text-pine">
+          {formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}
         </span>
-        <span className="text-sm font-bold text-pine">{formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}</span>
       </div>
-      <p className="mt-2 text-sm font-bold text-ink">{item.title}</p>
-      {item.subtitle ? <p className="mt-1 text-xs text-ink/58">{item.subtitle}</p> : null}
+      <p className="mt-2 text-body font-bold text-ink">{item.title}</p>
+      {item.subtitle ? <p className="mt-1 text-caption text-muted">{item.subtitle}</p> : null}
       {item.location ? (
-        <p className="mt-2 inline-flex items-center gap-1 text-xs text-ink/58">
+        <p className="mt-2 inline-flex items-center gap-1 text-caption text-muted">
           <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
           {item.location}
         </p>
@@ -233,22 +242,19 @@ export function HomeSelectedDateAgenda({
   }, [selectedDateKey]);
 
   return (
-    <section className="rounded-lg border border-white/80 bg-cream/88 p-4 shadow-soft backdrop-blur sm:p-5" aria-label="選択日の予定">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">Agenda</p>
-          <h2 className="mt-1 flex items-center gap-2 text-xl font-bold text-ink">
-            <CalendarDays aria-hidden="true" className="h-5 w-5 text-pine" />
-            選択日の予定
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">予定を見たい日だけに絞って確認します。</p>
-        </div>
-        <div className="text-sm text-ink/58" aria-live="polite">
-          {googleState === "loading" ? "Google Calendarを確認中" : null}
-          {googleState === "disconnected" ? "Google Calendarは未連携です" : null}
-          {googleState === "error" ? <span className="text-clay">Google Calendarを取得できませんでした</span> : null}
-        </div>
-      </div>
+    <Card aria-label="選択日の予定">
+      <SectionHeading
+        title="今日の予定"
+        description="Madoi の確定予定と Google カレンダーをまとめて表示します。"
+        icon={<CalendarDays aria-hidden="true" className="h-5 w-5 text-moss" />}
+        action={
+          <div className="text-caption text-muted" aria-live="polite">
+            {googleState === "loading" ? "Google Calendarを確認中" : null}
+            {googleState === "disconnected" ? "Google Calendarは未連携です" : null}
+            {googleState === "error" ? <span className="text-clay-ink">Google Calendarを取得できませんでした</span> : null}
+          </div>
+        }
+      />
 
       <div className="mt-4 grid gap-3">
         <nav className="flex flex-wrap gap-2" aria-label="表示する日付">
@@ -263,14 +269,14 @@ export function HomeSelectedDateAgenda({
           </DateShortcut>
         </nav>
 
-        <div className="rounded-lg border border-moss/16 bg-mist/18 p-3">
+        <div className="rounded-control border border-line bg-sunken p-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-bold text-ink">日付を選ぶ</p>
+            <p className="text-body font-bold text-ink">日付を選ぶ</p>
             <div className="flex items-center gap-2">
               <Link
                 href={`/?date=${previousWeekKey}`}
                 scroll={false}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
                 aria-label="前の週"
               >
                 <ChevronLeft aria-hidden="true" className="h-4 w-4" />
@@ -278,7 +284,7 @@ export function HomeSelectedDateAgenda({
               <Link
                 href={`/?date=${nextWeekKey}`}
                 scroll={false}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
                 aria-label="次の週"
               >
                 <ChevronRight aria-hidden="true" className="h-4 w-4" />
@@ -295,16 +301,14 @@ export function HomeSelectedDateAgenda({
                   scroll={false}
                   aria-current={active ? "date" : undefined}
                   className={clsx(
-                    "grid min-h-16 place-items-center rounded-lg border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                    active
-                      ? "border-pine bg-ink text-white shadow-soft"
-                      : "border-white/70 bg-cream/72 text-ink hover:border-moss/45 hover:bg-cream/92"
+                    "grid min-h-16 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                    active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
                   )}
                 >
-                  <span className={clsx("text-[11px] font-bold", active ? "text-white/72" : weekdayTone(dateKey))}>
+                  <span className={clsx("text-caption font-bold", active ? "text-white/75" : weekdayTone(dateKey))}>
                     {weekdayLabel(dateKey)}
                   </span>
-                  <span className="mt-1 text-sm font-bold">{shortDateLabel(dateKey)}</span>
+                  <span className="mt-1 text-body font-bold tabular-nums">{shortDateLabel(dateKey)}</span>
                 </Link>
               );
             })}
@@ -312,25 +316,20 @@ export function HomeSelectedDateAgenda({
         </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-moss/14 bg-cream/70 p-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">Timeline</p>
-            <h3 className="mt-1 text-lg font-bold text-ink">{selectedDateLabel(agenda.dateKey)}</h3>
-          </div>
-          <span className="w-fit rounded-full bg-mist/45 px-2 py-1 text-xs font-bold text-pine">{agenda.items.length}件</span>
+      <div className="mt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-title text-ink">{selectedDateLabel(agenda.dateKey)}</h3>
+          <span className="text-caption font-bold tabular-nums text-muted">{agenda.items.length}件</span>
         </div>
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-3 grid gap-2">
           {agenda.items.length > 0 ? (
             agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)
           ) : (
-            <div className="rounded-lg border border-dashed border-moss/28 bg-cream/55 p-5 text-sm text-ink/62">
-              この日の予定はまだありません。
-            </div>
+            <EmptyState icon={<CalendarDays aria-hidden="true" className="h-4 w-4" />}>この日の予定はまだありません。</EmptyState>
           )}
         </div>
       </div>
-    </section>
+    </Card>
   );
 }

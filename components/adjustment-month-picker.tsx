@@ -21,21 +21,21 @@ export function AdjustmentMonthPicker({ currentMonth, label }: { currentMonth: s
 
   return (
     <details className="group relative">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-ink/10 bg-white/75 px-3 py-2 text-base font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:px-4 sm:text-xl [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-base font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:px-4 sm:text-xl [&::-webkit-details-marker]:hidden">
         <CalendarDays aria-hidden="true" className="h-4 w-4 text-pine sm:h-5 sm:w-5" />
         {label}
       </summary>
       <form
         onSubmit={handleSubmit}
-        className="absolute left-1/2 z-10 mt-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-white/80 bg-cream p-3 shadow-lift"
+        className="absolute left-1/2 z-10 mt-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-control border border-line bg-cream p-3 shadow-lift"
       >
-        <label className="block text-sm font-bold text-ink/72">
+        <label className="block text-sm font-bold text-muted">
           表示する月
           <input
             type="month"
             value={month}
             onChange={(event) => setMonth(event.currentTarget.value)}
-            className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/90 px-3 py-2 text-base text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
+            className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
           />
         </label>
         <button

@@ -62,14 +62,14 @@ function dateLabel(dateKey: string) {
 
 function weekdayClass(index: number) {
   if (index === 0) {
-    return "text-clay";
+    return "text-clay-ink";
   }
 
   if (index === 6) {
     return "text-sky-700";
   }
 
-  return "text-ink/50";
+  return "text-muted";
 }
 
 function dayCellClass(day: CalendarDay) {
@@ -81,18 +81,18 @@ function dayCellClass(day: CalendarDay) {
   }
 
   if (!day.isCurrentMonth) {
-    return "border-white/70 bg-white/35 text-ink/30 hover:border-moss/35";
+    return "border-line bg-surface text-muted hover:border-moss/35";
   }
 
   if (dayIndex === 0 || isHoliday) {
-    return "border-white/70 bg-clay/8 text-clay hover:border-clay/45";
+    return "border-line bg-clay/8 text-clay-ink hover:border-clay/45";
   }
 
   if (dayIndex === 6) {
-    return "border-white/70 bg-skywash/55 text-sky-800 hover:border-sky-300";
+    return "border-line bg-skywash/55 text-sky-800 hover:border-sky-300";
   }
 
-  return "border-white/70 bg-white/62 text-ink hover:border-moss/45";
+  return "border-line bg-surface text-ink hover:border-moss/45";
 }
 
 function googleItemsFromResponse(response: GoogleCalendarResponse): HomeCalendarItem[] {
@@ -126,7 +126,7 @@ function DayDots({ day, googleCount }: { day: CalendarDay; googleCount: number }
       {day.hasConfirmed ? <span className="h-2 w-2 rounded-full bg-moss" /> : null}
       {googleCount > 0 ? <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" /> : null}
       {day.hasOverlap ? <span className="rounded-full bg-clay px-1.5 text-[10px] font-bold text-white">重</span> : null}
-      {total > 3 ? <span className="text-[10px] font-bold text-ink/48">+{total - 3}</span> : null}
+      {total > 3 ? <span className="text-[10px] font-bold text-muted">+{total - 3}</span> : null}
     </span>
   );
 }
@@ -135,7 +135,7 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
   return (
     <Link
       href={`/plans/${candidate.planId}`}
-      className="block rounded-lg border border-ink/8 bg-white/62 p-4 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
+      className="block rounded-control border border-line bg-surface p-4 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -143,13 +143,13 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
             {formatDateTimeRange(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}
           </p>
           <h3 className="mt-1 text-base font-bold text-ink">{candidate.eventTitle}</h3>
-          <p className="mt-1 text-sm text-ink/60">{candidate.planTitle ?? "日程調整"}</p>
+          <p className="mt-1 text-sm text-muted">{candidate.planTitle ?? "日程調整"}</p>
         </div>
-        <div className="text-sm font-semibold text-ink/68">
+        <div className="text-sm font-semibold text-muted">
           {planStatusLabels[candidate.status as keyof typeof planStatusLabels] ?? candidate.status}
         </div>
       </div>
-      <p className="mt-3 text-sm text-ink/64">
+      <p className="mt-3 text-sm text-muted">
         ○ {candidate.yes} / △ {candidate.maybe} / × {candidate.no} / 未回答 {candidate.unanswered}
       </p>
     </Link>
@@ -158,7 +158,7 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
 
 function GoogleTimelineItem({ item }: { item: HomeCalendarItem }) {
   return (
-    <article className="rounded-lg border border-sky-200/80 bg-skywash/38 p-4">
+    <article className="rounded-control border border-sky-200/80 bg-skywash/38 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-skywash px-2 py-0.5 text-[11px] font-bold text-sky-900 ring-1 ring-sky-300">
           Google Calendar
@@ -169,7 +169,7 @@ function GoogleTimelineItem({ item }: { item: HomeCalendarItem }) {
       </div>
       <h3 className="mt-2 text-base font-bold text-ink">{item.title}</h3>
       {item.location ? (
-        <p className="mt-2 inline-flex items-center gap-1 text-sm text-ink/58">
+        <p className="mt-2 inline-flex items-center gap-1 text-sm text-muted">
           <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
           {item.location}
         </p>
@@ -244,7 +244,7 @@ export function AdjustmentCalendarView({
           <Link
             href={`/plans?month=${previousMonth}&date=${defaultDateForMonth(previousMonth)}`}
             scroll={false}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="前の月"
           >
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
@@ -253,23 +253,23 @@ export function AdjustmentCalendarView({
           <Link
             href={`/plans?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
             scroll={false}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="次の月"
           >
             <ChevronRight aria-hidden="true" className="h-5 w-5" />
           </Link>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-ink/64">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/62 px-2 py-1">
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-muted">
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
             <span className="h-2 w-2 rounded-full bg-honey" />
             調整中
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/62 px-2 py-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
             <span className="h-2 w-2 rounded-full bg-moss" />
             確定済み
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/62 px-2 py-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
             <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" />
             Google Calendar
           </span>
@@ -294,7 +294,7 @@ export function AdjustmentCalendarView({
                     href={buildSearchHref(day.dateKey)}
                     scroll={false}
                     className={clsx(
-                      "min-h-16 rounded-lg border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
+                      "min-h-16 rounded-control border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
                       dayCellClass(day)
                     )}
                     aria-label={`${day.dateKey}の候補とGoogle Calendar予定を表示`}
@@ -313,14 +313,14 @@ export function AdjustmentCalendarView({
       <Card className="scroll-mt-24">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">Timeline</p>
+            <p className="text-eyebrow uppercase text-pine">Timeline</p>
             <h2 className="mt-1 text-xl font-bold text-ink">{dateLabel(calendar.selectedDateKey)}</h2>
           </div>
-          <div className="text-sm text-ink/58">
+          <div className="text-sm text-muted">
             <p>○ 行ける / △ 微妙 / × 行けない</p>
-            {googleState === "loading" ? <p className="text-xs text-ink/52">Google Calendarを確認中</p> : null}
-            {googleState === "disconnected" ? <p className="text-xs text-ink/52">Google Calendarは未連携です</p> : null}
-            {googleState === "error" ? <p className="text-xs text-clay">Google Calendarを取得できませんでした</p> : null}
+            {googleState === "loading" ? <p className="text-xs text-muted">Google Calendarを確認中</p> : null}
+            {googleState === "disconnected" ? <p className="text-xs text-muted">Google Calendarは未連携です</p> : null}
+            {googleState === "error" ? <p className="text-xs text-clay-ink">Google Calendarを取得できませんでした</p> : null}
           </div>
         </div>
 

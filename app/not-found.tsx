@@ -5,7 +5,7 @@ export default function NotFound() {
     <div className="space-y-6">
       <PageHeader title="ページが見つかりません" description="リンクが間違っているか、ページが削除された可能性があります。" />
       <Card className="max-w-xl">
-        <p className="text-sm leading-6 text-ink/68">
+        <p className="text-sm leading-6 text-muted">
           共有リンクを開いた場合は、送ってくれた人にもう一度リンクを確認してもらってください。
         </p>
         <div className="mt-5">

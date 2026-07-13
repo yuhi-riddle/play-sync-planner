@@ -33,7 +33,7 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
 
   return (
     <div className="space-y-6">
-      <PageHeader title="日程調整を編集" description="候補日時と回答期限を更新します。" />
+      <PageHeader eyebrow="Schedule" title="日程調整を編集" description="候補日時と回答期限を更新します。" />
       <Card>
         <PlanForm
           action={action}

@@ -13,7 +13,7 @@ export default async function NewEventPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="イベントを作る" description="まずはイベント名だけ決めます。作成後、そのまま候補日時と回答期限を入力します。" />
+      <PageHeader eyebrow="Events" title="イベントを作る" description="まずはイベント名だけ決めます。作成後、そのまま候補日時と回答期限を入力します。" />
       <Card>
         <EventForm action={createEventAction} draftAction={saveEventDraftAction} event={draftEvent} submitLabel="参加者募集へ進む" />
       </Card>

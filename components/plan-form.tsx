@@ -197,7 +197,7 @@ function TimeSelect({
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="text-sm font-medium text-ink">
-        <span className="text-ink/72">時</span>
+        <span className="text-muted">時</span>
         <div className="mt-2">
           <MadoiSelect
             value={hour}
@@ -210,7 +210,7 @@ function TimeSelect({
         </div>
       </label>
       <label className="text-sm font-medium text-ink">
-        <span className="text-ink/72">分</span>
+        <span className="text-muted">分</span>
         <div className="mt-2">
           <MadoiSelect
             value={minute}
@@ -267,12 +267,12 @@ function CalendarPicker({
   }
 
   return (
-    <div role="group" aria-label={label} className="rounded-lg border border-moss/16 bg-cream/72 p-3">
+    <div role="group" aria-label={label} className="rounded-control border border-moss/16 bg-surface p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => moveMonth(-1)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
           aria-label="前の月"
         >
           <ChevronLeft aria-hidden="true" className="h-5 w-5" />
@@ -289,16 +289,16 @@ function CalendarPicker({
         <button
           type="button"
           onClick={() => moveMonth(1)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
           aria-label="次の月"
         >
           <ChevronRight aria-hidden="true" className="h-5 w-5" />
         </button>
       </div>
       {monthPickerOpen ? (
-        <div className="mb-3 grid gap-2 rounded-lg border border-moss/18 bg-cream/70 p-3 sm:grid-cols-2">
+        <div className="mb-3 grid gap-2 rounded-control border border-moss/18 bg-surface p-3 sm:grid-cols-2">
           <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">年</span>
+            <span className="text-muted">年</span>
             <div className="mt-2">
               <MadoiSelect
                 value={String(visibleMonth.getFullYear())}
@@ -311,7 +311,7 @@ function CalendarPicker({
             </div>
           </label>
           <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">月</span>
+            <span className="text-muted">月</span>
             <div className="mt-2">
               <MadoiSelect
                 value={String(visibleMonth.getMonth())}
@@ -326,7 +326,7 @@ function CalendarPicker({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-ink/52">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-muted">
         {["日", "月", "火", "水", "木", "金", "土"].map((weekday) => (
           <div key={weekday} className="py-2">
             {weekday}
@@ -396,13 +396,13 @@ function CalendarPicker({
               }}
               disabled={disabled}
               className={clsx(
-                "relative flex aspect-square min-h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                rangeEdge || selected ? "bg-ink text-white shadow-soft" : inRange ? "bg-mist/62 text-ink ring-1 ring-moss/18" : availabilityTone ?? "bg-cream/70 text-ink hover:bg-mist/60",
+                "relative flex aspect-square min-h-10 items-center justify-center rounded-control text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                rangeEdge || selected ? "bg-ink text-white shadow-soft" : inRange ? "bg-mist/62 text-ink ring-1 ring-moss/18" : availabilityTone ?? "bg-surface text-ink hover:bg-mist/60",
                 !selected && !rangeEdge && holidayColor && "text-red-700",
                 !selected && !rangeEdge && !holidayColor && saturdayColor && "text-blue-700",
-                !cell.isCurrentMonth && !selected && !rangeEdge && "text-ink/30",
+                !cell.isCurrentMonth && !selected && !rangeEdge && "text-muted",
                 cell.isToday && !selected && !rangeEdge && "ring-1 ring-moss/40",
-                disabled && "pointer-events-none bg-cream/35 text-ink/20 line-through"
+                disabled && "pointer-events-none bg-surface text-muted line-through"
               )}
               aria-pressed={selected}
               aria-label={`${formatDateLabel(cell.date)}を選択${availabilityLabel}`}
@@ -681,12 +681,12 @@ export function PlanForm({
           <li
             key={step}
             className={clsx(
-              "rounded-lg border px-4 py-3 text-sm font-bold",
+              "rounded-control border px-4 py-3 text-sm font-bold",
               currentStep === index
                 ? "border-moss bg-mist/35 text-pine"
                 : index < currentStep
-                  ? "border-moss/20 bg-white/68 text-ink"
-                  : "border-white/70 bg-white/46 text-ink/50"
+                  ? "border-moss/20 bg-surface text-ink"
+                  : "border-line bg-surface text-muted"
             )}
           >
             <span className="mr-2 text-xs tabular-nums">STEP {index + 1}</span>
@@ -703,7 +703,7 @@ export function PlanForm({
             </h2>
           </div>
           {eventCategory === "nazotoki" ? (
-            <div className="rounded-lg border border-moss/20 bg-mist/24 p-3">
+            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
               <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {nazotokiTemplateTimes.map((time) => (
@@ -711,7 +711,7 @@ export function PlanForm({
                     key={time}
                     type="button"
                     onClick={() => applyTemplateTime(time)}
-                    className="rounded-full border border-ink/10 bg-white/80 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
                   >
                     {time}〜
                   </button>
@@ -751,7 +751,7 @@ export function PlanForm({
               busyRanges={selectedDayBusyRanges}
             />
           )}
-          <label className="flex items-center gap-3 rounded-lg border border-moss/16 bg-cream/72 px-4 py-3 text-sm font-bold text-ink">
+          <label className="flex items-center gap-3 rounded-control border border-moss/16 bg-surface px-4 py-3 text-sm font-bold text-ink">
             <input
               type="checkbox"
               aria-label="終日"
@@ -759,7 +759,7 @@ export function PlanForm({
                 onChange={(event) => {
                   setCandidateIsAllDay(event.target.checked);
                 }}
-              className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
+              className="h-5 w-5 rounded border-line text-moss focus:ring-clay"
             />
             終日
           </label>
@@ -774,12 +774,12 @@ export function PlanForm({
             </div>
           </div>
           {candidateIsPast ? (
-            <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+            <p className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
               過去の日時は候補にできません。
             </p>
           ) : null}
           {candidateEndIsInvalid ? (
-            <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+            <p className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
               終了時間は開始時間より後にしてください。
             </p>
           ) : null}
@@ -806,7 +806,7 @@ export function PlanForm({
               <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
                 回答期限を選ぶ
             </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">参加者に回答してほしい締め切りを選びます。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">参加者に回答してほしい締め切りを選びます。</p>
           </div>
           <CalendarPicker
             label="回答期限の日付を選択"
@@ -819,8 +819,8 @@ export function PlanForm({
           <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
           <p
             className={clsx(
-              "rounded-lg border p-3 text-sm",
-              deadlineIsTooLate ? "border-clay/25 bg-clay/10 text-ink" : "border-moss/20 bg-mist/28 text-ink/70"
+              "rounded-control border p-3 text-sm",
+              deadlineIsTooLate ? "border-clay/25 bg-clay/10 text-ink" : "border-moss/20 bg-mist/28 text-muted"
             )}
             aria-live="polite"
           >
@@ -835,23 +835,23 @@ export function PlanForm({
             <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
               リマインドを決める
             </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">回答していない人に、回答期限前の通知を作ります。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">回答していない人に、回答期限前の通知を作ります。</p>
           </div>
-          <div className="rounded-lg border border-moss/16 bg-cream/72 p-4">
+          <div className="rounded-control border border-moss/16 bg-surface p-4">
             <label className="flex items-center gap-3 text-sm font-bold text-ink">
               <input
                 type="checkbox"
                 checked={reminderEnabled}
                 onChange={(event) => setReminderEnabled(event.currentTarget.checked)}
-                className="h-5 w-5 rounded border-ink/20 text-moss focus:ring-clay"
+                className="h-5 w-5 rounded border-line text-moss focus:ring-clay"
               />
               回答期限前にリマインドする
             </label>
             <div className={clsx("mt-3 grid gap-3", !reminderEnabled && "opacity-45")}>
               {reminderDrafts.map((draft, index) => (
-                <div key={draft.id} className="grid gap-3 rounded-lg border border-moss/12 bg-cream/72 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                <div key={draft.id} className="grid gap-3 rounded-control border border-moss/12 bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                   <label className="text-sm font-medium text-ink">
-                    <span className="text-ink/72">{reminderTimingTitle(draft)}</span>
+                    <span className="text-muted">{reminderTimingTitle(draft)}</span>
                     <input
                       type="number"
                       min={1}
@@ -859,12 +859,12 @@ export function PlanForm({
                       value={draft.amount}
                       disabled={!reminderEnabled}
                       onChange={(event) => updateReminderDraft(draft.id, { amount: event.currentTarget.value.replace(/[^\d]/g, "") })}
-                      className="mt-2 min-h-11 w-full rounded-lg border border-ink/10 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20 disabled:bg-cream/45"
+                      className="mt-2 min-h-11 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20 disabled:bg-surface"
                       aria-label={`${reminderTimingTitle(draft)} 数値`}
                     />
                   </label>
                   <label className="text-sm font-medium text-ink">
-                    <span className="text-ink/72">単位</span>
+                    <span className="text-muted">単位</span>
                     <div className="mt-2">
                       <MadoiSelect
                         value={draft.unit}
@@ -880,7 +880,7 @@ export function PlanForm({
                     type="button"
                     onClick={() => removeReminderDraft(draft.id)}
                     disabled={!reminderEnabled || reminderDrafts.length === 1}
-                    className="inline-flex h-11 w-11 items-center justify-center self-end rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40"
+                    className="inline-flex h-11 w-11 items-center justify-center self-end rounded-full border border-line bg-surface text-muted transition-colors hover:border-clay hover:text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40"
                     aria-label={`${reminderTimingTitle(draft)} を削除`}
                     title="削除"
                   >
@@ -892,7 +892,7 @@ export function PlanForm({
                 type="button"
                 onClick={addReminderDraft}
                 disabled={!reminderEnabled}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-cream/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay disabled:pointer-events-none disabled:opacity-40 sm:w-auto"
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
                 リマインドを追加
@@ -908,7 +908,7 @@ export function PlanForm({
             <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-bold text-ink outline-none">
               内容を確認する
             </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">開始前に、参加者、候補日時、回答期限、リマインドを確認します。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">開始前に、参加者、候補日時、回答期限、リマインドを確認します。</p>
           </div>
           <div className="grid gap-3">
             <ReviewBlock title="候補日時" actionLabel="候補日時を修正" onEdit={() => moveToStep(0)}>
@@ -917,7 +917,7 @@ export function PlanForm({
             {participantCount !== undefined ? (
               <ReviewBlock title="参加者">
                 <p className="text-base font-bold text-ink">参加者 {participantCount}人</p>
-                <p className="mt-1 text-sm text-ink/58">参加受付を閉じた後は、参加者の追加はできません。</p>
+                <p className="mt-1 text-sm text-muted">参加受付を閉じた後は、参加者の追加はできません。</p>
               </ReviewBlock>
             ) : null}
             <ReviewBlock title="回答期限" actionLabel="回答期限を修正" onEdit={() => moveToStep(1)}>
@@ -925,7 +925,7 @@ export function PlanForm({
             </ReviewBlock>
             <ReviewBlock title="リマインド" actionLabel="リマインドを修正" onEdit={() => moveToStep(2)}>
               <p className="text-base font-bold text-ink">{reminderOffsetLabel(reminderEnabled, reminderDrafts)}</p>
-              <p className="mt-1 text-sm text-ink/58">イベント開始前の通知は、日程確定後に扱います。</p>
+              <p className="mt-1 text-sm text-muted">イベント開始前の通知は、日程確定後に扱います。</p>
             </ReviewBlock>
           </div>
           <TextArea label="メモ" name="memo" defaultValue={plan?.memo} placeholder="集合場所や補足があれば入力します。" />
@@ -933,7 +933,7 @@ export function PlanForm({
       ) : null}
 
       {message ? (
-        <p className="rounded-lg border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink" aria-live="polite">
+        <p className="rounded-control border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink" aria-live="polite">
           {message}
         </p>
       ) : null}
@@ -943,7 +943,7 @@ export function PlanForm({
           type="button"
           onClick={() => moveToStep(Math.max(currentStep - 1, 0))}
           disabled={currentStep === 0}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/10 bg-white/82 px-5 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
         >
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           戻る
@@ -975,7 +975,7 @@ export function PlanForm({
 function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDraft[]; onRemove?: (value: string) => void }) {
   if (candidates.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-moss/30 bg-white/54 p-4 text-sm text-ink/62">
+      <div className="rounded-control border border-line bg-sunken p-4 text-sm text-muted">
         候補日時はまだ追加されていません。
       </div>
     );
@@ -984,16 +984,16 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
   return (
     <div className="grid gap-2">
       {candidates.map((candidate, index) => (
-        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-lg border border-moss/12 bg-cream/72 px-4 py-3">
+        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-control border border-moss/12 bg-surface px-4 py-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">候補 {index + 1}</p>
+            <p className="text-eyebrow uppercase text-pine">候補 {index + 1}</p>
             <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
           </div>
           {onRemove ? (
             <button
               type="button"
               onClick={() => onRemove(candidate.start)}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-cream/82 text-ink/60 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:border-clay hover:text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay"
               aria-label={`候補 ${index + 1} を削除`}
               title="削除"
             >
@@ -1018,14 +1018,14 @@ function ReviewBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-moss/16 bg-cream/72 p-4">
+    <section className="rounded-control border border-moss/16 bg-surface p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">{title}</p>
+        <p className="text-eyebrow uppercase text-pine">{title}</p>
         {actionLabel && onEdit ? (
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex min-h-9 items-center justify-center rounded-full border border-ink/10 bg-cream/82 px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex min-h-9 items-center justify-center rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
           >
             {actionLabel}
           </button>

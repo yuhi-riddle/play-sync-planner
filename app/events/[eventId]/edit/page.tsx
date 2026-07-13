@@ -20,7 +20,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ even
 
   return (
     <div className="space-y-6">
-      <PageHeader title="イベント編集" description={event.title} />
+      <PageHeader eyebrow="Event" title="イベント編集" description={event.title} />
       <Card>
         <EventForm action={action} event={event} submitLabel="イベントを更新" />
       </Card>

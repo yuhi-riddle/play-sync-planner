@@ -51,7 +51,7 @@ export function ReminderMessageCard({
       {message && shareUrl ? (
         <>
           <textarea
-            className="min-h-40 w-full resize-y rounded-lg border border-ink/10 bg-white/82 p-3 text-sm leading-6 text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
+            className="min-h-40 w-full resize-y rounded-control border border-line bg-surface p-3 text-sm leading-6 text-ink outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
             value={message}
             readOnly
             aria-label="リマインド文面"
@@ -59,13 +59,13 @@ export function ReminderMessageCard({
           <button
             type="button"
             onClick={copyMessage}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
             aria-live="polite"
           >
             {copied ? <Check aria-hidden="true" className="mr-2 h-4 w-4" /> : <Copy aria-hidden="true" className="mr-2 h-4 w-4" />}
             {copied ? "コピーしました" : "文面をコピー"}
           </button>
-          <div className="rounded-lg border border-white/75 bg-white/58 p-3 text-sm text-ink/66">
+          <div className="rounded-control border border-line bg-surface p-3 text-sm text-muted">
             <div className="flex flex-wrap items-center gap-2">
               <span>{latestSentAt ? `前回: ${formatDateTime(latestSentAt)}` : "まだ送信記録はありません"}</span>
               <span className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">記録済み {sentCount}回</span>

@@ -1,8 +1,18 @@
 import Link from "next/link";
-import { Bell, CalendarDays, CalendarPlus, ListChecks, Settings } from "lucide-react";
+import { Bell, CalendarPlus, Check } from "lucide-react";
+import { clsx } from "clsx";
 
 import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
-import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  EmptyState,
+  PageHeader,
+  SecondaryLink,
+  SectionHeading,
+  type BadgeTone
+} from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/events";
 import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
@@ -43,33 +53,6 @@ type NotificationRow = {
   href: string;
   created_at: string;
 };
-
-const homeActions = [
-  {
-    href: "/events",
-    title: "イベント一覧",
-    description: "作成したイベントと調整中の日程を確認します。",
-    icon: CalendarDays
-  },
-  {
-    href: "/events/new",
-    title: "イベント作成",
-    description: "まずは名前とカテゴリだけ決めて始めます。",
-    icon: CalendarPlus
-  },
-  {
-    href: "/plans",
-    title: "日程調整カレンダー",
-    description: "候補日時の重なりを月表示で見ます。",
-    icon: ListChecks
-  },
-  {
-    href: "/settings",
-    title: "設定",
-    description: "Google Calendar連携やアカウントを確認します。",
-    icon: Settings
-  }
-];
 
 const actionFilterOptions: Array<{ value: NotificationActionFilter; label: string }> = [
   { value: "all", label: "すべて" },
@@ -204,11 +187,21 @@ export default async function HomePage({
   const filteredNotifications = filterNotificationsByActionFilter(unreadNotifications, activeActionFilter).slice(0, 5);
   const calendarItems = toCalendarItems(planRows);
 
+  const actionCount = notificationCounts.all;
+
+  // 0件のチップを並べても情報量がなく、空っぽ感を増幅するだけなので出さない
+  const visibleFilterOptions = actionCount > 0 ? actionFilterOptions.filter((option) => notificationCounts[option.value] > 0) : [];
+
   return (
     <div className="space-y-7">
       <PageHeader
-        title="ホーム"
-        description="選んだ日の予定と、対応が必要なことだけを確認します。"
+        eyebrow="Home"
+        title={greetingTitle(user.email)}
+        description={
+          actionCount > 0
+            ? `いま手が必要なのは${actionCount}件です。片づけば、あとは遊ぶだけ。`
+            : "対応が必要なことはありません。今日の予定を確認しましょう。"
+        }
         action={
           <ButtonLink href="/events/new">
             <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
@@ -217,61 +210,48 @@ export default async function HomePage({
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="よく使う操作">
-        {homeActions.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="group rounded-lg border border-white/80 bg-cream/86 p-4 shadow-soft transition-colors hover:border-moss/45 hover:bg-white/76 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-          >
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mist/55 text-pine transition-colors group-hover:bg-skywash">
-              <action.icon aria-hidden="true" className="h-4 w-4" />
-            </span>
-            <span className="mt-3 block text-base font-bold text-ink">{action.title}</span>
-            <span className="mt-1 block text-sm leading-6 text-ink/60">{action.description}</span>
-          </Link>
-        ))}
-      </section>
-
       <Card>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-              <Bell aria-hidden="true" className="h-5 w-5 text-pine" />
-              対応が必要なこと
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">期限、未回答、清算まわりを絞り込んで確認できます。</p>
-          </div>
-          <SecondaryLink href="/notifications">通知を開く</SecondaryLink>
-        </div>
+        <SectionHeading
+          title="対応が必要なこと"
+          description={actionCount > 0 ? "期限が近いものから並べています。" : undefined}
+          icon={<Bell aria-hidden="true" className="h-5 w-5 text-moss" />}
+          action={<SecondaryLink href="/notifications">通知を開く</SecondaryLink>}
+        />
 
-        <nav className="mt-4 flex flex-wrap gap-2" aria-label="対応が必要なことの絞り込み">
-          {actionFilterOptions.map((option) => (
-            <Link
-              key={option.value}
-              href={homeFilterHref(baseDateKey, option.value)}
-              scroll={false}
-              aria-current={activeActionFilter === option.value ? "page" : undefined}
-              className={
-                activeActionFilter === option.value
-                  ? "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                  : "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-2 text-sm font-bold text-ink/68 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-              }
-            >
-              {option.label} {notificationCounts[option.value]}
-            </Link>
-          ))}
-        </nav>
+        {visibleFilterOptions.length > 0 ? (
+          <nav className="mt-4 flex flex-wrap gap-2" aria-label="対応が必要なことの絞り込み">
+            {visibleFilterOptions.map((option) => (
+              <Link
+                key={option.value}
+                href={homeFilterHref(baseDateKey, option.value)}
+                scroll={false}
+                aria-current={activeActionFilter === option.value ? "page" : undefined}
+                className={clsx(
+                  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
+                  activeActionFilter === option.value
+                    ? "bg-ink text-white shadow-soft"
+                    : "border border-line-strong bg-surface text-muted hover:border-moss hover:text-pine"
+                )}
+              >
+                {option.label}
+                <span className="tabular-nums">{notificationCounts[option.value]}</span>
+              </Link>
+            ))}
+          </nav>
+        ) : null}
 
         <div className="mt-4 grid gap-3">
           {eventDraft ? (
-            <div className="rounded-lg border border-moss/24 bg-mist/24 p-4">
-              <span className="block text-sm font-bold text-ink">イベント作成の下書き</span>
-              <span className="mt-1 block text-sm leading-6 text-ink/62">入力途中のイベントがあります。続きから作成できます。</span>
+            <div className="rounded-control border border-moss/24 bg-mist p-4">
+              <span className="block text-body font-bold text-ink">イベント作成の下書き</span>
+              <span className="mt-1 block text-body text-muted">入力途中のイベントがあります。続きから作成できます。</span>
               <div className="mt-3 flex flex-wrap gap-2">
                 <ButtonLink href="/events/new">続きから入力</ButtonLink>
                 <form action={discardEventDraftAction}>
-                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2">
+                  <button
+                    type="submit"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                  >
                     下書きを破棄
                   </button>
                 </form>
@@ -279,18 +259,27 @@ export default async function HomePage({
             </div>
           ) : null}
           {filteredNotifications.length > 0 ? (
-            filteredNotifications.map((notification) => (
-              <Link
-                key={notification.id}
-                href={safeInternalHref(notification.href)}
-                className="rounded-lg border border-ink/8 bg-white/62 p-3 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
-              >
-                <span className="block text-sm font-bold text-ink">{notification.title}</span>
-                <span className="mt-1 block text-sm leading-6 text-ink/62">{notification.body}</span>
-              </Link>
-            ))
+            filteredNotifications.map((notification) => {
+              const badge = notificationBadge(notification.kind);
+
+              return (
+                <Link
+                  key={notification.id}
+                  href={safeInternalHref(notification.href)}
+                  className="rounded-control border border-line bg-sunken p-3 transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
+                >
+                  <span className="flex flex-wrap items-center gap-2">
+                    {badge ? <Badge tone={badge.tone} dot>{badge.label}</Badge> : null}
+                    <span className="text-body font-bold text-ink">{notification.title}</span>
+                  </span>
+                  <span className="mt-1 block text-body text-muted">{notification.body}</span>
+                </Link>
+              );
+            })
           ) : (
-            <EmptyState>この条件で対応が必要なものはありません。</EmptyState>
+            <EmptyState icon={<Check aria-hidden="true" className="h-4 w-4" />}>
+              いま対応が必要なものはありません。
+            </EmptyState>
           )}
         </div>
       </Card>
@@ -298,6 +287,30 @@ export default async function HomePage({
       <HomeSelectedDateAgenda selectedDateKey={baseDateKey} initialItems={calendarItems} />
     </div>
   );
+}
+
+function greetingTitle(email: string | undefined) {
+  const name = email?.split("@")[0]?.trim();
+  return name ? `こんにちは、${name} さん` : "ホーム";
+}
+
+function notificationBadge(kind: string): { label: string; tone: BadgeTone } | null {
+  switch (kind) {
+    case "answer_deadline":
+      return { label: "期限", tone: "warn" };
+    case "unanswered":
+      return { label: "未回答", tone: "info" };
+    case "answer_received":
+      return { label: "回答あり", tone: "accent" };
+    case "settlement_needed":
+      return { label: "清算", tone: "info" };
+    case "payment_due":
+      return { label: "支払い", tone: "warn" };
+    case "confirmation_due":
+      return { label: "受け取り確認", tone: "warn" };
+    default:
+      return null;
+  }
 }
 
 function safeInternalHref(value: string) {

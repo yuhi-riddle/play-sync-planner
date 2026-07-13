@@ -29,7 +29,7 @@ export default async function NewPlanPage({ params }: { params: Promise<{ eventI
 
   return (
     <div className="space-y-6">
-      <PageHeader title="日程調整を作成" description="参加者全体の空き具合を見ながら、候補日時と回答期限を決めます。" />
+      <PageHeader eyebrow="Schedule" title="日程調整を作成" description="参加者全体の空き具合を見ながら、候補日時と回答期限を決めます。" />
       <Card>
         <PlanForm
           action={action}

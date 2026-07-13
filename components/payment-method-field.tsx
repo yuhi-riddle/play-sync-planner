@@ -24,13 +24,13 @@ export function PaymentMethodField({
 
   return (
     <label className="block text-sm font-medium text-ink">
-      <span className="text-ink/72">{label}</span>
+      <span className="text-muted">{label}</span>
       <input
         name={name}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         className={clsx(
-          "mt-2 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20",
+          "mt-2 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20",
           compact ? "min-h-10" : "min-h-11"
         )}
         placeholder={placeholder}
@@ -45,7 +45,7 @@ export function PaymentMethodField({
               "rounded-full border px-3 py-1 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
               value === option
                 ? "border-moss bg-mist/45 text-pine"
-                : "border-ink/10 bg-cream/76 text-ink/72 hover:border-moss hover:text-pine"
+                : "border-line bg-surface text-muted hover:border-moss hover:text-pine"
             )}
           >
             {option}

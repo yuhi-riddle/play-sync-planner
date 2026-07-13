@@ -28,7 +28,7 @@ export async function AuthNav() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <div className="hidden items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-1.5 text-ink/70 shadow-soft sm:flex">
+      <div className="hidden items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-muted shadow-soft sm:flex">
         <UserRound aria-hidden="true" className="h-4 w-4 text-pine" />
         <span className="max-w-32 truncate font-bold" title={state.displayEmail ?? undefined}>
           {state.accountLabel}
@@ -36,7 +36,7 @@ export async function AuthNav() {
       </div>
       <Link
         href="/notifications"
-        className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/64 font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         aria-label={`通知${unreadCount ? ` 未読${unreadCount}件` : ""}`}
         title="通知"
       >
@@ -49,7 +49,7 @@ export async function AuthNav() {
       </Link>
       <Link
         href={state.settingsHref}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-ink/10 bg-white/64 px-3 py-2 text-sm font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-sm font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         aria-label="設定"
         title="設定"
       >
@@ -59,7 +59,7 @@ export async function AuthNav() {
       <form action={signOutAction}>
         <button
           type="submit"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/64 font-bold text-ink/70 transition-colors hover:border-clay hover:text-clay focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface font-bold text-muted transition-colors hover:border-clay hover:text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           aria-label="ログアウト"
           title="ログアウト"
         >
@@ -74,7 +74,7 @@ function AuthLink({ href, label }: { href: "/login"; label: "ログイン" }) {
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/64 px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-moss hover:bg-skywash/60 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-moss hover:bg-skywash/60 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
       aria-label={label}
       title={label}
     >

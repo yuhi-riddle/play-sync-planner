@@ -61,30 +61,30 @@ function dayCellClass(day: HomeCalendarDay) {
   }
 
   if (!day.isCurrentMonth) {
-    return "border-white/70 bg-white/35 text-ink/30 hover:border-moss/35";
+    return "border-line bg-surface text-muted hover:border-moss/35";
   }
 
   if (dayIndex === 0 || isHoliday) {
-    return "border-white/70 bg-clay/8 text-clay hover:border-clay/45";
+    return "border-line bg-clay/8 text-clay-ink hover:border-clay/45";
   }
 
   if (dayIndex === 6) {
-    return "border-white/70 bg-skywash/55 text-sky-800 hover:border-sky-300";
+    return "border-line bg-skywash/55 text-sky-800 hover:border-sky-300";
   }
 
-  return "border-white/70 bg-white/62 text-ink hover:border-moss/45";
+  return "border-line bg-surface text-ink hover:border-moss/45";
 }
 
 function weekdayClass(index: number) {
   if (index === 0) {
-    return "text-clay";
+    return "text-clay-ink";
   }
 
   if (index === 6) {
     return "text-sky-700";
   }
 
-  return "text-ink/50";
+  return "text-muted";
 }
 
 function itemBadgeClass(kind: HomeCalendarItem["kind"]) {
@@ -136,14 +136,14 @@ function DayCountDots({ day }: { day: HomeCalendarDay }) {
       {day.collectingCount > 0 ? <span className="h-2 w-2 rounded-full bg-honey" /> : null}
       {day.confirmedCount > 0 ? <span className="h-2 w-2 rounded-full bg-moss" /> : null}
       {day.googleCount > 0 ? <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" /> : null}
-      {day.itemCount > 3 ? <span className="text-[10px] font-bold text-ink/48">+{day.itemCount - 3}</span> : null}
+      {day.itemCount > 3 ? <span className="text-[10px] font-bold text-muted">+{day.itemCount - 3}</span> : null}
     </span>
   );
 }
 
 function TimelineItem({ item }: { item: HomeCalendarItem }) {
   const content = (
-    <div className="rounded-lg border border-ink/8 bg-white/68 p-3 transition-colors hover:border-moss/45">
+    <div className="rounded-control border border-line bg-surface p-3 transition-colors hover:border-moss/45">
       <div className="flex flex-wrap items-center gap-2">
         <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-bold", itemBadgeClass(item.kind))}>
           {itemKindLabel(item.kind)}
@@ -151,9 +151,9 @@ function TimelineItem({ item }: { item: HomeCalendarItem }) {
         <span className="text-sm font-bold text-pine">{formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}</span>
       </div>
       <p className="mt-2 text-sm font-bold text-ink">{item.title}</p>
-      {item.subtitle ? <p className="mt-1 text-xs text-ink/58">{item.subtitle}</p> : null}
+      {item.subtitle ? <p className="mt-1 text-xs text-muted">{item.subtitle}</p> : null}
       {item.location ? (
-        <p className="mt-2 inline-flex items-center gap-1 text-xs text-ink/58">
+        <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted">
           <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
           {item.location}
         </p>
@@ -221,18 +221,18 @@ export function HomeMonthCalendar({
   }, [month]);
 
   return (
-    <section className="rounded-lg border border-white/80 bg-cream/88 p-4 shadow-soft backdrop-blur sm:p-5" aria-label="月カレンダー">
+    <section className="rounded-control border border-line bg-surface p-4 shadow-soft backdrop-blur sm:p-5" aria-label="月カレンダー">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">Calendar</p>
+          <p className="text-eyebrow uppercase text-pine">Calendar</p>
           <h2 className="mt-1 text-xl font-bold text-ink">{monthLabel(month)}</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">MadoiとGoogle Calendarの予定を月単位で見比べられます。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">MadoiとGoogle Calendarの予定を月単位で見比べられます。</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href={`/?month=${previousMonth}&date=${defaultDateForMonth(previousMonth)}`}
             scroll={false}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="前の月"
           >
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
@@ -240,7 +240,7 @@ export function HomeMonthCalendar({
           <Link
             href={`/?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
             scroll={false}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/75 text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
             aria-label="次の月"
           >
             <ChevronRight aria-hidden="true" className="h-5 w-5" />
@@ -248,16 +248,16 @@ export function HomeMonthCalendar({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-ink/64">
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/62 px-2 py-1">
+      <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-muted">
+        <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
           <span className="h-2 w-2 rounded-full bg-honey" />
           調整中
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/62 px-2 py-1">
+        <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
           <span className="h-2 w-2 rounded-full bg-moss" />
           確定済み
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/62 px-2 py-1">
+        <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
           <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" />
           Google Calendar
         </span>
@@ -278,7 +278,7 @@ export function HomeMonthCalendar({
             href={`/?month=${day.dateKey.slice(0, 7)}&date=${day.dateKey}`}
             scroll={false}
             className={clsx(
-              "min-h-16 rounded-lg border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20",
+              "min-h-16 rounded-control border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20",
               dayCellClass(day)
             )}
             aria-label={`${day.dateKey}の予定を見る`}
@@ -290,22 +290,22 @@ export function HomeMonthCalendar({
         ))}
       </div>
 
-      <div className="mt-5 rounded-lg border border-white/70 bg-white/46 p-4">
+      <div className="mt-5 rounded-control border border-line bg-surface p-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">Timeline</p>
+            <p className="text-eyebrow uppercase text-pine">Timeline</p>
             <h3 className="mt-1 text-lg font-bold text-ink">{dateLabel(calendar.selectedDateKey)}</h3>
           </div>
-          {googleState === "loading" ? <p className="text-xs text-ink/52">Google Calendarを確認中</p> : null}
-          {googleState === "disconnected" ? <p className="text-xs text-ink/52">Google Calendarは未連携です</p> : null}
-          {googleState === "error" ? <p className="text-xs text-clay">Google Calendarを取得できませんでした</p> : null}
+          {googleState === "loading" ? <p className="text-xs text-muted">Google Calendarを確認中</p> : null}
+          {googleState === "disconnected" ? <p className="text-xs text-muted">Google Calendarは未連携です</p> : null}
+          {googleState === "error" ? <p className="text-xs text-clay-ink">Google Calendarを取得できませんでした</p> : null}
         </div>
 
         <div className="mt-4 grid gap-2">
           {calendar.selectedItems.length > 0 ? (
             calendar.selectedItems.map((item) => <TimelineItem key={`${item.kind}-${item.id}`} item={item} />)
           ) : (
-            <div className="rounded-lg border border-dashed border-moss/28 bg-white/52 p-5 text-sm text-ink/62">
+            <div className="rounded-control border border-line bg-sunken p-5 text-sm text-muted">
               この日の予定はまだありません。
             </div>
           )}

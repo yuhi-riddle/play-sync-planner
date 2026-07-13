@@ -62,7 +62,7 @@ export function EventForm({
             type="submit"
             formAction={draftAction}
             formNoValidate
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-5 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-5 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           >
             下書き保存
           </button>

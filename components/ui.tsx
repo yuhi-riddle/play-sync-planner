@@ -11,29 +11,61 @@ import { brand } from "@/lib/brand";
 export function PageHeader({
   title,
   description,
+  eyebrow,
   action
 }: {
   title: string;
   description?: string;
+  /** 画面のカテゴリ。省略するとブランド名になるが、原則として画面ごとの語を渡す */
+  eyebrow?: string;
   action?: ReactNode;
 }) {
   return (
-    <div className="relative flex flex-col gap-4 rounded-lg border border-white/70 bg-cream/72 p-5 shadow-soft backdrop-blur sm:flex-row sm:items-end sm:justify-between">
+    <div className="relative flex flex-col gap-4 rounded-card border border-line bg-surface p-5 shadow-raise sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss">{brand.shortName}</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-normal text-ink sm:text-4xl">{title}</h1>
-        {description ? <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/68">{description}</p> : null}
+        <p className="text-eyebrow uppercase text-pine">{eyebrow ?? brand.shortName}</p>
+        <h1 className="mt-2 text-display text-ink">{title}</h1>
+        {description ? <p className="mt-2 max-w-2xl text-body text-muted">{description}</p> : null}
       </div>
       {action}
     </div>
   );
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className,
+  ...props
+}: { children: ReactNode; className?: string } & React.ComponentPropsWithoutRef<"section">) {
   return (
-    <section className={clsx("rounded-lg border border-white/80 bg-cream/88 p-5 shadow-soft backdrop-blur", className)}>
+    <section className={clsx("rounded-card border border-line bg-surface p-5 shadow-raise", className)} {...props}>
       {children}
     </section>
+  );
+}
+
+export function SectionHeading({
+  title,
+  description,
+  icon,
+  action
+}: {
+  title: string;
+  description?: string;
+  icon?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 className="flex items-center gap-2 text-title text-ink">
+          {icon}
+          {title}
+        </h2>
+        {description ? <p className="mt-1 text-caption text-muted">{description}</p> : null}
+      </div>
+      {action}
+    </div>
   );
 }
 
@@ -41,7 +73,7 @@ export function ButtonLink({ href, children }: { href: string; children: ReactNo
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
     >
       {children}
     </Link>
@@ -52,7 +84,7 @@ export function SecondaryLink({ href, children }: { href: string; children: Reac
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
     >
       {children}
     </Link>
@@ -170,18 +202,13 @@ export function MadoiForm({ children, className, action, ...props }: MadoiFormPr
   return (
     <form ref={formRef} action={action} className={className} noValidate onSubmit={handleSubmit} {...props}>
       {errors.length > 0 ? (
-        <div
-          className="rounded-lg border border-clay/24 bg-clay/10 p-4 text-sm text-ink"
-          role="alert"
-          aria-live="assertive"
-        >
-          <p className="font-bold">入力を確認してください。</p>
-          <ul className="mt-2 grid gap-1 leading-6">
+        <Alert tone="error" title="入力を確認してください。" assertive>
+          <ul className="grid gap-1">
             {errors.map((error) => (
               <li key={error.key}>{error.message}</li>
             ))}
           </ul>
-        </div>
+        </Alert>
       ) : null}
       {children}
     </form>
@@ -222,10 +249,10 @@ export function TextField({
   }
 
   return (
-    <label className="block text-sm font-medium text-ink">
-      <span className="text-ink/72">{label}</span>
+    <label className="block text-body font-medium text-ink">
+      <span className="text-muted">{label}</span>
       <input
-        className="mt-2 min-h-11 w-full rounded-lg border border-moss/18 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-ink/34 focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-subtle focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         type={type}
         defaultValue={defaultValue ?? ""}
@@ -239,7 +266,7 @@ export function TextField({
         data-required-message={requiredMessage}
         data-invalid-message={type === "url" ? "URLの形式を確認してください。" : undefined}
       />
-      {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
+      {helpText ? <span className="mt-2 block text-caption text-muted">{helpText}</span> : null}
     </label>
   );
 }
@@ -363,18 +390,18 @@ export function MadoiSelect({
         onClick={() => setOpen((current) => !current)}
         onKeyDown={handleKeyDown}
         className={clsx(
-          "flex w-full items-center justify-between gap-3 rounded-lg border border-moss/18 bg-cream/90 text-left text-base text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
+          "flex w-full items-center justify-between gap-3 rounded-control border border-line-strong bg-surface text-left text-base text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
           compact ? "min-h-11 px-3 py-2" : "min-h-11 px-3 py-2"
         )}
       >
-        <span className={selectedOption ? "font-medium" : "text-ink/46"}>{selectedOption?.label ?? "選択してください"}</span>
+        <span className={selectedOption ? "font-medium" : "text-muted"}>{selectedOption?.label ?? "選択してください"}</span>
         <ChevronDown aria-hidden="true" className={clsx("h-4 w-4 shrink-0 text-moss transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
         <div
           id={listboxId}
           role="listbox"
-          className="absolute z-40 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-white/80 bg-cream p-2 shadow-soft"
+          className="absolute z-40 mt-2 max-h-64 w-full overflow-y-auto rounded-control border border-line bg-surface p-2 shadow-lift"
         >
           {options.map((option) => {
             const selected = option.value === selectedValue;
@@ -387,9 +414,9 @@ export function MadoiSelect({
                 disabled={option.disabled}
                 onClick={() => selectValue(option.value)}
                 className={clsx(
-                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                  selected ? "bg-mist/55 text-pine" : "text-ink hover:bg-cream/72",
-                  option.disabled && "pointer-events-none text-ink/35"
+                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                  selected ? "bg-mist text-pine" : "text-ink hover:bg-sunken",
+                  option.disabled && "pointer-events-none text-subtle"
                 )}
               >
                 <span>{option.label}</span>
@@ -433,10 +460,10 @@ export function TextArea({
   }
 
   return (
-    <label className="block text-sm font-medium text-ink">
-      <span className="text-ink/72">{label}</span>
+    <label className="block text-body font-medium text-ink">
+      <span className="text-muted">{label}</span>
       <textarea
-        className="mt-2 w-full rounded-lg border border-moss/18 bg-cream/90 px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-ink/34 focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-subtle focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         defaultValue={defaultValue ?? ""}
         rows={rows}
@@ -447,7 +474,7 @@ export function TextArea({
         data-field-label={label}
         data-required-message={requiredMessage}
       />
-      {helpText ? <span className="mt-2 block text-xs leading-5 text-ink/55">{helpText}</span> : null}
+      {helpText ? <span className="mt-2 block text-caption text-muted">{helpText}</span> : null}
     </label>
   );
 }
@@ -468,8 +495,8 @@ export function SelectField({
   requiredMessage?: string;
 }) {
   return (
-    <label className="block text-sm font-medium text-ink">
-      <span className="text-ink/72">{label}</span>
+    <label className="block text-body font-medium text-ink">
+      <span className="text-muted">{label}</span>
       <div className="mt-2">
         <MadoiSelect
           name={name}
@@ -488,13 +515,144 @@ export function SubmitButton({ children }: { children: ReactNode }) {
   return (
     <button
       type="submit"
-      className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+      className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
     >
       {children}
     </button>
   );
 }
 
-export function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="rounded-lg border border-dashed border-moss/28 bg-cream/58 p-6 text-sm text-ink/68">{children}</div>;
+/**
+ * 空状態。破線で囲うと「作りかけ」に見えるので、一段沈んだ面で表現する。
+ */
+export function EmptyState({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 rounded-control border border-line bg-sunken p-5 text-body text-muted">
+      {icon ? (
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-mist text-moss">
+          {icon}
+        </span>
+      ) : null}
+      <span>{children}</span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * 状態・数値・通知
+ * ------------------------------------------------------------------ */
+
+export type BadgeTone = "neutral" | "info" | "warn" | "accent" | "done";
+
+const badgeToneClasses: Record<BadgeTone, string> = {
+  neutral: "border-line bg-sunken text-muted",
+  info: "border-honey/45 bg-honey/18 text-honey-ink", // 調整中
+  warn: "border-clay/40 bg-clay/14 text-clay-ink", // 期限・要対応
+  accent: "border-moss/30 bg-skywash text-pine",
+  done: "border-moss/30 bg-mist text-pine" // 確定・完了
+};
+
+const badgeDotClasses: Record<BadgeTone, string> = {
+  neutral: "bg-subtle",
+  info: "bg-honey-ink",
+  warn: "bg-clay-ink",
+  accent: "bg-moss",
+  done: "bg-moss"
+};
+
+/** 色だけで状態を伝えないよう、ラベルは必須にしている。 */
+export function Badge({ children, tone = "neutral", dot = false }: { children: ReactNode; tone?: BadgeTone; dot?: boolean }) {
+  return (
+    <span
+      className={clsx(
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-caption font-bold",
+        badgeToneClasses[tone]
+      )}
+    >
+      {dot ? <span aria-hidden="true" className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", badgeDotClasses[tone])} /> : null}
+      {children}
+    </span>
+  );
+}
+
+/**
+ * 数値。emphasis="primary" は1画面に1つまで。
+ * 複数を primary にすると、どれも主役でなくなる。
+ */
+export function Stat({
+  label,
+  value,
+  sub,
+  emphasis = "secondary",
+  tone
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  emphasis?: "primary" | "secondary";
+  tone?: "warn" | "muted";
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-caption font-bold text-muted">{label}</span>
+      <span
+        className={clsx(
+          "tabular-nums",
+          emphasis === "primary" ? "text-[2.5rem] font-bold leading-none tracking-tight" : "text-stat",
+          tone === "warn" && "text-clay-ink",
+          tone === "muted" && "text-muted"
+        )}
+      >
+        {value}
+      </span>
+      {sub ? <span className="text-caption text-muted">{sub}</span> : null}
+    </div>
+  );
+}
+
+export function Progress({ value, max, label }: { value: number; max: number; label?: string }) {
+  const safeMax = Math.max(max, 1);
+  const percent = Math.min(100, Math.max(0, Math.round((value / safeMax) * 100)));
+
+  return (
+    <div
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-label={label ?? "進捗"}
+      className="h-2 overflow-hidden rounded-full border border-line bg-sunken"
+    >
+      <span className="block h-full rounded-full bg-gradient-to-r from-moss to-pine transition-[width]" style={{ width: `${percent}%` }} />
+    </div>
+  );
+}
+
+const alertToneClasses = {
+  info: "border-moss/28 bg-mist text-ink",
+  warn: "border-honey/45 bg-honey/14 text-ink",
+  error: "border-clay/40 bg-clay/12 text-ink"
+} as const;
+
+export function Alert({
+  children,
+  title,
+  tone = "info",
+  assertive = false
+}: {
+  children?: ReactNode;
+  title?: string;
+  tone?: keyof typeof alertToneClasses;
+  assertive?: boolean;
+}) {
+  return (
+    <div
+      role="alert"
+      aria-live={assertive ? "assertive" : "polite"}
+      className={clsx("rounded-control border p-4 text-body", alertToneClasses[tone])}
+    >
+      {title ? <p className="font-bold">{title}</p> : null}
+      {children ? <div className={clsx(title && "mt-2")}>{children}</div> : null}
+    </div>
+  );
 }

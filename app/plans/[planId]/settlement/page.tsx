@@ -241,7 +241,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     .sort((a, b) => b.paidAt.localeCompare(a.paidAt));
 
   const pageHeader = (
-    <PageHeader
+    <PageHeader eyebrow="Settlement"
       title="支払い・清算"
       description={event?.title ? `${event.title} の支払いと清算をまとめます。` : "支払いと清算をまとめます。"}
       action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整に戻る</SecondaryLink>}
@@ -257,7 +257,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         {isOwner ? (
           <Card>
             <h2 className="text-lg font-semibold text-ink">まず立替支払いを追加しましょう</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">
+            <p className="mt-1 text-sm leading-6 text-muted">
               チケット代や立替分を1件追加すると、清算結果や進捗をここに表示します。
             </p>
             <div className="mt-5">
@@ -302,7 +302,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
 
       <Card>
         <h2 className="text-lg font-semibold text-ink">清算の進捗</h2>
-        <p className="mt-1 text-sm leading-6 text-ink/60">今どこで止まっているかを確認します。</p>
+        <p className="mt-1 text-sm leading-6 text-muted">今どこで止まっているかを確認します。</p>
         <div className="mt-5">
           <SettlementProgressSteps
             paymentWaitingCount={settlementNextActions.paymentWaiting.length}
@@ -316,7 +316,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-ink">次にやること</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">支払い待ちと、受け取り確認待ちを分けて見ます。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">支払い待ちと、受け取り確認待ちを分けて見ます。</p>
           </div>
           {settlementNextActions.isComplete ? (
             <span className="inline-flex self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">清算完了</span>
@@ -350,7 +350,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
       <section className="grid gap-5 sm:grid-cols-2">
         <Card>
           <h2 className="text-lg font-semibold text-ink">支払いを追加</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">チケット代や立替分を追加すると、清算結果を自動で出します。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">チケット代や立替分を追加すると、清算結果を自動で出します。</p>
           <div className="mt-5">
             {participants.length > 0 ? (
               <ExpenseForm
@@ -368,7 +368,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
 
         <Card>
           <h2 className="text-lg font-semibold text-ink">参加者向け清算リンク</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/60">参加者はこのリンクから支払い先を確認し、支払い記録を残せます。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">参加者はこのリンクから支払い先を確認し、支払い記録を残せます。</p>
           <div className="mt-5">
             <ShareLinkCard shareUrl={publicSettlementUrl} />
           </div>
@@ -384,19 +384,19 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
             settlements.map((settlement) => {
               const progress = settlementProgress(settlement);
               return (
-                <article key={settlement.id} className="rounded-lg border border-white/75 bg-white/62 p-4">
+                <article key={settlement.id} className="rounded-control border border-line bg-surface p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-sm font-bold text-ink">
                         {participantName(settlement.from_participant)} → {participantName(settlement.to_participant)}
                       </p>
                       <p className="mt-2 text-2xl font-bold text-ink">{formatYen(settlement.amount)}</p>
-                      <p className="mt-1 text-sm text-ink/60">
+                      <p className="mt-1 text-sm text-muted">
                         {settlementStatusLabels[progress.status]} / 支払い済み {formatYen(progress.paidAmount)} / 残り {formatYen(progress.remainingAmount)}
                       </p>
-                      {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-ink/60">受け取り確認済み {formatYen(progress.confirmedAmount)}</p> : null}
+                      {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-muted">受け取り確認済み {formatYen(progress.confirmedAmount)}</p> : null}
                       {settlement.amount > 0 ? (
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/72">
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
                           <div
                             className="h-full rounded-full bg-moss"
                             style={{ width: `${Math.min(100, Math.round((progress.paidAmount / settlement.amount) * 100))}%` }}
@@ -423,27 +423,27 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
       <Card>
         <h2 className="text-lg font-semibold text-ink">支払い履歴</h2>
         {settlementPaymentCount > 0 ? (
-          <p className="mt-1 text-sm leading-6 text-ink/60">清算支払いが始まっているため、立替支払いの編集と削除はロックしています。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">清算支払いが始まっているため、立替支払いの編集と削除はロックしています。</p>
         ) : (
-          <p className="mt-1 text-sm leading-6 text-ink/60">入力ミスがあれば、支払った金額を記録する前にここで直せます。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">入力ミスがあれば、支払った金額を記録する前にここで直せます。</p>
         )}
         <div className="mt-5 grid gap-3">
           {expenses.length > 0 ? (
             expenses.map((expense) => {
               const paymentView = getPaymentInstructionView(expense.payment_method, expense.payment_url);
               return (
-              <article key={expense.id} className="rounded-lg border border-white/75 bg-white/62 p-4">
+              <article key={expense.id} className="rounded-control border border-line bg-surface p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="font-semibold text-ink">{expense.title}</p>
                     {expense.is_important ? (
-                      <p className="mt-2 inline-flex rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay">重要メモ</p>
+                      <p className="mt-2 inline-flex rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay-ink">重要メモ</p>
                     ) : null}
-                    <p className="mt-1 text-sm text-ink/60">
+                    <p className="mt-1 text-sm text-muted">
                       {participantName(expense.payer)} が支払い / {formatDateTime(expense.paid_at)}
                     </p>
                     {expense.memo ? (
-                      <p className={expense.is_important ? "mt-3 rounded-lg border border-clay/22 bg-white/75 p-3 text-sm leading-6 text-ink" : "mt-3 text-sm leading-6 text-ink/62"}>
+                      <p className={expense.is_important ? "mt-3 rounded-control border border-clay/22 bg-surface p-3 text-sm leading-6 text-ink" : "mt-3 text-sm leading-6 text-muted"}>
                         {expense.memo}
                       </p>
                     ) : null}
@@ -459,9 +459,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                   <p className="text-xl font-bold text-ink">{formatYen(expense.amount)}</p>
                 </div>
                 {isOwner && settlementPaymentCount === 0 ? (
-                  <div className="mt-4 flex flex-col gap-3 border-t border-white/75 pt-4">
-                    <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-                      <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
+                  <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
+                    <details className="rounded-control border border-line bg-surface p-3">
+                      <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
                         内容を編集
                       </summary>
                       <div className="mt-4">
@@ -490,7 +490,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                     <form action={deleteExpenseAction.bind(null, expense.id)}>
                       <button
                         type="submit"
-                        className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-clay/45 bg-white/80 px-4 py-2 text-sm font-bold text-clay transition-colors hover:bg-clay hover:text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-clay/45 bg-surface px-4 py-2 text-sm font-bold text-clay-ink transition-colors hover:bg-clay hover:text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
                       >
                         この支払いを削除
                       </button>
@@ -507,22 +507,22 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
       </Card>
 
       {isOwner ? (
-      <details className="rounded-2xl border border-ink/10 bg-white/55 p-5 shadow-soft">
+      <details className="rounded-card border border-line bg-surface p-5 shadow-soft">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
           <div>
             <h2 className="text-lg font-semibold text-ink">参加者に依頼する</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">依頼文面のコピーと、送信の記録をまとめています。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">依頼文面のコピーと、送信の記録をまとめています。</p>
           </div>
-          <span className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/78 px-4 py-1 text-sm font-bold text-ink">
+          <span className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-1 text-sm font-bold text-ink">
             開く / 閉じる
           </span>
         </summary>
         <div className="mt-5 grid gap-5">
           <Card>
             <h2 className="text-lg font-semibold text-ink">支払い依頼文面</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
             {hasMissingPaymentInstructions ? (
-              <p className="mt-3 rounded-lg border border-honey/35 bg-honey/14 p-3 text-sm leading-6 text-ink/70">
+              <p className="mt-3 rounded-control border border-honey/35 bg-honey/14 p-3 text-sm leading-6 text-muted">
                 受け取り方法が未設定の清算があります。必要なら「清算結果」で送金先を入力してから文面をコピーしてください。
               </p>
             ) : null}
@@ -546,7 +546,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
 
           <Card>
             <h2 className="text-lg font-semibold text-ink">受け取り確認依頼文面</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">支払い記録がある人に、受け取り確認をお願いする文面です。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">支払い記録がある人に、受け取り確認をお願いする文面です。</p>
             <div className="mt-5">
               {confirmationRequestMessage ? (
                 <SettlementReminderCard
@@ -568,7 +568,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
 
           <Card>
             <h2 className="text-lg font-semibold text-ink">送信記録</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">支払い依頼と確認依頼を分けて確認できます。</p>
+            <p className="mt-1 text-sm leading-6 text-muted">支払い依頼と確認依頼を分けて確認できます。</p>
             <div className="mt-5">
               {reminderLogSummary.recentLogs.length > 0 ? (
                 <div className="grid gap-2">
@@ -592,7 +592,7 @@ function NonOwnerSettlementNotice({ publicSettlementUrl }: { publicSettlementUrl
   return (
     <Card>
       <h2 className="text-lg font-semibold text-ink">支払いの記録について</h2>
-      <p className="mt-1 text-sm leading-6 text-ink/60">
+      <p className="mt-1 text-sm leading-6 text-muted">
         支払いの記録は、参加者向けの清算リンクから行えます。このページは主催者が清算をまとめるための画面です。
       </p>
       {publicSettlementUrl ? (
@@ -603,7 +603,7 @@ function NonOwnerSettlementNotice({ publicSettlementUrl }: { publicSettlementUrl
           参加者向け清算ページを開く
         </a>
       ) : (
-        <p className="mt-3 text-sm leading-6 text-ink/58">
+        <p className="mt-3 text-sm leading-6 text-muted">
           清算リンクがまだ発行されていません。主催者に共有を依頼してください。
         </p>
       )}
@@ -623,18 +623,18 @@ function NextActionList({
   description: (item: SettlementNextActionItem) => string;
 }) {
   return (
-    <div className="rounded-lg border border-white/75 bg-white/58 p-4">
+    <div className="rounded-control border border-line bg-surface p-4">
       <h3 className="text-sm font-bold text-ink">{title}</h3>
       {items.length > 0 ? (
         <ul className="mt-3 grid gap-2">
           {items.map((item) => (
-            <li key={`${item.participantName}-${item.counterpartyName}-${item.amount}`} className="rounded-lg border border-ink/8 bg-cream/68 px-3 py-2 text-sm leading-6 text-ink/72">
+            <li key={`${item.participantName}-${item.counterpartyName}-${item.amount}`} className="rounded-control border border-line bg-surface px-3 py-2 text-sm leading-6 text-muted">
               {description(item)}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 rounded-lg border border-dashed border-moss/24 bg-cream/54 px-3 py-2 text-sm text-ink/58">{emptyText}</p>
+        <p className="mt-3 rounded-control border border-line bg-sunken px-3 py-2 text-sm text-muted">{emptyText}</p>
       )}
     </div>
   );
@@ -642,14 +642,14 @@ function NextActionList({
 
 function SettlementReminderLogItem({ log }: { log: SettlementReminderLogView }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-white/75 bg-white/58 p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 rounded-control border border-line bg-surface p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">{log.label}</span>
         <span className="text-sm font-medium text-ink">
           {log.recipientNames.length > 0 ? log.recipientNames.join("、") : "宛先未記録"}
         </span>
       </div>
-      <span className="text-xs text-ink/58">{formatDateTime(log.sentAt)}</span>
+      <span className="text-xs text-muted">{formatDateTime(log.sentAt)}</span>
     </div>
   );
 }
@@ -657,9 +657,9 @@ function SettlementReminderLogItem({ log }: { log: SettlementReminderLogView }) 
 function SummaryTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <Card className="p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">{label}</p>
+      <p className="text-eyebrow uppercase text-pine">{label}</p>
       <p className="mt-2 text-xl font-bold text-ink">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-ink/58">{detail}</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
     </Card>
   );
 }
@@ -681,45 +681,45 @@ function SettlementActions({
     <div className="grid w-full min-w-0 gap-3 md:min-w-72">
       {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
 
-      <div className="rounded-lg border border-white/75 bg-white/58 p-3">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">支払い先</p>
+      <div className="rounded-control border border-line bg-surface p-3">
+        <p className="text-eyebrow uppercase text-pine">支払い先</p>
         <p className="mt-2 text-sm font-bold text-ink">{instructionView.methodLabel}</p>
         <PaymentDestinationLink href={settlement.payment_url} label={instructionView.linkLabel} detail={instructionView.detail} className="mt-2" />
         {progress.remainingAmount > 0 && isPayPayMethod(settlement.payment_method) ? (
           <PayPayActionPanel amount={progress.remainingAmount} className="mt-3" />
         ) : null}
-        {settlement.memo ? <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-ink/60">メモ: {settlement.memo}</p> : null}
+        {settlement.memo ? <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">メモ: {settlement.memo}</p> : null}
       </div>
 
       {canManage ? (
-      <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-        <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
+      <details className="rounded-control border border-line bg-surface p-3">
+        <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
           受け取り方法を設定
         </summary>
         <form action={updateSettlementPaymentInstructionAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
           <PaymentMethodField defaultValue={settlement.payment_method} compact />
           <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">送金先URL</span>
+            <span className="text-muted">送金先URL</span>
             <input
               name="payment_url"
               defaultValue={settlement.payment_url ?? ""}
-              className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               placeholder="https://..."
             />
           </label>
           <label className="text-sm font-medium text-ink">
-            <span className="text-ink/72">メモ</span>
+            <span className="text-muted">メモ</span>
             <textarea
               name="memo"
               rows={2}
               defaultValue={settlement.memo ?? ""}
-              className="mt-2 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+              className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               placeholder="例: 送金後に連絡ください"
             />
           </label>
           <button
             type="submit"
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
           >
             受け取り方法を保存
           </button>
@@ -728,13 +728,13 @@ function SettlementActions({
       ) : null}
 
       {canManage && progress.remainingAmount > 0 ? (
-        <details className="rounded-lg border border-ink/10 bg-cream/70 p-3">
-          <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-ink/10 bg-white/78 px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
+        <details className="rounded-control border border-line bg-surface p-3">
+          <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
             支払った金額を記録
           </summary>
           <MadoiForm action={recordSettlementPaymentAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
             <label className="text-sm font-medium text-ink">
-              <span className="text-ink/72">支払い金額</span>
+              <span className="text-muted">支払い金額</span>
               <input
                 name="amount"
                 type="number"
@@ -745,24 +745,24 @@ function SettlementActions({
                 required
                 data-field-label="支払い金額"
                 data-required-message="支払い金額を入力してください"
-                className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+                className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
             <PaymentMethodField placeholder="例: PayPay" compact />
             <label className="text-sm font-medium text-ink">
-              <span className="text-ink/72">支払い記録URL</span>
+              <span className="text-muted">支払い記録URL</span>
               <input
                 name="payment_url"
-                className="mt-2 min-h-10 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+                className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                 placeholder="送金履歴や控えのURLがあれば"
               />
             </label>
             <label className="text-sm font-medium text-ink">
-              <span className="text-ink/72">メモ</span>
+              <span className="text-muted">メモ</span>
               <textarea
                 name="memo"
                 rows={2}
-                className="mt-2 w-full rounded-lg border border-ink/10 bg-white/88 px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+                className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
             <button
@@ -776,14 +776,14 @@ function SettlementActions({
       ) : null}
 
       {(settlement.settlement_payments ?? []).length > 0 ? (
-        <div className="grid gap-2 rounded-lg border border-white/75 bg-white/58 p-3">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss">支払い履歴</p>
+        <div className="grid gap-2 rounded-control border border-line bg-surface p-3">
+          <p className="text-eyebrow uppercase text-pine">支払い履歴</p>
           {[...(settlement.settlement_payments ?? [])]
             .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
             .map((payment) => {
               const paymentView = getPaymentInstructionView(payment.payment_method, payment.payment_url);
               return (
-              <div key={payment.id} className="grid gap-2 rounded-lg border border-ink/8 bg-cream/60 p-3 text-sm text-ink/70">
+              <div key={payment.id} className="grid gap-2 rounded-control border border-line bg-surface p-3 text-sm text-muted">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-bold text-ink">{formatYen(payment.amount)}</span>
                   <span className="text-xs">{payment.confirmed_at ? `確認済み ${formatDateTime(payment.confirmed_at)}` : `記録 ${formatDateTime(payment.paid_at)}`}</span>
@@ -798,7 +798,7 @@ function SettlementActions({
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>
                     <button
                       type="submit"
-                      className="inline-flex min-h-9 w-full items-center justify-center rounded-full border border-ink/10 bg-white/82 px-3 py-1 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                      className="inline-flex min-h-9 w-full items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
                     >
                       受け取り確認
                     </button>

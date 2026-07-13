@@ -91,7 +91,7 @@ export default async function PlansPage({
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="日程調整カレンダー" />
+        <PageHeader eyebrow="Schedule" title="日程調整カレンダー" />
         <SetupPanel />
       </div>
     );
@@ -105,7 +105,7 @@ export default async function PlansPage({
   if (!user) {
     return (
       <div className="space-y-6">
-        <PageHeader title="日程調整カレンダー" />
+        <PageHeader eyebrow="Schedule" title="日程調整カレンダー" />
         <LoginPanel />
       </div>
     );
@@ -124,7 +124,7 @@ export default async function PlansPage({
 
   return (
     <div className="space-y-7">
-      <PageHeader
+      <PageHeader eyebrow="Schedule"
         title="日程調整カレンダー"
         description="同時進行の候補日時を月ごとに見比べます。重なりがある日は、下のタイムラインで優先順位を決めやすくしています。"
         action={

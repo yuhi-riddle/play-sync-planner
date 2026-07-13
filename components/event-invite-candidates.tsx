@@ -42,23 +42,23 @@ export function EventInviteCandidates({
   }
 
   if (orderedCandidates.length === 0) {
-    return <p className="text-sm text-ink/65">招待できるつながりがまだいません。</p>;
+    return <p className="text-sm text-muted">招待できるつながりがまだいません。</p>;
   }
 
   return (
     <section aria-labelledby="event-invite-candidates-heading" className="space-y-4">
       <div>
         <h2 id="event-invite-candidates-heading" className="text-xl font-semibold text-ink">Madoiで招待</h2>
-        <p className="mt-2 text-sm text-ink/65">一緒にイベントへ参加した人から選べます。</p>
+        <p className="mt-2 text-sm text-muted">一緒にイベントへ参加した人から選べます。</p>
       </div>
       <div className="space-y-2">
         {orderedCandidates.map((candidate) => {
           const checked = selectedIds.includes(candidate.userId);
           return (
-            <label key={candidate.userId} className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg border border-ink/8 bg-white/66 p-3">
+            <label key={candidate.userId} className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-control border border-line bg-surface p-3">
               <span className="min-w-0">
                 <span className="block font-semibold text-ink">{candidate.displayName}</span>
-                <span className="mt-1 block text-sm text-ink/60">一緒だったイベント {candidate.sharedEventCount}件</span>
+                <span className="mt-1 block text-sm text-muted">一緒だったイベント {candidate.sharedEventCount}件</span>
               </span>
               <input
                 type="checkbox"
@@ -80,7 +80,7 @@ export function EventInviteCandidates({
         Madoiで招待を送る
       </button>
       {message ? <p className="text-sm font-semibold text-pine" role="status">{message}</p> : null}
-      {error ? <p className="text-sm font-semibold text-clay" role="alert">{error}</p> : null}
+      {error ? <p className="text-sm font-semibold text-clay-ink" role="alert">{error}</p> : null}
     </section>
   );
 }

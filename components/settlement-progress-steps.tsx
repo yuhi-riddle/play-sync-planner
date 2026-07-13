@@ -47,16 +47,16 @@ export function SettlementProgressSteps({
         <li
           key={step.label}
           aria-current={step.tone === "current" ? "step" : undefined}
-          className={`rounded-lg border p-4 ${toneClassNames[step.tone]}`}
+          className={`rounded-control border p-4 ${toneClassNames[step.tone]}`}
         >
           <div className="flex items-start gap-3">
             <StepIcon tone={step.tone} />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-bold text-ink">{step.label}</p>
-                <span className="rounded-full bg-white/70 px-2.5 py-1 text-xs font-bold text-ink/64">{step.countLabel}</span>
+                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-bold text-muted">{step.countLabel}</span>
               </div>
-              <p className="mt-2 text-sm leading-6 text-ink/64">{step.detail}</p>
+              <p className="mt-2 text-sm leading-6 text-muted">{step.detail}</p>
             </div>
           </div>
         </li>
@@ -67,8 +67,8 @@ export function SettlementProgressSteps({
 
 const toneClassNames: Record<StepTone, string> = {
   current: "border-moss/32 bg-mist/42",
-  done: "border-moss/20 bg-white/66",
-  waiting: "border-ink/8 bg-white/46"
+  done: "border-moss/20 bg-surface",
+  waiting: "border-line bg-surface"
 };
 
 function StepIcon({ tone }: { tone: StepTone }) {
@@ -77,8 +77,8 @@ function StepIcon({ tone }: { tone: StepTone }) {
   }
 
   if (tone === "current") {
-    return <Clock3 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-clay" />;
+    return <Clock3 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-clay-ink" />;
   }
 
-  return <Circle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-ink/32" />;
+  return <Circle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-muted" />;
 }

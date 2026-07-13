@@ -16,7 +16,7 @@ export function PaymentDestinationLink({
     <div className={`flex min-w-0 flex-col items-start gap-1 ${className}`}>
       {href ? (
         <a
-          className="inline-flex min-h-9 w-full max-w-full items-center justify-center rounded-full border border-moss/28 bg-white/82 px-4 py-1 text-center text-xs font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+          className="inline-flex min-h-9 w-full max-w-full items-center justify-center rounded-full border border-moss/28 bg-surface px-4 py-1 text-center text-xs font-bold text-pine transition-colors hover:border-pine hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
           href={href}
           target="_blank"
           rel="noreferrer"
@@ -25,7 +25,7 @@ export function PaymentDestinationLink({
           {label}
         </a>
       ) : null}
-      {detail ? <span className="break-words text-xs leading-5 text-ink/55">{detail}</span> : null}
+      {detail ? <span className="break-words text-xs leading-5 text-muted">{detail}</span> : null}
     </div>
   );
 }

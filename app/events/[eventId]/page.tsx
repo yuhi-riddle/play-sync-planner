@@ -80,7 +80,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader eyebrow="Event"
         title={event.title}
         description="イベントの基本情報、参加者、日程調整をここで管理します。"
         action={isOwner && canStartAdjustment ? <ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink> : null}
@@ -117,9 +117,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-ink">参加者</h2>
-              <p className="mt-2 text-sm text-ink/65">参加済み {memberCount ?? 0}人</p>
+              <p className="mt-2 text-sm text-muted">参加済み {memberCount ?? 0}人</p>
             </div>
-            {canStartAdjustment ? <span className="text-sm font-bold text-pine">日程調整の準備中</span> : <span className="text-sm font-bold text-ink/60">参加者を募集中</span>}
+            {canStartAdjustment ? <span className="text-sm font-bold text-pine">日程調整の準備中</span> : <span className="text-sm font-bold text-muted">参加者を募集中</span>}
           </div>
         </Card>
       )}
@@ -144,9 +144,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
         {(event.plans as EventPlan[] | undefined)?.length ? (
           <div className="grid gap-3">
             {((event.plans ?? []) as EventPlan[]).map((plan) => (
-              <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft hover:border-moss">
+              <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-control border border-line bg-white p-4 shadow-soft hover:border-moss">
                 <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
-                <span className="mt-1 block text-sm text-ink/60">
+                <span className="mt-1 block text-sm text-muted">
                   {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}
                 </span>
               </Link>
@@ -294,8 +294,8 @@ async function loadInviteCandidates(eventId: string, currentUserId: string): Pro
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white/58 p-4">
-      <dt className="text-xs font-bold uppercase tracking-[0.12em] text-ink/48">{label}</dt>
+    <div className="rounded-control bg-surface p-4">
+      <dt className="text-eyebrow uppercase text-muted">{label}</dt>
       <dd className="mt-2 break-words text-base font-semibold text-ink">{value}</dd>
     </div>
   );

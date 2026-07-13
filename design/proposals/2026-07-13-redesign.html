@@ -1,0 +1,1760 @@
+<title>Madoi リデザイン提案</title>
+
+<style>
+  /* ============ 提案書シェル（中立地）============ */
+  :root {
+    --doc-bg: #f0efec;
+    --doc-panel: #ffffff;
+    --doc-sunk: #e7e5e0;
+    --doc-text: #1e1d1b;
+    --doc-muted: #6a675f;
+    --doc-line: #dcd9d2;
+    --doc-accent: #3f5c4c;
+    --doc-accent-soft: #e3ebe4;
+    --doc-warn: #b5503a;
+    --shadow-lift: 0 24px 60px rgba(40, 36, 28, .13), 0 2px 8px rgba(40, 36, 28, .05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --doc-bg: #16171a;
+      --doc-panel: #1e2023;
+      --doc-sunk: #131416;
+      --doc-text: #eceae5;
+      --doc-muted: #9b978e;
+      --doc-line: #303338;
+      --doc-accent: #8fb39a;
+      --doc-accent-soft: #232b26;
+      --doc-warn: #e08a72;
+      --shadow-lift: 0 24px 60px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --doc-bg: #16171a;
+    --doc-panel: #1e2023;
+    --doc-sunk: #131416;
+    --doc-text: #eceae5;
+    --doc-muted: #9b978e;
+    --doc-line: #303338;
+    --doc-accent: #8fb39a;
+    --doc-accent-soft: #232b26;
+    --doc-warn: #e08a72;
+    --shadow-lift: 0 24px 60px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
+  }
+
+  :root[data-theme="light"] {
+    --doc-bg: #f0efec;
+    --doc-panel: #ffffff;
+    --doc-sunk: #e7e5e0;
+    --doc-text: #1e1d1b;
+    --doc-muted: #6a675f;
+    --doc-line: #dcd9d2;
+    --doc-accent: #3f5c4c;
+    --doc-accent-soft: #e3ebe4;
+    --doc-warn: #b5503a;
+    --shadow-lift: 0 24px 60px rgba(40, 36, 28, .13), 0 2px 8px rgba(40, 36, 28, .05);
+  }
+
+  body {
+    margin: 0;
+    background: var(--doc-bg);
+    color: var(--doc-text);
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-feature-settings: "palt";
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px 120px;
+  }
+
+  /* --- 見出し --- */
+  .eyebrow {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--doc-accent);
+  }
+
+  h1 {
+    margin: 10px 0 0;
+    font-size: clamp(30px, 5vw, 46px);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: clamp(21px, 3vw, 27px);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -.005em;
+    text-wrap: balance;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  p { margin: 0; }
+
+  .lede {
+    margin-top: 18px;
+    max-width: 62ch;
+    font-size: 17px;
+    color: var(--doc-muted);
+  }
+
+  header.hero {
+    padding: 72px 0 40px;
+    border-bottom: 1px solid var(--doc-line);
+  }
+
+  .meta {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    font-size: 13px;
+    color: var(--doc-muted);
+  }
+  .meta b { color: var(--doc-text); font-weight: 700; }
+
+  section.block {
+    padding-top: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .sec-head { display: flex; flex-direction: column; gap: 10px; }
+  .sec-head p { max-width: 66ch; color: var(--doc-muted); font-size: 15px; }
+
+  /* --- 診断リスト --- */
+  .findings {
+    display: grid;
+    gap: 1px;
+    background: var(--doc-line);
+    border: 1px solid var(--doc-line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .finding {
+    background: var(--doc-panel);
+    padding: 20px 22px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  @media (min-width: 720px) {
+    .finding { grid-template-columns: 240px 1fr; gap: 24px; align-items: baseline; }
+  }
+  .finding h3 { font-size: 15px; }
+  .finding p { font-size: 14px; color: var(--doc-muted); }
+  .finding code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .88em;
+    background: var(--doc-sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--doc-text);
+  }
+
+  /* --- トークン --- */
+  .token-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .token-card {
+    background: var(--doc-panel);
+    border: 1px solid var(--doc-line);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .token-card > h3 { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--doc-muted); }
+
+  .swatch-row { display: flex; flex-direction: column; gap: 8px; }
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .chip {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    flex: none;
+  }
+  .swatch .name { font-weight: 700; }
+  .swatch .hex {
+    margin-left: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--doc-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .swatch .role { color: var(--doc-muted); font-size: 12px; }
+
+  .scale-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--doc-line);
+  }
+  .scale-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .scale-row .tag {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--doc-muted);
+    width: 66px;
+    flex: none;
+  }
+
+  /* --- モック領域（Madoi トークンをここにスコープ）--- */
+  .stage {
+    background: var(--doc-sunk);
+    border: 1px solid var(--doc-line);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  @media (min-width: 720px) { .stage { padding: 28px; } }
+
+  .stage-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px 16px;
+  }
+  .stage-bar .title { font-size: 13px; font-weight: 700; }
+  .stage-bar .hint { font-size: 12px; color: var(--doc-muted); margin-left: auto; }
+
+  .tabs { display: flex; gap: 4px; background: var(--doc-panel); border: 1px solid var(--doc-line); border-radius: 999px; padding: 3px; }
+  .tabs button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--doc-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 15px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .tabs button:hover { color: var(--doc-text); }
+  .tabs button[aria-selected="true"] { background: var(--doc-accent); color: var(--doc-panel); }
+  :root[data-theme="dark"] .tabs button[aria-selected="true"],
+  .tabs button[aria-selected="true"] { color: #fff; }
+  @media (prefers-color-scheme: dark) {
+    .tabs button[aria-selected="true"] { color: #14170f; }
+  }
+  :root[data-theme="dark"] .tabs button[aria-selected="true"] { color: #14170f; }
+  :root[data-theme="light"] .tabs button[aria-selected="true"] { color: #fff; }
+  .tabs button:focus-visible { outline: 2px solid var(--doc-warn); outline-offset: 2px; }
+
+  .frame-scroll { overflow-x: auto; }
+
+  /* ============ Madoi 新トークン ============ */
+  .madoi {
+    --canvas: #efe7d8;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --text: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --ink: #23262b;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --skywash: #d9e8e7;
+    --mist: #eff3ee;
+
+    --r-card: 14px;
+    --r-ctl: 10px;
+
+    --sh-raise: 0 1px 2px rgba(62, 51, 39, .04), 0 3px 10px rgba(62, 51, 39, .05);
+    --sh-soft: 0 8px 26px rgba(62, 51, 39, .09);
+    --sh-lift: 0 20px 48px rgba(62, 51, 39, .15);
+
+    min-width: 680px;
+    background:
+      radial-gradient(circle at 92% 3%, rgba(217, 170, 79, .13) 0 90px, transparent 91px),
+      radial-gradient(circle at 4% 2%, rgba(166, 202, 205, .34) 0 46px, transparent 47px),
+      var(--canvas);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* 現状再現用トークン（Before） */
+  .madoi.before {
+    --canvas: #f7f0e4;
+    --surface: #fffaf0;
+    --sunken: #fffaf0;
+    --line: rgba(255, 255, 255, .8);
+    --line-strong: rgba(95, 125, 101, .18);
+    --text: #23262b;
+    --muted: rgba(35, 38, 43, .68);
+    --subtle: rgba(35, 38, 43, .5);
+    --r-card: 8px;
+    --r-ctl: 8px;
+    --sh-raise: 0 16px 36px rgba(62, 51, 39, .09);
+    --sh-soft: 0 16px 36px rgba(62, 51, 39, .09);
+  }
+
+  /* 山型の背景装飾 */
+  .madoi::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    height: 150px;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .5;
+    background:
+      linear-gradient(135deg, transparent 0 34%, rgba(95, 125, 101, .34) 35% 55%, transparent 56%),
+      linear-gradient(28deg, transparent 0 48%, rgba(52, 79, 67, .3) 49% 70%, transparent 71%);
+    clip-path: polygon(0 80%, 18% 54%, 30% 68%, 47% 28%, 65% 61%, 76% 38%, 100% 82%, 100% 100%, 0 100%);
+  }
+  .madoi.before::after { opacity: .62; }
+
+  /* Madoi ヘッダー */
+  .m-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(6px);
+  }
+  .m-logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .m-logo .mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(150deg, var(--skywash), var(--moss) 60%, var(--pine));
+    flex: none;
+  }
+  .m-head .spacer { flex: 1; }
+  .m-nav {
+    display: flex;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .m-nav span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  /* Madoi 本文 */
+  .m-body {
+    position: relative;
+    z-index: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .m-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: var(--sh-raise);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .madoi.before .m-card {
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(4px);
+  }
+
+  .m-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--moss);
+    margin: 0;
+  }
+  .m-h1 { margin: 4px 0 0; font-size: 27px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
+  .madoi.before .m-h1 { font-size: 28px; letter-spacing: 0; }
+  .m-sub { margin: 5px 0 0; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .m-title { margin: 0; font-size: 15px; font-weight: 700; }
+  .m-desc { margin: 0; font-size: 12px; color: var(--muted); }
+
+  .m-pagehead { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 16px; }
+
+  .m-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--ink);
+    color: #fff;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: var(--sh-soft);
+    white-space: nowrap;
+    flex: none;
+  }
+  .m-btn.ghost {
+    background: var(--surface);
+    color: var(--pine);
+    border-color: var(--line-strong);
+    box-shadow: none;
+  }
+  .m-btn.sm { padding: 7px 13px; font-size: 12px; box-shadow: none; }
+
+  /* 沈んだ面 */
+  .m-sunken {
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .madoi.before .m-sunken {
+    background: color-mix(in srgb, var(--surface) 58%, transparent);
+    border: 1px dashed rgba(95, 125, 101, .28);
+  }
+  .m-empty {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+  .m-empty .ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--mist);
+    border: 1px solid var(--line);
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: var(--moss);
+  }
+  .madoi.before .m-empty .ico { display: none; }
+
+  /* バッジ */
+  .m-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .m-badge .dot { width: 6px; height: 6px; border-radius: 999px; flex: none; }
+  .m-badge.warn { background: color-mix(in srgb, var(--clay) 14%, var(--surface)); color: var(--clay-ink); border-color: color-mix(in srgb, var(--clay) 34%, transparent); }
+  .m-badge.warn .dot { background: var(--clay-ink); }
+  .m-badge.info { background: color-mix(in srgb, var(--honey) 18%, var(--surface)); color: var(--honey-ink); border-color: color-mix(in srgb, var(--honey) 42%, transparent); }
+  .m-badge.info .dot { background: var(--honey-ink); }
+  .m-badge.done { background: var(--mist); color: var(--pine); border-color: color-mix(in srgb, var(--moss) 30%, transparent); }
+  .m-badge.done .dot { background: var(--moss); }
+  .m-badge.neutral { background: var(--sunken); color: var(--muted); border-color: var(--line); }
+
+  /* チップ */
+  .m-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .m-chip {
+    border-radius: 999px;
+    padding: 7px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .m-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .m-chip .n {
+    background: color-mix(in srgb, var(--clay) 20%, var(--surface));
+    color: var(--clay-ink);
+    border-radius: 999px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .m-chip.on .n { background: rgba(255, 255, 255, .2); color: #fff; }
+
+  /* Stat */
+  .m-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .m-stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: var(--sh-raise);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .m-stat .lbl { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .m-stat .val { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .m-stat .sub { font-size: 11px; color: var(--subtle); }
+
+  /* Stat: 主役 */
+  .m-hero-stat {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    gap: 22px;
+    align-items: center;
+  }
+  .m-hero-stat .big {
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+  }
+  .m-hero-stat .big small { font-size: 17px; color: var(--muted); font-weight: 700; margin-left: 3px; }
+  .m-meta-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    overflow: hidden;
+  }
+  .m-meta-row .cell {
+    background: var(--sunken);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .m-meta-row .k { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--subtle); text-transform: uppercase; }
+  .m-meta-row .v { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .m-progress {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .m-progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--moss), var(--pine)); border-radius: 999px; }
+
+  /* 2カラム */
+  .m-cols { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; align-items: start; }
+  .m-colstack { display: flex; flex-direction: column; gap: 14px; }
+
+  /* 共有リンク（主役版） */
+  .m-share {
+    background: linear-gradient(160deg, var(--mist), var(--surface) 70%);
+    border-color: var(--line-strong);
+    box-shadow: var(--sh-soft);
+  }
+  .m-linkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-ctl);
+    padding: 11px 13px;
+    font-size: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--muted);
+    overflow: hidden;
+  }
+  .m-linkbox span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 候補行 */
+  .m-cand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: 12px 14px;
+  }
+  .m-cand.top { background: var(--surface); border-color: var(--moss); box-shadow: var(--sh-raise); }
+  .m-cand .rank {
+    width: 26px; height: 26px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .m-cand.top .rank { background: var(--pine); }
+  .m-cand .when { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .m-cand .who { font-size: 11px; color: var(--muted); }
+  .m-votes { margin-left: auto; display: flex; gap: 5px; }
+  .m-vote {
+    width: 38px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    text-align: center;
+    padding: 5px 0;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .m-vote b { display: block; font-size: 13px; }
+  .m-vote.o { color: var(--pine); border-color: color-mix(in srgb, var(--moss) 40%, transparent); background: var(--mist); }
+  .m-vote.x { color: var(--clay-ink); }
+
+  /* 日付ピッカー */
+  .m-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .m-day {
+    border-radius: var(--r-ctl);
+    border: 1px solid var(--line);
+    background: var(--sunken);
+    text-align: center;
+    padding: 9px 0;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .m-day .w { display: block; font-size: 10px; color: var(--subtle); margin-bottom: 2px; }
+  .m-day.sun .w { color: var(--clay-ink); }
+  .m-day.on { background: var(--ink); color: #fff; border-color: var(--ink); box-shadow: var(--sh-soft); }
+  .m-day.on .w { color: rgba(255, 255, 255, .7); }
+  .m-day.dot { position: relative; }
+  .m-day.dot::after {
+    content: "";
+    position: absolute;
+    left: 50%; bottom: 5px;
+    transform: translateX(-50%);
+    width: 4px; height: 4px;
+    border-radius: 999px;
+    background: var(--moss);
+  }
+
+  /* クイックリンク（Before/案A用） */
+  .m-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .m-quick .q {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: var(--sh-raise);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .madoi.before .m-quick .q { background: color-mix(in srgb, var(--surface) 88%, transparent); }
+  .m-quick .q .ico { color: var(--moss); }
+  .m-quick .q .t { font-size: 13px; font-weight: 700; }
+  .m-quick .q .d { font-size: 11px; color: var(--muted); line-height: 1.55; }
+  .m-quick .q.dup { position: relative; }
+  .m-quick .q.dup::before {
+    content: "重複";
+    position: absolute;
+    top: -8px; right: 8px;
+    background: var(--doc-warn, #b5503a);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  /* タイムライン行 */
+  .m-tl {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+    border-radius: var(--r-ctl);
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--moss);
+  }
+  .m-tl .t { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--pine); flex: none; }
+  .m-tl .n { font-size: 13px; font-weight: 700; }
+  .m-tl .src { margin-left: auto; }
+
+  .m-row { display: flex; align-items: center; gap: 10px; }
+  .m-row .spacer { flex: 1; }
+  .m-stack { display: flex; flex-direction: column; gap: 9px; }
+  .m-navrow {
+    display: flex;
+    gap: 16px;
+    padding: 0 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .m-navrow a { color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; }
+  .m-navrow a.cur { color: var(--pine); border-bottom-color: var(--moss); }
+
+  /* --- 比較キャプション --- */
+  .compare {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 900px) { .compare { grid-template-columns: 1fr 1fr; } }
+  .compare-item { display: flex; flex-direction: column; gap: 10px; }
+  .compare-item .cap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--doc-sunk);
+    color: var(--doc-muted);
+    border: 1px solid var(--doc-line);
+  }
+  .pill.now { background: color-mix(in srgb, var(--doc-warn) 12%, transparent); color: var(--doc-warn); border-color: color-mix(in srgb, var(--doc-warn) 30%, transparent); }
+  .pill.next { background: var(--doc-accent-soft); color: var(--doc-accent); border-color: color-mix(in srgb, var(--doc-accent) 30%, transparent); }
+  .compare-item .note { font-size: 13px; color: var(--doc-muted); }
+  .mini { min-width: 0; }
+  .mini .madoi { min-width: 560px; }
+
+  /* --- 推奨 --- */
+  .rec {
+    background: var(--doc-panel);
+    border: 1px solid var(--doc-line);
+    border-left: 3px solid var(--doc-accent);
+    border-radius: 12px;
+    padding: 24px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .rec ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--doc-muted); }
+  .rec ul b { color: var(--doc-text); }
+
+  /* --- 仕様テーブル --- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--doc-line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; background: var(--doc-panel); }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--doc-line); vertical-align: top; }
+  th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--doc-muted); background: var(--doc-sunk); }
+  tr:last-child td { border-bottom: 0; }
+  td b { font-weight: 700; }
+  td.dim { color: var(--doc-muted); }
+
+  footer {
+    margin-top: 90px;
+    padding-top: 26px;
+    border-top: 1px solid var(--doc-line);
+    font-size: 13px;
+    color: var(--doc-muted);
+  }
+
+  .hidden { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Redesign Proposal</p>
+    <h1>Madoi ブラッシュアップ提案</h1>
+    <p class="lede">
+      ベージュ×和のアースカラーというブランドはそのままに、面・色・タイポ・情報の並べ方を作り直す。
+      画面は足さない、消さない。今ある良さが見えていないだけなので、それを見えるようにする。
+    </p>
+    <div class="meta">
+      <span><b>対象</b> 全画面（モックはホーム / 日程調整詳細）</span>
+      <span><b>スコープ</b> 見た目・レイアウト・配色・コピー</span>
+      <span><b>対象外</b> ダークモード、機能変更</span>
+    </div>
+  </header>
+
+  <!-- ============ 診断 ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>何が起きているか</h2>
+      <p>スクリーンショットとコードを突き合わせて分かった6点。「なんとなく物足りない」の正体は、ほぼ最初の1点に集約される。</p>
+    </div>
+
+    <div class="findings">
+      <div class="finding">
+        <h3>1. 平板さの正体は、カードの半透明</h3>
+        <p>
+          <code>Card</code> が <code>bg-cream/88 + backdrop-blur</code> なので、背景のグラデーションと山型イラストがカードを透けて上がってくる。
+          そもそもカード面 <code>#fffaf0</code> と地 <code>#f7f0e4</code> の明度差は4%しかなく、透過がそれを埋めて全画面が一枚のもやになる。
+        </p>
+      </div>
+      <div class="finding">
+        <h3>2. 色が働いていない</h3>
+        <p>
+          <code>moss</code> <code>pine</code> <code>clay</code> <code>honey</code> <code>skywash</code> <code>mist</code> を定義済みなのに、実際の塗りは paper / cream / ink のほぼ3色。強調は全部ただの黒ボタン。
+        </p>
+      </div>
+      <div class="finding">
+        <h3>3. 文字色が濁っている</h3>
+        <p>
+          テキスト階層を <code>text-ink/68</code> のように<b>黒の透明度</b>で作っている。暖色のベージュ地に黒を薄く重ねると、澄まない灰色になる。暖色地には暖色グレーを重ねるのが正しい。
+        </p>
+      </div>
+      <div class="finding">
+        <h3>4. 質感に差がない</h3>
+        <p>
+          <code>text-sm</code> が296箇所でほぼ一色。影は1種類だけ（<code>shadow-lift</code> は定義されたまま未使用）。角丸は8px一律で、カードもボタンもチップも同じ手触り。フォントは未指定でOS任せ。
+        </p>
+      </div>
+      <div class="finding">
+        <h3>5. ホームの一等地が重複導線</h3>
+        <p>
+          ページ見出しの直下にクイックリンクが4枚。だが<b>「イベント作成」はすぐ上のボタンと、「設定」はグローバルヘッダーと重複</b>している。4枚中2枚が無価値なスペースを食い、本当に見たい「対応が必要なこと」を下へ押している。
+        </p>
+      </div>
+      <div class="finding">
+        <h3>6. 主役が埋もれている</h3>
+        <p>
+          日程調整詳細の主役は「誰が答えたか」。なのに<b>回答状況が均等5枚サマリーの1枚</b>でしかない。右カラムも、この画面で一番取られるアクション（リンクを配る）が3枚の中に埋もれている。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ トークン ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>土台を作り直す</h2>
+      <p>両案に共通する設計。ここが全画面に効くので、案の違いは「この上でどこまで踏み込むか」だけになる。</p>
+    </div>
+
+    <div class="token-grid">
+
+      <div class="token-card">
+        <h3>面 — 3段にする</h3>
+        <div class="swatch-row">
+          <div class="swatch"><i class="chip" style="background:#efe7d8"></i><span class="name">canvas</span><span class="role">地</span><span class="hex">#EFE7D8</span></div>
+          <div class="swatch"><i class="chip" style="background:#fffdf7"></i><span class="name">surface</span><span class="role">カード</span><span class="hex">#FFFDF7</span></div>
+          <div class="swatch"><i class="chip" style="background:#f6f0e4"></i><span class="name">sunken</span><span class="role">沈んだ面</span><span class="hex">#F6F0E4</span></div>
+          <div class="swatch"><i class="chip" style="background:#e4dac6"></i><span class="name">line</span><span class="role">境界</span><span class="hex">#E4DAC6</span></div>
+        </div>
+        <p class="finding" style="padding:0;background:none;font-size:12px;color:var(--doc-muted);line-height:1.6">
+          カードは<b>不透明</b>にする。地を少し沈め、カードを明るくして、目に見える段差を作る。背景の山は「カードの後ろ」に正しく回る。
+        </p>
+      </div>
+
+      <div class="token-card">
+        <h3>文字 — 暖色グレー3段</h3>
+        <div class="swatch-row">
+          <div class="swatch"><i class="chip" style="background:#262320"></i><span class="name">text</span><span class="role">本文 14.9:1</span><span class="hex">#262320</span></div>
+          <div class="swatch"><i class="chip" style="background:#6f665c"></i><span class="name">muted</span><span class="role">補足 5.3:1</span><span class="hex">#6F665C</span></div>
+          <div class="swatch"><i class="chip" style="background:#948a7d"></i><span class="name">subtle</span><span class="role">装飾のみ</span><span class="hex">#948A7D</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--doc-muted);line-height:1.6">
+          黒の透明度重ねをやめる。<code style="font-size:.9em">subtle</code> は WCAG AA を満たさないので、罫線・プレースホルダ専用と決めてルール化する。
+        </p>
+      </div>
+
+      <div class="token-card">
+        <h3>色 — 意味に紐づける</h3>
+        <div class="swatch-row">
+          <div class="swatch"><i class="chip" style="background:#5f7d65"></i><span class="name">moss</span><span class="role">線・アイコン</span><span class="hex">#5F7D65</span></div>
+          <div class="swatch"><i class="chip" style="background:#344f43"></i><span class="name">pine</span><span class="role">強調文字・確定</span><span class="hex">#344F43</span></div>
+          <div class="swatch"><i class="chip" style="background:#df7d69"></i><span class="name">clay</span><span class="role">期限・要対応</span><span class="hex">#DF7D69</span></div>
+          <div class="swatch"><i class="chip" style="background:#d9aa4f"></i><span class="name">honey</span><span class="role">調整中</span><span class="hex">#D9AA4F</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--doc-muted);line-height:1.6">
+          値は現状のまま。<b>使い道を決める</b>のが本題。moss と clay は淡い地の上だと文字として AA を割るので、文字に使うときは pine / clay-ink に落とす。
+        </p>
+      </div>
+
+      <div class="token-card">
+        <h3>形 — リズムを付ける</h3>
+        <div class="swatch-row">
+          <div class="swatch"><i class="chip" style="background:var(--doc-sunk);border-radius:14px"></i><span class="name">card</span><span class="role">カード</span><span class="hex">14px</span></div>
+          <div class="swatch"><i class="chip" style="background:var(--doc-sunk);border-radius:10px"></i><span class="name">control</span><span class="role">入力・行</span><span class="hex">10px</span></div>
+          <div class="swatch"><i class="chip" style="background:var(--doc-sunk);border-radius:999px"></i><span class="name">full</span><span class="role">ボタン・チップ</span><span class="hex">999px</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--doc-muted);line-height:1.6">
+          8px一律をやめ、この3値だけにする。影も3段（<code style="font-size:.9em">raise</code> / <code style="font-size:.9em">soft</code> / <code style="font-size:.9em">lift</code>）。輪郭は罫線で出し、影は軽くする。
+        </p>
+      </div>
+
+      <div class="token-card" style="grid-column:1/-1">
+        <h3>文字組み — Zen Kaku Gothic New</h3>
+        <div class="swatch-row">
+          <div class="scale-row"><span class="tag">display</span><span style="font-size:27px;font-weight:700;letter-spacing:-.01em">日程調整</span></div>
+          <div class="scale-row"><span class="tag">title</span><span style="font-size:17px;font-weight:700">候補ランキング</span></div>
+          <div class="scale-row"><span class="tag">body</span><span style="font-size:14px">◯が多く、×と未回答が少ない候補を上に並べています。</span></div>
+          <div class="scale-row"><span class="tag">stat</span><span style="font-size:26px;font-weight:700;font-variant-numeric:tabular-nums">4/7<small style="font-size:15px;color:var(--doc-muted)">人</small></span></div>
+          <div class="scale-row"><span class="tag">caption</span><span style="font-size:12px;color:var(--doc-muted)">回答受付中 / リマインド1日前</span></div>
+          <div class="scale-row"><span class="tag">eyebrow</span><span style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--doc-accent)">Schedule</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--doc-muted);line-height:1.6">
+          丸みのあるゴシック。「心地よく合わせる」というタグラインに合う。数字は <code style="font-size:.9em">tabular-nums</code> で桁を揃える（日付と人数がガタつかなくなる）。
+          <b>この提案書では実フォントを読み込めない（外部CDN遮断）ため、上はシステムフォントでの代用表示。</b>
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ Before / After ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>まず、面を分ける</h2>
+      <p>色を足す前にこれ。カードを不透明にして地との段差を作るだけで、同じ情報が読めるようになる。左が現状、右が新トークン適用後。</p>
+    </div>
+
+    <div class="compare">
+      <div class="compare-item">
+        <div class="cap"><span class="pill now">現状</span><span>カードが背景に溶けている</span></div>
+        <div class="mini frame-scroll">
+          <div class="madoi before">
+            <div class="m-body" style="padding:16px">
+              <div class="m-card">
+                <p class="m-title">対応が必要なこと</p>
+                <p class="m-desc">期限、未回答、清算まわりを絞り込んで確認できます。</p>
+                <div class="m-sunken">この条件で対応が必要なものはありません。</div>
+              </div>
+              <div class="m-card">
+                <p class="m-title">未回答者</p>
+                <div class="m-sunken">未回答者はいません。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">カード・地・カード内の空状態が、ほぼ同じ明るさ。境界は破線が担っていて、未完成に見える。</p>
+      </div>
+
+      <div class="compare-item">
+        <div class="cap"><span class="pill next">改善後</span><span>3段の面で構造が読める</span></div>
+        <div class="mini frame-scroll">
+          <div class="madoi">
+            <div class="m-body" style="padding:16px">
+              <div class="m-card">
+                <p class="m-title">対応が必要なこと</p>
+                <p class="m-desc">期限、未回答、清算まわりを絞り込んで確認できます。</p>
+                <div class="m-sunken">
+                  <div class="m-empty">
+                    <span class="ico">✓</span>
+                    <span>いま対応が必要なものはありません。</span>
+                  </div>
+                </div>
+              </div>
+              <div class="m-card">
+                <p class="m-title">未回答者</p>
+                <div class="m-sunken">
+                  <div class="m-empty">
+                    <span class="ico">✓</span>
+                    <span>全員から回答が届いています。</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">地 → カード → 沈んだ面、の3段。破線をやめ、空状態も「意図してそう置いた」ものに見える。コピーも前向きに直した。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ モック ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>2案</h2>
+      <p>
+        トークンは共通。違うのは<b>情報の並べ方まで踏み込むかどうか</b>だけ。案Bを選んでも案Aの土台はそのまま使うので、Aから始めてBへ進むこともできる。
+      </p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bar">
+        <span class="title">ホーム</span>
+        <div class="tabs" role="tablist" aria-label="ホームの案">
+          <button role="tab" aria-selected="false" aria-controls="home-now" id="tab-home-now">現状</button>
+          <button role="tab" aria-selected="false" aria-controls="home-a" id="tab-home-a">案A ／ 静</button>
+          <button role="tab" aria-selected="true" aria-controls="home-b" id="tab-home-b">案B ／ 動</button>
+        </div>
+        <span class="hint">横スクロールできます</span>
+      </div>
+
+      <!-- 現状 -->
+      <div class="frame-scroll hidden" id="home-now" role="tabpanel" aria-labelledby="tab-home-now">
+        <div class="madoi before">
+          <div class="m-head">
+            <span class="m-logo"><i class="mark"></i>Madoi</span>
+            <span class="spacer"></span>
+            <span class="m-nav"><span>adeliaekun</span><span>通知</span><span>設定</span></span>
+          </div>
+          <div class="m-body">
+            <div class="m-card m-pagehead">
+              <div>
+                <p class="m-eyebrow">Madoi</p>
+                <h2 class="m-h1">ホーム</h2>
+                <p class="m-sub">選んだ日の予定と、対応が必要なことだけを確認します。</p>
+              </div>
+              <span class="m-btn">イベント作成</span>
+            </div>
+
+            <div class="m-quick">
+              <div class="q"><span class="ico">▤</span><span class="t">イベント一覧</span><span class="d">作成したイベントと調整中の日程を確認します。</span></div>
+              <div class="q dup"><span class="ico">＋</span><span class="t">イベント作成</span><span class="d">まずは名前とカテゴリだけ決めて始めます。</span></div>
+              <div class="q"><span class="ico">▦</span><span class="t">日程調整カレンダー</span><span class="d">候補日時の重なりを月表示で見ます。</span></div>
+              <div class="q dup"><span class="ico">⚙</span><span class="t">設定</span><span class="d">Google Calendar連携やアカウントを確認します。</span></div>
+            </div>
+
+            <div class="m-card">
+              <div class="m-row">
+                <div>
+                  <p class="m-title">対応が必要なこと</p>
+                  <p class="m-desc">期限、未回答、清算まわりを絞り込んで確認できます。</p>
+                </div>
+                <span class="spacer"></span>
+                <span class="m-btn ghost sm">通知を開く</span>
+              </div>
+              <div class="m-chips">
+                <span class="m-chip on">すべて 0</span>
+                <span class="m-chip">期限 0</span>
+                <span class="m-chip">未回答 0</span>
+                <span class="m-chip">清算 0</span>
+                <span class="m-chip">支払い 0</span>
+                <span class="m-chip">受け取り確認 0</span>
+              </div>
+              <div class="m-sunken">この条件で対応が必要なものはありません。</div>
+            </div>
+
+            <div class="m-card">
+              <div>
+                <p class="m-eyebrow">Agenda</p>
+                <p class="m-title" style="margin-top:4px">選択日の予定</p>
+                <p class="m-desc">予定を見たい日だけに絞って確認します。</p>
+              </div>
+              <div class="m-chips">
+                <span class="m-chip on">今日</span>
+                <span class="m-chip">明日</span>
+                <span class="m-chip">週末</span>
+              </div>
+              <div class="m-days">
+                <div class="m-day sun"><span class="w">日</span>7/5</div>
+                <div class="m-day"><span class="w">月</span>7/6</div>
+                <div class="m-day"><span class="w">火</span>7/7</div>
+                <div class="m-day"><span class="w">水</span>7/8</div>
+                <div class="m-day"><span class="w">木</span>7/9</div>
+                <div class="m-day on"><span class="w">金</span>7/10</div>
+                <div class="m-day"><span class="w">土</span>7/11</div>
+              </div>
+              <div class="m-sunken">この日の予定はまだありません。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 案A -->
+      <div class="frame-scroll hidden" id="home-a" role="tabpanel" aria-labelledby="tab-home-a">
+        <div class="madoi">
+          <div class="m-head">
+            <span class="m-logo"><i class="mark"></i>Madoi</span>
+            <span class="spacer"></span>
+            <span class="m-nav"><span>adeliaekun</span><span>通知</span><span>設定</span></span>
+          </div>
+          <div class="m-body">
+            <div class="m-card m-pagehead">
+              <div>
+                <p class="m-eyebrow">Home</p>
+                <h2 class="m-h1">ホーム</h2>
+                <p class="m-sub">選んだ日の予定と、対応が必要なことだけを確認します。</p>
+              </div>
+              <span class="m-btn">＋ イベント作成</span>
+            </div>
+
+            <div class="m-quick">
+              <div class="q"><span class="ico">▤</span><span class="t">イベント一覧</span><span class="d">作成したイベントと調整中の日程を確認します。</span></div>
+              <div class="q"><span class="ico">＋</span><span class="t">イベント作成</span><span class="d">まずは名前とカテゴリだけ決めて始めます。</span></div>
+              <div class="q"><span class="ico">▦</span><span class="t">日程調整カレンダー</span><span class="d">候補日時の重なりを月表示で見ます。</span></div>
+              <div class="q"><span class="ico">⚙</span><span class="t">設定</span><span class="d">Google Calendar連携やアカウントを確認します。</span></div>
+            </div>
+
+            <div class="m-card">
+              <div class="m-row">
+                <div>
+                  <p class="m-title">対応が必要なこと</p>
+                  <p class="m-desc">期限、未回答、清算まわりを絞り込んで確認できます。</p>
+                </div>
+                <span class="spacer"></span>
+                <span class="m-btn ghost sm">通知を開く</span>
+              </div>
+              <div class="m-chips">
+                <span class="m-chip on">すべて 0</span>
+                <span class="m-chip">期限 0</span>
+                <span class="m-chip">未回答 0</span>
+                <span class="m-chip">清算 0</span>
+                <span class="m-chip">支払い 0</span>
+                <span class="m-chip">受け取り確認 0</span>
+              </div>
+              <div class="m-sunken">
+                <div class="m-empty"><span class="ico">✓</span><span>いま対応が必要なものはありません。</span></div>
+              </div>
+            </div>
+
+            <div class="m-card">
+              <div>
+                <p class="m-eyebrow">Agenda</p>
+                <p class="m-title" style="margin-top:4px">選択日の予定</p>
+                <p class="m-desc">予定を見たい日だけに絞って確認します。</p>
+              </div>
+              <div class="m-chips">
+                <span class="m-chip on">今日</span>
+                <span class="m-chip">明日</span>
+                <span class="m-chip">週末</span>
+              </div>
+              <div class="m-days">
+                <div class="m-day sun"><span class="w">日</span>7/5</div>
+                <div class="m-day"><span class="w">月</span>7/6</div>
+                <div class="m-day"><span class="w">火</span>7/7</div>
+                <div class="m-day dot"><span class="w">水</span>7/8</div>
+                <div class="m-day"><span class="w">木</span>7/9</div>
+                <div class="m-day on"><span class="w">金</span>7/10</div>
+                <div class="m-day dot"><span class="w">土</span>7/11</div>
+              </div>
+              <div class="m-sunken">
+                <div class="m-empty"><span class="ico">◷</span><span>この日の予定はまだありません。</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 案B -->
+      <div class="frame-scroll" id="home-b" role="tabpanel" aria-labelledby="tab-home-b">
+        <div class="madoi">
+          <div class="m-head">
+            <span class="m-logo"><i class="mark"></i>Madoi</span>
+            <span class="spacer"></span>
+            <span class="m-nav"><span>adeliaekun</span><span>通知</span><span>設定</span></span>
+          </div>
+          <div class="m-body">
+            <div class="m-navrow">
+              <a href="#" class="cur">ホーム</a>
+              <a href="#">イベント</a>
+              <a href="#">日程調整カレンダー</a>
+            </div>
+
+            <div class="m-card m-pagehead">
+              <div>
+                <p class="m-eyebrow">Home</p>
+                <h2 class="m-h1">こんにちは、adeliaekun さん</h2>
+                <p class="m-sub">いま手が必要なのは3件。ぜんぶ片づけば、あとは遊ぶだけ。</p>
+              </div>
+              <span class="m-btn">＋ イベント作成</span>
+            </div>
+
+            <div class="m-card">
+              <div class="m-row">
+                <div>
+                  <p class="m-title">対応が必要なこと</p>
+                  <p class="m-desc">期限が近いものから並べています。</p>
+                </div>
+                <span class="spacer"></span>
+                <span class="m-btn ghost sm">通知を開く</span>
+              </div>
+              <div class="m-chips">
+                <span class="m-chip on">すべて <i class="n">3</i></span>
+                <span class="m-chip">期限 <i class="n">1</i></span>
+                <span class="m-chip">未回答 <i class="n">2</i></span>
+              </div>
+              <div class="m-stack">
+                <div class="m-tl" style="border-left-color:var(--clay)">
+                  <span class="t">明日 23:59</span>
+                  <span class="n">謎解き公演「灯台」の回答期限</span>
+                  <span class="src"><span class="m-badge warn"><i class="dot"></i>期限が近い</span></span>
+                </div>
+                <div class="m-tl" style="border-left-color:var(--honey)">
+                  <span class="t">7/18 まで</span>
+                  <span class="n">サマーライブの候補日に回答</span>
+                  <span class="src"><span class="m-badge info"><i class="dot"></i>未回答</span></span>
+                </div>
+                <div class="m-tl" style="border-left-color:var(--honey)">
+                  <span class="t">7/20 まで</span>
+                  <span class="n">飲み会（8月）の候補日に回答</span>
+                  <span class="src"><span class="m-badge info"><i class="dot"></i>未回答</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="m-card">
+              <div class="m-row">
+                <div>
+                  <p class="m-title">今日の予定</p>
+                  <p class="m-desc">Madoi の確定予定と Google カレンダーをまとめて表示します。</p>
+                </div>
+                <span class="spacer"></span>
+                <span class="m-chips">
+                  <span class="m-chip on">今日</span>
+                  <span class="m-chip">明日</span>
+                  <span class="m-chip">週末</span>
+                </span>
+              </div>
+              <div class="m-days">
+                <div class="m-day sun"><span class="w">日</span>7/5</div>
+                <div class="m-day"><span class="w">月</span>7/6</div>
+                <div class="m-day"><span class="w">火</span>7/7</div>
+                <div class="m-day dot"><span class="w">水</span>7/8</div>
+                <div class="m-day"><span class="w">木</span>7/9</div>
+                <div class="m-day on"><span class="w">金</span>7/10</div>
+                <div class="m-day dot"><span class="w">土</span>7/11</div>
+              </div>
+              <div class="m-stack">
+                <div class="m-tl">
+                  <span class="t">19:00 – 21:00</span>
+                  <span class="n">謎解き公演「灯台」</span>
+                  <span class="src"><span class="m-badge done"><i class="dot"></i>確定</span></span>
+                </div>
+                <div class="m-tl" style="border-left-color:var(--line-strong)">
+                  <span class="t">終日</span>
+                  <span class="n">有給（Google カレンダー）</span>
+                  <span class="src"><span class="m-badge neutral">Google</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日程調整詳細 -->
+    <div class="stage">
+      <div class="stage-bar">
+        <span class="title">日程調整 詳細</span>
+        <div class="tabs" role="tablist" aria-label="日程調整詳細の案">
+          <button role="tab" aria-selected="false" aria-controls="plan-now" id="tab-plan-now">現状</button>
+          <button role="tab" aria-selected="false" aria-controls="plan-a" id="tab-plan-a">案A ／ 静</button>
+          <button role="tab" aria-selected="true" aria-controls="plan-b" id="tab-plan-b">案B ／ 動</button>
+        </div>
+        <span class="hint">横スクロールできます</span>
+      </div>
+
+      <!-- 現状 -->
+      <div class="frame-scroll hidden" id="plan-now" role="tabpanel" aria-labelledby="tab-plan-now">
+        <div class="madoi before">
+          <div class="m-head">
+            <span class="m-logo"><i class="mark"></i>Madoi</span>
+            <span class="spacer"></span>
+            <span class="m-nav"><span>adeliaekun</span><span>通知</span><span>設定</span></span>
+          </div>
+          <div class="m-body">
+            <div class="m-card m-pagehead">
+              <div>
+                <p class="m-eyebrow">Madoi</p>
+                <h2 class="m-h1">日程調整</h2>
+                <p class="m-sub">サマーライブ の日程を調整しています。</p>
+              </div>
+              <span class="m-btn">日程を確定</span>
+            </div>
+
+            <div class="m-stats">
+              <div class="m-stat"><span class="lbl">回答状況</span><span class="val">4/7人</span><span class="sub">未回答 3人</span></div>
+              <div class="m-stat"><span class="lbl">候補日時</span><span class="val">3件</span><span class="sub">おすすめ 7/17</span></div>
+              <div class="m-stat"><span class="lbl">回答期限</span><span class="val">7/11</span><span class="sub">受付中</span></div>
+              <div class="m-stat"><span class="lbl">確定日時</span><span class="val">未設定</span><span class="sub">未確定</span></div>
+              <div class="m-stat"><span class="lbl">清算</span><span class="val">未開始</span><span class="sub">確定後に使います</span></div>
+            </div>
+
+            <div class="m-cols">
+              <div class="m-card">
+                <div class="m-row">
+                  <div>
+                    <p class="m-title">候補ランキング</p>
+                    <p class="m-desc">◯が多く、×と未回答が少ない候補を上に並べています。</p>
+                  </div>
+                  <span class="spacer"></span>
+                  <span class="m-btn ghost sm">候補を編集</span>
+                </div>
+                <div class="m-stack">
+                  <div class="m-cand">
+                    <span class="rank">1</span>
+                    <span><span class="when">7/17 (金) 19:00 – 21:00</span><br><span class="who">回答済み 4/7人</span></span>
+                    <span class="m-votes">
+                      <span class="m-vote">◯<b>3</b></span>
+                      <span class="m-vote">△<b>1</b></span>
+                      <span class="m-vote">×<b>0</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                  <div class="m-cand">
+                    <span class="rank">2</span>
+                    <span><span class="when">7/18 (土) 13:00 – 15:00</span><br><span class="who">回答済み 4/7人</span></span>
+                    <span class="m-votes">
+                      <span class="m-vote">◯<b>2</b></span>
+                      <span class="m-vote">△<b>1</b></span>
+                      <span class="m-vote">×<b>1</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="m-colstack">
+                <div class="m-card">
+                  <p class="m-title">共有リンク</p>
+                  <p class="m-desc">このリンクを送ると、未ログインの人も回答できます。</p>
+                  <div class="m-linkbox"><span>https://madoi.app/s/0cc5774a-810b-431f/answer</span></div>
+                  <div class="m-row">
+                    <span class="m-btn ghost sm">リンクをコピー</span>
+                    <span class="m-btn sm">自分も回答する</span>
+                  </div>
+                </div>
+                <div class="m-card">
+                  <p class="m-title">未回答者</p>
+                  <p class="m-desc">まだ回答していない人に送る文面をコピーできます。</p>
+                  <div class="m-sunken">3人が未回答です。</div>
+                </div>
+                <div class="m-card">
+                  <p class="m-title">参加者</p>
+                  <div class="m-sunken">共有リンクから回答すると、参加者として追加されます。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 案A -->
+      <div class="frame-scroll hidden" id="plan-a" role="tabpanel" aria-labelledby="tab-plan-a">
+        <div class="madoi">
+          <div class="m-head">
+            <span class="m-logo"><i class="mark"></i>Madoi</span>
+            <span class="spacer"></span>
+            <span class="m-nav"><span>adeliaekun</span><span>通知</span><span>設定</span></span>
+          </div>
+          <div class="m-body">
+            <div class="m-card m-pagehead">
+              <div>
+                <p class="m-eyebrow">Schedule</p>
+                <h2 class="m-h1">日程調整</h2>
+                <p class="m-sub">サマーライブ の日程を調整しています。</p>
+              </div>
+              <span class="m-btn">日程を確定</span>
+            </div>
+
+            <div class="m-stats">
+              <div class="m-stat"><span class="lbl">回答状況</span><span class="val">4/7人</span><span class="sub">未回答 3人</span></div>
+              <div class="m-stat"><span class="lbl">候補日時</span><span class="val">3件</span><span class="sub">おすすめ 7/17</span></div>
+              <div class="m-stat"><span class="lbl">回答期限</span><span class="val">7/11</span><span class="sub">受付中</span></div>
+              <div class="m-stat"><span class="lbl">確定日時</span><span class="val">未設定</span><span class="sub">未確定</span></div>
+              <div class="m-stat"><span class="lbl">清算</span><span class="val">未開始</span><span class="sub">確定後に使います</span></div>
+            </div>
+
+            <div class="m-cols">
+              <div class="m-card">
+                <div class="m-row">
+                  <div>
+                    <p class="m-title">候補ランキング</p>
+                    <p class="m-desc">◯が多く、×と未回答が少ない候補を上に並べています。</p>
+                  </div>
+                  <span class="spacer"></span>
+                  <span class="m-btn ghost sm">候補を編集</span>
+                </div>
+                <div class="m-stack">
+                  <div class="m-cand top">
+                    <span class="rank">1</span>
+                    <span><span class="when">7/17 (金) 19:00 – 21:00</span><br><span class="who">回答済み 4/7人</span></span>
+                    <span class="m-votes">
+                      <span class="m-vote o">◯<b>3</b></span>
+                      <span class="m-vote">△<b>1</b></span>
+                      <span class="m-vote x">×<b>0</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                  <div class="m-cand">
+                    <span class="rank">2</span>
+                    <span><span class="when">7/18 (土) 13:00 – 15:00</span><br><span class="who">回答済み 4/7人</span></span>
+                    <span class="m-votes">
+                      <span class="m-vote o">◯<b>2</b></span>
+                      <span class="m-vote">△<b>1</b></span>
+                      <span class="m-vote x">×<b>1</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="m-colstack">
+                <div class="m-card">
+                  <p class="m-title">共有リンク</p>
+                  <p class="m-desc">このリンクを送ると、未ログインの人も回答できます。</p>
+                  <div class="m-linkbox"><span>https://madoi.app/s/0cc5774a-810b-431f/answer</span></div>
+                  <div class="m-row">
+                    <span class="m-btn ghost sm">リンクをコピー</span>
+                    <span class="m-btn sm">自分も回答する</span>
+                  </div>
+                </div>
+                <div class="m-card">
+                  <p class="m-title">未回答者</p>
+                  <p class="m-desc">まだ回答していない人に送る文面をコピーできます。</p>
+                  <div class="m-sunken">
+                    <div class="m-empty"><span class="ico">◷</span><span>3人が未回答です。</span></div>
+                  </div>
+                </div>
+                <div class="m-card">
+                  <p class="m-title">参加者</p>
+                  <div class="m-sunken">
+                    <div class="m-empty"><span class="ico">＋</span><span>共有リンクから回答すると、参加者として追加されます。</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 案B -->
+      <div class="frame-scroll" id="plan-b" role="tabpanel" aria-labelledby="tab-plan-b">
+        <div class="madoi">
+          <div class="m-head">
+            <span class="m-logo"><i class="mark"></i>Madoi</span>
+            <span class="spacer"></span>
+            <span class="m-nav"><span>adeliaekun</span><span>通知</span><span>設定</span></span>
+          </div>
+          <div class="m-body">
+            <div class="m-navrow">
+              <a href="#">ホーム</a>
+              <a href="#">イベント</a>
+              <a href="#" class="cur">日程調整カレンダー</a>
+            </div>
+
+            <div class="m-card m-pagehead">
+              <div>
+                <p class="m-eyebrow">Schedule</p>
+                <h2 class="m-h1">サマーライブ</h2>
+                <p class="m-sub">候補は3件。回答期限まであと1日。</p>
+              </div>
+              <span class="m-btn">日程を確定</span>
+            </div>
+
+            <!-- 主役: 回答状況 -->
+            <div class="m-card">
+              <div class="m-hero-stat">
+                <div>
+                  <p class="m-eyebrow">回答状況</p>
+                  <p class="big" style="margin:6px 0 0">4/7<small>人</small></p>
+                  <div class="m-progress"><i style="width:57%"></i></div>
+                  <p class="m-desc" style="margin-top:8px">あと3人。期限は明日 23:59。</p>
+                </div>
+                <div class="m-stack">
+                  <div class="m-meta-row">
+                    <div class="cell"><span class="k">候補</span><span class="v">3件</span></div>
+                    <div class="cell"><span class="k">期限</span><span class="v" style="color:var(--clay-ink)">7/11 23:59</span></div>
+                    <div class="cell"><span class="k">確定日時</span><span class="v" style="color:var(--muted)">未確定</span></div>
+                    <div class="cell"><span class="k">清算</span><span class="v" style="color:var(--muted)">未開始</span></div>
+                  </div>
+                  <div class="m-row">
+                    <span class="m-badge warn"><i class="dot"></i>期限が近い</span>
+                    <span class="m-badge info"><i class="dot"></i>調整中</span>
+                    <span class="spacer"></span>
+                    <span class="m-btn ghost sm">未回答の3人にリマインド</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="m-cols">
+              <div class="m-card">
+                <div class="m-row">
+                  <div>
+                    <p class="m-title">候補ランキング</p>
+                    <p class="m-desc">◯が多く、×と未回答が少ない順。</p>
+                  </div>
+                  <span class="spacer"></span>
+                  <span class="m-btn ghost sm">候補を編集</span>
+                </div>
+                <div class="m-stack">
+                  <div class="m-cand top">
+                    <span class="rank">1</span>
+                    <span>
+                      <span class="when">7/17 (金) 19:00 – 21:00</span>
+                      <span class="m-badge done" style="margin-left:8px"><i class="dot"></i>おすすめ</span>
+                      <br><span class="who">回答済み 4/7人 ・ スコア 8</span>
+                    </span>
+                    <span class="m-votes">
+                      <span class="m-vote o">◯<b>3</b></span>
+                      <span class="m-vote">△<b>1</b></span>
+                      <span class="m-vote x">×<b>0</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                  <div class="m-cand">
+                    <span class="rank">2</span>
+                    <span><span class="when">7/18 (土) 13:00 – 15:00</span><br><span class="who">回答済み 4/7人 ・ スコア 5</span></span>
+                    <span class="m-votes">
+                      <span class="m-vote o">◯<b>2</b></span>
+                      <span class="m-vote">△<b>1</b></span>
+                      <span class="m-vote x">×<b>1</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                  <div class="m-cand">
+                    <span class="rank">3</span>
+                    <span><span class="when">7/24 (金) 19:00 – 21:00</span><br><span class="who">回答済み 4/7人 ・ スコア 1</span></span>
+                    <span class="m-votes">
+                      <span class="m-vote o">◯<b>1</b></span>
+                      <span class="m-vote">△<b>0</b></span>
+                      <span class="m-vote x">×<b>3</b></span>
+                      <span class="m-vote">未<b>3</b></span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="m-colstack">
+                <!-- 主役に格上げ -->
+                <div class="m-card m-share">
+                  <p class="m-eyebrow">いま一番効くこと</p>
+                  <p class="m-title" style="margin-top:2px">リンクを配る</p>
+                  <p class="m-desc">未ログインの人もそのまま回答できます。</p>
+                  <div class="m-linkbox">
+                    <span>madoi.app/s/0cc5774a…/answer</span>
+                  </div>
+                  <div class="m-row">
+                    <span class="m-btn sm" style="box-shadow:var(--sh-soft)">リンクをコピー</span>
+                    <span class="m-btn ghost sm">自分も回答する</span>
+                  </div>
+                </div>
+
+                <div class="m-card">
+                  <div class="m-row">
+                    <p class="m-title">未回答 <span style="color:var(--clay-ink)">3人</span></p>
+                    <span class="spacer"></span>
+                    <span class="m-btn ghost sm">文面をコピー</span>
+                  </div>
+                  <div class="m-stack">
+                    <div class="m-tl" style="border-left-color:var(--clay);padding:9px 12px">
+                      <span class="n">たろう</span><span class="src"><span class="m-badge warn"><i class="dot"></i>未回答</span></span>
+                    </div>
+                    <div class="m-tl" style="border-left-color:var(--clay);padding:9px 12px">
+                      <span class="n">はなこ</span><span class="src"><span class="m-badge warn"><i class="dot"></i>未回答</span></span>
+                    </div>
+                    <div class="m-tl" style="border-left-color:var(--clay);padding:9px 12px">
+                      <span class="n">じろう</span><span class="src"><span class="m-badge warn"><i class="dot"></i>未回答</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="m-card">
+                  <p class="m-title">参加者 <span style="color:var(--muted);font-weight:400">7人</span></p>
+                  <div class="m-sunken" style="padding:11px 13px">
+                    <div class="m-empty">
+                      <span class="ico">＋</span>
+                      <span>共有リンクから回答した人も、ここに追加されます。</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 推奨 ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>推奨は案B</h2>
+      <p>ただし段階的に入れられる。案Aの土台（トークン・プリミティブ）を先に入れて全画面を底上げし、そのあとホームと日程調整詳細だけ案Bの情報設計に進む、という順序を勧める。</p>
+    </div>
+
+    <div class="rec">
+      <h3>なぜ案Bか</h3>
+      <ul>
+        <li><b>案Aだけだと、重複導線が残る。</b> 見た目は締まるが、ホームの一等地をクイックリンク4枚（うち2枚は重複）が占め続ける。この構造的な問題は、色や影では直せない。</li>
+        <li><b>0件のチップを6個並べるのをやめる。</b> 「すべて0 / 期限0 / 未回答0…」は情報量がゼロなうえ、空っぽ感を増幅している。件数があるものだけ出す。</li>
+        <li><b>回答状況を主役にすると、次の行動が決まる。</b> 「4/7人・あと3人・期限は明日」まで一目で読めれば、ユーザーがやることは「リマインドを送る」に自ずと決まる。だから右カラムも「リンクを配る」を主役に格上げした。</li>
+        <li><b>色が意味を持つ。</b> clay = 期限、honey = 調整中、moss/pine = 確定。今は定義されているだけで一度も使われていない色が、ここで初めて働きはじめる。</li>
+      </ul>
+    </div>
+
+    <div class="rec" style="border-left-color:var(--doc-warn)">
+      <h3>案Bのリスク</h3>
+      <ul>
+        <li><b>変更範囲が広い。</b> ホームと日程調整詳細のコンポーネントを組み替えるので、案Aより差分が大きく、レビューも重くなる。</li>
+        <li><b>ヘッダー直下のテキストナビは新しい要素。</b> ただし <code>docs/design/03_screen_flow.md</code> の「常時表示の左メニューや下部タブは置かない」という方針には抵触しない範囲に収めている（サイドバーでも下部タブでもない）。ここは判断がほしい。</li>
+        <li><b>挨拶コピーは好みが分かれる。</b> 「こんにちは、◯◯さん」が合わないなら「ホーム」のままでいい。トークンとレイアウトの話とは独立している。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 仕様 ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>状態とエッジケース</h2>
+      <p>モックは「ちょうどよくデータがある」状態しか描いていない。実装では以下を決めておく必要がある。</p>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>場面</th>
+            <th>状態</th>
+            <th>扱い</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>対応が必要なこと</b></td>
+            <td>0件</td>
+            <td>チップ行そのものを出さない。カードは残し、「いま対応が必要なものはありません。」＋チェックアイコンの空状態。<span class="dim">現状は0件チップを6個並べていて、空虚さを増幅している。</span></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td class="dim">件数が多い</td>
+            <td class="dim">期限が近い順に最大5件。以降は「通知を開く」へ送る。</td>
+          </tr>
+          <tr>
+            <td><b>回答状況</b></td>
+            <td>参加者0人</td>
+            <td>進捗バーを出さず、「まだ誰も招待していません」＋共有リンクへの導線に切り替える。<span class="dim">0/0人 で 0% のバーを出すと、壊れて見える。</span></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td class="dim">全員回答済み</td>
+            <td class="dim">バーを moss で満たし、バッジを「確定できます」に。CTA「日程を確定」を主ボタンとして強調。</td>
+          </tr>
+          <tr>
+            <td><b>期限バッジ</b></td>
+            <td>24時間以内 / 超過</td>
+            <td>clay（期限が近い）／ 超過時は「受付終了」の neutral に落とす。<span class="dim">超過後も赤いままだと、直しようのない警告を出し続けることになる。</span></td>
+          </tr>
+          <tr>
+            <td><b>候補ランキング</b></td>
+            <td>同スコアが並ぶ</td>
+            <td>「おすすめ」バッジは最上位1件のみ。同点なら日付が早い方。<span class="dim">2件に付けると推薦の意味が消える。</span></td>
+          </tr>
+          <tr>
+            <td><b>未回答者</b></td>
+            <td>0人</td>
+            <td>カードを縮小し、「全員から回答が届いています。」の1行に。<span class="dim">空カードで縦を食わない。</span></td>
+          </tr>
+          <tr>
+            <td><b>共有リンク</b></td>
+            <td>日程確定後</td>
+            <td>「いま一番効くこと」の見出しを外し、通常カードに降格。<span class="dim">確定後にリンク配布を煽る意味はない。</span></td>
+          </tr>
+          <tr>
+            <td><b>subtle 色</b></td>
+            <td>常時</td>
+            <td>WCAG AA（4.5:1）を満たさないため、<b>本文・ラベルには使わない</b>。罫線・プレースホルダ・装飾のみ。<span class="dim">ルールとして design/rules.md に固定する。</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 次の一手 ============ -->
+  <section class="block">
+    <div class="sec-head">
+      <h2>進め方</h2>
+      <p>実装は4段階。1と2を入れた時点で全画面が底上げされるので、そこで一度スクリーンショットを撮って確かめられる。</p>
+    </div>
+
+    <div class="findings">
+      <div class="finding">
+        <h3>1. 土台</h3>
+        <p><code>tailwind.config.ts</code> にトークン、<code>app/layout.tsx</code> に Zen Kaku Gothic New、<code>app/globals.css</code> の背景装飾を調整。<code>design/tokens.css</code> と <code>design/rules.md</code> も同時に作る。</p>
+      </div>
+      <div class="finding">
+        <h3>2. プリミティブ</h3>
+        <p><code>components/ui.tsx</code> の <code>Card</code> / <code>EmptyState</code> / <code>PageHeader</code> を直し、<code>Badge</code> <code>Stat</code> <code>Alert</code> <code>Progress</code> を足す。<b>Card を直した時点で全画面に効く。</b></p>
+      </div>
+      <div class="finding">
+        <h3>3. 情報設計（案B）</h3>
+        <p>ホームのクイックリンク撤去と「対応が必要なこと」の繰り上げ、日程調整詳細の主役立て。ここだけレイアウトに触る。</p>
+      </div>
+      <div class="finding">
+        <h3>4. 横展開と検証</h3>
+        <p>清算ページ（<code>rounded-*</code> が36箇所と最も散らかっている）などのアドホックな記述をプリミティブへ回収。Playwright で全画面のビフォー / アフターを撮り、コントラスト比も確認する。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    モックは実装予定のトークンで組んでいる。フォントだけは、この提案書が外部CDNを読み込めないためシステムフォントで代用している（実装では Zen Kaku Gothic New）。
+  </footer>
+
+</div>
+
+<script>
+  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+
+    function select(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        var panel = document.getElementById(t.getAttribute("aria-controls"));
+        if (panel) panel.classList.toggle("hidden", !on);
+      });
+    }
+
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener("click", function () { select(tab); });
+      tab.addEventListener("keydown", function (e) {
+        var next = null;
+        if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+        if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (next) { e.preventDefault(); next.focus(); select(next); }
+      });
+    });
+  });
+</script>

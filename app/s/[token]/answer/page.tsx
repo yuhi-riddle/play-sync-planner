@@ -13,7 +13,7 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
   if (!hasSupabaseAdminEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader title="日程回答" />
+        <PageHeader eyebrow="Answer" title="日程回答" />
         <SetupPanel />
       </div>
     );
@@ -38,7 +38,7 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
 
   return (
     <div className="space-y-6">
-      <PageHeader title="日程回答" description={`${event?.title ?? "イベント"} / ${plan.title ?? "日程調整"}`} />
+      <PageHeader eyebrow="Answer" title="日程回答" description={`${event?.title ?? "イベント"} / ${plan.title ?? "日程調整"}`} />
       <Card>
         {!answerable ? (
           <EmptyState>回答期限を過ぎているため、回答できません。</EmptyState>
