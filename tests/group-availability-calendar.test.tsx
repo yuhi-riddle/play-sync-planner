@@ -67,4 +67,20 @@ describe("GroupAvailabilityCalendar", () => {
       })
     );
   });
+
+  it("shows the access message without offering a retry when the API returns 403", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: "日程調整中の主催者だけが空き状況を集計できます。" })
+      }))
+    );
+
+    render(<GroupAvailabilityCalendar eventId="event-1" visibleMonth="2026-07" selectedRange={null} />);
+
+    expect(await screen.findByText("日程調整中の主催者だけが空き状況を集計できます。")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "空き状況を更新" })).not.toBeInTheDocument();
+  });
 });

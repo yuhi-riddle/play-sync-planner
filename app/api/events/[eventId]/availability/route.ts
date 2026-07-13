@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { monthRangeInTokyo, buildAvailabilitySlots } from "@/lib/domain/group-availability";
+import { canReadGroupAvailability } from "@/lib/domain/calendar-availability-access";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -12,19 +13,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "ログインが必要です。" }, { status: 401 });
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: membership, error: membershipError } = await supabase
-    .from("event_members")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("user_id", user.id)
-    .eq("status", "joined")
-    .maybeSingle();
-
-  if (membershipError || !membership) {
-    return NextResponse.json({ error: "このイベントの参加者だけが空き状況を確認できます。" }, { status: 403 });
   }
 
   const month = request.nextUrl.searchParams.get("month");
@@ -40,6 +28,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const admin = createSupabaseAdminClient();
+  const { data: event, error: eventError } = await admin
+    .from("events")
+    .select("owner_user_id, status")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (eventError || !canReadGroupAvailability({ eventStatus: event?.status, isOwner: event?.owner_user_id === user.id })) {
+    return NextResponse.json({ error: "日程調整中の主催者だけが空き状況を集計できます。" }, { status: 403 });
+  }
+
   const { data: members, error: membersError } = await admin
     .from("event_members")
     .select("user_id")

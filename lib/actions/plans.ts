@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { formDataToObject } from "@/lib/form-data";
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/validators";
 
 function toIsoDateTime(value: string): string {
@@ -177,6 +178,97 @@ export async function updatePlanAction(planId: string, formData: FormData) {
 
   if (participantsError || datesError || reminderError) {
     throw new Error(participantsError?.message ?? datesError?.message ?? reminderError?.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/events/${plan.event_id}`);
+  revalidatePath(`/plans/${planId}`);
+  redirect(`/plans/${planId}`);
+}
+
+export async function restartPlanAdjustmentAction(planId: string) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: plan, error: planError } = await supabase
+    .from("plans")
+    .select("id, event_id, owner_user_id, title")
+    .eq("id", planId)
+    .eq("owner_user_id", userId)
+    .single();
+
+  if (planError || !plan) {
+    throw new Error("この日程調整を再開する権限がありません。");
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: candidateDates, error: candidateDatesError } = await admin
+    .from("candidate_dates")
+    .select("id")
+    .eq("plan_id", planId);
+  if (candidateDatesError) {
+    throw new Error(candidateDatesError.message);
+  }
+
+  const candidateDateIds = (candidateDates ?? []).map((candidateDate) => candidateDate.id);
+  if (candidateDateIds.length > 0) {
+    const { error } = await admin.from("availability_answers").delete().in("candidate_date_id", candidateDateIds);
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  const [{ error: planUpdateError }, { error: eventUpdateError }, { error: participantsUpdateError }] = await Promise.all([
+    admin
+      .from("plans")
+      .update({ status: "collecting_answers", confirmed_start_at: null, confirmed_end_at: null, is_all_day: false })
+      .eq("id", planId),
+    admin.from("events").update({ status: "planning" }).eq("id", plan.event_id),
+    admin.from("participants").update({ status: "invited" }).eq("plan_id", planId)
+  ]);
+  if (planUpdateError || eventUpdateError || participantsUpdateError) {
+    throw new Error(planUpdateError?.message ?? eventUpdateError?.message ?? participantsUpdateError?.message);
+  }
+
+  const [{ data: participants, error: participantsError }, { data: shareLink, error: shareLinkError }] = await Promise.all([
+    admin.from("participants").select("user_id").eq("plan_id", planId).not("user_id", "is", null),
+    admin.from("share_links").select("token").eq("plan_id", planId).eq("purpose", "answer").maybeSingle()
+  ]);
+  if (participantsError || shareLinkError) {
+    throw new Error(participantsError?.message ?? shareLinkError?.message);
+  }
+
+  const notificationTime = new Date().toISOString();
+  const notifications = (participants ?? []).flatMap((participant) => {
+    if (!participant.user_id || !shareLink?.token) {
+      return [];
+    }
+    const notification = buildNotificationCandidate({
+      userId: participant.user_id,
+      kind: "unanswered",
+      planId,
+      title: plan.title ?? "日程調整",
+      href: `/s/${shareLink.token}/answer`,
+      dueAt: `restart:${notificationTime}`
+    });
+    return [{
+      user_id: notification.userId,
+      kind: notification.kind,
+      title: notification.title,
+      body: notification.body,
+      href: notification.href,
+      dedupe_key: notification.dedupeKey,
+      read_at: null
+    }];
+  });
+  if (notifications.length > 0) {
+    const { error } = await admin.from("notifications").upsert(notifications, { onConflict: "user_id,dedupe_key" });
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   revalidatePath("/");

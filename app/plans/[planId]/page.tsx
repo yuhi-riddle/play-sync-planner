@@ -7,6 +7,7 @@ import { SettlementStatusBadge } from "@/components/settlement-status-badge";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
+import { restartPlanAdjustmentAction } from "@/lib/actions/plans";
 import { markReminderSentAction } from "@/lib/actions/reminders";
 import { planStatusLabels } from "@/lib/constants";
 import {
@@ -19,7 +20,7 @@ import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
 import { getSettlementStatusView } from "@/lib/domain/settlement";
 import { formatDateTime, formatDateTimeRange } from "@/lib/format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,7 @@ export default async function PlanDetailPage({
   searchParams?: Promise<{ calendar?: string }>;
 }) {
   const { planId } = await params;
+  const currentUserId = await getCurrentUserId();
   const query = (await searchParams) ?? {};
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase
@@ -137,6 +139,8 @@ export default async function PlanDetailPage({
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
   const settlementStatus = getSettlementStatusView(plan.settlement_status);
   const isConfirmed = plan.status === "date_confirmed";
+  const isPlanOwner = currentUserId === plan.owner_user_id;
+  const restartPlanAdjustment = restartPlanAdjustmentAction.bind(null, plan.id);
   const { data: calendarIntegration } = isConfirmed
     ? await supabase.from("calendar_integrations").select("id").eq("user_id", plan.owner_user_id).eq("provider", "google").maybeSingle()
     : { data: null };
@@ -193,6 +197,25 @@ export default async function PlanDetailPage({
               <SecondaryLink href="/settings">Google Calendarを連携</SecondaryLink>
             )}
           </div>
+        </Card>
+      ) : null}
+
+      {isConfirmed && isPlanOwner ? (
+        <Card className="p-4">
+          <details>
+            <summary className="cursor-pointer text-sm font-bold text-ink">再調整を始める</summary>
+            <p className="mt-3 text-sm leading-6 text-ink/70">
+              確定済みの予定を回答受付中に戻します。参加者の回答は削除され、もう一度回答を集めます。
+            </p>
+            <form action={restartPlanAdjustment} className="mt-4">
+              <button
+                type="submit"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-clay px-4 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              >
+                再調整を始める
+              </button>
+            </form>
+          </details>
         </Card>
       ) : null}
 

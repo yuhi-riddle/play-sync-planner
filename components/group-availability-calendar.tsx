@@ -17,6 +17,7 @@ type AvailabilityResponse = {
   slots: AvailabilitySlot[];
 };
 
+const accessDeniedMessage = "日程調整中の主催者だけが空き状況を集計できます。";
 function toTimestamp(value: string) {
   return new Date(value.length === 16 ? `${value}:00+09:00` : value).getTime();
 }
@@ -120,15 +121,17 @@ export function GroupAvailabilityCalendar({
           </div>
           <p className="mt-1 text-sm leading-6 text-ink/62">予定の名前・場所・個別の空き時間は表示しません。</p>
         </div>
-        <button
-          type="button"
-          onClick={refresh}
-          className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:self-auto"
-          aria-label="空き状況を更新"
-        >
-          <RefreshCw aria-hidden="true" className="h-4 w-4" />
-          更新
-        </button>
+        {error !== accessDeniedMessage ? (
+          <button
+            type="button"
+            onClick={refresh}
+            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:self-auto"
+            aria-label="空き状況を更新"
+          >
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            更新
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-4" aria-live="polite">
