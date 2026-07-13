@@ -68,6 +68,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+GOOGLE_CALENDAR_CLIENT_ID=
+GOOGLE_CALENDAR_CLIENT_SECRET=
+GOOGLE_CALENDAR_REDIRECT_URI=http://localhost:3000/api/google-calendar/callback
+CALENDAR_TOKEN_ENCRYPTION_KEY=
 CRON_SECRET=
 ```
 
@@ -83,6 +87,15 @@ supabase/migrations/006_settlement_payments.sql
 supabase/migrations/007_expense_important_notes.sql
 supabase/migrations/008_settlement_reminder_type.sql
 supabase/migrations/009_site_notifications.sql
+supabase/migrations/010_participant_user_identity.sql
+supabase/migrations/011_plan_multiple_reminders.sql
+supabase/migrations/012_answer_received_notifications.sql
+supabase/migrations/013_repair_notifications_setup.sql
+supabase/migrations/014_member_first_coordination.sql
+supabase/migrations/015_fix_event_policy_recursion.sql
+supabase/migrations/016_legal_consents_and_event_drafts.sql
+supabase/migrations/017_connections_messages_and_invites.sql
+supabase/migrations/018_require_follow_for_favorites.sql
 ```
 
 Google Calendar 連携を使う場合は、次の手順も実施してください。
@@ -115,6 +128,7 @@ npm run build
 - `docs/phase2-google-calendar-setup.md`: Google Calendar セットアップ手順
 - `docs/current-status.md`: 現在の実装状況、残件、リリース前チェックリスト
 - `docs/release-checklist.md`: ローカル・本番公開前の確認手順
+- `docs/closed-beta-test-setup.md`: 外部テスター向けの公開テスト準備
 
 ## Phase 2 Google Calendar 連携
 
