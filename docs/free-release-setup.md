@@ -34,14 +34,16 @@
 5. `Project Name` が `play-sync-planner` であることを確認する。
 6. `Framework Preset` が `Next.js` であることを確認する。
 7. `Root Directory` は空欄のままにする。
-8. この時点では環境変数を入力しない。
-9. 画面下の `Deploy` を押す。
-10. デプロイ完了画面が表示されるまで待つ。
-11. `Visit` を押す。ログインやCalendar連携が失敗しても、ここでは問題ありません。
+8. まだ `Deploy` は押さない。環境変数を先に設定する必要がある。
+9. `Project Name` が `play-sync-planner` の場合、`NEXT_PUBLIC_SITE_URL` には `https://play-sync-planner.vercel.app` を使う。
+10. 先に「3. Vercelの環境変数を設定する」の全手順を実施する。
+11. 環境変数を保存したあと、この画面へ戻り、画面下の `Deploy` を押す。
+12. デプロイ完了画面が表示されるまで待つ。
+13. `Visit` を押す。
 
 ### 2-2. Vercel本番URLをコピーする
 
-1. Vercelで `play-sync-planner` プロジェクトを開く。
+1. Vercelで `play-sync-planner` プロジェクトを開く。初回デプロイに失敗していても、プロジェクトは作成済みなので続けられる。
 2. `Overview` を開く。
 3. `Domains` または `Production Deployment` に表示される `https://...vercel.app` を探す。
 4. 表示されたURLのコピーアイコンを押す。
