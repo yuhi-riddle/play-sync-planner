@@ -3,15 +3,17 @@ import { notFound } from "next/navigation";
 
 import { EventMemberInviteCard } from "@/components/event-member-invite-card";
 import { EventInviteCandidates } from "@/components/event-invite-candidates";
+import { EventCancelAction } from "@/components/event-cancel-action";
 import { EventChat } from "@/components/event-chat";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
 import { createEventMessageAction } from "@/lib/actions/event-messages";
 import { createEventUserInvitationsAction } from "@/lib/actions/connections";
-import { categoryLabels, eventStatusLabels, planStatusLabels } from "@/lib/constants";
+import { cancelEventAction } from "@/lib/actions/events";
+import { categoryLabels, planStatusLabels } from "@/lib/constants";
+import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import type { EventMessage } from "@/lib/domain/event-chat";
 import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
-import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import { formatDateTime } from "@/lib/format";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
@@ -57,8 +59,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
     notFound();
   }
 
+  const admin = createSupabaseAdminClient();
   const [{ count: memberCount }, { data: invite }, currentUserId] = await Promise.all([
-    supabase.from("event_members").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "joined"),
+    admin.from("event_members").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "joined"),
     supabase
       .from("event_invite_links")
       .select("token, status")
@@ -86,14 +89,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       <Card>
         <dl className="grid gap-3 sm:grid-cols-2">
           <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
-          <Info label="ステータス" value={eventStatusLabels[event.status as keyof typeof eventStatusLabels]} />
+          <Info label="進行状況" value={event.status === "confirmed" ? "確定" : (event.plans ?? []).length ? "日程調整中" : "参加者募集中"} />
           <Info label="場所メモ" value={event.location_name ?? "未設定"} />
           <Info label="URL" value={event.url ?? "未設定"} />
           <Info label="メモ" value={event.memo ?? "未設定"} />
         </dl>
-        <div className="mt-5">
-          <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
-        </div>
+        {isOwner ? (
+          <div className="mt-5 flex flex-wrap gap-3">
+            <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
+            <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+          </div>
+        ) : null}
       </Card>
 
       {isOwner ? (

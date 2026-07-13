@@ -1,6 +1,6 @@
 # Madoi 現在の実装状況
 
-最終更新: 2026-07-06
+最終更新: 2026-07-13
 
 このドキュメントは、いま何ができていて、何が残っているのかを固定するための棚卸しです。
 小さな改善を増やし続けるのではなく、次の区切りに向けて必要な作業だけを見えるようにします。
@@ -16,7 +16,9 @@ Phase 1 は完了済みです。
 ### Phase 1: 日程調整
 
 - Supabase Auth による Google ログイン
+- ログイン前の利用規約・プライバシーポリシー同意と、同意日時・版数の保存
 - イベント作成、編集、一覧、詳細
+- イベント作成途中の下書き保存と、ホームの対応事項からの再開・破棄
 - 参加予定の作成、編集
 - 候補日時登録
 - 回答期限登録
@@ -30,6 +32,7 @@ Phase 1 は完了済みです。
 ### Phase 2: Google Calendar
 
 - Google Calendar 連携、解除
+- 空き状況集計用の `calendar.freebusy` 権限要求と、権限不足時の再連携導線
 - 設定画面でのログイン中メールアドレス表示と、別アカウント利用時の案内
 - Google Calendar 用 OAuth コールバック
 - Calendar トークンの暗号化保存
@@ -43,6 +46,16 @@ Phase 1 は完了済みです。
 - 回答期限前リマインドの任意タイミング複数設定
 - リマインド文面生成
 - 手動送信済みログ
+
+### 共同調整とつながり
+
+- 参加済みの共通イベントをきっかけにした片方向フォロー
+- フォロー済みユーザーのお気に入り登録と、ブロックによる関係解除
+- 過去に同じイベントへ参加した人を候補にする、ログイン必須のアプリ内招待
+- 招待の承諾・辞退と、承諾時のイベント参加処理
+- 参加済みメンバーだけが読めるイベント内チャット
+- 主催者かつ日程調整中だけが見られる、参加者全体の空き状況集計
+- 日程を再調整するための、確定日時・回答・参加状況のリセット
 
 ### Phase 3: 清算
 
@@ -106,7 +119,7 @@ Phase 1 は完了済みです。
    - RLS と API key の扱いが正しいこと。
    - Google OAuth のリダイレクト URL が正しいこと。
    - Google OAuth のスコープが実装内容と合っていること。
-   - Google Calendar 連携を使う場合は、`calendar.events` スコープで再連携できること。
+   - Google Calendar 連携を使う場合は、`calendar.events` と `calendar.freebusy` スコープで再連携できること。
    - `.env.local` と本番環境変数がそろっていること。
    - Vercel Cron と `CRON_SECRET` の扱いを決めること。
 
@@ -178,6 +191,9 @@ Phase 1 は完了済みです。
 
 - [ ] `001_phase1_schema.sql` を適用済み。
 - [ ] `002_calendar_integrations.sql` を適用済み。
+- [ ] `016_legal_consents_and_event_drafts.sql` を適用済み。
+- [ ] `017_connections_messages_and_invites.sql` を適用済み。
+- [ ] `018_require_follow_for_favorites.sql` を適用済み。
 - [ ] `003_plan_reminder_settings.sql` を適用済み。
 - [ ] `004_plan_reminder_logs.sql` を適用済み。
 - [ ] `005_settlement_core.sql` を適用済み。

@@ -61,9 +61,74 @@ export async function createEventAction(formData: FormData) {
     throw new Error(memberError?.message ?? inviteError?.message);
   }
 
+  await supabase.from("event_drafts").delete().eq("owner_user_id", user.id);
+
   revalidatePath("/");
   revalidatePath("/events");
   redirect(getAfterEventCreatePath(data.id));
+}
+
+export async function saveEventDraftAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const payload = {
+    category: formData.get("category")?.toString() ?? "",
+    title: formData.get("title")?.toString() ?? "",
+    url: formData.get("url")?.toString() ?? "",
+    location_name: formData.get("location_name")?.toString() ?? "",
+    memo: formData.get("memo")?.toString() ?? ""
+  };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("event_drafts").upsert({ owner_user_id: user.id, payload }, { onConflict: "owner_user_id" });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/events/new");
+}
+
+export async function discardEventDraftAction() {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("event_drafts").delete().eq("owner_user_id", user.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/events/new");
+}
+
+export async function cancelEventAction(eventId: string) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("events").update({ status: "cancelled" }).eq("id", eventId).eq("owner_user_id", user.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await Promise.all([
+    supabase.from("plans").update({ status: "cancelled" }).eq("event_id", eventId),
+    supabase.from("event_invite_links").update({ status: "closed", closed_at: new Date().toISOString() }).eq("event_id", eventId).eq("status", "open")
+  ]);
+
+  revalidatePath("/");
+  revalidatePath("/events");
+  revalidatePath(`/events/${eventId}`);
+  redirect("/events");
 }
 
 export async function updateEventAction(eventId: string, formData: FormData) {

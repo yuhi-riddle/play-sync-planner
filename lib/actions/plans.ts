@@ -50,7 +50,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     role: member.role,
     status: member.status
   })) as EventMember[];
-  if (!canStartPlanFromMembers(members)) {
+  if (!canStartPlanFromMembers(members) || !members.some((member) => member.userId === userId && member.role === "organizer" && member.status === "joined")) {
     throw new Error("主催者を含む参加者を集めてから日程調整を作成してください。");
   }
 
@@ -60,7 +60,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
       event_id: eventId,
       owner_user_id: userId,
       title: values.title,
-      answer_deadline_at: values.answer_deadline_at,
+      answer_deadline_at: toIsoDateTime(values.answer_deadline_at),
       memo: values.memo,
       status: "collecting_answers",
       settlement_status: "not_started",
@@ -83,7 +83,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     sort_order: index
   }));
 
-  const shareLink = buildAnswerShareLink(plan.id, values.answer_deadline_at);
+  const shareLink = buildAnswerShareLink(plan.id, toIsoDateTime(values.answer_deadline_at));
   const reminderOffsets = normalizeReminderOffsets(values);
   const reminderSetting = {
     plan_id: plan.id,
@@ -119,7 +119,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     .from("plans")
     .update({
       title: values.title,
-      answer_deadline_at: values.answer_deadline_at,
+      answer_deadline_at: toIsoDateTime(values.answer_deadline_at),
       memo: values.memo
     })
     .eq("id", planId)

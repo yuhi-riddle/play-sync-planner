@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { EventCancelAction } from "@/components/event-cancel-action";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { categoryLabels, eventStatusLabels, EVENT_CATEGORIES, EVENT_STATUSES } from "@/lib/constants";
+import { cancelEventAction } from "@/lib/actions/events";
+import { categoryLabels, EVENT_CATEGORIES } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -11,11 +13,9 @@ export const dynamic = "force-dynamic";
 
 type EventFilterQuery = {
   category?: string;
-  status?: string;
 };
 
 type EventCategoryFilter = "all" | (typeof EVENT_CATEGORIES)[number];
-type EventStatusFilter = "all" | (typeof EVENT_STATUSES)[number];
 
 function normalizeCategory(value: string | undefined) {
   return EVENT_CATEGORIES.includes(value as (typeof EVENT_CATEGORIES)[number])
@@ -23,19 +23,10 @@ function normalizeCategory(value: string | undefined) {
     : "all";
 }
 
-function normalizeStatus(value: string | undefined) {
-  return EVENT_STATUSES.includes(value as (typeof EVENT_STATUSES)[number])
-    ? (value as (typeof EVENT_STATUSES)[number])
-    : "all";
-}
-
-function filterHref(category: EventCategoryFilter, status: EventStatusFilter) {
+function filterHref(category: EventCategoryFilter) {
   const params = new URLSearchParams();
   if (category !== "all") {
     params.set("category", category);
-  }
-  if (status !== "all") {
-    params.set("status", status);
   }
   const query = params.toString();
   return query ? `/events?${query}` : "/events";
@@ -68,7 +59,6 @@ function FilterChip({
 export default async function EventsPage({ searchParams }: { searchParams?: Promise<EventFilterQuery> }) {
   const query = (await searchParams) ?? {};
   const activeCategory = normalizeCategory(query.category);
-  const activeStatus = normalizeStatus(query.status);
 
   if (!hasSupabaseEnv()) {
     return (
@@ -97,14 +87,11 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
     .from("events")
     .select("id, title, category, start_date, end_date, location_name, status, plans(id)")
     .eq("owner_user_id", user.id)
+    .in("status", ["interested", "planning", "confirmed"])
     .order("created_at", { ascending: false });
 
   if (activeCategory !== "all") {
     eventsQuery = eventsQuery.eq("category", activeCategory);
-  }
-
-  if (activeStatus !== "all") {
-    eventsQuery = eventsQuery.eq("status", activeStatus);
   }
 
   const { data: events } = await eventsQuery;
@@ -121,33 +108,16 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-moss">カテゴリ</p>
             <div className="flex flex-wrap gap-2">
-              <FilterChip href={filterHref("all", activeStatus)} active={activeCategory === "all"}>
+              <FilterChip href={filterHref("all")} active={activeCategory === "all"}>
                 すべて
               </FilterChip>
               {EVENT_CATEGORIES.map((category) => (
                 <FilterChip
                   key={category}
-                  href={filterHref(category, activeStatus)}
+                  href={filterHref(category)}
                   active={activeCategory === category}
                 >
                   {categoryLabels[category]}
-                </FilterChip>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-moss">状態</p>
-            <div className="flex flex-wrap gap-2">
-              <FilterChip href={filterHref(activeCategory, "all")} active={activeStatus === "all"}>
-                すべて
-              </FilterChip>
-              {EVENT_STATUSES.map((status) => (
-                <FilterChip
-                  key={status}
-                  href={filterHref(activeCategory, status)}
-                  active={activeStatus === status}
-                >
-                  {eventStatusLabels[status]}
                 </FilterChip>
               ))}
             </div>
@@ -157,8 +127,8 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       {(events ?? []).length > 0 ? (
         <div className="grid gap-4">
           {(events ?? []).map((event) => (
-            <Link key={event.id} href={`/events/${event.id}`} className="block">
-              <Card className="transition-colors hover:border-moss/45">
+            <Card key={event.id} className="transition-colors hover:border-moss/45">
+              <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="mb-3 inline-flex rounded-full bg-skywash/70 px-3 py-1 text-xs font-bold text-pine">
@@ -173,12 +143,15 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs font-bold text-ink/70">
-                    <span className="rounded-full bg-mist px-3 py-1">{eventStatusLabels[event.status as keyof typeof eventStatusLabels]}</span>
+                    <span className="rounded-full bg-mist px-3 py-1">{event.status === "confirmed" ? "確定" : event.plans?.length ? "日程調整中" : "参加者募集中"}</span>
                     <span className="rounded-full bg-cream/82 px-3 py-1">日程調整 {event.plans?.length ?? 0}件</span>
                   </div>
                 </div>
-              </Card>
-            </Link>
+              </Link>
+              <div className="mt-4 border-t border-ink/8 pt-4">
+                <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+              </div>
+            </Card>
           ))}
         </div>
       ) : (

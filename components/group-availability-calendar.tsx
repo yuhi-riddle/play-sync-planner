@@ -17,7 +17,9 @@ type AvailabilityResponse = {
   slots: AvailabilitySlot[];
 };
 
+type AvailabilityErrorResponse = { error?: string; code?: string };
 const accessDeniedMessage = "日程調整中の主催者だけが空き状況を集計できます。";
+
 function toTimestamp(value: string) {
   return new Date(value.length === 16 ? `${value}:00+09:00` : value).getTime();
 }
@@ -67,18 +69,24 @@ export function GroupAvailabilityCalendar({
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError("");
+    setErrorCode("");
 
     fetch(`/api/events/${eventId}/availability?month=${visibleMonth}`, { signal: controller.signal })
       .then(async (response) => {
-        const data = (await response.json()) as AvailabilityResponse | { error?: string };
+        const data = (await response.json()) as AvailabilityResponse | AvailabilityErrorResponse;
         if (!response.ok) {
-          throw new Error("error" in data && data.error ? data.error : "空き状況を取得できませんでした。");
+          const reason = new Error("error" in data && data.error ? data.error : "空き状況を取得できませんでした。");
+          if ("code" in data && data.code) {
+            reason.name = data.code;
+          }
+          throw reason;
         }
         return data as AvailabilityResponse;
       })
@@ -88,6 +96,7 @@ export function GroupAvailabilityCalendar({
           return;
         }
         setAvailability(null);
+        setErrorCode(reason instanceof Error ? reason.name : "");
         setError(reason instanceof Error ? reason.message : "空き状況を取得できませんでした。");
       })
       .finally(() => setLoading(false));
@@ -136,7 +145,16 @@ export function GroupAvailabilityCalendar({
 
       <div className="mt-4" aria-live="polite">
         {loading ? <p className="text-sm text-ink/60">空き状況を集計しています。</p> : null}
-        {error ? <p className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink">{error}</p> : null}
+        {error ? (
+          <div className="rounded-lg border border-clay/25 bg-clay/10 p-3 text-sm text-ink">
+            <p>{error}</p>
+            {errorCode === "calendar_reconnect_required" ? (
+              <a href={`/api/google-calendar/connect?next=${encodeURIComponent(`/events/${eventId}/plans/new`)}`} className="mt-2 inline-flex font-bold text-pine underline underline-offset-4">
+                Google Calendar を再連携
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         {!loading && !error && availability ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/82 px-3 py-1.5 text-sm font-bold text-pine">参加者 {availability.participantCount}人</span>

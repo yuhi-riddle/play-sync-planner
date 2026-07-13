@@ -15,14 +15,16 @@ describe("google calendar oauth", () => {
     expect(safeNextPath("//example.com")).toBe("/");
   });
 
-  it("builds an OAuth URL with offline access and Calendar events write scope", () => {
+  it("builds an OAuth URL with offline access, event write, and free/busy scopes", () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = "client-id";
     process.env.GOOGLE_CALENDAR_REDIRECT_URI = "http://localhost:3000/api/google-calendar/callback";
 
     const url = new URL(buildGoogleCalendarAuthUrl({ state: "state-1" }));
 
     expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
-    expect(url.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/calendar.events");
+    expect(url.searchParams.get("scope")).toBe(
+      "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.freebusy"
+    );
     expect(url.searchParams.get("access_type")).toBe("offline");
     expect(url.searchParams.get("prompt")).toBe("consent");
   });

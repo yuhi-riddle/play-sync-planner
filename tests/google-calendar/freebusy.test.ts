@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchCalendarFreeBusy, normalizeFreeBusyResponse } from "@/lib/google-calendar/freebusy";
+import { CalendarFreeBusyError, fetchCalendarFreeBusy, normalizeFreeBusyResponse } from "@/lib/google-calendar/freebusy";
 
 describe("Google Calendar free/busy", () => {
   it("normalizes busy ranges without event details", () => {
@@ -41,5 +41,18 @@ describe("Google Calendar free/busy", () => {
         })
       })
     );
+  });
+
+  it("keeps the Google response status when calendar re-authorization is needed", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403 })) as unknown as typeof fetch;
+
+    await expect(
+      fetchCalendarFreeBusy({
+        accessToken: "access-token",
+        timeMin: "2026-07-01T00:00:00+09:00",
+        timeMax: "2026-08-01T00:00:00+09:00",
+        fetchImpl
+      })
+    ).rejects.toMatchObject<Partial<CalendarFreeBusyError>>({ status: 403 });
   });
 });

@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { monthRangeInTokyo, buildAvailabilitySlots } from "@/lib/domain/group-availability";
 import { canReadGroupAvailability } from "@/lib/domain/calendar-availability-access";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
-import { fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { CalendarFreeBusyError, fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
+import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +91,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       participantCount: memberUserIds.length,
       slots
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof CalendarFreeBusyError && (error.status === 401 || error.status === 403)) {
+      return NextResponse.json({ error: "Google Calendar の再連携が必要です。", code: "calendar_reconnect_required" }, { status: 409 });
+    }
     return NextResponse.json({ error: "空き状況を取得できませんでした。時間をおいて再試行してください。" }, { status: 502 });
   }
 }

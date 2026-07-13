@@ -4,6 +4,7 @@ import { Bell, CalendarDays, CalendarPlus, ListChecks, Settings } from "lucide-r
 import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
+import { discardEventDraftAction } from "@/lib/actions/events";
 import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
 import {
   countNotificationsByActionFilter,
@@ -195,6 +196,8 @@ export default async function HomePage({
     .order("created_at", { ascending: false })
     .limit(80);
 
+  const { data: eventDraft } = await supabase.from("event_drafts").select("id, payload, updated_at").eq("owner_user_id", user.id).maybeSingle();
+
   const planRows = (plans ?? []) as PlanRow[];
   const unreadNotifications = (notifications ?? []) as NotificationRow[];
   const notificationCounts = countNotificationsByActionFilter(unreadNotifications);
@@ -261,6 +264,20 @@ export default async function HomePage({
         </nav>
 
         <div className="mt-4 grid gap-3">
+          {eventDraft ? (
+            <div className="rounded-lg border border-moss/24 bg-mist/24 p-4">
+              <span className="block text-sm font-bold text-ink">イベント作成の下書き</span>
+              <span className="mt-1 block text-sm leading-6 text-ink/62">入力途中のイベントがあります。続きから作成できます。</span>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <ButtonLink href="/events/new">続きから入力</ButtonLink>
+                <form action={discardEventDraftAction}>
+                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-4 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2">
+                    下書きを破棄
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : null}
           {filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => (
               <Link

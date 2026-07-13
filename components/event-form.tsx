@@ -17,10 +17,12 @@ type EventRecord = {
 
 export function EventForm({
   action,
+  draftAction,
   event,
   submitLabel
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  draftAction?: (formData: FormData) => void | Promise<void>;
   event?: EventRecord;
   submitLabel: string;
 }) {
@@ -53,8 +55,18 @@ export function EventForm({
         placeholder="例: 新宿駅周辺 / お店未定 / オンライン"
       />
       <TextArea label="メモ" name="memo" defaultValue={event?.memo} />
-      <div>
+      <div className="flex flex-wrap gap-3">
         <SubmitButton>{submitLabel}</SubmitButton>
+        {draftAction ? (
+          <button
+            type="submit"
+            formAction={draftAction}
+            formNoValidate
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/82 px-5 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          >
+            下書き保存
+          </button>
+        ) : null}
       </div>
     </MadoiForm>
   );

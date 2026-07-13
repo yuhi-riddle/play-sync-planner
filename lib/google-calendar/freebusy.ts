@@ -4,6 +4,13 @@ export type GoogleFreeBusyResponse = {
   calendars?: Record<string, { busy?: BusyRange[] }>;
 };
 
+export class CalendarFreeBusyError extends Error {
+  constructor(public readonly status: number) {
+    super("Failed to fetch Google Calendar free/busy data");
+    this.name = "CalendarFreeBusyError";
+  }
+}
+
 export function normalizeFreeBusyResponse(response: GoogleFreeBusyResponse): BusyRange[] {
   return Object.values(response.calendars ?? {}).flatMap((calendar) => calendar.busy ?? []);
 }
@@ -36,7 +43,7 @@ export async function fetchCalendarFreeBusy({
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch Google Calendar free/busy data");
+    throw new CalendarFreeBusyError(response.status);
   }
 
   return normalizeFreeBusyResponse((await response.json()) as GoogleFreeBusyResponse);
