@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { ConnectionList } from "@/components/connection-list";
+import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/received-event-invitations";
 import { SetupPanel } from "@/components/state-panels";
 import { PageHeader } from "@/components/ui";
 import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
@@ -34,7 +35,7 @@ export default async function ConnectionsPage() {
     redirect("/login?next=%2Fconnections");
   }
 
-  const candidates = await loadConnectionCandidates(user.id);
+  const [candidates, invitations] = await Promise.all([loadConnectionCandidates(user.id), loadReceivedEventInvitations(user.id)]);
   const favorites = candidates.filter((candidate) => candidate.isFavorite);
   const mutualFollows = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && candidate.isFollowedBy);
   const following = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && !candidate.isFollowedBy);
@@ -43,9 +44,42 @@ export default async function ConnectionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
+      <ReceivedEventInvitations invitations={invitations} />
       <ConnectionList favorites={favorites} mutualFollows={mutualFollows} following={following} candidates={recent} />
     </div>
   );
+}
+
+async function loadReceivedEventInvitations(currentUserId: string): Promise<ReceivedEventInvitation[]> {
+  const admin = createSupabaseAdminClient();
+  const { data: invitations, error: invitationsError } = await admin
+    .from("event_user_invitations")
+    .select("id, event_id, created_at")
+    .eq("invitee_user_id", currentUserId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if (invitationsError || !invitations?.length) return [];
+
+  const eventIds = invitations.map((invitation) => invitation.event_id);
+  const [eventsResult, organizersResult] = await Promise.all([
+    admin.from("events").select("id, title").in("id", eventIds),
+    admin.from("event_members").select("event_id, display_name").in("event_id", eventIds).eq("role", "organizer").eq("status", "joined")
+  ]);
+
+  if (eventsResult.error || organizersResult.error) {
+    throw new Error("届いた招待を読み込めませんでした");
+  }
+
+  const eventTitles = new Map((eventsResult.data ?? []).map((event) => [event.id, event.title]));
+  const organizerNames = new Map((organizersResult.data ?? []).map((organizer) => [organizer.event_id, organizer.display_name]));
+
+  return invitations.map((invitation) => ({
+    id: invitation.id,
+    eventTitle: eventTitles.get(invitation.event_id) ?? "イベント",
+    organizerName: organizerNames.get(invitation.event_id) ?? "主催者",
+    createdAt: invitation.created_at
+  }));
 }
 
 async function loadConnectionCandidates(currentUserId: string): Promise<ConnectionCandidate[]> {

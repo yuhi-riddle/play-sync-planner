@@ -271,7 +271,7 @@ export async function createEventUserInvitationsAction(eventId: string, inviteeU
         kind: "event_invitation",
         title: `${event.title} に招待されました`,
         body: "Madoiでイベントへの招待が届いています。",
-        href: `/events/${eventId}`,
+        href: "/connections",
         dedupe_key: `event-invitation:${eventId}:${inviteeUserId}`,
         read_at: null
       },
@@ -311,7 +311,7 @@ export async function respondToEventUserInvitationAction(
     throw new Error("この招待には返答できません。");
   }
 
-  if (invitation.status !== "pending") {
+  if (invitation.status !== "pending" && !(response === "accepted" && invitation.status === "accepted")) {
     throw new Error("この招待にはすでに返答済みです。");
   }
 
@@ -334,8 +334,38 @@ export async function respondToEventUserInvitationAction(
     throw new Error("ブロック中の相手からの招待には返答できません。");
   }
 
+  const { data: claimedInvitation, error: claimError } = await admin
+    .from("event_user_invitations")
+    .update({ status: response, responded_at: new Date().toISOString() })
+    .eq("id", invitation.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) {
+    throw new Error("招待への返答を保存できませんでした。");
+  }
+
+  if (!claimedInvitation) {
+    const { data: latestInvitation, error: latestInvitationError } = await admin
+      .from("event_user_invitations")
+      .select("status")
+      .eq("id", invitation.id)
+      .maybeSingle();
+
+    if (latestInvitationError || latestInvitation?.status !== response) {
+      throw new Error("この招待にはすでに返答済みです。");
+    }
+
+    if (response === "declined") {
+      revalidateConnections(invitation.event_id);
+      revalidatePath("/notifications");
+      return;
+    }
+  }
+
   if (response === "accepted") {
-    if (membershipResult.data?.status === "joined") {
+    if (membershipResult.data?.status === "joined" && claimedInvitation) {
       throw new Error("このイベントにはすでに参加しています。");
     }
 
@@ -351,6 +381,18 @@ export async function respondToEventUserInvitationAction(
     );
 
     if (memberError) {
+      if (claimedInvitation) {
+        const { error: rollbackError } = await admin
+          .from("event_user_invitations")
+          .update({ status: "pending", responded_at: null })
+          .eq("id", invitation.id)
+          .eq("status", "accepted");
+
+        if (rollbackError) {
+          await admin.from("event_user_invitations").delete().eq("id", invitation.id).eq("status", "accepted");
+        }
+      }
+
       throw new Error("イベントへの参加を確定できませんでした。");
     }
   }
