@@ -57,7 +57,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] 通知を既読にできる。
 - [ ] すべて既読にしたあと、未読件数が0になる。
 
-無料のVercel Hobbyプランでは、`vercel.json` により毎日 `00:00 UTC`（日本時間の午前9時台）に `/api/cron/notifications` を実行します。毎時・毎分の実行は有料プランが必要です。
+無料公開では、GASの時間主導トリガーから約1時間ごとに `/api/cron/notifications` を実行します。`CRON_SECRET` をGASのスクリプトプロパティへ設定し、Vercelの値と一致させます。
 `CRON_SECRET` を設定した場合は、手動実行時に `Authorization: Bearer <CRON_SECRET>` が必要です。
 
 ## 5. 手動確認シナリオ

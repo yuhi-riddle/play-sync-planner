@@ -129,6 +129,7 @@ npm run build
 - `docs/current-status.md`: 現在の実装状況、残件、リリース前チェックリスト
 - `docs/release-checklist.md`: ローカル・本番公開前の確認手順
 - `docs/free-release-setup.md`: 無料URLで公開し、PCを閉じていても使えるようにする詳細手順
+- `docs/gas-notification-schedule.md`: 無料で通知生成を約1時間ごとに実行するGAS設定手順
 - `docs/closed-beta-test-setup.md`: 独自ドメインとGoogle OAuth審査へ移行するための詳細手順
 
 ## Phase 2 Google Calendar 連携
@@ -231,7 +232,7 @@ Madoi内で、未回答、回答期限、清算待ち、支払い待ち、受け
 - ホームに対応が必要な通知を表示し、期限、未回答、清算、支払い、確認待ちで絞り込める
 - `/notifications` で通知一覧を確認する
 - 既読、すべて既読にできる
-- 通知生成APIを Vercel Cron から定期実行する（無料公開では1日1回）
+- 通知生成APIを定期実行する（無料公開ではGASから約1時間ごと）
 - 回答期限前のサイト内通知は、参加予定ごとの複数リマインド設定に沿って生成する
 
-本番で通知生成APIを手動実行できないようにしたい場合は、`CRON_SECRET` を設定してください。未設定の場合、本番では Vercel Cron の User-Agent だけを許可します。
+本番では `CRON_SECRET` を設定し、GASから `Authorization: Bearer <CRON_SECRET>` を付けて通知生成APIを呼び出してください。
