@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import React from "react";
 import { useId, useState } from "react";
 import { clsx } from "clsx";
@@ -59,16 +59,18 @@ function ConsentRow({
           <span className="sr-only">（新しいタブで開きます）</span>
         </Link>
         <span className="ml-1">内容を確認し、同意する</span>
-        {opened ? (
-          <span className="ml-2 inline-flex items-center gap-1 text-caption font-bold text-pine">
-            <Check aria-hidden="true" className="h-3.5 w-3.5" />
-            開きました
-          </span>
-        ) : (
+        {opened ? null : (
           <span id={hintId} className="ml-2 text-caption text-muted">
             先にリンクを開くとチェックできます
           </span>
         )}
+      </span>
+      {/*
+        リンクを開くとチェックボックスが濃くなるので、操作できるようになったことは見れば分かる。
+        画面には出さず、支援技術にだけ状態の変化を伝える。
+      */}
+      <span aria-live="polite" className="sr-only">
+        {opened ? `${label}のチェックができるようになりました` : ""}
       </span>
     </div>
   );
