@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import React from "react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { clsx } from "clsx";
 
 /**
@@ -31,7 +31,6 @@ function ConsentRow({
   accepted: boolean;
   onAcceptedChange: (accepted: boolean) => void;
 }) {
-  const hintId = useId();
   const [opened, setOpened] = useState(false);
 
   return (
@@ -50,11 +49,6 @@ function ConsentRow({
           <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
           <span className="sr-only">（新しいタブで開きます）</span>
         </Link>
-        {opened ? null : (
-          <span id={hintId} className="ml-2 text-caption text-muted">
-            開くと同意欄を操作できます
-          </span>
-        )}
       </span>
       <label
         className={clsx(
@@ -66,7 +60,6 @@ function ConsentRow({
           name={name}
           type="checkbox"
           aria-label={label}
-          aria-describedby={opened ? undefined : hintId}
           checked={accepted}
           disabled={!opened}
           onChange={(event) => onAcceptedChange(event.target.checked)}
