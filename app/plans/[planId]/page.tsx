@@ -29,6 +29,7 @@ import {
   type CandidateAnswerSummary
 } from "@/lib/domain/confirmation";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
+import { buildProgressSummaryLine } from "@/lib/domain/plans";
 import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
 import { getSettlementStatusView } from "@/lib/domain/settlement";
@@ -177,15 +178,16 @@ export default async function PlanDetailPage({
     participantProgress.total
   );
   const planStatus = planStatusLabels[plan.status as keyof typeof planStatusLabels] ?? String(plan.status);
+  const isConfirmed = plan.status === "date_confirmed";
   const deadlineState = deadlineStateOf(plan.answer_deadline_at, new Date());
   const progressSummaryLine = buildProgressSummaryLine({
     total: participantProgress.total,
     pending: participantProgress.pending,
     deadlineState,
-    answerDeadlineAt: plan.answer_deadline_at
+    answerDeadlineAt: plan.answer_deadline_at,
+    isConfirmed
   });
   const settlementStatus = getSettlementStatusView(plan.settlement_status);
-  const isConfirmed = plan.status === "date_confirmed";
   const isPlanOwner = currentUserId === plan.owner_user_id;
   const restartPlanAdjustment = restartPlanAdjustmentAction.bind(null, plan.id);
   const { data: calendarIntegration } = isConfirmed
@@ -312,7 +314,7 @@ export default async function PlanDetailPage({
                 <Badge tone="neutral">受付終了</Badge>
               ) : (
                 <>
-                  {deadlineState === "soon" ? (
+                  {!isConfirmed && deadlineState === "soon" ? (
                     <Badge tone="warn" dot>
                       期限が近い
                     </Badge>
@@ -412,37 +414,6 @@ export default async function PlanDetailPage({
       </Card>
     </div>
   );
-}
-
-/** 数字だけ見せても次の行動が決まらないので、「あと何人・いつまで」まで書く。 */
-function buildProgressSummaryLine({
-  total,
-  pending,
-  deadlineState,
-  answerDeadlineAt
-}: {
-  total: number;
-  pending: number;
-  deadlineState: DeadlineState;
-  answerDeadlineAt: string | null;
-}) {
-  if (total === 0) {
-    return "まだ誰も招待していません。共有リンクを配ってください。";
-  }
-
-  if (pending === 0) {
-    return "全員から回答が届いています。日程を確定できます。";
-  }
-
-  if (deadlineState === "closed") {
-    return `あと${pending}人。回答は締め切りました。`;
-  }
-
-  if (answerDeadlineAt) {
-    return `あと${pending}人。期限は${formatDateTime(answerDeadlineAt)}。`;
-  }
-
-  return `あと${pending}人。`;
 }
 
 function MetaCell({ label, value, tone }: { label: string; value: ReactNode; tone?: "warn" | "muted" }) {

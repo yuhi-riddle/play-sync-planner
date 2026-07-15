@@ -15,6 +15,15 @@ afterEach(() => {
 });
 
 describe("HomeSelectedDateAgenda", () => {
+  it("labels the agenda as the selected date instead of today", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-12" initialItems={[]} />);
+
+    expect(screen.getByRole("heading", { name: "選択日の予定" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "今日の予定" })).not.toBeInTheDocument();
+  });
+
   it("shows only items on the selected date", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

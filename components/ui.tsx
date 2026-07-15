@@ -22,9 +22,9 @@ export function PageHeader({
 }) {
   return (
     <div className="relative flex flex-col gap-4 rounded-card border border-line bg-surface p-5 shadow-raise sm:flex-row sm:items-end sm:justify-between">
-      <div>
+      <div className="min-w-0">
         <p className="text-eyebrow uppercase text-pine">{eyebrow ?? brand.shortName}</p>
-        <h1 className="mt-2 text-display text-ink">{title}</h1>
+        <h1 className="mt-2 break-words text-display text-ink">{title}</h1>
         {description ? <p className="mt-2 max-w-2xl text-body text-muted">{description}</p> : null}
       </div>
       {action}
@@ -252,7 +252,7 @@ export function TextField({
     <label className="block text-body font-medium text-ink">
       <span className="text-muted">{label}</span>
       <input
-        className="mt-2 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-subtle focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         type={type}
         defaultValue={defaultValue ?? ""}
@@ -463,7 +463,7 @@ export function TextArea({
     <label className="block text-body font-medium text-ink">
       <span className="text-muted">{label}</span>
       <textarea
-        className="mt-2 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-subtle focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
         name={name}
         defaultValue={defaultValue ?? ""}
         rows={rows}

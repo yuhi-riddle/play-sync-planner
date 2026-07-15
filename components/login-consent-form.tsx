@@ -35,42 +35,47 @@ function ConsentRow({
   const [opened, setOpened] = useState(false);
 
   return (
-    <div className="flex items-start gap-3">
-      <input
-        name={name}
-        type="checkbox"
-        aria-label={label}
-        aria-describedby={opened ? undefined : hintId}
-        checked={accepted}
-        disabled={!opened}
-        onChange={(event) => onAcceptedChange(event.target.checked)}
-        className="mt-1 h-4 w-4 accent-pine disabled:cursor-not-allowed disabled:opacity-40"
-      />
+    <div className="grid gap-2">
       <span className={clsx(!opened && "text-muted")}>
         <Link
           href={href}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setOpened(true)}
-          className="inline-flex items-center gap-1 font-bold text-pine underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          onAuxClick={() => setOpened(true)}
+          onContextMenu={() => setOpened(true)}
+          className="inline-flex min-h-11 items-center gap-1 font-bold text-pine underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         >
           {linkLabel}
           <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
           <span className="sr-only">（新しいタブで開きます）</span>
         </Link>
-        <span className="ml-1">内容を確認し、同意する</span>
         {opened ? null : (
           <span id={hintId} className="ml-2 text-caption text-muted">
-            先にリンクを開くとチェックできます
+            開くと同意欄を操作できます
           </span>
         )}
       </span>
-      {/*
-        リンクを開くとチェックボックスが濃くなるので、操作できるようになったことは見れば分かる。
-        画面には出さず、支援技術にだけ状態の変化を伝える。
-      */}
+      <label
+        className={clsx(
+          "flex min-h-11 items-center gap-3 rounded-control border border-line bg-surface px-3 py-2 text-body font-medium text-ink",
+          !opened && "cursor-not-allowed text-muted opacity-60"
+        )}
+      >
+        <input
+          name={name}
+          type="checkbox"
+          aria-label={label}
+          aria-describedby={opened ? undefined : hintId}
+          checked={accepted}
+          disabled={!opened}
+          onChange={(event) => onAcceptedChange(event.target.checked)}
+          className="h-5 w-5 shrink-0 accent-pine disabled:cursor-not-allowed"
+        />
+        <span>{label}</span>
+      </label>
       <span aria-live="polite" className="sr-only">
-        {opened ? `${label}のチェックができるようになりました` : ""}
+        {opened ? label + "のチェックができるようになりました" : ""}
       </span>
     </div>
   );

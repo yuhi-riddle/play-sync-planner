@@ -1,7 +1,7 @@
 "use client";
 
 import { ReceiptText } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
 import { PaymentMethodField } from "@/components/payment-method-field";
 import { MadoiForm, MadoiSelect, TextArea, TextField } from "@/components/ui";
@@ -46,10 +46,6 @@ export function ExpenseForm({
   );
 
   const selectedCount = selectedIds.size;
-  const selectedParticipants = useMemo(
-    () => participants.filter((participant) => selectedIds.has(participant.id)),
-    [participants, selectedIds]
-  );
 
   function toggleParticipant(participantId: string, checked: boolean) {
     setSelectedIds((current) => {

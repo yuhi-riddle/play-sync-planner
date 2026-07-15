@@ -6,7 +6,7 @@ import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { cancelEventAction } from "@/lib/actions/events";
 import { categoryLabels } from "@/lib/constants";
-import { normalizeCategory } from "@/lib/event-filter";
+import { countEventsByCategory, normalizeCategory, resolveEventCategoryFilter } from "@/lib/event-filter";
 import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -18,7 +18,7 @@ type EventFilterQuery = {
 
 export default async function EventsPage({ searchParams }: { searchParams?: Promise<EventFilterQuery> }) {
   const query = (await searchParams) ?? {};
-  const activeCategory = normalizeCategory(query.category);
+  const requestedCategory = normalizeCategory(query.category);
 
   if (!hasSupabaseEnv()) {
     return (
@@ -43,18 +43,19 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
     );
   }
 
-  let eventsQuery = supabase
+  const eventsQuery = supabase
     .from("events")
     .select("id, title, category, start_date, end_date, location_name, status, plans(id)")
     .eq("owner_user_id", user.id)
     .in("status", ["interested", "planning", "confirmed"])
     .order("created_at", { ascending: false });
 
-  if (activeCategory !== "all") {
-    eventsQuery = eventsQuery.eq("category", activeCategory);
-  }
-
   const { data: events } = await eventsQuery;
+  const eventRows = events ?? [];
+  const categoryCounts = countEventsByCategory(eventRows);
+  const activeCategory = resolveEventCategoryFilter(requestedCategory, categoryCounts);
+  const visibleEvents =
+    activeCategory === "all" ? eventRows : eventRows.filter((event) => event.category === activeCategory);
 
   return (
     <div className="space-y-6">
@@ -64,11 +65,11 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           <h2 className="text-title text-ink">絞り込み</h2>
           <p className="mt-1 text-caption text-muted">カテゴリでイベントを探せます。</p>
         </div>
-        <EventCategoryFilter activeCategory={activeCategory} />
+        <EventCategoryFilter activeCategory={activeCategory} categoryCounts={categoryCounts} />
       </Card>
-      {(events ?? []).length > 0 ? (
+      {visibleEvents.length > 0 ? (
         <div className="grid gap-4">
-          {(events ?? []).map((event) => (
+          {visibleEvents.map((event) => (
             <Card key={event.id} className="transition-colors hover:border-moss/45">
               <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

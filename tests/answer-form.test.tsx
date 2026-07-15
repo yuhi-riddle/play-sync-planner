@@ -52,14 +52,8 @@ describe("AnswerForm", () => {
     });
   });
 
-  it("shows a help message about remaining answers and hides it once all are answered", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ connected: false, busy: [] })
-      })
-    );
+  it("shows a help message about remaining answers and hides it once all are answered", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
     render(<AnswerForm token="token-1" candidateDates={candidates} />);
 
     expect(screen.getByText("残り2件の候補に回答すると送信できます。")).toBeInTheDocument();

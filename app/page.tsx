@@ -19,6 +19,7 @@ import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
 import {
   countNotificationsByActionFilter,
   filterNotificationsByActionFilter,
+  resolveNotificationActionFilter,
   type NotificationActionFilter
 } from "@/lib/domain/site-notifications";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
@@ -136,7 +137,7 @@ export default async function HomePage({
 }) {
   const query = (await searchParams) ?? {};
   const baseDateKey = normalizeBaseDate(query.date);
-  const activeActionFilter = normalizeActionFilter(query.action);
+  const requestedActionFilter = normalizeActionFilter(query.action);
 
   if (!hasSupabaseEnv()) {
     return (
@@ -184,6 +185,7 @@ export default async function HomePage({
   const planRows = (plans ?? []) as PlanRow[];
   const unreadNotifications = (notifications ?? []) as NotificationRow[];
   const notificationCounts = countNotificationsByActionFilter(unreadNotifications);
+  const activeActionFilter = resolveNotificationActionFilter(requestedActionFilter, notificationCounts);
   const filteredNotifications = filterNotificationsByActionFilter(unreadNotifications, activeActionFilter).slice(0, 5);
   const calendarItems = toCalendarItems(planRows);
 
@@ -196,11 +198,11 @@ export default async function HomePage({
     <div className="space-y-7">
       <PageHeader
         eyebrow="Home"
-        title={greetingTitle(user.email)}
+        title="ホーム"
         description={
           actionCount > 0
-            ? `いま手が必要なのは${actionCount}件です。片づけば、あとは遊ぶだけ。`
-            : "対応が必要なことはありません。今日の予定を確認しましょう。"
+            ? greetingTitle(user.email) + " いま手が必要なのは" + actionCount + "件です。"
+            : greetingTitle(user.email) + " 対応が必要なことはありません。今日の予定を確認しましょう。"
         }
         action={
           <ButtonLink href="/events/new">
@@ -213,7 +215,7 @@ export default async function HomePage({
       <Card>
         <SectionHeading
           title="対応が必要なこと"
-          description={actionCount > 0 ? "期限が近いものから並べています。" : undefined}
+          description={actionCount > 0 ? "新しいものから並べています。" : undefined}
           icon={<Bell aria-hidden="true" className="h-5 w-5 text-moss" />}
           action={<SecondaryLink href="/notifications">通知を開く</SecondaryLink>}
         />

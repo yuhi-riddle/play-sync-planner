@@ -232,7 +232,7 @@ export async function createEventUserInvitationsAction(eventId: string, inviteeU
   }
 
   for (let index = 0; index < targetUserIds.length; index += 1) {
-    const targetUserId = targetUserIds[index];
+
     const sharedEventResult = relationshipChecks[index * 2];
     const blockedResult = relationshipChecks[index * 2 + 1];
 

@@ -8,6 +8,7 @@ import {
   filterNotificationsByActionFilter,
   filterNotificationsByReadState,
   onlyUnreadNotifications,
+  resolveNotificationActionFilter,
   summarizeUnreadNotifications,
   type NotificationActionFilter,
   type NotificationCandidate
@@ -165,7 +166,8 @@ describe("filterNotificationsByActionFilter", () => {
     { id: "unanswered", kind: "unanswered" },
     { id: "settlement", kind: "settlement_needed" },
     { id: "payment", kind: "payment_due" },
-    { id: "confirmation", kind: "confirmation_due" }
+    { id: "confirmation", kind: "confirmation_due" },
+    { id: "message", kind: "event_message" }
   ];
 
   it.each<[NotificationActionFilter, string[]]>([
@@ -235,5 +237,24 @@ describe("buildPlanNotificationInputs", () => {
     );
 
     expect(inputs.filter((input) => input.kind === "answer_deadline")).toHaveLength(0);
+  });
+});
+
+describe("resolveNotificationActionFilter", () => {
+  const counts = {
+    all: 2,
+    deadline: 1,
+    unanswered: 1,
+    settlement: 0,
+    payment: 0,
+    confirmation: 0
+  };
+
+  it("falls back to all when the requested filter has no notifications", () => {
+    expect(resolveNotificationActionFilter("payment", counts)).toBe("all");
+  });
+
+  it("keeps a requested filter that still has notifications", () => {
+    expect(resolveNotificationActionFilter("deadline", counts)).toBe("deadline");
   });
 });

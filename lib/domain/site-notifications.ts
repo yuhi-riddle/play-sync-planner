@@ -130,24 +130,30 @@ export function filterNotificationsByActionFilter<T extends ActionFilterableNoti
   notifications: T[],
   filter: NotificationActionFilter
 ): T[] {
-  if (filter === "all") {
-    return notifications;
-  }
-
-  return notifications.filter((notification) => actionFilterForKind(notification.kind) === filter);
+  return notifications.filter((notification) => {
+    const notificationFilter = actionFilterForKind(notification.kind);
+    return filter === "all" ? notificationFilter !== null : notificationFilter === filter;
+  });
 }
 
 export function countNotificationsByActionFilter<T extends ActionFilterableNotification>(
   notifications: T[]
 ): NotificationActionCounts {
   return {
-    all: notifications.length,
+    all: filterNotificationsByActionFilter(notifications, "all").length,
     deadline: filterNotificationsByActionFilter(notifications, "deadline").length,
     unanswered: filterNotificationsByActionFilter(notifications, "unanswered").length,
     settlement: filterNotificationsByActionFilter(notifications, "settlement").length,
     payment: filterNotificationsByActionFilter(notifications, "payment").length,
     confirmation: filterNotificationsByActionFilter(notifications, "confirmation").length
   };
+}
+
+export function resolveNotificationActionFilter(
+  requestedFilter: NotificationActionFilter,
+  counts: NotificationActionCounts
+): NotificationActionFilter {
+  return requestedFilter !== "all" && counts[requestedFilter] === 0 ? "all" : requestedFilter;
 }
 
 export function buildAnswerReceivedNotificationInput({

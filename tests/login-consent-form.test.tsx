@@ -29,6 +29,33 @@ describe("LoginConsentForm", () => {
     expect(privacyBox).toBeDisabled();
   });
 
+  it("中央クリックで書面を開いた場合もチェックできる", () => {
+    render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
+    const { termsLink, termsBox } = elements();
+
+    fireEvent(termsLink, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+
+    expect(termsBox).toBeEnabled();
+  });
+
+  it("右クリックから書面を開く場合も同意欄を操作できる", () => {
+    render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
+    const { termsLink, termsBox } = elements();
+
+    fireEvent.contextMenu(termsLink);
+
+    expect(termsBox).toBeEnabled();
+  });
+
+  it("書面リンクの次に大きな同意操作へ進める", () => {
+    render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
+    const { termsLink, termsBox } = elements();
+
+    const position = termsLink.compareDocumentPosition(termsBox);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(termsBox.closest("label")).toHaveClass("min-h-11");
+  });
+
   it("両方を開いて同意するまでログインできない", () => {
     render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
     const { submit, termsLink, privacyLink, termsBox, privacyBox } = elements();

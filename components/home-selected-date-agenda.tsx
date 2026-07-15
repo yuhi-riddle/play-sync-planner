@@ -244,7 +244,7 @@ export function HomeSelectedDateAgenda({
   return (
     <Card aria-label="選択日の予定">
       <SectionHeading
-        title="今日の予定"
+        title="選択日の予定"
         description="Madoi の確定予定と Google カレンダーをまとめて表示します。"
         icon={<CalendarDays aria-hidden="true" className="h-5 w-5 text-moss" />}
         action={

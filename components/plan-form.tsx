@@ -367,7 +367,7 @@ function CalendarPicker({
                 }
                 onSelectDate(cell.date);
               }}
-              onPointerDown={(event) => {
+              onPointerDown={() => {
                 if (!onSelectRange || disabled) {
                   return;
                 }
@@ -848,7 +848,7 @@ export function PlanForm({
               回答期限前にリマインドする
             </label>
             <div className={clsx("mt-3 grid gap-3", !reminderEnabled && "opacity-45")}>
-              {reminderDrafts.map((draft, index) => (
+              {reminderDrafts.map((draft) => (
                 <div key={draft.id} className="grid gap-3 rounded-control border border-moss/12 bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                   <label className="text-sm font-medium text-ink">
                     <span className="text-muted">{reminderTimingTitle(draft)}</span>

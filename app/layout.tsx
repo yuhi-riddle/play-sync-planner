@@ -20,6 +20,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ja">
       <body>
+        <a
+          href="#main-content"
+          className="fixed left-4 top-4 z-[60] -translate-y-24 rounded-full bg-ink px-4 py-2 text-body font-bold text-white shadow-lift transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        >
+          本文へ移動
+        </a>
         <div className="app-shell min-h-screen">
           <header className="sticky top-0 z-50 border-b border-line bg-surface/85 backdrop-blur-md">
             <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-10">
@@ -38,7 +44,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:px-8 xl:px-10">
             <PrimaryNav />
-            <main>{children}</main>
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
           </div>
           <footer className="mx-auto max-w-[1440px] px-4 pb-8 text-body text-muted sm:px-6 lg:px-8 xl:px-10">
             <div className="flex flex-wrap gap-4 border-t border-line pt-5">

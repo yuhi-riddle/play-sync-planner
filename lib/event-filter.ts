@@ -17,3 +17,28 @@ export function eventFilterHref(category: EventCategoryFilter) {
   const query = params.toString();
   return query ? `/events?${query}` : "/events";
 }
+
+export type EventCategoryCounts = Record<EventCategoryFilter, number>;
+
+export function countEventsByCategory(events: Array<{ category: string | null }>): EventCategoryCounts {
+  const counts = Object.fromEntries([
+    ["all", events.length],
+    ...EVENT_CATEGORIES.map((category) => [category, 0])
+  ]) as EventCategoryCounts;
+
+  events.forEach((event) => {
+    if (EVENT_CATEGORIES.includes(event.category as (typeof EVENT_CATEGORIES)[number])) {
+      const category = event.category as (typeof EVENT_CATEGORIES)[number];
+      counts[category] += 1;
+    }
+  });
+
+  return counts;
+}
+
+export function resolveEventCategoryFilter(
+  requestedCategory: EventCategoryFilter,
+  counts: EventCategoryCounts
+): EventCategoryFilter {
+  return requestedCategory !== "all" && counts[requestedCategory] === 0 ? "all" : requestedCategory;
+}

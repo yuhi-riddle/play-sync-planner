@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import React from "react";
 import type { ReactNode } from "react";
 
-import { MadoiSelect } from "@/components/ui";
 import { categoryLabels, EVENT_CATEGORIES } from "@/lib/constants";
-import { eventFilterHref, type EventCategoryFilter as CategoryValue } from "@/lib/event-filter";
-
-const options = [
-  { value: "all", label: "すべて" },
-  ...EVENT_CATEGORIES.map((category) => ({ value: category, label: categoryLabels[category] }))
-];
+import {
+  eventFilterHref,
+  type EventCategoryCounts,
+  type EventCategoryFilter as CategoryValue
+} from "@/lib/event-filter";
 
 function FilterChip({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {
   return (
@@ -29,34 +28,42 @@ function FilterChip({ href, active, children }: { href: string; active: boolean;
   );
 }
 
-/**
- * カテゴリは9件あり、スマホだとチップが4行に折り返して画面の大半を絞り込みが占めてしまう。
- * 狭い画面ではドロップダウン、広い画面では一覧性のあるチップ、と出し分ける。
- */
-export function EventCategoryFilter({ activeCategory }: { activeCategory: CategoryValue }) {
+export function EventCategoryFilter({
+  activeCategory,
+  categoryCounts
+}: {
+  activeCategory: CategoryValue;
+  categoryCounts: EventCategoryCounts;
+}) {
   const router = useRouter();
+  const options = [
+    { value: "all" as const, label: "すべて" },
+    ...EVENT_CATEGORIES.filter((category) => categoryCounts[category] > 0).map((category) => ({
+      value: category,
+      label: categoryLabels[category]
+    }))
+  ];
 
   return (
     <div>
       <p className="mb-2 text-eyebrow uppercase text-pine">カテゴリ</p>
-
       <div className="sm:hidden">
-        <MadoiSelect
-          fieldLabel="カテゴリ"
-          ariaLabel="カテゴリで絞り込む"
+        <select
+          aria-label="カテゴリで絞り込む"
           value={activeCategory}
-          options={options}
-          onValueChange={(value) => router.push(eventFilterHref(value as CategoryValue))}
-        />
+          onChange={(event) => router.push(eventFilterHref(event.target.value as CategoryValue))}
+          className="min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base font-medium text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
-
       <div className="hidden flex-wrap gap-2 sm:flex">
         {options.map((option) => (
-          <FilterChip
-            key={option.value}
-            href={eventFilterHref(option.value as CategoryValue)}
-            active={activeCategory === option.value}
-          >
+          <FilterChip key={option.value} href={eventFilterHref(option.value)} active={activeCategory === option.value}>
             {option.label}
           </FilterChip>
         ))}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnswerShareLink, buildPublicSettlementUrl } from "@/lib/domain/plans";
+import { buildAnswerShareLink, buildProgressSummaryLine, buildPublicSettlementUrl } from "@/lib/domain/plans";
 
 describe("buildAnswerShareLink", () => {
   it("uses the answer deadline as the share link expiration", () => {
@@ -29,5 +29,19 @@ describe("buildPublicSettlementUrl", () => {
 
   it("normalizes trailing slash on the origin", () => {
     expect(buildPublicSettlementUrl("https://madoi.example/", "token-1")).toBe("https://madoi.example/s/token-1/settlement");
+  });
+});
+
+describe("buildProgressSummaryLine", () => {
+  it("does not prompt the owner to confirm an already confirmed plan", () => {
+    expect(
+      buildProgressSummaryLine({
+        total: 3,
+        pending: 1,
+        deadlineState: "soon",
+        answerDeadlineAt: "2026-07-20T18:00:00+09:00",
+        isConfirmed: true
+      })
+    ).toBe("日程は確定済みです。");
   });
 });
