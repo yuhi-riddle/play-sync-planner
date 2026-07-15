@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, PageHeader, SecondaryLink } from "@/components/ui";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 const sections = [
   {
@@ -16,7 +17,7 @@ const sections = [
   },
   {
     title: "4. 共有範囲",
-    body: "イベントに入力された内容は、そのイベントの参加者に表示されます。日程回答用の共有リンクを使う場合は、リンクを受け取った人にイベント名、候補日時、回答に必要な情報が表示されることがあります。共有リンクは、意図しない相手に渡らないように扱ってください。"
+    body: "ニックネームと設定したプロフィール画像は、同じイベントの参加者や招待候補になった利用者に表示されることがあります。イベントに入力された内容は、そのイベントの参加者に表示されます。日程回答用の共有リンクを使う場合は、リンクを受け取った人にイベント名、候補日時、回答に必要な情報が表示されることがあります。共有リンクは、意図しない相手に渡らないように扱ってください。"
   },
   {
     title: "5. 外部サービス",
@@ -36,9 +37,10 @@ const sections = [
   }
 ];
 
-export default async function PrivacyPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
-  const { from } = await searchParams;
-  const returnHref = from === "login" ? "/login" : "/";
+export default async function PrivacyPage({ searchParams }: { searchParams: Promise<{ from?: string; next?: string }> }) {
+  const { from, next } = await searchParams;
+  const nextPath = safeNextPath(next);
+  const returnHref = from === "login" ? `/login?next=${encodeURIComponent(nextPath)}` : "/";
 
   return (
     <div className="space-y-6">

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/events";
+import { getEventDraftResumePath } from "@/lib/domain/event-flow";
 import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
 import {
   countNotificationsByActionFilter,
@@ -64,16 +65,26 @@ const actionFilterOptions: Array<{ value: NotificationActionFilter; label: strin
   { value: "confirmation", label: "受け取り確認" }
 ];
 
-function toDateKey(value: Date) {
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+function tokyoDateKey(value: Date) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-function normalizeBaseDate(value: string | undefined) {
+function normalizeBaseDate(value: string | undefined, fallback: string) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value ?? "")) {
-    return value as string;
+    const parsed = new Date(`${value}T00:00:00Z`);
+    if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value) {
+      return value as string;
+    }
   }
 
-  return toDateKey(new Date());
+  return fallback;
 }
 
 function normalizeActionFilter(value: string | undefined): NotificationActionFilter {
@@ -136,7 +147,8 @@ export default async function HomePage({
   searchParams?: Promise<{ date?: string; action?: string }>;
 }) {
   const query = (await searchParams) ?? {};
-  const baseDateKey = normalizeBaseDate(query.date);
+  const todayDateKey = tokyoDateKey(new Date());
+  const baseDateKey = normalizeBaseDate(query.date, todayDateKey);
   const requestedActionFilter = normalizeActionFilter(query.action);
 
   if (!hasSupabaseEnv()) {
@@ -162,7 +174,7 @@ export default async function HomePage({
     );
   }
 
-  const { data: plans } = await supabase
+  const plansPromise = supabase
     .from("plans")
     .select(
       "id, title, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at, events(title, location_name), candidate_dates(id, start_at, end_at, is_all_day)"
@@ -172,7 +184,7 @@ export default async function HomePage({
     .order("created_at", { ascending: false })
     .limit(30);
 
-  const { data: notifications } = await supabase
+  const notificationsPromise = supabase
     .from("notifications")
     .select("id, kind, title, body, href, created_at")
     .eq("user_id", user.id)
@@ -180,7 +192,16 @@ export default async function HomePage({
     .order("created_at", { ascending: false })
     .limit(80);
 
-  const { data: eventDraft } = await supabase.from("event_drafts").select("id, payload, updated_at").eq("owner_user_id", user.id).maybeSingle();
+  const eventDraftPromise = supabase
+    .from("event_drafts")
+    .select("id, payload, updated_at")
+    .eq("owner_user_id", user.id)
+    .maybeSingle();
+  const [{ data: plans }, { data: notifications }, { data: eventDraft }] = await Promise.all([
+    plansPromise,
+    notificationsPromise,
+    eventDraftPromise
+  ]);
 
   const planRows = (plans ?? []) as PlanRow[];
   const unreadNotifications = (notifications ?? []) as NotificationRow[];
@@ -248,7 +269,7 @@ export default async function HomePage({
               <span className="block text-body font-bold text-ink">イベント作成の下書き</span>
               <span className="mt-1 block text-body text-muted">入力途中のイベントがあります。続きから作成できます。</span>
               <div className="mt-3 flex flex-wrap gap-2">
-                <ButtonLink href="/events/new">続きから入力</ButtonLink>
+                <ButtonLink href={getEventDraftResumePath()}>続きから入力</ButtonLink>
                 <form action={discardEventDraftAction}>
                   <button
                     type="submit"
@@ -286,7 +307,7 @@ export default async function HomePage({
         </div>
       </Card>
 
-      <HomeSelectedDateAgenda selectedDateKey={baseDateKey} initialItems={calendarItems} />
+      <HomeSelectedDateAgenda selectedDateKey={baseDateKey} todayDateKey={todayDateKey} initialItems={calendarItems} />
     </div>
   );
 }

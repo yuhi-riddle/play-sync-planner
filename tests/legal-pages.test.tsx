@@ -7,10 +7,10 @@ import TermsPage from "@/app/terms/page";
 
 describe("legal pages", () => {
   it("shows the expected terms sections and a login return link", async () => {
-    render(await TermsPage({ searchParams: Promise.resolve({ from: "login" }) }));
+    render(await TermsPage({ searchParams: Promise.resolve({ from: "login", next: "/events/event-1" }) }));
 
     expect(screen.getByRole("heading", { name: "3. 利用者の責任" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ログインへ戻る" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: "ログインへ戻る" })).toHaveAttribute("href", "/login?next=%2Fevents%2Fevent-1");
   });
 
   it("explains shared-link visibility and the retention period", async () => {

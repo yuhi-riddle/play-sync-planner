@@ -23,6 +23,15 @@ const recent = {
   isFavorite: false
 };
 
+const followedOnly = {
+  ...recent,
+  userId: "33333333-3333-4333-8333-333333333333",
+  displayName: "Cさん",
+  sharedEventCount: 0,
+  latestSharedAt: "",
+  isFollowing: true
+};
+
 describe("EventInviteCandidates", () => {
   it("lets the organizer select people and sends only their ids", async () => {
     const action = vi.fn().mockResolvedValue(undefined);
@@ -36,5 +45,12 @@ describe("EventInviteCandidates", () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledWith([favorite.userId]));
     expect(screen.getByText("招待を送りました")).toBeInTheDocument();
+  });
+
+  it("explains that followed users without shared events are invite candidates", () => {
+    render(<EventInviteCandidates candidates={[followedOnly]} action={vi.fn()} />);
+
+    expect(screen.getByText("一緒に参加した人や、フォロー中・お気に入りの人から選べます。")).toBeInTheDocument();
+    expect(screen.getByText("フォロー中")).toBeInTheDocument();
   });
 });

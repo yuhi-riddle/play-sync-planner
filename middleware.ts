@@ -1,6 +1,8 @@
 import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getProfileOnboardingRedirect } from "@/lib/domain/profile";
+
 const publicPaths = new Set(["/login", "/terms", "/privacy", "/consent"]);
 
 export async function middleware(request: NextRequest) {
@@ -37,6 +39,31 @@ export async function middleware(request: NextRequest) {
     consentUrl.search = "";
     consentUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(consentUrl);
+  }
+
+  if (request.nextUrl.pathname === "/onboarding/profile") {
+    return response;
+  }
+
+  if (typeof user.user_metadata?.profile_onboarding_completed_at === "string") {
+    return response;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("onboarding_completed_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!profileError) {
+    const onboardingPath = getProfileOnboardingRedirect(
+      request.nextUrl.pathname,
+      request.nextUrl.search,
+      profile?.onboarding_completed_at
+    );
+    if (onboardingPath) {
+      return NextResponse.redirect(new URL(onboardingPath, request.url));
+    }
   }
 
   return response;

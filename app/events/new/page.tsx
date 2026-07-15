@@ -1,15 +1,25 @@
 import { EventForm } from "@/components/event-form";
 import { Card, PageHeader } from "@/components/ui";
 import { createEventAction, saveEventDraftAction } from "@/lib/actions/events";
+import { shouldResumeEventDraft } from "@/lib/domain/event-flow";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
-export default async function NewEventPage() {
-  const user = await getCurrentUser();
-  const supabase = await createSupabaseServerClient();
-  const { data: draft } = user
-    ? await supabase.from("event_drafts").select("payload").eq("owner_user_id", user.id).maybeSingle()
-    : { data: null };
-  const draftEvent = (draft?.payload ?? undefined) as Parameters<typeof EventForm>[0]["event"];
+export default async function NewEventPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ resume?: string | string[] }>;
+}) {
+  const query = (await searchParams) ?? {};
+  let draftEvent: Parameters<typeof EventForm>[0]["event"];
+
+  if (shouldResumeEventDraft(query.resume)) {
+    const user = await getCurrentUser();
+    if (user) {
+      const supabase = await createSupabaseServerClient();
+      const result = await supabase.from("event_drafts").select("payload").eq("owner_user_id", user.id).maybeSingle();
+      draftEvent = result.data?.payload as Parameters<typeof EventForm>[0]["event"];
+    }
+  }
 
   return (
     <div className="space-y-6">

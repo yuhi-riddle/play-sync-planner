@@ -4,18 +4,8 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getUserDisplayName } from "@/lib/domain/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
-
-function getDisplayName(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
-  const metadata = user.user_metadata ?? {};
-  const fullName = metadata.full_name ?? metadata.name;
-
-  if (typeof fullName === "string" && fullName.trim()) {
-    return fullName.trim();
-  }
-
-  return user.email?.split("@")[0] ?? "参加者";
-}
 
 async function requireEventOwner(eventId: string) {
   const user = await getCurrentUser();
@@ -151,7 +141,7 @@ export async function joinEventFromInviteAction(token: string) {
     {
       event_id: invite.event_id,
       user_id: user.id,
-      display_name: getDisplayName(user),
+      display_name: getUserDisplayName(user),
       role: "member",
       status: "joined"
     },

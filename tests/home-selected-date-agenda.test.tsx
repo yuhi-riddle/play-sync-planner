@@ -1,16 +1,18 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
 
+const navigationMocks = vi.hoisted(() => ({ replace: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn()
-  })
+  useRouter: () => ({ replace: navigationMocks.replace }),
+  useSearchParams: () => new URLSearchParams("action=deadline")
 }));
 
 afterEach(() => {
+  navigationMocks.replace.mockReset();
   vi.unstubAllGlobals();
 });
 
@@ -18,7 +20,7 @@ describe("HomeSelectedDateAgenda", () => {
   it("labels the agenda as the selected date instead of today", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
 
-    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-12" initialItems={[]} />);
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-12" todayDateKey="2026-07-12" initialItems={[]} />);
 
     expect(screen.getByRole("heading", { name: "選択日の予定" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "今日の予定" })).not.toBeInTheDocument();
@@ -50,6 +52,7 @@ describe("HomeSelectedDateAgenda", () => {
     render(
       <HomeSelectedDateAgenda
         selectedDateKey="2026-07-12"
+        todayDateKey="2026-07-12"
         initialItems={[
           {
             id: "candidate-1",
@@ -80,4 +83,29 @@ describe("HomeSelectedDateAgenda", () => {
     expect(screen.queryByText("翌日の予定")).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/google-calendar/freebusy?month=2026-07");
   });
-});
+
+  it("switches the selected date immediately and keeps the active notification filter", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+
+    render(
+      <HomeSelectedDateAgenda
+        selectedDateKey="2026-07-12"
+        todayDateKey="2026-07-12"
+        initialItems={[
+          {
+            id: "next-week",
+            kind: "confirmed",
+            title: "来週の予定",
+            startAt: "2026-07-19T10:00:00+09:00",
+            endAt: "2026-07-19T11:00:00+09:00"
+          }
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+
+    expect(screen.getByRole("heading", { name: "7月19日(日)" })).toBeInTheDocument();
+    expect(screen.getByText("来週の予定")).toBeInTheDocument();
+    expect(navigationMocks.replace).toHaveBeenCalledWith("/?action=deadline&date=2026-07-19", { scroll: false });
+  });});

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { canInviteCandidate } from "@/lib/domain/connections";
+import { getUserDisplayName } from "@/lib/domain/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -169,17 +171,6 @@ export async function blockUserAction(userId: string): Promise<void> {
   revalidateConnections();
 }
 
-function displayNameForUser(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
-  const metadata = user.user_metadata ?? {};
-  const name = metadata.full_name ?? metadata.name;
-
-  if (typeof name === "string" && name.trim()) {
-    return name.trim();
-  }
-
-  return user.email?.split("@")[0] ?? "参加者";
-}
-
 async function requireInvitationOwner(eventId: string) {
   const user = await getCurrentUser();
   if (!user) {
@@ -212,36 +203,57 @@ export async function createEventUserInvitationsAction(eventId: string, inviteeU
     throw new Error("自分自身は招待できません。");
   }
 
-  const [{ data: memberships, error: membershipError }, { data: invitations, error: invitationError }, ...relationshipChecks] =
-    await Promise.all([
-      admin.from("event_members").select("user_id, status").eq("event_id", eventId).in("user_id", targetUserIds),
-      admin
-        .from("event_user_invitations")
-        .select("invitee_user_id, status")
-        .eq("event_id", eventId)
-        .in("invitee_user_id", targetUserIds)
-        .in("status", ["pending", "accepted"]),
-      ...targetUserIds.flatMap((targetUserId) => [
-        admin.rpc("have_shared_event", { first_user_id: user.id, second_user_id: targetUserId }),
-        admin.rpc("is_user_blocked", { first_user_id: user.id, second_user_id: targetUserId })
-      ])
-    ]);
+  const [
+    { data: memberships, error: membershipError },
+    { data: invitations, error: invitationError },
+    { data: following, error: followingError },
+    { data: favorites, error: favoritesError },
+    ...relationshipChecks
+  ] = await Promise.all([
+    admin.from("event_members").select("user_id, status").eq("event_id", eventId).in("user_id", targetUserIds),
+    admin
+      .from("event_user_invitations")
+      .select("invitee_user_id, status")
+      .eq("event_id", eventId)
+      .in("invitee_user_id", targetUserIds)
+      .in("status", ["pending", "accepted"]),
+    admin.from("user_connections").select("followed_user_id").eq("follower_user_id", user.id).in("followed_user_id", targetUserIds),
+    admin.from("user_favorites").select("favorite_user_id").eq("user_id", user.id).in("favorite_user_id", targetUserIds),
+    ...targetUserIds.flatMap((targetUserId) => [
+      admin.rpc("have_shared_event", { first_user_id: user.id, second_user_id: targetUserId }),
+      admin.rpc("is_user_blocked", { first_user_id: user.id, second_user_id: targetUserId })
+    ])
+  ]);
 
-  if (membershipError || invitationError) {
+  if (membershipError || invitationError || followingError || favoritesError) {
     throw new Error("招待できる相手を確認できませんでした。");
   }
 
-  for (let index = 0; index < targetUserIds.length; index += 1) {
+  const followingUserIds = new Set((following ?? []).map((connection) => connection.followed_user_id));
+  const favoriteUserIds = new Set((favorites ?? []).map((favorite) => favorite.favorite_user_id));
 
+  for (let index = 0; index < targetUserIds.length; index += 1) {
+    const targetUserId = targetUserIds[index];
     const sharedEventResult = relationshipChecks[index * 2];
     const blockedResult = relationshipChecks[index * 2 + 1];
 
-    if (sharedEventResult.error || blockedResult.error || !sharedEventResult.data) {
-      throw new Error("一緒にイベントへ参加した人だけを招待できます。");
+    if (sharedEventResult.error || blockedResult.error) {
+      throw new Error("招待できる相手を確認できませんでした。");
     }
 
     if (blockedResult.data) {
       throw new Error("ブロック中の人には招待を送れません。");
+    }
+
+    if (
+      !canInviteCandidate({
+        hasSharedEvent: Boolean(sharedEventResult.data),
+        isFollowing: followingUserIds.has(targetUserId),
+        isFavorite: favoriteUserIds.has(targetUserId),
+        isBlocked: false
+      })
+    ) {
+      throw new Error("一緒に参加した人、フォロー中またはお気に入りの人だけを招待できます。");
     }
   }
 
@@ -370,7 +382,7 @@ export async function respondToEventUserInvitationAction(
         {
           event_id: invitation.event_id,
           user_id: user.id,
-          display_name: displayNameForUser(user),
+          display_name: getUserDisplayName(user),
           role: "member",
           status: "joined"
         },

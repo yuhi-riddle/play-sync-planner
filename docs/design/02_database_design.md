@@ -493,6 +493,11 @@ Phase 3-B：
 - event_user_invitations
 - event_messages
 
+プロフィール：
+
+- profiles
+- Storage bucket `profile-avatars`
+
 後続Phase：
 
 - reminders
@@ -501,5 +506,6 @@ Phase 3-B：
 
 - `017_connections_messages_and_invites.sql` は、つながり、ブロック、お気に入り、アプリ内招待、イベントメッセージと、それらのRLSを追加する
 - `018_require_follow_for_favorites.sql` は、お気に入り登録をフォロー済みの相手に限定する
+- `019_user_profiles_and_avatars.sql` は、ニックネーム、任意のプロフィール画像、初回設定完了日時を追加する
 - 招待の承諾時は、招待の状態を更新してから参加者レコードを作成する。二重送信では、すでに参加済みなら成功として扱う
 - 日程の再調整では、`availability_answers` を削除し、`plans` の確定日時を空にして回答受付へ戻す。Google CalendarのFreeBusy結果は保存しない

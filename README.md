@@ -13,14 +13,18 @@ Madoi は、友人同士の遊びや公演参加の日程を合わせるため�
 ## 現在できること
 
 - イベント登録
+- イベント一覧の状態・カテゴリ・表示順・表示件数フィルター
+- イベント作成の下書き保存と明示的な再開
 - 参加予定作成
 - 候補日時登録
 - 日程回答
 - 日程確定
 - 共有リンクによる未ログイン回答
 - 主催者自身の回答導線
-- 調整カレンダー
+- 自分が参加している調整をまとめる月カレンダー
 - 参加者管理
+- ニックネームとプロフィール画像の設定
+- フォロー・お気に入りによるつながり管理と次回招待
 - 利用規約・プライバシーポリシーのドラフト表示
 - Google Calendar の予定確認
 - 未回答者の確認とリマインド文面コピー
@@ -96,6 +100,7 @@ supabase/migrations/015_fix_event_policy_recursion.sql
 supabase/migrations/016_legal_consents_and_event_drafts.sql
 supabase/migrations/017_connections_messages_and_invites.sql
 supabase/migrations/018_require_follow_for_favorites.sql
+supabase/migrations/019_user_profiles_and_avatars.sql
 ```
 
 Google Calendar 連携を使う場合は、次の手順も実施してください。
@@ -137,15 +142,15 @@ npm run build
 候補日時作成画面で、自分の Google Calendar の予定名・場所・時間を確認できます。日程確定後は、予定詳細の「Calendarに作成して招待」から主催者のGoogle Calendarに予定を作成できます。Google Calendar連携済みの参加者がいれば、カレンダー招待も送ります。
 
 取得するのは予定の開始・終了時刻、予定名、場所だけです。予定の説明、参加者、Meet URL、添付ファイルは取得しません。Google Calendar の予定詳細はデータベースに保存しません。
-## Phase 2 ホーム日付表示と調整カレンダー
+## Phase 2 ホーム日付表示とカレンダー
 
-ホーム画面では、選択した1日のMadoi予定とGoogle Calendar予定だけを表示します。今日、明日、週末、任意の日付で絞り込めます。月単位の俯瞰は `/plans` の調整カレンダーで行います。
+ホーム画面では、選択した1日のMadoi予定とGoogle Calendar予定だけを表示します。今日、明日、週末、任意の日付で絞り込めます。月単位の俯瞰は `/plans` のカレンダーで行います。
 
 - 調整中: 黄色の点
 - 確定済み: 緑の点
 - Google Calendar: 青の点
 
-調整カレンダーでは、同時進行の候補日時を月単位で見比べます。Google Calendarの予定は画面表示後に取得し、予定名・場所・時間を表示します。
+カレンダーでは、自分が参加している同時進行の候補日時を月単位で見比べます。Google Calendarの予定は画面表示後に取得し、予定名・場所・時間を表示します。
 ## Phase 2 回答画面のGoogle Calendar確認
 
 共有リンクの日程回答画面では、ログイン済みかつGoogle Calendar連携済みの場合、自分の予定と候補日時の重なりを確認しながら回答できます。

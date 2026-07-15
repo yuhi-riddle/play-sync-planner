@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { safeNextPath } from "@/lib/auth/safe-next-path";
+import { getProfileCallbackRedirect } from "@/lib/domain/profile";
 import { PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -36,6 +37,20 @@ export async function GET(request: NextRequest) {
 
       if (consentError) {
         return NextResponse.redirect(new URL("/consent", request.url));
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("onboarding_completed_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const onboardingPath = getProfileCallbackRedirect(
+        nextPath,
+        profile?.onboarding_completed_at,
+        profileError
+      );
+      if (onboardingPath) {
+        return NextResponse.redirect(new URL(onboardingPath, request.url));
       }
     } else if (user) {
       return NextResponse.redirect(new URL(`/consent?next=${encodeURIComponent(nextPath)}`, request.url));

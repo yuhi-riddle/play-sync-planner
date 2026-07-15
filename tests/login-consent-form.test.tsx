@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginConsentForm } from "@/components/login-consent-form";
 
@@ -14,7 +14,16 @@ function elements() {
   };
 }
 
+function openWithoutNavigation(link: HTMLElement) {
+  link.addEventListener("click", (event) => event.preventDefault(), { once: true });
+  fireEvent.click(link);
+}
+
 describe("LoginConsentForm", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it("書面を開くまでチェックできない（開いてもいない書面への同意は同意ではない）", () => {
     render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
     const { submit, termsLink, termsBox, privacyBox } = elements();
@@ -24,7 +33,7 @@ describe("LoginConsentForm", () => {
     expect(submit).toBeDisabled();
 
     // 利用規約を開いた行だけが操作できるようになる
-    fireEvent.click(termsLink);
+    openWithoutNavigation(termsLink);
     expect(termsBox).toBeEnabled();
     expect(privacyBox).toBeDisabled();
   });
@@ -60,32 +69,32 @@ describe("LoginConsentForm", () => {
     render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
     const { submit, termsLink, privacyLink, termsBox, privacyBox } = elements();
 
-    fireEvent.click(termsLink);
+    openWithoutNavigation(termsLink);
     fireEvent.click(termsBox);
     expect(submit).toBeDisabled();
 
-    fireEvent.click(privacyLink);
+    openWithoutNavigation(privacyLink);
     fireEvent.click(privacyBox);
     expect(submit).toBeEnabled();
   });
 
-  it("規約は別タブで開く（この画面から離脱しないので、チェック状態を保存せずに済む）", () => {
+  it("規約は同じタブで開き、戻る導線で同意画面を再開できる", () => {
     render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
     const { termsLink, privacyLink } = elements();
 
-    expect(termsLink).toHaveAttribute("href", "/terms?from=login");
-    expect(privacyLink).toHaveAttribute("href", "/privacy?from=login");
-    expect(termsLink).toHaveAttribute("target", "_blank");
-    expect(privacyLink).toHaveAttribute("target", "_blank");
+    expect(termsLink).toHaveAttribute("href", "/terms?from=login&next=%2Fevents");
+    expect(privacyLink).toHaveAttribute("href", "/privacy?from=login&next=%2Fevents");
+    expect(termsLink).not.toHaveAttribute("target");
+    expect(privacyLink).not.toHaveAttribute("target");
   });
 
-  it("同意チェックを保存しない（再表示のたびに未チェック・未開封から始まる）", () => {
+  it("規約ページから戻っても閲覧済み・チェック済み状態を復元する", () => {
     const { unmount } = render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
 
     const first = elements();
-    fireEvent.click(first.termsLink);
+    openWithoutNavigation(first.termsLink);
     fireEvent.click(first.termsBox);
-    fireEvent.click(first.privacyLink);
+    openWithoutNavigation(first.privacyLink);
     fireEvent.click(first.privacyBox);
     expect(first.submit).toBeEnabled();
 
@@ -93,10 +102,10 @@ describe("LoginConsentForm", () => {
     render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
 
     const second = elements();
-    expect(second.termsBox).not.toBeChecked();
-    expect(second.privacyBox).not.toBeChecked();
-    expect(second.termsBox).toBeDisabled();
-    expect(second.privacyBox).toBeDisabled();
-    expect(second.submit).toBeDisabled();
+    expect(second.termsBox).toBeChecked();
+    expect(second.privacyBox).toBeChecked();
+    expect(second.termsBox).toBeEnabled();
+    expect(second.privacyBox).toBeEnabled();
+    expect(second.submit).toBeEnabled();
   });
 });

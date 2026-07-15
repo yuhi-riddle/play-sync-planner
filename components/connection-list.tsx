@@ -24,7 +24,7 @@ export function ConnectionList({ favorites, mutualFollows = [], following, candi
       <ConnectionSection title="お気に入り" people={favorites} emptyMessage="お気に入りにした人はいません。" />
       <ConnectionSection title="相互フォロー" people={mutualFollows} emptyMessage="相互フォローの人はいません。" />
       <ConnectionSection title="フォロー中" people={following} emptyMessage="フォロー中の人はいません。" />
-      <ConnectionSection title="最近一緒だった人" people={candidates} emptyMessage="一緒に参加した人がまだいません。" />
+      <ConnectionSection title="一緒に参加している人" people={candidates} emptyMessage="一緒に参加している人がまだいません。" />
     </div>
   );
 }
@@ -64,7 +64,7 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
         <div className="min-w-0">
           <p className="font-semibold text-ink">{person.displayName}</p>
           <p className="mt-1 text-sm text-muted">
-            一緒だったイベント {person.sharedEventCount}件
+            共通のイベント {person.sharedEventCount}件
             {isMutualFollow(person) ? "・相互フォロー" : person.isFollowing ? "・フォロー中" : ""}
           </p>
         </div>

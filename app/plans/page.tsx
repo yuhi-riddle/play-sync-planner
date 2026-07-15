@@ -4,7 +4,12 @@ import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
 import { ButtonLink, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { toDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  hasSupabaseAdminEnv,
+  hasSupabaseEnv
+} from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +96,7 @@ export default async function PlansPage({
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
-        <PageHeader eyebrow="Schedule" title="日程調整カレンダー" />
+        <PageHeader eyebrow="Calendar" title="カレンダー" />
         <SetupPanel />
       </div>
     );
@@ -105,18 +110,28 @@ export default async function PlansPage({
   if (!user) {
     return (
       <div className="space-y-6">
-        <PageHeader eyebrow="Schedule" title="日程調整カレンダー" />
+        <PageHeader eyebrow="Calendar" title="カレンダー" />
         <LoginPanel />
       </div>
     );
   }
 
-  const { data: plans } = await supabase
-    .from("plans")
-    .select("id, title, status, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer))")
-    .eq("owner_user_id", user.id)
-    .in("status", ["draft", "collecting_answers", "date_confirmed"])
-    .order("created_at", { ascending: false });
+  const { data: memberships } = await supabase
+    .from("event_members")
+    .select("event_id")
+    .eq("user_id", user.id)
+    .eq("status", "joined");
+  const joinedEventIds = [...new Set((memberships ?? []).map((membership) => membership.event_id))];
+  const calendarClient = hasSupabaseAdminEnv() ? createSupabaseAdminClient() : supabase;
+  const plansResult = joinedEventIds.length
+    ? await calendarClient
+        .from("plans")
+        .select("id, title, status, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer))")
+        .in("event_id", joinedEventIds)
+        .in("status", ["draft", "collecting_answers", "date_confirmed"])
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const plans = plansResult.data;
 
   const candidates = ((plans ?? []) as PlanRow[]).flatMap((plan) =>
     (plan.candidate_dates ?? []).map((candidate) => toCandidate(plan, candidate))
@@ -124,9 +139,9 @@ export default async function PlansPage({
 
   return (
     <div className="space-y-7">
-      <PageHeader eyebrow="Schedule"
-        title="日程調整カレンダー"
-        description="同時進行の候補日時を月ごとに見比べます。重なりがある日は、下のタイムラインで優先順位を決めやすくしています。"
+      <PageHeader eyebrow="Calendar"
+        title="カレンダー"
+        description="自分のGoogleカレンダーと、Madoiで調整中の候補日時を月ごとに見比べます。"
         action={
           <ButtonLink href="/events/new">
             <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />

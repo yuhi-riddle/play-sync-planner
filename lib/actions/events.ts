@@ -5,19 +5,9 @@ import { redirect } from "next/navigation";
 
 import { formDataToObject } from "@/lib/form-data";
 import { getAfterEventCreatePath } from "@/lib/domain/event-flow";
+import { getUserDisplayName } from "@/lib/domain/profile";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { eventSchema } from "@/lib/validators";
-
-function getDisplayName(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
-  const metadata = user.user_metadata ?? {};
-  const fullName = metadata.full_name ?? metadata.name;
-
-  if (typeof fullName === "string" && fullName.trim()) {
-    return fullName.trim();
-  }
-
-  return user.email?.split("@")[0] ?? "主催者";
-}
 
 export async function createEventAction(formData: FormData) {
   const user = await getCurrentUser();
@@ -44,7 +34,7 @@ export async function createEventAction(formData: FormData) {
     supabase.from("event_members").insert({
       event_id: data.id,
       user_id: user.id,
-      display_name: getDisplayName(user),
+      display_name: getUserDisplayName(user, "主催者"),
       role: "organizer",
       status: "joined"
     }),

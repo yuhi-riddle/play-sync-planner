@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, PageHeader, SecondaryLink } from "@/components/ui";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 const sections = [
   {
@@ -36,9 +37,10 @@ const sections = [
   }
 ];
 
-export default async function TermsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
-  const { from } = await searchParams;
-  const returnHref = from === "login" ? "/login" : "/";
+export default async function TermsPage({ searchParams }: { searchParams: Promise<{ from?: string; next?: string }> }) {
+  const { from, next } = await searchParams;
+  const nextPath = safeNextPath(next);
+  const returnHref = from === "login" ? `/login?next=${encodeURIComponent(nextPath)}` : "/";
 
   return (
     <div className="space-y-6">

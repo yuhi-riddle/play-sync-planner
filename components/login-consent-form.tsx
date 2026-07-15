@@ -1,28 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
 import React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 
-/**
- * 同意チェックは保存しない。
- *
- * 事前にチェックが入った状態で見せると、同意を取ったことにならない。
- * かといって規約を読みに行くたびに入力が消えるのも困るので、規約は別タブで開き、
- * この画面から離脱させないことで両立させている。
- *
- * さらに、開いてもいない書面への同意もまた同意とは言えないので、
- * リンクを開くまでチェックボックスは操作できない。
- */
+const CONSENT_DRAFT_KEY = "madoi-login-consent";
+
+type ConsentDraft = {
+  termsOpened: boolean;
+  privacyOpened: boolean;
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
+};
+
+const emptyConsentDraft: ConsentDraft = {
+  termsOpened: false,
+  privacyOpened: false,
+  termsAccepted: false,
+  privacyAccepted: false
+};
+
+/** 規約ページから戻るまで、閲覧済み・チェック済みの状態を同じタブ内に保持する。 */
 function ConsentRow({
   name,
   label,
   linkLabel,
   href,
   accepted,
-  onAcceptedChange
+  onAcceptedChange,
+  opened,
+  onOpened
 }: {
   name: string;
   label: string;
@@ -30,24 +38,20 @@ function ConsentRow({
   href: string;
   accepted: boolean;
   onAcceptedChange: (accepted: boolean) => void;
+  opened: boolean;
+  onOpened: () => void;
 }) {
-  const [opened, setOpened] = useState(false);
-
   return (
     <div className="grid gap-2">
       <span className={clsx(!opened && "text-muted")}>
         <Link
           href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => setOpened(true)}
-          onAuxClick={() => setOpened(true)}
-          onContextMenu={() => setOpened(true)}
+          onClick={onOpened}
+          onAuxClick={onOpened}
+          onContextMenu={onOpened}
           className="inline-flex min-h-11 items-center gap-1 font-bold text-pine underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         >
           {linkLabel}
-          <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-          <span className="sr-only">（新しいタブで開きます）</span>
         </Link>
       </span>
       <label
@@ -83,32 +87,60 @@ export function LoginConsentForm({
   nextPath: string;
   submitLabel?: string;
 }) {
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const canSubmit = termsAccepted && privacyAccepted;
+  const [draft, setDraft] = useState(emptyConsentDraft);
+
+  useEffect(() => {
+    const stored = window.sessionStorage.getItem(CONSENT_DRAFT_KEY);
+    if (!stored) return;
+
+    try {
+      setDraft({ ...emptyConsentDraft, ...(JSON.parse(stored) as Partial<ConsentDraft>) });
+    } catch {
+      window.sessionStorage.removeItem(CONSENT_DRAFT_KEY);
+    }
+  }, []);
+
+  const updateDraft = (patch: Partial<ConsentDraft>) => {
+    setDraft((current) => {
+      const next = { ...current, ...patch };
+      window.sessionStorage.setItem(CONSENT_DRAFT_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const canSubmit = draft.termsAccepted && draft.privacyAccepted;
+  const encodedNextPath = encodeURIComponent(nextPath);
 
   return (
-    <form action={action} className="space-y-5">
+    <form
+      action={action}
+      className="space-y-5"
+      onSubmit={() => window.sessionStorage.removeItem(CONSENT_DRAFT_KEY)}
+    >
       <input type="hidden" name="next" value={nextPath} />
       <p className="text-body text-muted">
-        2つの書面を開いて内容を確認すると、チェックを入れられます。両方に同意するとログインできます。
+        利用規約とプライバシーポリシーの両方に同意すると、Googleログインへ進めます。
       </p>
       <div className="space-y-3 rounded-control border border-line bg-sunken p-4 text-body text-ink">
         <ConsentRow
           name="termsAccepted"
           label="利用規約に同意する"
           linkLabel="利用規約を読む"
-          href="/terms?from=login"
-          accepted={termsAccepted}
-          onAcceptedChange={setTermsAccepted}
+          href={`/terms?from=login&next=${encodedNextPath}`}
+          accepted={draft.termsAccepted}
+          onAcceptedChange={(accepted) => updateDraft({ termsAccepted: accepted })}
+          opened={draft.termsOpened}
+          onOpened={() => updateDraft({ termsOpened: true })}
         />
         <ConsentRow
           name="privacyAccepted"
           label="プライバシーポリシーに同意する"
           linkLabel="プライバシーポリシーを読む"
-          href="/privacy?from=login"
-          accepted={privacyAccepted}
-          onAcceptedChange={setPrivacyAccepted}
+          href={`/privacy?from=login&next=${encodedNextPath}`}
+          accepted={draft.privacyAccepted}
+          onAcceptedChange={(accepted) => updateDraft({ privacyAccepted: accepted })}
+          opened={draft.privacyOpened}
+          onOpened={() => updateDraft({ privacyOpened: true })}
         />
       </div>
       <button

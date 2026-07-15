@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Bell, LogOut, Settings, UserRound } from "lucide-react";
+import React from "react";
 
 import { signOutAction } from "@/lib/actions/auth";
 import { getAuthNavState } from "@/lib/domain/auth-nav";
+import { getGoogleProfileDefaults, getProfileAvatarUrl } from "@/lib/domain/profile";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export async function AuthNav() {
@@ -20,20 +22,49 @@ export async function AuthNav() {
     return <AuthLink href={state.primaryHref} label={state.primaryLabel} />;
   }
 
-  const { count: unreadCount } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user!.id)
-    .is("read_at", null);
+  const [{ data: profile }, { count: unreadCount }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("nickname, avatar_path, onboarding_completed_at")
+      .eq("user_id", user!.id)
+      .maybeSingle(),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user!.id)
+      .is("read_at", null)
+  ]);
+  const googleDefaults = getGoogleProfileDefaults(user!);
+  const nickname = profile?.nickname ?? googleDefaults.nickname ?? state.accountLabel;
+  const avatarUrl = getProfileAvatarUrl(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    profile?.avatar_path,
+    googleDefaults.avatarUrl
+  );
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <div className="hidden items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-muted shadow-soft sm:flex">
-        <UserRound aria-hidden="true" className="h-4 w-4 text-pine" />
-        <span className="max-w-32 truncate font-bold" title={state.displayEmail ?? undefined}>
-          {state.accountLabel}
+      <Link
+        href="/settings"
+        className="flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-2 py-1.5 text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:px-3"
+        aria-label={`プロフィール設定を開く（${nickname}）`}
+        title="プロフィール設定を開く"
+      >
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={`${nickname}のプロフィール画像`}
+            className="h-7 w-7 rounded-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <UserRound aria-hidden="true" className="h-5 w-5 text-pine" />
+        )}
+        <span className="hidden max-w-32 truncate font-bold sm:inline" title={nickname ?? undefined}>
+          {nickname}
         </span>
-      </div>
+      </Link>
       <Link
         href="/notifications"
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"

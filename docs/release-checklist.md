@@ -33,6 +33,13 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] `supabase/migrations/010_participant_user_identity.sql`
 - [ ] `supabase/migrations/011_plan_multiple_reminders.sql`
 - [ ] `supabase/migrations/012_answer_received_notifications.sql`
+- [ ] `supabase/migrations/013_repair_notifications_setup.sql`
+- [ ] `supabase/migrations/014_member_first_coordination.sql`
+- [ ] `supabase/migrations/015_fix_event_policy_recursion.sql`
+- [ ] `supabase/migrations/016_legal_consents_and_event_drafts.sql`
+- [ ] `supabase/migrations/017_connections_messages_and_invites.sql`
+- [ ] `supabase/migrations/018_require_follow_for_favorites.sql`
+- [ ] `supabase/migrations/019_user_profiles_and_avatars.sql`
 
 途中でエラーが出た場合は、実行したファイル名とエラー全文を控えます。
 

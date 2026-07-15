@@ -53,6 +53,6 @@ describe("Google Calendar free/busy", () => {
         timeMax: "2026-08-01T00:00:00+09:00",
         fetchImpl
       })
-    ).rejects.toMatchObject<Partial<CalendarFreeBusyError>>({ status: 403 });
+    ).rejects.toMatchObject({ status: 403 } satisfies Partial<CalendarFreeBusyError>);
   });
 });

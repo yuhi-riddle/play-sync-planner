@@ -53,4 +53,13 @@ describe("ConnectionList", () => {
 
     expect(screen.getByRole("button", { name: "お気に入りを外す" })).toBeEnabled();
   });
+
+  it("describes shared participation without implying that every event is in the past", () => {
+    render(<ConnectionList favorites={[]} following={[]} candidates={[candidate]} />);
+
+    expect(screen.getByRole("heading", { name: "一緒に参加している人" })).toBeInTheDocument();
+    expect(screen.getByText("共通のイベント 3件")).toBeInTheDocument();
+    expect(screen.queryByText("最近一緒だった人")).not.toBeInTheDocument();
+    expect(screen.queryByText("一緒だったイベント 3件")).not.toBeInTheDocument();
+  });
 });

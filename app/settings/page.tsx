@@ -1,7 +1,9 @@
 import { AccountEmailCard } from "@/components/account-email-card";
 import { CalendarConnectionCard } from "@/components/calendar-connection-card";
+import { ProfileSettingsCard } from "@/components/profile-settings-card";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { PageHeader, SecondaryLink } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
+import { getGoogleProfileDefaults, getProfileAvatarUrl, isProfileSchemaUnavailable } from "@/lib/domain/profile";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -36,24 +38,47 @@ export default async function SettingsPage({
     );
   }
 
-  const { data: calendarIntegration } = await supabase
-    .from("calendar_integrations")
-    .select("account_email, updated_at")
-    .eq("user_id", user.id)
-    .eq("provider", "google")
-    .maybeSingle();
+  const [{ data: profile, error: profileError }, { data: calendarIntegration }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("nickname, avatar_path, onboarding_completed_at")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("calendar_integrations")
+      .select("account_email, updated_at")
+      .eq("user_id", user.id)
+      .eq("provider", "google")
+      .maybeSingle()
+  ]);
+  const googleDefaults = getGoogleProfileDefaults(user);
+  const avatarUrl = getProfileAvatarUrl(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    profile?.avatar_path,
+    googleDefaults.avatarUrl
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader title="設定" description="アカウント情報と外部サービス連携を管理できます。" />
+      {profileError ? (
+        <Card>
+          <h2 className="text-title text-ink">プロフィール機能の準備が必要です</h2>
+          <p className="mt-2 text-body text-muted">
+            {isProfileSchemaUnavailable(profileError)
+              ? "Supabaseへmigration 019を適用すると、プロフィールを変更できます。"
+              : "プロフィールを読み込めませんでした。時間をおいてもう一度開いてください。"}
+          </p>
+        </Card>
+      ) : (
+        <ProfileSettingsCard
+          mode="settings"
+          initialNickname={profile?.nickname ?? googleDefaults.nickname}
+          currentAvatarUrl={avatarUrl}
+          hasCustomAvatar={Boolean(profile?.avatar_path)}
+        />
+      )}
       <AccountEmailCard email={user.email} />
-      <section className="rounded-control border border-line bg-surface p-5 shadow-soft">
-        <h2 className="text-xl font-semibold text-ink">つながり</h2>
-        <p className="mt-2 text-sm text-muted">一緒に参加した人のフォローやお気に入りを管理できます。</p>
-        <div className="mt-4">
-          <SecondaryLink href="/connections">つながりを開く</SecondaryLink>
-        </div>
-      </section>
       <CalendarConnectionCard
         connected={Boolean(calendarIntegration)}
         accountEmail={calendarIntegration?.account_email ?? null}

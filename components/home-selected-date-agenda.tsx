@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
@@ -56,11 +57,11 @@ function selectedDateLabel(dateKey: string) {
   }).format(dateFromKey(dateKey));
 }
 
-function nextWeekendDateKey() {
-  const today = new Date();
+function nextWeekendDateKey(todayDateKey: string) {
+  const today = dateFromKey(todayDateKey);
   const day = today.getDay();
   if (day === 0 || day === 6) {
-    return toDateKey(today);
+    return todayDateKey;
   }
 
   return toDateKey(addDays(today, 6 - day));
@@ -129,26 +130,16 @@ function itemAccentClass(kind: HomeAgendaItem["kind"]) {
 }
 
 function DateShortcut({
-  href,
+  onSelect,
   active,
   children
 }: {
-  href: string;
+  onSelect: () => void;
   active: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={active ? "date" : undefined}
-      className={clsx(
-        "inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
-        active ? "bg-ink text-white shadow-soft" : "border border-line-strong bg-surface text-muted hover:border-moss hover:text-pine"
-      )}
-    >
-      {children}
-    </Link>
+    <button type="button" onClick={onSelect} aria-current={active ? "date" : undefined} className={clsx("inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2", active ? "bg-ink text-white shadow-soft" : "border border-line-strong bg-surface text-muted hover:border-moss hover:text-pine")}>{children}</button>
   );
 }
 
@@ -194,27 +185,43 @@ function AgendaItem({ item }: { item: HomeAgendaItem }) {
 
 export function HomeSelectedDateAgenda({
   selectedDateKey,
+  todayDateKey,
   initialItems
 }: {
   selectedDateKey: string;
+  todayDateKey: string;
   initialItems: HomeAgendaItem[];
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeDateKey, setActiveDateKey] = useState(selectedDateKey);
   const [googleItems, setGoogleItems] = useState<HomeAgendaItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
-  const todayKey = useMemo(() => toDateKey(new Date()), []);
-  const tomorrowKey = useMemo(() => toDateKey(addDays(new Date(), 1)), []);
-  const weekendKey = useMemo(() => nextWeekendDateKey(), []);
-  const weekDays = useMemo(() => weekDaysFor(selectedDateKey), [selectedDateKey]);
+  const tomorrowKey = useMemo(() => toDateKey(addDays(dateFromKey(todayDateKey), 1)), [todayDateKey]);
+  const weekendKey = useMemo(() => nextWeekendDateKey(todayDateKey), [todayDateKey]);
+  const weekDays = useMemo(() => weekDaysFor(activeDateKey), [activeDateKey]);
   const previousWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), -7));
   const nextWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), 7));
+  const activeMonth = monthParam(activeDateKey);
   const items = useMemo(() => [...initialItems, ...googleItems], [googleItems, initialItems]);
-  const agenda = buildHomeAgendaDay({ selectedDate: dateFromKey(selectedDateKey), items });
+  const agenda = buildHomeAgendaDay({ selectedDate: dateFromKey(activeDateKey), items });
+
+  useEffect(() => {
+    setActiveDateKey(selectedDateKey);
+  }, [selectedDateKey]);
+
+  function selectDate(dateKey: string) {
+    setActiveDateKey(dateKey);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("date", dateKey);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  }
 
   useEffect(() => {
     let cancelled = false;
     setGoogleState("loading");
 
-    fetch(`/api/google-calendar/freebusy?month=${monthParam(selectedDateKey)}`)
+    fetch(`/api/google-calendar/freebusy?month=${activeMonth}`)
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("failed");
@@ -239,7 +246,7 @@ export function HomeSelectedDateAgenda({
     return () => {
       cancelled = true;
     };
-  }, [selectedDateKey]);
+  }, [activeMonth]);
 
   return (
     <Card aria-label="選択日の予定">
@@ -258,13 +265,13 @@ export function HomeSelectedDateAgenda({
 
       <div className="mt-4 grid gap-3">
         <nav className="flex flex-wrap gap-2" aria-label="表示する日付">
-          <DateShortcut href={`/?date=${todayKey}`} active={selectedDateKey === todayKey}>
+          <DateShortcut onSelect={() => selectDate(todayDateKey)} active={activeDateKey === todayDateKey}>
             今日
           </DateShortcut>
-          <DateShortcut href={`/?date=${tomorrowKey}`} active={selectedDateKey === tomorrowKey}>
+          <DateShortcut onSelect={() => selectDate(tomorrowKey)} active={activeDateKey === tomorrowKey}>
             明日
           </DateShortcut>
-          <DateShortcut href={`/?date=${weekendKey}`} active={selectedDateKey === weekendKey}>
+          <DateShortcut onSelect={() => selectDate(weekendKey)} active={activeDateKey === weekendKey}>
             週末
           </DateShortcut>
         </nav>
@@ -273,32 +280,22 @@ export function HomeSelectedDateAgenda({
           <div className="flex items-center justify-between gap-2">
             <p className="text-body font-bold text-ink">日付を選ぶ</p>
             <div className="flex items-center gap-2">
-              <Link
-                href={`/?date=${previousWeekKey}`}
-                scroll={false}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                aria-label="前の週"
-              >
+              <button type="button" onClick={() => selectDate(previousWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay" aria-label="前の週">
                 <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-              </Link>
-              <Link
-                href={`/?date=${nextWeekKey}`}
-                scroll={false}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                aria-label="次の週"
-              >
+              </button>
+              <button type="button" onClick={() => selectDate(nextWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay" aria-label="次の週">
                 <ChevronRight aria-hidden="true" className="h-4 w-4" />
-              </Link>
+              </button>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-7 gap-1">
             {weekDays.map((dateKey) => {
-              const active = dateKey === selectedDateKey;
+              const active = dateKey === activeDateKey;
               return (
-                <Link
+                <button
+                  type="button"
                   key={dateKey}
-                  href={`/?date=${dateKey}`}
-                  scroll={false}
+                  onClick={() => selectDate(dateKey)}
                   aria-current={active ? "date" : undefined}
                   className={clsx(
                     "grid min-h-16 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
@@ -309,7 +306,7 @@ export function HomeSelectedDateAgenda({
                     {weekdayLabel(dateKey)}
                   </span>
                   <span className="mt-1 text-body font-bold tabular-nums">{shortDateLabel(dateKey)}</span>
-                </Link>
+                </button>
               );
             })}
           </div>

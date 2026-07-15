@@ -13,7 +13,8 @@ import { cancelEventAction } from "@/lib/actions/events";
 import { categoryLabels, planStatusLabels } from "@/lib/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import type { EventMessage } from "@/lib/domain/event-chat";
-import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
+import { buildInviteCandidates, resolveInviteProfileNames, type ConnectionCandidate } from "@/lib/domain/connections";
+import { getUserDisplayName } from "@/lib/domain/profile";
 import { formatDateTime } from "@/lib/format";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
@@ -220,19 +221,8 @@ async function loadEventChat(eventId: string, currentUserId: string): Promise<{ 
 
 async function loadInviteCandidates(eventId: string, currentUserId: string): Promise<ConnectionCandidate[]> {
   const admin = createSupabaseAdminClient();
-  const { data: currentMemberships, error: currentMembershipsError } = await admin
-    .from("event_members")
-    .select("event_id")
-    .eq("user_id", currentUserId)
-    .eq("status", "joined");
-
-  if (currentMembershipsError || !currentMemberships?.length) {
-    return [];
-  }
-
-  const sharedEventIds = currentMemberships.map((membership) => membership.event_id);
-  const [membersResult, existingMembersResult, followingResult, followedByResult, favoritesResult, blocksResult] = await Promise.all([
-    admin.from("event_members").select("event_id, user_id, display_name, created_at").in("event_id", sharedEventIds).eq("status", "joined"),
+  const [currentMembershipsResult, existingMembersResult, followingResult, followedByResult, favoritesResult, blocksResult] = await Promise.all([
+    admin.from("event_members").select("event_id").eq("user_id", currentUserId).eq("status", "joined"),
     admin.from("event_members").select("user_id").eq("event_id", eventId).eq("status", "joined"),
     admin.from("user_connections").select("followed_user_id").eq("follower_user_id", currentUserId),
     admin.from("user_connections").select("follower_user_id").eq("followed_user_id", currentUserId),
@@ -244,13 +234,26 @@ async function loadInviteCandidates(eventId: string, currentUserId: string): Pro
   ]);
 
   if (
-    membersResult.error ||
+    currentMembershipsResult.error ||
     existingMembersResult.error ||
     followingResult.error ||
     followedByResult.error ||
     favoritesResult.error ||
     blocksResult.error
   ) {
+    throw new Error("招待候補を読み込めませんでした。");
+  }
+
+  const sharedEventIds = (currentMembershipsResult.data ?? []).map((membership) => membership.event_id);
+  const membersResult = sharedEventIds.length
+    ? await admin
+        .from("event_members")
+        .select("event_id, user_id, display_name, created_at")
+        .in("event_id", sharedEventIds)
+        .eq("status", "joined")
+    : { data: [], error: null };
+
+  if (membersResult.error) {
     throw new Error("招待候補を読み込めませんでした。");
   }
 
@@ -261,35 +264,42 @@ async function loadInviteCandidates(eventId: string, currentUserId: string): Pro
   const followingUserIds = new Set((followingResult.data ?? []).map((connection) => connection.followed_user_id));
   const followedByUserIds = new Set((followedByResult.data ?? []).map((connection) => connection.follower_user_id));
   const favoriteUserIds = new Set((favoritesResult.data ?? []).map((favorite) => favorite.favorite_user_id));
-  const people = new Map<string, ConnectionCandidate>();
+  const sharedMembers = ((membersResult.data ?? []) as EventMemberRow[]).map((member) => ({
+    userId: member.user_id,
+    displayName: member.display_name,
+    sharedAt: member.created_at
+  }));
+  const candidateUserIds = [
+    ...new Set([...sharedMembers.map((member) => member.userId), ...followingUserIds, ...favoriteUserIds])
+  ].filter((userId) => userId !== currentUserId && !existingMemberIds.has(userId) && !blockedUserIds.has(userId));
 
-  for (const member of (membersResult.data ?? []) as EventMemberRow[]) {
-    if (member.user_id === currentUserId || existingMemberIds.has(member.user_id) || blockedUserIds.has(member.user_id)) {
-      continue;
-    }
-
-    const existing = people.get(member.user_id);
-    if (!existing) {
-      people.set(member.user_id, {
-        userId: member.user_id,
-        displayName: member.display_name,
-        sharedEventCount: 1,
-        latestSharedAt: member.created_at,
-        isFollowing: followingUserIds.has(member.user_id),
-        isFollowedBy: followedByUserIds.has(member.user_id),
-        isFavorite: favoriteUserIds.has(member.user_id)
-      });
-      continue;
-    }
-
-    existing.sharedEventCount += 1;
-    if (member.created_at > existing.latestSharedAt) {
-      existing.latestSharedAt = member.created_at;
-      existing.displayName = member.display_name;
-    }
+  if (candidateUserIds.length === 0) {
+    return [];
   }
 
-  return sortInviteCandidates([...people.values()]);
+  const profileResult = await admin.from("profiles").select("user_id, nickname").in("user_id", candidateUserIds);
+  const profileNames = resolveInviteProfileNames(profileResult.data, profileResult.error);
+  const sharedUserIds = new Set(sharedMembers.map((member) => member.userId));
+  const fallbackNameEntries = await Promise.all(
+    candidateUserIds
+      .filter((userId) => !profileNames.has(userId) && !sharedUserIds.has(userId))
+      .map(async (userId) => {
+        const { data, error } = await admin.auth.admin.getUserById(userId);
+        return [userId, !error && data.user ? getUserDisplayName(data.user, "Madoiユーザー") : "Madoiユーザー"] as const;
+      })
+  );
+
+  return buildInviteCandidates({
+    currentUserId,
+    sharedMembers,
+    existingMemberIds,
+    followingUserIds,
+    followedByUserIds,
+    favoriteUserIds,
+    blockedUserIds,
+    profileNames,
+    fallbackNames: new Map(fallbackNameEntries)
+  });
 }
 
 function Info({ label, value }: { label: string; value: string }) {
