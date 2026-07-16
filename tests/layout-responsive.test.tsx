@@ -11,12 +11,16 @@ import RootLayout from "@/app/layout";
 describe("RootLayout responsive header", () => {
   it("stacks the brand and account controls on mobile and returns to one row on larger screens", () => {
     vi.stubGlobal("React", React);
-    const document = new DOMParser().parseFromString(renderToStaticMarkup(<RootLayout>本文</RootLayout>), "text/html");
+    const markup = renderToStaticMarkup(<RootLayout>本文</RootLayout>);
+    const parsedDocument = new DOMParser().parseFromString(markup, "text/html");
+    document.body.innerHTML = parsedDocument.body.innerHTML;
 
     const headerInner = document.querySelector("header > div");
     const classNames = headerInner?.getAttribute("class")?.split(/\s+/) ?? [];
     expect(classNames).toEqual(
       expect.arrayContaining(["flex-col", "gap-3", "sm:flex-row", "sm:items-center", "sm:justify-between"])
     );
+    expect(document.querySelector("main")?.parentElement).toHaveClass("pb-28", "sm:pb-10");
+    expect(document.querySelector("footer")).toHaveClass("pb-28", "sm:pb-8");
   });
 });

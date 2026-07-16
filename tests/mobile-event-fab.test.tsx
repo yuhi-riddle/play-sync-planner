@@ -15,7 +15,9 @@ describe("MobileEventFab", () => {
 
     render(<MobileEventFab />);
 
-    expect(screen.getByRole("link", { name: "イベントを作る" })).toHaveAttribute("href", "/events/new");
+    const createEventLink = screen.getByRole("link", { name: "イベントを作る" });
+    expect(createEventLink).toHaveAttribute("href", "/events/new");
+    expect(createEventLink.className).toContain("safe-area-inset-bottom");
   });
 
   it("hides on the event creation page", () => {
