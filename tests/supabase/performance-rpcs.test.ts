@@ -23,11 +23,15 @@ describe("event list performance and atomic block migration", () => {
 
   it("uses a deterministic ordinal window and bounds the requested page", () => {
     const sql = migration();
+    expect(sql).toContain("p_offset bigint default 0");
+    expect(sql).toMatch(
+      /greatest\(coalesce\(p_offset, 0::bigint\), 0::bigint\) as offset_value/
+    );
     expect(sql).toMatch(
       /row_number\(\) over \([\s\S]*?created_at desc,\s+id desc\s+\) as ordinal/
     );
     expect(sql).toMatch(
-      /where ordinal > offset_value\s+and ordinal <= offset_value \+ limit_value/
+      /where ordinal > offset_value\s+and ordinal <= offset_value \+ limit_value::bigint/
     );
   });
 
@@ -58,7 +62,7 @@ describe("event list performance and atomic block migration", () => {
       /if target_user_id is null or target_user_id = current_user_id then\s+raise exception 'Invalid block target';\s+end if;/
     );
     expect(sql).toMatch(
-      /if not public\.have_shared_event\(current_user_id, target_user_id\) then\s+raise exception 'A shared event is required';\s+end if;/
+      /if not public\.have_shared_event\(current_user_id, target_user_id\) then\s+raise exception using\s+errcode = 'PSP01',\s+message = 'A shared event is required';\s+end if;/
     );
   });
 
@@ -66,8 +70,10 @@ describe("event list performance and atomic block migration", () => {
     const sql = migration();
     expect(sql.match(/security definer/g)).toHaveLength(2);
     expect(sql.match(/set search_path = public/g)).toHaveLength(2);
-    expect(sql).toContain("revoke all on function public.list_owned_event_ids(text, text, text, integer, integer) from public");
-    expect(sql).toContain("grant execute on function public.list_owned_event_ids(text, text, text, integer, integer) to authenticated");
+    expect(sql).toContain("drop function if exists public.list_owned_event_ids(text, text, text, integer, integer)");
+    expect(sql).toContain("revoke all on function public.list_owned_event_ids(text, text, text, integer, bigint) from public");
+    expect(sql).toContain("grant execute on function public.list_owned_event_ids(text, text, text, integer, bigint) to authenticated");
+    expect(sql).not.toContain("grant execute on function public.list_owned_event_ids(text, text, text, integer, integer)");
     expect(sql).toContain("revoke all on function public.block_user_atomic(uuid) from public");
     expect(sql).toContain("grant execute on function public.block_user_atomic(uuid) to authenticated");
     expect(sql).toContain("events_owner_category_created_id_idx");

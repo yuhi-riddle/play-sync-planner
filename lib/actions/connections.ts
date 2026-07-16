@@ -8,6 +8,7 @@ import { getUserDisplayName } from "@/lib/domain/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const sharedEventRequiredErrorCode = "PSP01";
 
 type ConnectionTarget = {
   currentUserId: string;
@@ -147,6 +148,9 @@ export async function blockUserAction(userId: string): Promise<void> {
   });
 
   if (error) {
+    if (error.code === sharedEventRequiredErrorCode) {
+      throw new Error("共通のイベントに参加しているユーザーだけを操作できます");
+    }
     throw new Error("ブロックできませんでした");
   }
 

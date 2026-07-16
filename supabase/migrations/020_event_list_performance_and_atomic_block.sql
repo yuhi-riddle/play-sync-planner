@@ -4,12 +4,14 @@ on public.events(owner_user_id, category, created_at desc, id desc);
 create index if not exists plans_event_status_confirmed_idx
 on public.plans(event_id, status, confirmed_start_at, confirmed_end_at);
 
+drop function if exists public.list_owned_event_ids(text, text, text, integer, integer);
+
 create or replace function public.list_owned_event_ids(
   p_filter text default 'active',
   p_category text default 'all',
   p_sort text default 'newest',
   p_limit integer default 10,
-  p_offset integer default 0
+  p_offset bigint default 0
 )
 returns table(event_ids uuid[], total_count bigint)
 language sql
@@ -27,7 +29,7 @@ as $$
       end as category_value,
       case when p_sort in ('newest', 'soonest', 'latest') then p_sort else 'newest' end as sort_value,
       case when p_limit in (10, 20, 50) then p_limit else 10 end as limit_value,
-      greatest(coalesce(p_offset, 0), 0) as offset_value
+      greatest(coalesce(p_offset, 0::bigint), 0::bigint) as offset_value
   ),
   owned_events as (
     select e.*
@@ -133,7 +135,7 @@ as $$
         from ordered
         cross join normalized
         where ordinal > offset_value
-          and ordinal <= offset_value + limit_value
+          and ordinal <= offset_value + limit_value::bigint
       ),
       '{}'::uuid[]
     ) as event_ids,
@@ -158,7 +160,9 @@ begin
   end if;
 
   if not public.have_shared_event(current_user_id, target_user_id) then
-    raise exception 'A shared event is required';
+    raise exception using
+      errcode = 'PSP01',
+      message = 'A shared event is required';
   end if;
 
   insert into public.user_blocks (blocker_user_id, blocked_user_id)
@@ -175,7 +179,7 @@ begin
 end;
 $$;
 
-revoke all on function public.list_owned_event_ids(text, text, text, integer, integer) from public;
+revoke all on function public.list_owned_event_ids(text, text, text, integer, bigint) from public;
 revoke all on function public.block_user_atomic(uuid) from public;
-grant execute on function public.list_owned_event_ids(text, text, text, integer, integer) to authenticated;
+grant execute on function public.list_owned_event_ids(text, text, text, integer, bigint) to authenticated;
 grant execute on function public.block_user_atomic(uuid) to authenticated;

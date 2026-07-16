@@ -160,4 +160,22 @@ describe("EventsPage", () => {
 
     expect(redirect).toHaveBeenCalledWith("/events?page=2");
   });
+
+  it("passes an offset beyond the PostgreSQL integer range without overflowing", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 2_147_483_660);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ page: "214748366" }) }));
+
+    expect(rpc).toHaveBeenCalledWith("list_owned_event_ids", expect.objectContaining({
+      p_limit: 10,
+      p_offset: 2_147_483_650
+    }));
+  });
 });

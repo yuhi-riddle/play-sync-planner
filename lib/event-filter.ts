@@ -118,7 +118,7 @@ export function normalizeEventListQuery(query: {
     pageSize: EVENT_LIST_PAGE_SIZES.includes(pageSize as EventListPageSize)
       ? (pageSize as EventListPageSize)
       : 10,
-    page: Number.isInteger(page) && page > 0 ? page : 1
+    page: Number.isSafeInteger(page) && page > 0 ? page : 1
   };
 }
 

@@ -38,9 +38,22 @@ describe("blockUserAction", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/connections");
   });
 
-  it("does not revalidate when the atomic RPC fails", async () => {
+  it("preserves the existing message when the target no longer shares an event", async () => {
     createSupabaseServerClient.mockResolvedValue({
-      rpc: vi.fn().mockResolvedValue({ error: { message: "database failure" } })
+      rpc: vi.fn().mockResolvedValue({
+        error: { code: "PSP01", message: "A shared event is required" }
+      })
+    });
+
+    await expect(blockUserAction(blockedUserId)).rejects.toThrow(
+      "共通のイベントに参加しているユーザーだけを操作できます"
+    );
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("uses the general block error for an unexpected database failure", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
     });
 
     await expect(blockUserAction(blockedUserId)).rejects.toThrow("ブロックできませんでした");

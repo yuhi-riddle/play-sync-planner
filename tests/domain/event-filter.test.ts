@@ -80,6 +80,10 @@ describe("event list query", () => {
     });
   });
 
+  it("normalizes a page number outside JavaScript's safe integer range", () => {
+    expect(normalizeEventListQuery({ page: "9007199254740992" }).page).toBe(1);
+  });
+
   it("maps display sorting to database ordering", () => {
     expect(getEventListSort("newest")).toEqual({ column: "created_at", ascending: false });
     expect(getEventListSort("soonest")).toEqual({ column: "start_date", ascending: true, nullsFirst: false });
