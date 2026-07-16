@@ -21,6 +21,16 @@ describe("event list performance and atomic block migration", () => {
     expect(sql).toContain("select count(*)::bigint from ordered");
   });
 
+  it("uses a deterministic ordinal window and bounds the requested page", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /row_number\(\) over \([\s\S]*?created_at desc,\s+id desc\s+\) as ordinal/
+    );
+    expect(sql).toMatch(
+      /where ordinal > offset_value\s+and ordinal <= offset_value \+ limit_value/
+    );
+  });
+
   it("keeps lifecycle, settlement, and schedule sorting rules in the database", () => {
     const sql = migration();
     expect(sql).toContain("p.status not in ('cancelled', 'skipped')");
@@ -37,6 +47,19 @@ describe("event list performance and atomic block migration", () => {
     expect(sql).toContain("delete from public.user_connections");
     expect(sql).toContain("delete from public.user_favorites");
     expect(sql).toContain("public.have_shared_event(current_user_id, target_user_id)");
+  });
+
+  it("rejects unauthenticated, self, null, and unrelated block targets", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /if current_user_id is null then\s+raise exception 'Authentication required';\s+end if;/
+    );
+    expect(sql).toMatch(
+      /if target_user_id is null or target_user_id = current_user_id then\s+raise exception 'Invalid block target';\s+end if;/
+    );
+    expect(sql).toMatch(
+      /if not public\.have_shared_event\(current_user_id, target_user_id\) then\s+raise exception 'A shared event is required';\s+end if;/
+    );
   });
 
   it("limits RPC execution to authenticated users and adds query indexes", () => {
