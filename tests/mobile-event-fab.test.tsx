@@ -17,7 +17,22 @@ describe("MobileEventFab", () => {
 
     const createEventLink = screen.getByRole("link", { name: "イベントを作る" });
     expect(createEventLink).toHaveAttribute("href", "/events/new");
-    expect(createEventLink.className).toContain("safe-area-inset-bottom");
+    expect(createEventLink).toHaveClass("bottom-[calc(5.5rem+env(safe-area-inset-bottom))]");
+  });
+
+  it("keeps visible hover and keyboard focus states", () => {
+    vi.mocked(usePathname).mockReturnValue("/events");
+
+    render(<MobileEventFab />);
+
+    expect(screen.getByRole("link", { name: "イベントを作る" })).toHaveClass(
+      "transition-colors",
+      "hover:bg-pine",
+      "focus:outline-none",
+      "focus:ring-2",
+      "focus:ring-clay",
+      "focus:ring-offset-2"
+    );
   });
 
   it("hides on the event creation page", () => {
