@@ -197,10 +197,16 @@ export default async function HomePage({
     .select("id, payload, updated_at")
     .eq("owner_user_id", user.id)
     .maybeSingle();
-  const [{ data: plans }, { data: notifications }, { data: eventDraft }] = await Promise.all([
+  const profilePromise = supabase
+    .from("profiles")
+    .select("nickname")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const [{ data: plans }, { data: notifications }, { data: eventDraft }, { data: profile }] = await Promise.all([
     plansPromise,
     notificationsPromise,
-    eventDraftPromise
+    eventDraftPromise,
+    profilePromise
   ]);
 
   const planRows = (plans ?? []) as PlanRow[];
@@ -222,8 +228,8 @@ export default async function HomePage({
         title="ホーム"
         description={
           actionCount > 0
-            ? greetingTitle(user.email) + " いま手が必要なのは" + actionCount + "件です。"
-            : greetingTitle(user.email) + " 対応が必要なことはありません。今日の予定を確認しましょう。"
+            ? greetingTitle(profile?.nickname, user.email) + " いま手が必要なのは" + actionCount + "件です。"
+            : greetingTitle(profile?.nickname, user.email) + " 対応が必要なことはありません。今日の予定を確認しましょう。"
         }
         action={
           <ButtonLink href="/events/new">
@@ -312,8 +318,8 @@ export default async function HomePage({
   );
 }
 
-function greetingTitle(email: string | undefined) {
-  const name = email?.split("@")[0]?.trim();
+function greetingTitle(nickname: string | null | undefined, email: string | undefined) {
+  const name = nickname?.trim() || email?.split("@")[0]?.trim();
   return name ? `こんにちは、${name} さん` : "ホーム";
 }
 

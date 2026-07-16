@@ -37,7 +37,7 @@ export function ProfileSettingsCard({
   const showCurrentAvatar = Boolean(currentAvatarUrl) && !removeAvatar;
 
   return (
-    <Card className="max-w-2xl">
+    <Card id={isOnboarding ? undefined : "profile"} className="max-w-2xl scroll-mt-32">
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-skywash text-pine">
           <UserRound aria-hidden="true" className="h-5 w-5" />

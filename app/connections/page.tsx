@@ -4,7 +4,13 @@ import { ConnectionList } from "@/components/connection-list";
 import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/received-event-invitations";
 import { SetupPanel } from "@/components/state-panels";
 import { PageHeader } from "@/components/ui";
-import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
+import {
+  buildBlockedUsers,
+  resolveConnectionProfileNames,
+  sortInviteCandidates,
+  type BlockedUser,
+  type ConnectionCandidate
+} from "@/lib/domain/connections";
 import { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +41,11 @@ export default async function ConnectionsPage() {
     redirect("/login?next=%2Fconnections");
   }
 
-  const [candidates, invitations] = await Promise.all([loadConnectionCandidates(user.id), loadReceivedEventInvitations(user.id)]);
+  const [candidates, invitations, blockedUsers] = await Promise.all([
+    loadConnectionCandidates(user.id),
+    loadReceivedEventInvitations(user.id),
+    loadBlockedUsers(user.id)
+  ]);
   const favorites = candidates.filter((candidate) => candidate.isFavorite);
   const mutualFollows = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && candidate.isFollowedBy);
   const following = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && !candidate.isFollowedBy);
@@ -45,7 +55,13 @@ export default async function ConnectionsPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Connections" title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
       <ReceivedEventInvitations invitations={invitations} />
-      <ConnectionList favorites={favorites} mutualFollows={mutualFollows} following={following} candidates={recent} />
+      <ConnectionList
+        favorites={favorites}
+        mutualFollows={mutualFollows}
+        following={following}
+        candidates={recent}
+        blockedUsers={blockedUsers}
+      />
     </div>
   );
 }
@@ -80,6 +96,54 @@ async function loadReceivedEventInvitations(currentUserId: string): Promise<Rece
     organizerName: organizerNames.get(invitation.event_id) ?? "主催者",
     createdAt: invitation.created_at
   }));
+}
+
+async function loadBlockedUsers(currentUserId: string): Promise<BlockedUser[]> {
+  const admin = createSupabaseAdminClient();
+  const { data: blocks, error: blocksError } = await admin
+    .from("user_blocks")
+    .select("blocked_user_id, created_at")
+    .eq("blocker_user_id", currentUserId)
+    .order("created_at", { ascending: false });
+
+  if (blocksError) {
+    throw new Error("ブロック中のユーザーを読み込めませんでした");
+  }
+
+  const blockedUserIds = (blocks ?? []).map((block) => block.blocked_user_id);
+  if (blockedUserIds.length === 0) {
+    return [];
+  }
+
+  const profileResult = await admin.from("profiles").select("user_id, nickname").in("user_id", blockedUserIds);
+  const profileNames = resolveConnectionProfileNames(profileResult.data, profileResult.error);
+  const fallbackEntries = await Promise.all(
+    blockedUserIds
+      .filter((userId) => !profileNames.has(userId))
+      .map(async (userId) => {
+        const { data, error } = await admin.auth.admin.getUserById(userId);
+        const displayName = !error && data.user ? getBlockedUserDisplayName(data.user) : "Madoiユーザー";
+        return [userId, displayName] as const;
+      })
+  );
+
+  return buildBlockedUsers({
+    blockedUserIds,
+    profileNames,
+    fallbackNames: new Map(fallbackEntries)
+  });
+}
+
+function getBlockedUserDisplayName(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
+  const metadata = user.user_metadata ?? {};
+  for (const key of ["nickname", "full_name", "name"]) {
+    const value = metadata[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return user.email?.split("@")[0]?.trim() || "Madoiユーザー";
 }
 
 async function loadConnectionCandidates(currentUserId: string): Promise<ConnectionCandidate[]> {

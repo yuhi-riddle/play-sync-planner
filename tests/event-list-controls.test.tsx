@@ -26,6 +26,7 @@ describe("EventListControls", () => {
     const form = screen.getByRole("form", { name: "イベント一覧の表示条件" });
     expect(form).toHaveAttribute("method", "get");
     expect(screen.getByRole("combobox", { name: "状態" })).toHaveValue("active");
+    expect(screen.getByRole("option", { name: "対応中" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "下書き (1)" })).toBeInTheDocument();
     expect(screen.getByText("下書き 1件")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "カテゴリ" })).toBeInTheDocument();

@@ -38,6 +38,7 @@ describe("ProfileSettingsCard", () => {
       />
     );
 
+    expect(screen.getByRole("heading", { name: "プロフィール" }).closest("section")).toHaveAttribute("id", "profile");
     expect(screen.getByLabelText("プロフィール画像")).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
     fireEvent.click(screen.getByRole("button", { name: "画像を削除" }));
     expect(screen.getByDisplayValue("true")).toHaveAttribute("name", "removeAvatar");

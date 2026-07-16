@@ -24,20 +24,12 @@ function requireTargetUserId(value: string): string {
 }
 
 async function requireConnectionTarget(userId: string, options: { allowBlocked?: boolean } = {}): Promise<ConnectionTarget> {
-  const targetUserId = requireTargetUserId(userId);
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-
-  if (user.id === targetUserId) {
-    throw new Error("自分自身にはこの操作を行えません");
-  }
-
+  const target = await requireAuthenticatedTarget(userId);
+  const { currentUserId, targetUserId } = target;
   const admin = createSupabaseAdminClient();
   const [sharedEventResult, blockResult] = await Promise.all([
-    admin.rpc("have_shared_event", { first_user_id: user.id, second_user_id: targetUserId }),
-    admin.rpc("is_user_blocked", { first_user_id: user.id, second_user_id: targetUserId })
+    admin.rpc("have_shared_event", { first_user_id: currentUserId, second_user_id: targetUserId }),
+    admin.rpc("is_user_blocked", { first_user_id: currentUserId, second_user_id: targetUserId })
   ]);
 
   if (sharedEventResult.error || blockResult.error) {
@@ -50,6 +42,20 @@ async function requireConnectionTarget(userId: string, options: { allowBlocked?:
 
   if (blockResult.data && !options.allowBlocked) {
     throw new Error("ブロック中のユーザーにはこの操作を行えません");
+  }
+
+  return target;
+}
+
+async function requireAuthenticatedTarget(userId: string): Promise<ConnectionTarget> {
+  const targetUserId = requireTargetUserId(userId);
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (user.id === targetUserId) {
+    throw new Error("自分自身にはこの操作を行えません");
   }
 
   return { currentUserId: user.id, targetUserId };
@@ -166,6 +172,22 @@ export async function blockUserAction(userId: string): Promise<void> {
 
   if (blockError) {
     throw new Error("ブロックできませんでした");
+  }
+
+  revalidateConnections();
+}
+
+export async function unblockUserAction(userId: string): Promise<void> {
+  const { currentUserId, targetUserId } = await requireAuthenticatedTarget(userId);
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("user_blocks")
+    .delete()
+    .eq("blocker_user_id", currentUserId)
+    .eq("blocked_user_id", targetUserId);
+
+  if (error) {
+    throw new Error("ブロックを解除できませんでした");
   }
 
   revalidateConnections();

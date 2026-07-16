@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildBlockedUsers,
   buildInviteCandidates,
   canInviteCandidate,
   isMutualFollow,
+  resolveConnectionProfileNames,
   resolveInviteProfileNames,
   sortInviteCandidates,
   type ConnectionCandidate
@@ -147,5 +149,39 @@ describe("canInviteCandidate", () => {
     expect(canInviteCandidate({ hasSharedEvent: false, isFollowing: false, isFavorite: true, isBlocked: false })).toBe(true);
     expect(canInviteCandidate({ hasSharedEvent: true, isFollowing: true, isFavorite: true, isBlocked: true })).toBe(false);
     expect(canInviteCandidate({ hasSharedEvent: false, isFollowing: false, isFavorite: false, isBlocked: false })).toBe(false);
+  });
+});
+
+describe("blocked user display names", () => {
+  it("uses profile names first and authentication fallbacks when needed", () => {
+    expect(
+      buildBlockedUsers({
+        blockedUserIds: ["profile-user", "fallback-user", "unknown-user"],
+        profileNames: new Map([["profile-user", "プロフィール名"]]),
+        fallbackNames: new Map([
+          ["profile-user", "古い名前"],
+          ["fallback-user", "Googleの表示名"]
+        ])
+      })
+    ).toEqual([
+      { userId: "profile-user", displayName: "プロフィール名" },
+      { userId: "fallback-user", displayName: "Googleの表示名" },
+      { userId: "unknown-user", displayName: "Madoiユーザー" }
+    ]);
+  });
+
+  it("continues without profiles when migration 019 is not applied", () => {
+    expect(
+      resolveConnectionProfileNames(null, {
+        code: "PGRST205",
+        message: "Could not find the table 'public.profiles' in the schema cache"
+      })
+    ).toEqual(new Map());
+  });
+
+  it("keeps unexpected profile errors visible", () => {
+    expect(() => resolveConnectionProfileNames(null, { code: "42501", message: "permission denied" })).toThrow(
+      "つながりのプロフィールを読み込めませんでした"
+    );
   });
 });

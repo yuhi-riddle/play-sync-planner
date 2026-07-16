@@ -28,6 +28,11 @@ type BuildInviteCandidatesInput = {
   fallbackNames: ReadonlyMap<string, string>;
 };
 
+export type BlockedUser = {
+  userId: string;
+  displayName: string;
+};
+
 type ProfileNameRow = {
   user_id: string;
   nickname: string;
@@ -37,6 +42,32 @@ type ProfileErrorLike = {
   code?: string | null;
   message?: string | null;
 };
+
+export function resolveConnectionProfileNames(
+  rows: ProfileNameRow[] | null | undefined,
+  error: ProfileErrorLike | null | undefined
+): Map<string, string> {
+  if (error && !isProfileSchemaUnavailable(error)) {
+    throw new Error("つながりのプロフィールを読み込めませんでした");
+  }
+
+  return new Map((rows ?? []).map((profile) => [profile.user_id, profile.nickname]));
+}
+
+export function buildBlockedUsers({
+  blockedUserIds,
+  profileNames,
+  fallbackNames
+}: {
+  blockedUserIds: Iterable<string>;
+  profileNames: ReadonlyMap<string, string>;
+  fallbackNames: ReadonlyMap<string, string>;
+}): BlockedUser[] {
+  return [...blockedUserIds].map((userId) => ({
+    userId,
+    displayName: profileNames.get(userId) ?? fallbackNames.get(userId) ?? "Madoiユーザー"
+  }));
+}
 
 export function isMutualFollow(candidate: ConnectionCandidate): boolean {
   return candidate.isFollowing && candidate.isFollowedBy;

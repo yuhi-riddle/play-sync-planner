@@ -19,13 +19,19 @@ vi.mock("@/lib/supabase/server", () => ({
 import EventsPage from "@/app/events/page";
 
 function createEventQuery(data: Array<Record<string, unknown>>, count: number) {
-  return {
+  const query = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
-    range: vi.fn().mockResolvedValue({ data, count, error: null })
+    range: vi.fn()
   };
+
+  query.range.mockImplementation((from: number, to: number) =>
+    Promise.resolve({ data: data.slice(from, to + 1), count, error: null })
+  );
+
+  return query;
 }
 
 function createDraftQuery(draft: Record<string, unknown> | null) {
@@ -73,14 +79,15 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(eventQuery.in).toHaveBeenCalledWith("status", ["interested", "planning", "confirmed"]);
+    expect(eventQuery.in).not.toHaveBeenCalled();
     expect(eventQuery.order).toHaveBeenCalledWith("created_at", { ascending: false });
-    expect(eventQuery.range).toHaveBeenCalledWith(0, 9);
+    expect(eventQuery.order).toHaveBeenCalledWith("id", { ascending: false });
+    expect(eventQuery.range).toHaveBeenCalledWith(0, 499);
     expect(screen.getByText("下書き 1件")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "夏ライブ" })).toBeInTheDocument();
   });
 
-  it("applies status, category, sorting, page size, and page to the database query", async () => {
+  it("applies category in the database and status and sorting in the work-list calculation", async () => {
     const eventQuery = createEventQuery(
       [
         {
@@ -109,15 +116,15 @@ describe("EventsPage", () => {
           category: "live",
           sort: "soonest",
           limit: "20",
-          page: "2"
+          page: "1"
         })
       })
     );
 
-    expect(eventQuery.in).toHaveBeenCalledWith("status", ["cancelled"]);
+    expect(eventQuery.in).not.toHaveBeenCalled();
     expect(eventQuery.eq).toHaveBeenCalledWith("category", "live");
-    expect(eventQuery.order).toHaveBeenCalledWith("start_date", { ascending: true, nullsFirst: false });
-    expect(eventQuery.range).toHaveBeenCalledWith(20, 39);
+    expect(eventQuery.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(eventQuery.range).toHaveBeenCalledWith(0, 499);
     expect(screen.queryByRole("button", { name: "イベントを中止" })).not.toBeInTheDocument();
   });
 
@@ -144,7 +151,21 @@ describe("EventsPage", () => {
   });
 
   it("redirects to the last available page when the requested page is out of range", async () => {
-    const eventQuery = createEventQuery([], 15);
+    const eventQuery = createEventQuery(
+      Array.from({ length: 15 }, (_, index) => ({
+        id: `event-${index}`,
+        title: `イベント${index}`,
+        category: "other",
+        start_date: null,
+        end_date: null,
+        location_name: null,
+        status: "planning",
+        created_at: `2026-07-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
+        plans: [],
+        event_members: []
+      })),
+      15
+    );
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
@@ -154,5 +175,32 @@ describe("EventsPage", () => {
     await expect(EventsPage({ searchParams: Promise.resolve({ page: "3" }) })).rejects.toThrow("NEXT_REDIRECT");
 
     expect(redirect).toHaveBeenCalledWith("/events?page=2");
+  });
+
+  it("loads every event across database batches before filtering", async () => {
+    const events = Array.from({ length: 501 }, (_, index) => ({
+      id: `event-${index}`,
+      title: `イベント${index}`,
+      category: "other",
+      start_date: null,
+      end_date: null,
+      location_name: null,
+      status: "planning",
+      created_at: `2026-07-15T00:${String(index % 60).padStart(2, "0")}:00Z`,
+      plans: [],
+      event_members: []
+    }));
+    const eventQuery = createEventQuery(events, events.length);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    expect(eventQuery.range).toHaveBeenNthCalledWith(1, 0, 499);
+    expect(eventQuery.range).toHaveBeenNthCalledWith(2, 500, 999);
+    expect(screen.getByText("1-10 / 501件")).toBeInTheDocument();
   });
 });

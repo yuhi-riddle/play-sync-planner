@@ -36,6 +36,11 @@ export async function AuthNav() {
   ]);
   const googleDefaults = getGoogleProfileDefaults(user!);
   const nickname = profile?.nickname ?? googleDefaults.nickname ?? state.accountLabel;
+  const profileCompleted =
+    Boolean(profile?.onboarding_completed_at) ||
+    typeof user!.user_metadata?.profile_onboarding_completed_at === "string";
+  const profileHref = profileCompleted ? "/settings#profile" : "/onboarding/profile";
+  const profileLabel = profileCompleted ? nickname : "プロフィール設定";
   const avatarUrl = getProfileAvatarUrl(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     profile?.avatar_path,
@@ -43,26 +48,26 @@ export async function AuthNav() {
   );
 
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_repeat(3,2.75rem)] items-center gap-1 text-sm sm:flex sm:w-auto sm:gap-2">
       <Link
-        href="/settings"
-        className="flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-2 py-1.5 text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:px-3"
-        aria-label={`プロフィール設定を開く（${nickname}）`}
-        title="プロフィール設定を開く"
+        href={profileHref}
+        className="flex min-h-11 min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-2 py-1.5 text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:px-3"
+        aria-label={profileCompleted ? `プロフィールを開く（${nickname}）` : "プロフィールを設定"}
+        title={profileCompleted ? "プロフィールを開く" : "プロフィールを設定"}
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarUrl}
             alt={`${nickname}のプロフィール画像`}
-            className="h-7 w-7 rounded-full object-cover"
+            className="h-7 w-7 shrink-0 rounded-full object-cover"
             referrerPolicy="no-referrer"
           />
         ) : (
           <UserRound aria-hidden="true" className="h-5 w-5 text-pine" />
         )}
-        <span className="hidden max-w-32 truncate font-bold sm:inline" title={nickname ?? undefined}>
-          {nickname}
+        <span className="min-w-0 truncate font-bold sm:max-w-32" title={profileLabel ?? undefined}>
+          {profileLabel}
         </span>
       </Link>
       <Link
@@ -80,14 +85,14 @@ export async function AuthNav() {
       </Link>
       <Link
         href={state.settingsHref}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-sm font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface p-0 text-sm font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
         aria-label="設定"
         title="設定"
       >
         <Settings aria-hidden="true" className="h-4 w-4" />
         <span className="hidden sm:inline">設定</span>
       </Link>
-      <form action={signOutAction}>
+      <form action={signOutAction} className="h-11 w-11">
         <button
           type="submit"
           className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface font-bold text-muted transition-colors hover:border-clay hover:text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"

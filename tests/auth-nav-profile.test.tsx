@@ -21,7 +21,7 @@ describe("AuthNav profile", () => {
     vi.clearAllMocks();
   });
 
-  it("shows the profile nickname and avatar in the header", async () => {
+  it("separates the completed profile entry from general settings", async () => {
     vi.stubGlobal("React", React);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
     const profileQuery = {
@@ -44,13 +44,53 @@ describe("AuthNav profile", () => {
 
     render(await AuthNav());
 
-    const profileLink = screen.getByRole("link", { name: "プロフィール設定を開く（ゆうやん）" });
-    expect(profileLink).toHaveAttribute("href", "/settings");
-    expect(profileLink).toHaveAttribute("title", "プロフィール設定を開く");
+    const profileLink = screen.getByRole("link", { name: "プロフィールを開く（ゆうやん）" });
+    expect(profileLink).toHaveAttribute("href", "/settings#profile");
+    expect(profileLink).toHaveAttribute("title", "プロフィールを開く");
+    expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/settings");
     expect(screen.getByText("ゆうやん")).toBeInTheDocument();
+    expect(screen.getByText("ゆうやん")).not.toHaveClass("hidden");
     expect(screen.getByRole("img", { name: "ゆうやんのプロフィール画像" })).toHaveAttribute(
       "src",
       "https://project.supabase.co/storage/v1/object/public/profile-avatars/user-1/avatar.webp"
+    );
+  });
+
+  it("shows the profile onboarding entry at mobile widths when setup is incomplete", async () => {
+    vi.stubGlobal("React", React);
+    const profileQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { nickname: null, avatar_path: null, onboarding_completed_at: null },
+        error: null
+      })
+    };
+    const notificationQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockResolvedValue({ count: 0 })
+    };
+    createSupabaseServerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: "user-1", email: "user@example.com", user_metadata: {} } }
+        })
+      },
+      from: vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery))
+    });
+
+    render(await AuthNav());
+
+    const profileLink = screen.getByRole("link", { name: "プロフィールを設定" });
+    expect(profileLink).toHaveAttribute("href", "/onboarding/profile");
+    expect(screen.getByText("プロフィール設定")).not.toHaveClass("hidden");
+    expect(profileLink.parentElement).toHaveClass(
+      "grid",
+      "w-full",
+      "grid-cols-[minmax(0,1fr)_repeat(3,2.75rem)]",
+      "sm:flex",
+      "sm:w-auto"
     );
   });
 });
