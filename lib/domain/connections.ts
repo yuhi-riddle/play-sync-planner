@@ -56,16 +56,14 @@ export function resolveConnectionProfileNames(
 
 export function buildBlockedUsers({
   blockedUserIds,
-  profileNames,
-  fallbackNames
+  profileNames
 }: {
   blockedUserIds: Iterable<string>;
   profileNames: ReadonlyMap<string, string>;
-  fallbackNames: ReadonlyMap<string, string>;
 }): BlockedUser[] {
   return [...blockedUserIds].map((userId) => ({
     userId,
-    displayName: profileNames.get(userId) ?? fallbackNames.get(userId) ?? "Madoiユーザー"
+    displayName: profileNames.get(userId) ?? "Madoiユーザー"
   }));
 }
 
