@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, getCurrentUser, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, revalidatePath } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
+  createSupabaseServerClient: vi.fn(),
   getCurrentUser: vi.fn(),
   revalidatePath: vi.fn()
 }));
@@ -10,14 +11,42 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
-  createSupabaseServerClient: vi.fn(),
+  createSupabaseServerClient,
   getCurrentUser
 }));
 
-import { unblockUserAction } from "@/lib/actions/connections";
+import { blockUserAction, unblockUserAction } from "@/lib/actions/connections";
 
 const currentUserId = "11111111-1111-4111-8111-111111111111";
 const blockedUserId = "22222222-2222-4222-8222-222222222222";
+
+describe("blockUserAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUser.mockResolvedValue({ id: currentUserId });
+  });
+
+  it("delegates the whole block operation to one atomic RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    createSupabaseServerClient.mockResolvedValue({ rpc });
+
+    await blockUserAction(blockedUserId);
+
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("block_user_atomic", { target_user_id: blockedUserId });
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(revalidatePath).toHaveBeenCalledWith("/connections");
+  });
+
+  it("does not revalidate when the atomic RPC fails", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { message: "database failure" } })
+    });
+
+    await expect(blockUserAction(blockedUserId)).rejects.toThrow("ブロックできませんでした");
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
 
 describe("unblockUserAction", () => {
   beforeEach(() => {
