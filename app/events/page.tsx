@@ -11,7 +11,6 @@ import { categoryLabels, eventStatusLabels } from "@/lib/constants";
 import { getEventDraftResumePath } from "@/lib/domain/event-flow";
 import {
   buildEventListHref,
-  filterAndSortEventsForList,
   getEventCardSummary,
   getEventListPagination,
   isEventLifecycleFinished,
@@ -52,6 +51,11 @@ type EventRow = EventListItem & {
   event_members: Array<{ status: string }> | null;
 };
 
+type EventListRpcRow = {
+  event_ids: string[] | null;
+  total_count: number | string | null;
+};
+
 type EventDraftPayload = {
   title?: string;
   category?: string;
@@ -65,8 +69,6 @@ const settlementLabels = {
   settling: "清算中",
   settled: "清算済み"
 } as const;
-
-const EVENT_QUERY_BATCH_SIZE = 500;
 
 export default async function EventsPage({ searchParams }: { searchParams?: Promise<EventFilterQuery> }) {
   const query = normalizeEventListQuery((await searchParams) ?? {});
@@ -113,34 +115,40 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   let totalItems = visibleDraft ? 1 : 0;
 
   if (query.status !== "draft") {
-    const events: EventRow[] = [];
+    const requestedOffset = (query.page - 1) * query.pageSize;
+    const { data: rpcRows, error: rpcError } = await supabase.rpc("list_owned_event_ids", {
+      p_filter: query.status,
+      p_category: query.category,
+      p_sort: query.sort,
+      p_limit: query.pageSize,
+      p_offset: requestedOffset
+    });
+    if (rpcError) throw new Error(rpcError.message);
 
-    for (let from = 0; ; from += EVENT_QUERY_BATCH_SIZE) {
-      let eventsQuery = supabase
+    const rpcRow = (rpcRows?.[0] ?? null) as EventListRpcRow | null;
+    const eventIds = rpcRow?.event_ids ?? [];
+    totalItems = Number(rpcRow?.total_count ?? 0);
+
+    const requestedPagination = getEventListPagination(totalItems, query.pageSize, query.page);
+    if (requestedPagination.page !== query.page) {
+      redirect(buildEventListHref(query, requestedPagination.page));
+    }
+
+    if (eventIds.length > 0) {
+      const { data: pageRows, error: pageError } = await supabase
         .from("events")
         .select(
           "id, title, category, start_date, end_date, location_name, status, created_at, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day)"
         )
-        .eq("owner_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false });
+        .in("id", eventIds);
+      if (pageError) throw new Error(pageError.message);
 
-      if (query.category !== "all") {
-        eventsQuery = eventsQuery.eq("category", query.category);
-      }
-
-      const { data: batch, error } = await eventsQuery.range(from, from + EVENT_QUERY_BATCH_SIZE - 1);
-      if (error) throw new Error(error.message);
-
-      const rows = (batch ?? []) as EventRow[];
-      events.push(...rows);
-      if (rows.length < EVENT_QUERY_BATCH_SIZE) break;
+      const rowsById = new Map(((pageRows ?? []) as EventRow[]).map((event) => [event.id, event]));
+      eventRows = eventIds.flatMap((eventId) => {
+        const event = rowsById.get(eventId);
+        return event ? [event] : [];
+      });
     }
-
-    const filteredEvents = filterAndSortEventsForList(events, query.status, query.sort);
-    totalItems = filteredEvents.length;
-    const requestedPagination = getEventListPagination(totalItems, query.pageSize, query.page);
-    eventRows = filteredEvents.slice(requestedPagination.rangeFrom, requestedPagination.rangeTo + 1);
   }
 
   const pagination = getEventListPagination(totalItems, query.pageSize, query.page);
