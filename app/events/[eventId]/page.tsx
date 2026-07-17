@@ -5,6 +5,7 @@ import { EventMemberInviteCard } from "@/components/event-member-invite-card";
 import { EventInviteCandidates } from "@/components/event-invite-candidates";
 import { EventCancelAction } from "@/components/event-cancel-action";
 import { EventChat } from "@/components/event-chat";
+import { GoogleMapsDirectionsLink } from "@/components/google-maps-directions-link";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
 import { createEventMessageAction } from "@/lib/actions/event-messages";
@@ -95,6 +96,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
           <Info label="URL" value={event.url ?? "未設定"} />
           <Info label="メモ" value={event.memo ?? "未設定"} />
         </dl>
+        <div>
+          <GoogleMapsDirectionsLink destination={event.location_name} />
+        </div>
         {isOwner ? (
           <div className="mt-5 flex flex-wrap gap-3">
             <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
