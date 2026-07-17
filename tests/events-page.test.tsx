@@ -110,6 +110,8 @@ describe("EventsPage", () => {
     expect(within(eventCardLink).queryByText("謎解き")).not.toBeInTheDocument();
     expect(within(eventCardLink).queryByText("清算中")).not.toBeInTheDocument();
     expect(within(eventCardLink).queryByText("参加者を確認")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("気になる")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
   });
 
   it("asks the database for one page and fetches only the returned event ids", async () => {
