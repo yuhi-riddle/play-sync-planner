@@ -185,6 +185,8 @@ describe("event work state", () => {
   it("derives one concrete display state by priority", () => {
     const cases = [
       [{ status: "done", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],
+      [{ status: "cancelled", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],
+      [{ status: "cancelled", plans: [{ settlement_status: "settling" }] }, "settlement_waiting"],
       [{ status: "cancelled", plans: [{ settlement_status: "not_started" }] }, "cancelled"],
       [{ status: "done", plans: [{ settlement_status: "settled" }] }, "completed"],
       [{ status: "planning", plans: [{ status: "collecting_answers", settlement_status: "not_started" }] }, "answer_waiting"],
@@ -227,6 +229,7 @@ describe("event work state", () => {
       displayState: "settlement_waiting",
       schedule: { isConfirmed: true }
     });
+    expect(summary).not.toHaveProperty("nextAction");
   });
 
   it("sorts by the confirmed schedule shown on the card", () => {

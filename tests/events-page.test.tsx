@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createSupabaseServerClient, redirect } = vi.hoisted(() => ({
@@ -87,9 +87,11 @@ describe("EventsPage", () => {
   it("shows one concrete state and keeps the event card concise", async () => {
     const eventQuery = createEventQuery([{
       ...makeEvent("event-1", "週末の謎解き会"),
+      category: "nazotoki",
       status: "interested",
       location_name: "新宿",
-      event_members: [{ status: "joined" }]
+      event_members: [{ status: "joined" }],
+      plans: [{ status: "draft", settlement_status: "settling" }]
     }]);
     const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery(null);
@@ -104,8 +106,10 @@ describe("EventsPage", () => {
     expect(screen.getByText("参加者待ち")).toBeInTheDocument();
     expect(screen.getByText("新宿")).toBeInTheDocument();
     expect(screen.getByText("参加 1人")).toBeInTheDocument();
-    expect(screen.queryByText("気になる")).not.toBeInTheDocument();
-    expect(screen.queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
+    const eventCardLink = screen.getByRole("link", { name: /週末の謎解き会/ });
+    expect(within(eventCardLink).queryByText("謎解き")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("清算中")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("参加者を確認")).not.toBeInTheDocument();
   });
 
   it("asks the database for one page and fetches only the returned event ids", async () => {
