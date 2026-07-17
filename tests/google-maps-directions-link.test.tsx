@@ -21,9 +21,11 @@ describe("GoogleMapsDirectionsLink", () => {
 
   it("renders a safe external link only when a destination exists", () => {
     const { rerender } = render(<GoogleMapsDirectionsLink destination="新宿駅" />);
+    const link = screen.getByRole("link", { name: "現在地からの経路を見る" });
 
-    expect(screen.getByRole("link", { name: "現在地からの経路を見る" })).toHaveAttribute("target", "_blank");
-    expect(screen.getByRole("link", { name: "現在地からの経路を見る" })).toHaveAttribute("rel", "noreferrer");
+    expect(link).toHaveAttribute("href", buildGoogleMapsDirectionsUrl("新宿駅"));
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
 
     rerender(<GoogleMapsDirectionsLink destination="   " />);
     expect(screen.queryByRole("link", { name: "現在地からの経路を見る" })).not.toBeInTheDocument();
