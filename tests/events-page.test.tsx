@@ -84,6 +84,30 @@ describe("EventsPage", () => {
     expect(screen.getByRole("heading", { name: "夏ライブ" })).toBeInTheDocument();
   });
 
+  it("shows one concrete state and keeps the event card concise", async () => {
+    const eventQuery = createEventQuery([{
+      ...makeEvent("event-1", "週末の謎解き会"),
+      status: "interested",
+      location_name: "新宿",
+      event_members: [{ status: "joined" }]
+    }]);
+    const rpc = createRpcResult(["event-1"], 1);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByText("参加者待ち")).toBeInTheDocument();
+    expect(screen.getByText("新宿")).toBeInTheDocument();
+    expect(screen.getByText("参加 1人")).toBeInTheDocument();
+    expect(screen.queryByText("気になる")).not.toBeInTheDocument();
+    expect(screen.queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
+  });
+
   it("asks the database for one page and fetches only the returned event ids", async () => {
     const eventQuery = createEventQuery([
       makeEvent("event-2", "2番目"),
