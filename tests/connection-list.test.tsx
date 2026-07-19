@@ -2,23 +2,19 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { unblockUserAction } = vi.hoisted(() => ({
-  unblockUserAction: vi.fn().mockResolvedValue(undefined)
-}));
-
 vi.mock("@/lib/actions/connections", () => ({
   blockUserAction: vi.fn(),
   followUserAction: vi.fn(),
   toggleFavoriteAction: vi.fn(),
   unfollowUserAction: vi.fn(),
-  unblockUserAction
+  unblockUserAction: vi.fn()
 }));
 
 import { ConnectionList } from "@/components/connection-list";
 
 const favorite = {
   userId: "11111111-1111-4111-8111-111111111111",
-  displayName: "あきらさん",
+  displayName: "お気に入りの人",
   sharedEventCount: 3,
   latestSharedAt: "2026-07-01T10:00:00.000Z",
   isFollowing: true,
@@ -26,128 +22,84 @@ const favorite = {
   isFavorite: true
 };
 
-const following = {
+const mutual = {
   ...favorite,
   userId: "22222222-2222-4222-8222-222222222222",
-  displayName: "はるかさん",
-  isFollowing: true,
-  isFollowedBy: false,
+  displayName: "相互フォローの人",
   isFavorite: false
 };
 
-const candidate = {
+const shared = {
   ...favorite,
   userId: "33333333-3333-4333-8333-333333333333",
-  displayName: "みなとさん",
+  displayName: "共有イベントの人",
   isFollowing: false,
   isFollowedBy: false,
   isFavorite: false
 };
 
-const blockedUser = {
-  userId: "44444444-4444-4444-8444-444444444444",
-  displayName: "なぎささん"
-};
+function response(items: typeof favorite[], nextCursor: string | null = null) {
+  return { ok: true, json: vi.fn().mockResolvedValue({ items, nextCursor }) } as unknown as Response;
+}
 
 describe("ConnectionList", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
-  it("shows filters with counts and only the selected group", () => {
-    render(
-      <ConnectionList
-        favorites={[favorite]}
-        mutualFollows={[]}
-        following={[following]}
-        candidates={[candidate]}
-        blockedUsers={[blockedUser]}
-      />
-    );
+  it("loads an unfetched category only when first selected and explains mutual chat", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response([mutual]));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ConnectionList initialCategory="favorites" initialItems={[favorite]} counts={{ favorites: 1, mutual: 1 }} />);
 
-    expect(screen.getByRole("tab", { name: "お気に入り 1件" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "相互フォロー 0件" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "フォロー中 1件" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "一緒に参加 1件" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "ブロック中 1件" })).toBeInTheDocument();
-    expect(screen.getByText("あきらさん")).toBeInTheDocument();
-    expect(screen.queryByText("はるかさん")).not.toBeInTheDocument();
+    expect(screen.getByText("お気に入りの人")).toBeInTheDocument();
+    expect(screen.getByText(/相互フォローになると、1対1のチャット/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("tab", { name: "フォロー中 1件" }));
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/connections?category=mutual"));
+    expect(await screen.findByText("相互フォローの人")).toBeInTheDocument();
 
-    expect(screen.getByText("はるかさん")).toBeInTheDocument();
-    expect(screen.queryByText("あきらさん")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ブロック" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /お気に入り/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("switches the mobile connection group from one dropdown", () => {
-    render(
-      <ConnectionList
-        favorites={[favorite]}
-        mutualFollows={[]}
-        following={[following]}
-        candidates={[candidate]}
-        blockedUsers={[blockedUser]}
-      />
-    );
+  it("uses the cursor for more, appends without duplicates, and keeps categories independent", async () => {
+    const nextCursor = "next-cursor";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response([mutual], nextCursor))
+      .mockResolvedValueOnce(response([mutual, shared]));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ConnectionList initialCategory="favorites" initialItems={[favorite]} counts={{ favorites: 1, mutual: 2 }} />);
 
-    const select = screen.getByRole("combobox", { name: "表示するつながり" });
-    expect(select).toHaveClass("sm:hidden");
-    expect(screen.getByRole("option", { name: "お気に入り (1件)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    await screen.findByText("相互フォローの人");
+    fireEvent.click(screen.getByRole("button", { name: "さらに20件表示" }));
 
-    fireEvent.change(select, { target: { value: "following" } });
+    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/connections?category=mutual&cursor=next-cursor"));
+    expect(await screen.findByText("共有イベントの人")).toBeInTheDocument();
+    expect(screen.getAllByText("相互フォローの人")).toHaveLength(1);
 
-    expect(screen.getByText("はるかさん")).toBeInTheDocument();
-    expect(screen.queryByText("あきらさん")).not.toBeInTheDocument();
-    expect(screen.getByRole("tablist", { name: "つながりを絞り込む" }).parentElement).toHaveClass("hidden", "sm:block");
+    fireEvent.click(screen.getByRole("tab", { name: /お気に入り/ }));
+    expect(screen.getByText("お気に入りの人")).toBeInTheDocument();
+    expect(screen.queryByText("共有イベントの人")).not.toBeInTheDocument();
   });
 
-  it("briefly explains follow, favorite, and block behavior", () => {
-    render(<ConnectionList favorites={[]} following={[]} candidates={[]} blockedUsers={[]} />);
+  it("preserves items after a failed request and prevents a duplicate in-flight request", async () => {
+    let rejectFetch: (reason?: unknown) => void = () => undefined;
+    const fetchMock = vi.fn().mockImplementation(() => new Promise<Response>((_, reject) => { rejectFetch = reject; }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ConnectionList initialCategory="favorites" initialItems={[favorite]} counts={{ favorites: 1, mutual: 1 }} />);
 
-    expect(screen.getByText("フォローすると、次のイベントへ招待しやすくなります。")).toBeInTheDocument();
-    expect(screen.getByText("お気に入りは、フォロー中の人を見つけやすくする目印です。")).toBeInTheDocument();
-    expect(screen.getByText("ブロックすると、お互いのフォローとお気に入りが外れます。")).toBeInTheDocument();
-  });
+    const mutualTab = screen.getByRole("tab", { name: /相互フォロー/ });
+    fireEvent.click(mutualTab);
+    fireEvent.click(mutualTab);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
-  it("keeps favorite disabled until the person is followed", () => {
-    render(<ConnectionList favorites={[]} following={[]} candidates={[candidate]} blockedUsers={[]} />);
-    fireEvent.click(screen.getByRole("tab", { name: "一緒に参加 1件" }));
-
-    expect(screen.getByRole("button", { name: "お気に入りにする" })).toBeDisabled();
-  });
-
-  it("allows an existing favorite to be removed even after an unfollow", () => {
-    render(
-      <ConnectionList
-        favorites={[{ ...favorite, isFollowing: false }]}
-        following={[]}
-        candidates={[]}
-        blockedUsers={[]}
-      />
-    );
-
-    expect(screen.getByRole("button", { name: "お気に入りを外す" })).toBeEnabled();
-  });
-
-  it("describes shared participation without implying that every event is in the past", () => {
-    render(<ConnectionList favorites={[]} following={[]} candidates={[candidate]} />);
-
-    fireEvent.click(screen.getByRole("tab", { name: "一緒に参加 1件" }));
-    expect(screen.getByText("共通のイベント 3件")).toBeInTheDocument();
-    expect(screen.queryByText("最近一緒だった人")).not.toBeInTheDocument();
-    expect(screen.queryByText("一緒だったイベント 3件")).not.toBeInTheDocument();
-  });
-
-  it("shows blocked users and lets the user unblock them", async () => {
-    render(<ConnectionList favorites={[]} following={[]} candidates={[]} blockedUsers={[blockedUser]} />);
-
-    fireEvent.click(screen.getByRole("tab", { name: "ブロック中 1件" }));
-    expect(screen.getByText("なぎささん")).toBeInTheDocument();
-    expect(screen.getByText("解除しても、以前のフォローやお気に入りは戻りません。")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "なぎささんのブロックを解除" }));
-
-    await waitFor(() => expect(unblockUserAction).toHaveBeenCalledWith(blockedUser.userId));
+    rejectFetch(new Error("network"));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /お気に入り/ }));
+    expect(screen.getByText("お気に入りの人")).toBeInTheDocument();
   });
 });

@@ -4,25 +4,53 @@ import { ConnectionList } from "@/components/connection-list";
 import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/received-event-invitations";
 import { SetupPanel } from "@/components/state-panels";
 import { PageHeader } from "@/components/ui";
-import {
-  buildBlockedUsers,
-  resolveConnectionProfileNames,
-  sortInviteCandidates,
-  type BlockedUser,
-  type ConnectionCandidate
-} from "@/lib/domain/connections";
-import { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import type { ConnectionCandidate } from "@/lib/domain/connections";
+import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { connectionCategorySchema, type ConnectionCategory } from "@/lib/validation/request";
 
 export const dynamic = "force-dynamic";
 
-type EventMemberRow = {
-  event_id: string;
+const pageSize = 20;
+
+type SearchParams = { category?: string | string[] };
+type ConnectionRow = {
   user_id: string;
   display_name: string;
+  shared_event_count: number | string;
+  latest_shared_at: string;
+  is_following: boolean;
+  is_followed_by: boolean;
+  is_favorite: boolean;
+  cursor_at: string;
+  cursor_user_id: string;
+};
+type ConnectionCountRow = { category: string; item_count: number | string };
+type InvitationRow = {
+  invitation_id: string;
+  event_title: string;
+  organizer_name: string;
   created_at: string;
 };
 
-export default async function ConnectionsPage() {
+function selectedCategory(searchParams: SearchParams): ConnectionCategory {
+  const value = typeof searchParams.category === "string" ? searchParams.category : null;
+  const parsed = connectionCategorySchema.safeParse(value);
+  return parsed.success ? parsed.data : "favorites";
+}
+
+function toCandidate(row: ConnectionRow): ConnectionCandidate {
+  return {
+    userId: row.user_id,
+    displayName: row.display_name,
+    sharedEventCount: Number(row.shared_event_count),
+    latestSharedAt: row.latest_shared_at,
+    isFollowing: row.is_following,
+    isFollowedBy: row.is_followed_by,
+    isFavorite: row.is_favorite
+  };
+}
+
+export default async function ConnectionsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
@@ -32,159 +60,54 @@ export default async function ConnectionsPage() {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
+  const [params, supabase] = await Promise.all([searchParams ?? Promise.resolve({}), createSupabaseServerClient()]);
   const {
     data: { user }
   } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=%2Fconnections");
 
-  if (!user) {
-    redirect("/login?next=%2Fconnections");
-  }
-
-  const [candidates, invitations, blockedUsers] = await Promise.all([
-    loadConnectionCandidates(user.id),
-    loadReceivedEventInvitations(user.id),
-    loadBlockedUsers(user.id)
+  const category = selectedCategory(params);
+  const [countsResult, invitationsResult, connectionsResult] = await Promise.all([
+    supabase.rpc("get_connection_counts"),
+    supabase.rpc("list_received_event_invitations", { p_limit: 20 }),
+    supabase.rpc("list_connections", {
+      p_category: category,
+      p_cursor_at: null,
+      p_cursor_user_id: null,
+      p_limit: 20
+    })
   ]);
-  const favorites = candidates.filter((candidate) => candidate.isFavorite);
-  const mutualFollows = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && candidate.isFollowedBy);
-  const following = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && !candidate.isFollowedBy);
-  const recent = candidates.filter((candidate) => !candidate.isFavorite && !candidate.isFollowing);
+
+  const counts = Object.fromEntries(
+    ((countsResult.error ? [] : countsResult.data ?? []) as ConnectionCountRow[])
+      .filter((row) => connectionCategorySchema.safeParse(row.category).success)
+      .map((row) => [row.category, Number(row.item_count)])
+  ) as Partial<Record<ConnectionCategory, number>>;
+  const invitations: ReceivedEventInvitation[] = invitationsResult.error
+    ? []
+    : ((invitationsResult.data ?? []) as InvitationRow[]).map((invitation) => ({
+      id: invitation.invitation_id,
+      eventTitle: invitation.event_title,
+      organizerName: invitation.organizer_name,
+      createdAt: invitation.created_at
+    }));
+  const rows = connectionsResult.error ? [] : ((connectionsResult.data ?? []) as ConnectionRow[]);
+  const lastRow = rows.length === pageSize ? rows.at(-1) : undefined;
+  const initialNextCursor = lastRow
+    ? Buffer.from(JSON.stringify({ cursorAt: lastRow.cursor_at, cursorUserId: lastRow.cursor_user_id })).toString("base64url")
+    : null;
 
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Connections" title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
       <ReceivedEventInvitations invitations={invitations} />
       <ConnectionList
-        favorites={favorites}
-        mutualFollows={mutualFollows}
-        following={following}
-        candidates={recent}
-        blockedUsers={blockedUsers}
+        initialCategory={category}
+        initialItems={rows.map(toCandidate)}
+        initialNextCursor={initialNextCursor}
+        initialError={connectionsResult.error ? "つながりを読み込めませんでした。もう一度お試しください。" : null}
+        counts={counts}
       />
     </div>
   );
-}
-
-async function loadReceivedEventInvitations(currentUserId: string): Promise<ReceivedEventInvitation[]> {
-  const admin = createSupabaseAdminClient();
-  const { data: invitations, error: invitationsError } = await admin
-    .from("event_user_invitations")
-    .select("id, event_id, created_at")
-    .eq("invitee_user_id", currentUserId)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
-
-  if (invitationsError || !invitations?.length) return [];
-
-  const eventIds = invitations.map((invitation) => invitation.event_id);
-  const [eventsResult, organizersResult] = await Promise.all([
-    admin.from("events").select("id, title").in("id", eventIds),
-    admin.from("event_members").select("event_id, display_name").in("event_id", eventIds).eq("role", "organizer").eq("status", "joined")
-  ]);
-
-  if (eventsResult.error || organizersResult.error) {
-    throw new Error("届いた招待を読み込めませんでした");
-  }
-
-  const eventTitles = new Map((eventsResult.data ?? []).map((event) => [event.id, event.title]));
-  const organizerNames = new Map((organizersResult.data ?? []).map((organizer) => [organizer.event_id, organizer.display_name]));
-
-  return invitations.map((invitation) => ({
-    id: invitation.id,
-    eventTitle: eventTitles.get(invitation.event_id) ?? "イベント",
-    organizerName: organizerNames.get(invitation.event_id) ?? "主催者",
-    createdAt: invitation.created_at
-  }));
-}
-
-async function loadBlockedUsers(currentUserId: string): Promise<BlockedUser[]> {
-  const admin = createSupabaseAdminClient();
-  const { data: blocks, error: blocksError } = await admin
-    .from("user_blocks")
-    .select("blocked_user_id, created_at")
-    .eq("blocker_user_id", currentUserId)
-    .order("created_at", { ascending: false });
-
-  if (blocksError) {
-    throw new Error("ブロック中のユーザーを読み込めませんでした");
-  }
-
-  const blockedUserIds = (blocks ?? []).map((block) => block.blocked_user_id);
-  if (blockedUserIds.length === 0) {
-    return [];
-  }
-
-  const profileResult = await admin.from("profiles").select("user_id, nickname").in("user_id", blockedUserIds);
-  const profileNames = resolveConnectionProfileNames(profileResult.data, profileResult.error);
-
-  return buildBlockedUsers({
-    blockedUserIds,
-    profileNames
-  });
-}
-
-async function loadConnectionCandidates(currentUserId: string): Promise<ConnectionCandidate[]> {
-  const admin = createSupabaseAdminClient();
-  const { data: currentMemberships, error: currentMembershipsError } = await admin
-    .from("event_members")
-    .select("event_id")
-    .eq("user_id", currentUserId)
-    .eq("status", "joined");
-
-  if (currentMembershipsError || !currentMemberships?.length) {
-    return [];
-  }
-
-  const eventIds = currentMemberships.map((membership) => membership.event_id);
-  const [membersResult, followingResult, followedByResult, favoritesResult, blocksResult] = await Promise.all([
-    admin.from("event_members").select("event_id, user_id, display_name, created_at").in("event_id", eventIds).eq("status", "joined"),
-    admin.from("user_connections").select("followed_user_id").eq("follower_user_id", currentUserId),
-    admin.from("user_connections").select("follower_user_id").eq("followed_user_id", currentUserId),
-    admin.from("user_favorites").select("favorite_user_id").eq("user_id", currentUserId),
-    admin
-      .from("user_blocks")
-      .select("blocker_user_id, blocked_user_id")
-      .or(`blocker_user_id.eq.${currentUserId},blocked_user_id.eq.${currentUserId}`)
-  ]);
-
-  if (membersResult.error || followingResult.error || followedByResult.error || favoritesResult.error || blocksResult.error) {
-    throw new Error("つながりを読み込めませんでした。");
-  }
-
-  const blockedUserIds = new Set(
-    (blocksResult.data ?? []).map((block) => (block.blocker_user_id === currentUserId ? block.blocked_user_id : block.blocker_user_id))
-  );
-  const followingUserIds = new Set((followingResult.data ?? []).map((connection) => connection.followed_user_id));
-  const followedByUserIds = new Set((followedByResult.data ?? []).map((connection) => connection.follower_user_id));
-  const favoriteUserIds = new Set((favoritesResult.data ?? []).map((favorite) => favorite.favorite_user_id));
-  const people = new Map<string, ConnectionCandidate>();
-
-  for (const member of (membersResult.data ?? []) as EventMemberRow[]) {
-    if (member.user_id === currentUserId || blockedUserIds.has(member.user_id)) {
-      continue;
-    }
-
-    const existing = people.get(member.user_id);
-    if (!existing) {
-      people.set(member.user_id, {
-        userId: member.user_id,
-        displayName: member.display_name,
-        sharedEventCount: 1,
-        latestSharedAt: member.created_at,
-        isFollowing: followingUserIds.has(member.user_id),
-        isFollowedBy: followedByUserIds.has(member.user_id),
-        isFavorite: favoriteUserIds.has(member.user_id)
-      });
-      continue;
-    }
-
-    existing.sharedEventCount += 1;
-    if (member.created_at > existing.latestSharedAt) {
-      existing.latestSharedAt = member.created_at;
-      existing.displayName = member.display_name;
-    }
-  }
-
-  return sortInviteCandidates([...people.values()]);
 }
