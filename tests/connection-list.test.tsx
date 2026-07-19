@@ -57,7 +57,7 @@ describe("ConnectionList", () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/connections?category=mutual"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/connections?category=mutual", expect.anything()));
     expect(await screen.findByText("相互フォローの人")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /お気に入り/ }));
@@ -77,7 +77,7 @@ describe("ConnectionList", () => {
     await screen.findByText("相互フォローの人");
     fireEvent.click(screen.getByRole("button", { name: "さらに20件表示" }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/connections?category=mutual&cursor=next-cursor"));
+    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/connections?category=mutual&cursor=next-cursor", expect.anything()));
     expect(await screen.findByText("共有イベントの人")).toBeInTheDocument();
     expect(screen.getAllByText("相互フォローの人")).toHaveLength(1);
 
@@ -86,7 +86,62 @@ describe("ConnectionList", () => {
     expect(screen.queryByText("共有イベントの人")).not.toBeInTheDocument();
   });
 
-  it("preserves items after a failed request and prevents a duplicate in-flight request", async () => {
+  it("preserves loaded items after a failed load-more and retries that cursor", async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(response([shared]));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ConnectionList initialCategory="mutual" initialItems={[mutual]} initialNextCursor="next-cursor" counts={{ mutual: 1 }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "さらに20件表示" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("相互フォローの人")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "再試行" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("共有イベントの人")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/connections?category=mutual&cursor=next-cursor", expect.anything());
+  });
+
+  it("syncs fresh server props and invalidates a cached non-current category", async () => {
+    const freshFavorite = { ...favorite, displayName: "更新後のお気に入り" };
+    const fetchMock = vi.fn().mockResolvedValue(response([mutual]));
+    vi.stubGlobal("fetch", fetchMock);
+    const view = render(<ConnectionList initialCategory="favorites" initialItems={[favorite]} counts={{ favorites: 1, mutual: 1 }} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    await screen.findByText("相互フォローの人");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    view.rerender(<ConnectionList initialCategory="favorites" initialItems={[freshFavorite]} counts={{ favorites: 4, mutual: 8 }} />);
+    expect(await screen.findByText("更新後のお気に入り")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /お気に入り 4人/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("aborts in-flight requests when fresh server props replace them and on unmount", async () => {
+    const signals: AbortSignal[] = [];
+    const fetchMock = vi.fn().mockImplementation((_: string, init: RequestInit) => {
+      signals.push(init.signal as AbortSignal);
+      return new Promise<Response>(() => undefined);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const view = render(<ConnectionList initialCategory="favorites" initialItems={[favorite]} counts={{ favorites: 1, mutual: 1 }} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    view.rerender(<ConnectionList initialCategory="favorites" initialItems={[{ ...favorite, displayName: "更新" }]} counts={{ favorites: 2, mutual: 1 }} />);
+    await waitFor(() => expect(signals[0].aborted).toBe(true));
+
+    fireEvent.click(screen.getByRole("tab", { name: /相互フォロー/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    view.unmount();
+    expect(signals[1].aborted).toBe(true);
+  });
+
+  it("prevents a duplicate in-flight request", async () => {
     let rejectFetch: (reason?: unknown) => void = () => undefined;
     const fetchMock = vi.fn().mockImplementation(() => new Promise<Response>((_, reject) => { rejectFetch = reject; }));
     vi.stubGlobal("fetch", fetchMock);
@@ -99,7 +154,5 @@ describe("ConnectionList", () => {
 
     rejectFetch(new Error("network"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /お気に入り/ }));
-    expect(screen.getByText("お気に入りの人")).toBeInTheDocument();
   });
 });

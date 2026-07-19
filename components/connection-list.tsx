@@ -1,7 +1,7 @@
 "use client";
 
 import { Heart, ShieldBan, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
-import React, { useRef, useState, useTransition } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import type { KeyboardEvent } from "react";
 
 import { blockUserAction, followUserAction, toggleFavoriteAction, unfollowUserAction, unblockUserAction } from "@/lib/actions/connections";
@@ -69,6 +69,7 @@ export function ConnectionList(props: ConnectionListProps) {
     counts = {}
   } = props;
   const [activeCategory, setActiveCategory] = useState<ConnectionCategory>(initialCategory);
+  const [visibleCounts, setVisibleCounts] = useState(counts);
   const [states, setStates] = useState<CategoryStates>(() => {
     if (!initialItems) return legacyInitialStates(props);
     const result: CategoryStates = {
@@ -89,11 +90,44 @@ export function ConnectionList(props: ConnectionListProps) {
   });
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const inFlight = useRef(new Set<ConnectionCategory>());
+  const controllers = useRef(new Map<ConnectionCategory, AbortController>());
   const active = states[activeCategory];
   const categories = Object.keys(categoryDetails) as ConnectionCategory[];
 
+  function abortRequests() {
+    controllers.current.forEach((controller) => controller.abort());
+    controllers.current.clear();
+    inFlight.current.clear();
+  }
+
+  useEffect(() => () => abortRequests(), []);
+
+  useEffect(() => {
+    if (!initialItems) return;
+    abortRequests();
+    setActiveCategory(initialCategory);
+    setVisibleCounts(counts);
+    setStates({
+      favorites: emptyState(),
+      mutual: emptyState(),
+      following: emptyState(),
+      shared: emptyState(),
+      blocked: emptyState(),
+      [initialCategory]: {
+        items: initialItems ?? [],
+        nextCursor: initialNextCursor,
+        loading: false,
+        error: initialError,
+        fetched: initialError === null
+      }
+    });
+  }, [initialCategory, initialError, initialItems, initialNextCursor, counts]);
+
   async function loadCategory(category: ConnectionCategory, cursor: string | null = null) {
     if (inFlight.current.has(category)) return;
+    controllers.current.get(category)?.abort();
+    const controller = new AbortController();
+    controllers.current.set(category, controller);
     inFlight.current.add(category);
     setStates((current) => ({
       ...current,
@@ -103,9 +137,11 @@ export function ConnectionList(props: ConnectionListProps) {
     try {
       const parameters = new URLSearchParams({ category });
       if (cursor) parameters.set("cursor", cursor);
-      const response = await fetch(`/api/connections?${parameters.toString()}`);
+      const response = await fetch(`/api/connections?${parameters.toString()}`, { signal: controller.signal });
+      if (controller.signal.aborted || controllers.current.get(category) !== controller) return;
       if (!response.ok) throw new Error("Request failed");
       const page = await response.json() as ConnectionPage;
+      if (controller.signal.aborted || controllers.current.get(category) !== controller) return;
       if (!Array.isArray(page.items) || (page.nextCursor !== null && typeof page.nextCursor !== "string")) throw new Error("Invalid response");
       setStates((current) => {
         const previous = current[category];
@@ -120,13 +156,17 @@ export function ConnectionList(props: ConnectionListProps) {
           }
         };
       });
-    } catch {
+    } catch (cause) {
+      if (controller.signal.aborted || (cause instanceof Error && cause.name === "AbortError")) return;
       setStates((current) => ({
         ...current,
         [category]: { ...current[category], loading: false, error: "読み込めませんでした。もう一度お試しください。" }
       }));
     } finally {
-      inFlight.current.delete(category);
+      if (controllers.current.get(category) === controller) {
+        controllers.current.delete(category);
+        inFlight.current.delete(category);
+      }
     }
   }
 
@@ -162,7 +202,7 @@ export function ConnectionList(props: ConnectionListProps) {
       <label className="grid gap-2 sm:hidden" htmlFor="connection-group-select">
         <span className="text-sm font-bold text-ink">表示するつながり</span>
         <select id="connection-group-select" value={activeCategory} onChange={(event) => selectCategory(event.target.value as ConnectionCategory)} className="min-h-11 w-full rounded-control border border-line bg-surface px-3 py-2 text-base font-bold text-ink focus:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20">
-          {categories.map((category) => <option key={category} value={category}>{`${categoryDetails[category].label} (${counts[category] ?? states[category].items.length}人)`}</option>)}
+          {categories.map((category) => <option key={category} value={category}>{`${categoryDetails[category].label} (${visibleCounts[category] ?? states[category].items.length}人)`}</option>)}
         </select>
       </label>
 
@@ -171,7 +211,7 @@ export function ConnectionList(props: ConnectionListProps) {
           {categories.map((category, index) => {
             const selected = category === activeCategory;
             return <button key={category} ref={(node) => { tabRefs.current[index] = node; }} id={`connection-tab-${category}`} type="button" role="tab" aria-selected={selected} aria-controls={`connection-panel-${category}`} tabIndex={selected ? 0 : -1} onClick={() => selectCategory(category)} onKeyDown={(event) => handleTabKeyDown(event, index)} className={selected ? "inline-flex min-h-11 items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-bold text-white shadow-soft focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2" : "inline-flex min-h-11 items-center gap-2 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-sm font-bold text-ink/70 transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"}>
-              <span>{categoryDetails[category].label}</span><span className={selected ? "text-white/80" : "text-ink/50"}>{counts[category] ?? states[category].items.length}人</span>
+              <span>{categoryDetails[category].label}</span><span className={selected ? "text-white/80" : "text-ink/50"}>{visibleCounts[category] ?? states[category].items.length}人</span>
             </button>;
           })}
         </div>

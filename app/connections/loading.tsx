@@ -1,3 +1,5 @@
+import React from "react";
+
 export default function ConnectionsLoading() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="つながりを読み込み中">
