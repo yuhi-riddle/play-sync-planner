@@ -37,12 +37,12 @@ describe("AuthNav profile", () => {
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockResolvedValue({ count: 0 })
     };
+    const user = { id: "user-1", email: "user@example.com", user_metadata: {} };
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1", email: "user@example.com", user_metadata: {} } } }) },
       from: vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery))
     });
 
-    render(await AuthNav());
+    render(await AuthNav({ user }));
 
     const profileLink = screen.getByRole("link", { name: "プロフィールを開く（ゆうやん）" });
     expect(profileLink).toHaveAttribute("href", "/settings#profile");
@@ -71,16 +71,12 @@ describe("AuthNav profile", () => {
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockResolvedValue({ count: 0 })
     };
+    const user = { id: "user-1", email: "user@example.com", user_metadata: {} };
     createSupabaseServerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: { id: "user-1", email: "user@example.com", user_metadata: {} } }
-        })
-      },
       from: vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery))
     });
 
-    render(await AuthNav());
+    render(await AuthNav({ user }));
 
     const profileLink = screen.getByRole("link", { name: "プロフィールを設定" });
     expect(profileLink).toHaveAttribute("href", "/onboarding/profile");

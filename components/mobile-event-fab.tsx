@@ -16,10 +16,10 @@ function isFabVisiblePath(pathname: string) {
   return pathname === "/" || pathname === "/events" || pathname === "/plans";
 }
 
-export function MobileEventFab() {
+export function MobileEventFab({ isSignedIn }: { isSignedIn: boolean }) {
   const pathname = usePathname();
 
-  if (!isFabVisiblePath(pathname) || !shouldShowPrimaryNavigation(pathname)) return null;
+  if (!isSignedIn || !isFabVisiblePath(pathname) || !shouldShowPrimaryNavigation(pathname)) return null;
 
   return (
     <Link

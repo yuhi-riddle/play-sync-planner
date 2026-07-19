@@ -13,7 +13,7 @@ describe("MobileEventFab", () => {
   it("shows an event creation link on the events page", () => {
     vi.mocked(usePathname).mockReturnValue("/events");
 
-    render(<MobileEventFab />);
+    render(<MobileEventFab isSignedIn />);
 
     const createEventLink = screen.getByRole("link", { name: "イベントを作る" });
     expect(createEventLink).toHaveAttribute("href", "/events/new");
@@ -23,7 +23,7 @@ describe("MobileEventFab", () => {
   it("keeps visible hover and keyboard focus states", () => {
     vi.mocked(usePathname).mockReturnValue("/events");
 
-    render(<MobileEventFab />);
+    render(<MobileEventFab isSignedIn />);
 
     expect(screen.getByRole("link", { name: "イベントを作る" })).toHaveClass(
       "transition-colors",
@@ -38,7 +38,7 @@ describe("MobileEventFab", () => {
   it("hides on the event creation page", () => {
     vi.mocked(usePathname).mockReturnValue("/events/new");
 
-    render(<MobileEventFab />);
+    render(<MobileEventFab isSignedIn />);
 
     expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
   });
@@ -46,7 +46,15 @@ describe("MobileEventFab", () => {
   it("hides on pages outside the event workflow", () => {
     vi.mocked(usePathname).mockReturnValue("/settings");
 
-    render(<MobileEventFab />);
+    render(<MobileEventFab isSignedIn />);
+
+    expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
+  });
+
+  it("hides when the visitor is signed out", () => {
+    vi.mocked(usePathname).mockReturnValue("/events");
+
+    render(<MobileEventFab isSignedIn={false} />);
 
     expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
   });

@@ -22,10 +22,10 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-export function PrimaryNav() {
+export function PrimaryNav({ isSignedIn }: { isSignedIn: boolean }) {
   const pathname = usePathname();
 
-  if (!shouldShowPrimaryNavigation(pathname)) return null;
+  if (!isSignedIn || !shouldShowPrimaryNavigation(pathname)) return null;
 
   return (
     <nav

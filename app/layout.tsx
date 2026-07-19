@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 
 import { AuthNav } from "@/components/auth-nav";
 import { MobileEventFab } from "@/components/mobile-event-fab";
 import { PrimaryNav } from "@/components/primary-nav";
 import { brand } from "@/lib/brand";
+import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 import "./globals.css";
 
@@ -16,7 +18,16 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  let user: User | null = null;
+
+  if (hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  }
+  const isSignedIn = Boolean(user);
+
   return (
     <html lang="ja">
       <body>
@@ -39,11 +50,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 </span>
                 <span>{brand.name}</span>
               </Link>
-              <AuthNav />
+              <AuthNav user={user} />
             </div>
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-28 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:px-8 xl:px-10">
-            <PrimaryNav />
+            <PrimaryNav isSignedIn={isSignedIn} />
             <main id="main-content" tabIndex={-1}>
               {children}
             </main>
@@ -58,7 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </Link>
             </div>
           </footer>
-          <MobileEventFab />
+          <MobileEventFab isSignedIn={isSignedIn} />
         </div>
       </body>
     </html>

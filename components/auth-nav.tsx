@@ -1,27 +1,21 @@
 import Link from "next/link";
+import type { User } from "@supabase/supabase-js";
 import { Bell, LogOut, Settings, UserRound } from "lucide-react";
 import React from "react";
 
 import { signOutAction } from "@/lib/actions/auth";
 import { getAuthNavState } from "@/lib/domain/auth-nav";
 import { getGoogleProfileDefaults, getProfileAvatarUrl } from "@/lib/domain/profile";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function AuthNav() {
-  if (!hasSupabaseEnv()) {
-    return <AuthLink href="/login" label="ログイン" />;
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+export async function AuthNav({ user }: { user: User | null }) {
   const state = getAuthNavState(user?.email);
 
   if (!state.isSignedIn) {
     return <AuthLink href={state.primaryHref} label={state.primaryLabel} />;
   }
 
+  const supabase = await createSupabaseServerClient();
   const [{ data: profile }, { count: unreadCount }] = await Promise.all([
     supabase
       .from("profiles")
