@@ -182,6 +182,27 @@ describe("event work state", () => {
     expect(getEventSchedule(event, now).startAt).toBe("2026-08-01T10:00:00+09:00");
   });
 
+  it("waits for schedule creation when only a past confirmed schedule and an unconfirmed plan remain", () => {
+    const event = {
+      status: "confirmed",
+      plans: [
+        {
+          status: "date_confirmed",
+          settlement_status: "settled",
+          confirmed_start_at: "2026-07-01",
+          confirmed_end_at: "2026-07-01",
+          is_all_day: true
+        },
+        {
+          status: "draft",
+          settlement_status: "not_started"
+        }
+      ]
+    };
+
+    expect(getEventDisplayState(event, now)).toBe("schedule_creation_waiting");
+  });
+
   it("derives one concrete display state by priority", () => {
     const cases = [
       [{ status: "done", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],

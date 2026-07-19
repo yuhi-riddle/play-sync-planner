@@ -239,7 +239,11 @@ export function getEventDisplayState(event: EventListItem, now = new Date()): Ev
   if (event.status === "cancelled") return "cancelled";
   if (lifecycleFinished) return "completed";
   if (plans.some((plan) => plan.status === "collecting_answers")) return "answer_waiting";
-  if (getEventSchedule(event, now).isConfirmed) return "event_waiting";
+  const schedule = getEventSchedule(event, now);
+  const confirmedStartAt = schedule.isConfirmed
+    ? startOfScheduleTimestamp(schedule.startAt, schedule.isAllDay)
+    : null;
+  if (confirmedStartAt !== null && confirmedStartAt > now.getTime()) return "event_waiting";
   if (event.status === "interested") return "participant_waiting";
   return "schedule_creation_waiting";
 }
@@ -352,4 +356,11 @@ function endOfScheduleTimestamp(value: string, isAllDay: boolean) {
     return new Date(`${value}T23:59:59.999+09:00`).getTime();
   }
   return nullableTimestamp(value) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function startOfScheduleTimestamp(value: string | null, isAllDay: boolean) {
+  if (value && isAllDay && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00.000+09:00`).getTime();
+  }
+  return nullableTimestamp(value);
 }
