@@ -7,6 +7,10 @@ revoke all on schema private from anon;
 grant usage on schema private to authenticated;
 grant usage on schema private to service_role;
 
+alter default privileges for role postgres in schema private revoke execute on functions from public;
+alter default privileges for role postgres in schema private revoke execute on functions from anon;
+alter default privileges for role postgres in schema private grant execute on functions to service_role;
+
 create or replace function private.is_event_owner(target_event_id uuid)
 returns boolean
 language sql
@@ -53,7 +57,8 @@ as $$
     from public.event_members as first_member
     join public.event_members as second_member
       on second_member.event_id = first_member.event_id
-    where first_member.user_id = first_user_id
+    where (auth.uid() = first_user_id or auth.uid() = second_user_id)
+      and first_member.user_id = first_user_id
       and first_member.status = 'joined'
       and second_member.user_id = second_user_id
       and second_member.status = 'joined'
@@ -73,8 +78,74 @@ as $$
   select exists (
     select 1
     from public.user_blocks
-    where (public.user_blocks.blocker_user_id = first_user_id and public.user_blocks.blocked_user_id = second_user_id)
+    where (auth.uid() = first_user_id or auth.uid() = second_user_id)
+      and (
+        (public.user_blocks.blocker_user_id = first_user_id and public.user_blocks.blocked_user_id = second_user_id)
        or (public.user_blocks.blocker_user_id = second_user_id and public.user_blocks.blocked_user_id = first_user_id)
+      )
+  );
+$$;
+
+create or replace function public.have_shared_event(
+  first_user_id uuid,
+  second_user_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.event_members as first_member
+    join public.event_members as second_member
+      on second_member.event_id = first_member.event_id
+    where (auth.uid() = first_user_id or auth.uid() = second_user_id)
+      and first_member.user_id = first_user_id
+      and first_member.status = 'joined'
+      and second_member.user_id = second_user_id
+      and second_member.status = 'joined'
+  );
+$$;
+
+create or replace function public.is_user_blocked(
+  first_user_id uuid,
+  second_user_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.user_blocks
+    where (auth.uid() = first_user_id or auth.uid() = second_user_id)
+      and (
+        (public.user_blocks.blocker_user_id = first_user_id and public.user_blocks.blocked_user_id = second_user_id)
+        or (public.user_blocks.blocker_user_id = second_user_id and public.user_blocks.blocked_user_id = first_user_id)
+      )
+  );
+$$;
+
+create or replace function public.is_following(
+  follower_id uuid,
+  followed_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.user_connections
+    where (auth.uid() = follower_id or auth.uid() = followed_id)
+      and public.user_connections.follower_user_id = follower_id
+      and public.user_connections.followed_user_id = followed_id
   );
 $$;
 

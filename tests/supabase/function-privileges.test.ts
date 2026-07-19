@@ -30,7 +30,7 @@ describe("function privilege hardening migration", () => {
       expect(sql).toMatch(new RegExp(`create or replace function\\s+${signature.source}`));
     }
 
-    expect(sql.match(/returns boolean\s+language sql\s+stable\s+security definer\s+set search_path = ''/g)).toHaveLength(4);
+    expect(sql.match(/returns boolean\s+language sql\s+stable\s+security definer\s+set search_path = ''/g)).toHaveLength(7);
     expect(sql).toContain("and public.events.owner_user_id = auth.uid()");
     expect(sql).toContain("and public.event_members.user_id = auth.uid()");
   });
@@ -43,6 +43,42 @@ describe("function privilege hardening migration", () => {
     expect(sql).toContain("private.have_shared_event(follower_user_id, followed_user_id)");
     expect(sql).toContain("not private.is_user_blocked(follower_user_id, followed_user_id)");
     expect(sql).toContain("private.have_shared_event(current_user_id, target_user_id)");
+  });
+
+  it("only lets relationship helpers inspect a relationship involving the caller", () => {
+    const sql = migration();
+
+    for (const [functionName, callerGuard] of [
+      ["private.have_shared_event", "auth.uid() = first_user_id or auth.uid() = second_user_id"],
+      ["private.is_user_blocked", "auth.uid() = first_user_id or auth.uid() = second_user_id"],
+      ["public.have_shared_event", "auth.uid() = first_user_id or auth.uid() = second_user_id"],
+      ["public.is_user_blocked", "auth.uid() = first_user_id or auth.uid() = second_user_id"],
+      ["public.is_following", "auth.uid() = follower_id or auth.uid() = followed_id"],
+    ]) {
+      const match = sql.match(
+        new RegExp(
+          `create or replace function ${functionName.replace(".", "\\.")}\\([\\s\\S]*?as \\\$\\$([\\s\\S]*?)\\$\\$;`
+        )
+      );
+
+      expect(match?.[1], `missing ${functionName} implementation`).toContain(
+        callerGuard
+      );
+    }
+  });
+
+  it("keeps future private functions from inheriting public execution", () => {
+    const sql = migration();
+
+    expect(sql).toContain(
+      "alter default privileges for role postgres in schema private revoke execute on functions from public;"
+    );
+    expect(sql).toContain(
+      "alter default privileges for role postgres in schema private revoke execute on functions from anon;"
+    );
+    expect(sql).toContain(
+      "alter default privileges for role postgres in schema private grant execute on functions to service_role;"
+    );
   });
 
   it("allows only authenticated and service roles to execute hardened functions", () => {
