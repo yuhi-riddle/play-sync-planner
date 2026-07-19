@@ -153,19 +153,14 @@ describe("canInviteCandidate", () => {
 });
 
 describe("blocked user display names", () => {
-  it("uses profile names first and authentication fallbacks when needed", () => {
+  it("uses profile names and a stable default without authentication lookups", () => {
     expect(
       buildBlockedUsers({
-        blockedUserIds: ["profile-user", "fallback-user", "unknown-user"],
-        profileNames: new Map([["profile-user", "プロフィール名"]]),
-        fallbackNames: new Map([
-          ["profile-user", "古い名前"],
-          ["fallback-user", "Googleの表示名"]
-        ])
+        blockedUserIds: ["profile-user", "unknown-user"],
+        profileNames: new Map([["profile-user", "プロフィール名"]])
       })
     ).toEqual([
       { userId: "profile-user", displayName: "プロフィール名" },
-      { userId: "fallback-user", displayName: "Googleの表示名" },
       { userId: "unknown-user", displayName: "Madoiユーザー" }
     ]);
   });

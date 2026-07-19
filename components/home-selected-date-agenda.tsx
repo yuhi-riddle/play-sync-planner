@@ -78,17 +78,6 @@ function weekdayLabel(dateKey: string) {
   return new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(dateFromKey(dateKey));
 }
 
-function weekdayTone(dateKey: string) {
-  const day = dateFromKey(dateKey).getDay();
-  if (day === 0) {
-    return "text-clay-ink";
-  }
-  if (day === 6) {
-    return "text-pine";
-  }
-  return "text-muted";
-}
-
 function googleItemsFromResponse(response: GoogleCalendarResponse): HomeAgendaItem[] {
   if (!response.connected) {
     return [];
@@ -276,7 +265,7 @@ export function HomeSelectedDateAgenda({
           </DateShortcut>
         </nav>
 
-        <div className="rounded-control border border-line bg-sunken p-3">
+        <div className="rounded-control border border-line bg-sunken p-2 sm:p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-body font-bold text-ink">日付を選ぶ</p>
             <div className="flex items-center gap-2">
@@ -288,27 +277,25 @@ export function HomeSelectedDateAgenda({
               </button>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-7 gap-1">
-            {weekDays.map((dateKey) => {
-              const active = dateKey === activeDateKey;
-              return (
-                <button
-                  type="button"
-                  key={dateKey}
-                  onClick={() => selectDate(dateKey)}
-                  aria-current={active ? "date" : undefined}
-                  className={clsx(
-                    "grid min-h-16 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                    active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
-                  )}
-                >
-                  <span className={clsx("text-caption font-bold", active ? "text-white/75" : weekdayTone(dateKey))}>
-                    {weekdayLabel(dateKey)}
-                  </span>
-                  <span className="mt-1 text-body font-bold tabular-nums">{shortDateLabel(dateKey)}</span>
-                </button>
-              );
-            })}
+          <div
+            data-testid="home-week-grid"
+            className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-0.5 sm:gap-1"
+          >
+            {weekDays.map((dateKey) => (
+              <button
+                type="button"
+                key={dateKey}
+                onClick={() => selectDate(dateKey)}
+                aria-current={dateKey === activeDateKey ? "date" : undefined}
+                className={clsx(
+                  "grid min-h-14 min-w-0 place-items-center rounded-control border px-0.5 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1",
+                  dateKey === activeDateKey ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
+                )}
+              >
+                <span className="truncate text-[0.7rem] font-bold sm:text-caption">{weekdayLabel(dateKey)}</span>
+                <span className="mt-1 truncate text-xs font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

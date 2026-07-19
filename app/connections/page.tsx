@@ -117,33 +117,11 @@ async function loadBlockedUsers(currentUserId: string): Promise<BlockedUser[]> {
 
   const profileResult = await admin.from("profiles").select("user_id, nickname").in("user_id", blockedUserIds);
   const profileNames = resolveConnectionProfileNames(profileResult.data, profileResult.error);
-  const fallbackEntries = await Promise.all(
-    blockedUserIds
-      .filter((userId) => !profileNames.has(userId))
-      .map(async (userId) => {
-        const { data, error } = await admin.auth.admin.getUserById(userId);
-        const displayName = !error && data.user ? getBlockedUserDisplayName(data.user) : "Madoiユーザー";
-        return [userId, displayName] as const;
-      })
-  );
 
   return buildBlockedUsers({
     blockedUserIds,
-    profileNames,
-    fallbackNames: new Map(fallbackEntries)
+    profileNames
   });
-}
-
-function getBlockedUserDisplayName(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
-  const metadata = user.user_metadata ?? {};
-  for (const key of ["nickname", "full_name", "name"]) {
-    const value = metadata[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return user.email?.split("@")[0]?.trim() || "Madoiユーザー";
 }
 
 async function loadConnectionCandidates(currentUserId: string): Promise<ConnectionCandidate[]> {

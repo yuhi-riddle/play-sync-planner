@@ -8,6 +8,24 @@ export type EventListFilter = (typeof EVENT_LIST_FILTERS)[number];
 export type EventListSort = (typeof EVENT_LIST_SORTS)[number];
 export type EventListPageSize = (typeof EVENT_LIST_PAGE_SIZES)[number];
 export type EventSettlementState = "not_started" | "not_needed" | "needed" | "settling" | "settled";
+export type EventDisplayState =
+  | "participant_waiting"
+  | "schedule_creation_waiting"
+  | "answer_waiting"
+  | "event_waiting"
+  | "settlement_waiting"
+  | "completed"
+  | "cancelled";
+
+export const eventDisplayStateLabels: Record<EventDisplayState, string> = {
+  participant_waiting: "参加者待ち",
+  schedule_creation_waiting: "日程作成待ち",
+  answer_waiting: "回答待ち",
+  event_waiting: "開催待ち",
+  settlement_waiting: "清算待ち",
+  completed: "完了",
+  cancelled: "中止"
+};
 
 export type EventListPlan = {
   status?: string | null;
@@ -118,7 +136,7 @@ export function normalizeEventListQuery(query: {
     pageSize: EVENT_LIST_PAGE_SIZES.includes(pageSize as EventListPageSize)
       ? (pageSize as EventListPageSize)
       : 10,
-    page: Number.isInteger(page) && page > 0 ? page : 1
+    page: Number.isSafeInteger(page) && page > 0 ? page : 1
   };
 }
 
@@ -212,6 +230,20 @@ export function isEventLifecycleFinished(event: EventListItem, now = new Date())
   return endOfScheduleTimestamp(endAt, true) < now.getTime();
 }
 
+export function getEventDisplayState(event: EventListItem, now = new Date()): EventDisplayState {
+  const lifecycleFinished = isEventLifecycleFinished(event, now);
+  const settlementFinished = isEventSettlementFinished(event);
+  const plans = event.plans ?? [];
+
+  if (lifecycleFinished && !settlementFinished) return "settlement_waiting";
+  if (event.status === "cancelled") return "cancelled";
+  if (lifecycleFinished) return "completed";
+  if (plans.some((plan) => plan.status === "collecting_answers")) return "answer_waiting";
+  if (hasUpcomingConfirmedSchedule(plans, now)) return "event_waiting";
+  if (event.status === "interested") return "participant_waiting";
+  return "schedule_creation_waiting";
+}
+
 export function matchesEventListFilter(event: EventListItem, filter: EventListFilter, now = new Date()) {
   const lifecycleFinished = isEventLifecycleFinished(event, now);
   const settlementFinished = isEventSettlementFinished(event);
@@ -244,30 +276,14 @@ export function filterAndSortEventsForList<T extends EventListItem>(
 
 export function getEventCardSummary(event: EventListItem, now = new Date()) {
   const settlementState = getEventSettlementState(event);
-  const lifecycleFinished = isEventLifecycleFinished(event, now);
   const plans = event.plans ?? [];
-
-  let nextAction = "イベントを確認";
-  if (lifecycleFinished && !finishedSettlementStatuses.has(settlementState)) {
-    nextAction = "清算を確認";
-  } else if (event.status === "interested") {
-    nextAction = "参加者を確認";
-  } else if (plans.length === 0) {
-    nextAction = "日程調整を始める";
-  } else if (plans.some((plan) => plan.status === "collecting_answers")) {
-    nextAction = "回答状況を確認";
-  } else if (event.status === "confirmed") {
-    nextAction = "確定した予定を確認";
-  } else if (lifecycleFinished) {
-    nextAction = "完了内容を確認";
-  }
 
   return {
     schedule: getEventSchedule(event, now),
     joinedCount: (event.event_members ?? []).filter((member) => member.status === "joined").length,
     coordinationCount: plans.length,
     settlementState,
-    nextAction
+    displayState: getEventDisplayState(event, now)
   };
 }
 
@@ -336,4 +352,19 @@ function endOfScheduleTimestamp(value: string, isAllDay: boolean) {
     return new Date(`${value}T23:59:59.999+09:00`).getTime();
   }
   return nullableTimestamp(value) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function startOfScheduleTimestamp(value: string | null, isAllDay: boolean) {
+  if (value && isAllDay && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00.000+09:00`).getTime();
+  }
+  return nullableTimestamp(value);
+}
+
+function hasUpcomingConfirmedSchedule(plans: readonly EventListPlan[], now: Date) {
+  return plans.some((plan) => {
+    if (ignoredPlanStatuses.has(plan.status ?? "")) return false;
+    const startAt = startOfScheduleTimestamp(plan.confirmed_start_at ?? null, plan.is_all_day === true);
+    return startAt !== null && startAt > now.getTime();
+  });
 }

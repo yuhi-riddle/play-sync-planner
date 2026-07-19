@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildEventListHref,
   countEventsByCategory,
+  eventDisplayStateLabels,
   filterAndSortEventsForList,
   getEventCardSummary,
-  getEventSchedule,
+  getEventDisplayState,
   getEventListPagination,
   getEventListSort,
+  getEventSchedule,
   getEventSettlementState,
   getEventStatusesForListFilter,
   matchesEventListFilter,
@@ -78,6 +80,10 @@ describe("event list query", () => {
       pageSize: 10,
       page: 1
     });
+  });
+
+  it("normalizes a page number outside JavaScript's safe integer range", () => {
+    expect(normalizeEventListQuery({ page: "9007199254740992" }).page).toBe(1);
   });
 
   it("maps display sorting to database ordering", () => {
@@ -176,6 +182,100 @@ describe("event work state", () => {
     expect(getEventSchedule(event, now).startAt).toBe("2026-08-01T10:00:00+09:00");
   });
 
+  it("waits for schedule creation when only a past confirmed schedule and an unconfirmed plan remain", () => {
+    const event = {
+      status: "confirmed",
+      plans: [
+        {
+          status: "date_confirmed",
+          settlement_status: "settled",
+          confirmed_start_at: "2026-07-01",
+          confirmed_end_at: "2026-07-01",
+          is_all_day: true
+        },
+        {
+          status: "draft",
+          settlement_status: "not_started"
+        }
+      ]
+    };
+
+    expect(getEventDisplayState(event, now)).toBe("schedule_creation_waiting");
+  });
+
+  it("waits for the event when any confirmed plan is upcoming", () => {
+    const event = {
+      status: "confirmed",
+      plans: [
+        {
+          status: "date_confirmed",
+          settlement_status: "not_started",
+          confirmed_start_at: "2026-07-15T10:00:00+09:00",
+          confirmed_end_at: "2026-07-15T14:00:00+09:00"
+        },
+        {
+          status: "date_confirmed",
+          settlement_status: "not_started",
+          confirmed_start_at: "2026-08-01T10:00:00+09:00",
+          confirmed_end_at: "2026-08-01T12:00:00+09:00"
+        }
+      ]
+    };
+
+    expect(getEventSchedule(event, now).startAt).toBe("2026-07-15T10:00:00+09:00");
+    expect(getEventDisplayState(event, now)).toBe("event_waiting");
+  });
+
+  it("treats an all-day confirmed plan as upcoming only before midnight in Japan", () => {
+    const event = {
+      status: "confirmed",
+      plans: [
+        {
+          status: "date_confirmed",
+          settlement_status: "not_started",
+          confirmed_start_at: "2026-08-01",
+          confirmed_end_at: "2026-08-01",
+          is_all_day: true
+        },
+        {
+          status: "draft",
+          settlement_status: "not_started"
+        }
+      ]
+    };
+
+    expect(getEventDisplayState(event, new Date("2026-07-31T14:59:59Z"))).toBe("event_waiting");
+    expect(getEventDisplayState(event, new Date("2026-07-31T15:00:00Z"))).toBe("schedule_creation_waiting");
+  });
+
+  it("derives one concrete display state by priority", () => {
+    const cases = [
+      [{ status: "done", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],
+      [{ status: "cancelled", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],
+      [{ status: "cancelled", plans: [{ settlement_status: "settling" }] }, "settlement_waiting"],
+      [{ status: "cancelled", plans: [{ settlement_status: "not_started" }] }, "cancelled"],
+      [{ status: "done", plans: [{ settlement_status: "settled" }] }, "completed"],
+      [{ status: "planning", plans: [{ status: "collecting_answers", settlement_status: "not_started" }] }, "answer_waiting"],
+      [{ status: "confirmed", plans: [{ status: "date_confirmed", settlement_status: "not_started", confirmed_start_at: "2026-08-01T10:00:00+09:00" }] }, "event_waiting"],
+      [{ status: "interested", plans: [] }, "participant_waiting"],
+      [{ status: "planning", plans: [] }, "schedule_creation_waiting"]
+    ] as const;
+
+    for (const [event, expected] of cases) {
+      expect(getEventDisplayState(event, now)).toBe(expected);
+    }
+
+    expect(eventDisplayStateLabels).toEqual({
+      participant_waiting: "参加者待ち",
+      schedule_creation_waiting: "日程作成待ち",
+      answer_waiting: "回答待ち",
+      event_waiting: "開催待ち",
+      settlement_waiting: "清算待ち",
+      completed: "完了",
+      cancelled: "中止"
+    });
+  });
+
   it("summarizes the information needed on an event card", () => {
     const summary = getEventCardSummary({
       status: "done",
@@ -192,9 +292,10 @@ describe("event work state", () => {
       joinedCount: 2,
       coordinationCount: 1,
       settlementState: "needed",
-      nextAction: "清算を確認",
+      displayState: "settlement_waiting",
       schedule: { isConfirmed: true }
     });
+    expect(summary).not.toHaveProperty("nextAction");
   });
 
   it("sorts by the confirmed schedule shown on the card", () => {

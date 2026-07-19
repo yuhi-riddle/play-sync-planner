@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, CalendarClock, CalendarDays, MapPin, ReceiptText, UsersRound } from "lucide-react";
+import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 
 import { EventCancelAction } from "@/components/event-cancel-action";
 import { EventListControls } from "@/components/event-list-controls";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { cancelEventAction } from "@/lib/actions/events";
-import { categoryLabels, eventStatusLabels } from "@/lib/constants";
+import { categoryLabels } from "@/lib/constants";
 import { getEventDraftResumePath } from "@/lib/domain/event-flow";
 import {
   buildEventListHref,
-  filterAndSortEventsForList,
+  eventDisplayStateLabels,
   getEventCardSummary,
   getEventListPagination,
   isEventLifecycleFinished,
@@ -52,21 +52,16 @@ type EventRow = EventListItem & {
   event_members: Array<{ status: string }> | null;
 };
 
+type EventListRpcRow = {
+  event_ids: string[] | null;
+  total_count: number | string | null;
+};
+
 type EventDraftPayload = {
   title?: string;
   category?: string;
   location_name?: string;
 };
-
-const settlementLabels = {
-  not_started: "清算前",
-  not_needed: "清算なし",
-  needed: "清算待ち",
-  settling: "清算中",
-  settled: "清算済み"
-} as const;
-
-const EVENT_QUERY_BATCH_SIZE = 500;
 
 export default async function EventsPage({ searchParams }: { searchParams?: Promise<EventFilterQuery> }) {
   const query = normalizeEventListQuery((await searchParams) ?? {});
@@ -113,34 +108,40 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   let totalItems = visibleDraft ? 1 : 0;
 
   if (query.status !== "draft") {
-    const events: EventRow[] = [];
+    const requestedOffset = (query.page - 1) * query.pageSize;
+    const { data: rpcRows, error: rpcError } = await supabase.rpc("list_owned_event_ids", {
+      p_filter: query.status,
+      p_category: query.category,
+      p_sort: query.sort,
+      p_limit: query.pageSize,
+      p_offset: requestedOffset
+    });
+    if (rpcError) throw new Error(rpcError.message);
 
-    for (let from = 0; ; from += EVENT_QUERY_BATCH_SIZE) {
-      let eventsQuery = supabase
+    const rpcRow = (rpcRows?.[0] ?? null) as EventListRpcRow | null;
+    const eventIds = rpcRow?.event_ids ?? [];
+    totalItems = Number(rpcRow?.total_count ?? 0);
+
+    const requestedPagination = getEventListPagination(totalItems, query.pageSize, query.page);
+    if (requestedPagination.page !== query.page) {
+      redirect(buildEventListHref(query, requestedPagination.page));
+    }
+
+    if (eventIds.length > 0) {
+      const { data: pageRows, error: pageError } = await supabase
         .from("events")
         .select(
           "id, title, category, start_date, end_date, location_name, status, created_at, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day)"
         )
-        .eq("owner_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false });
+        .in("id", eventIds);
+      if (pageError) throw new Error(pageError.message);
 
-      if (query.category !== "all") {
-        eventsQuery = eventsQuery.eq("category", query.category);
-      }
-
-      const { data: batch, error } = await eventsQuery.range(from, from + EVENT_QUERY_BATCH_SIZE - 1);
-      if (error) throw new Error(error.message);
-
-      const rows = (batch ?? []) as EventRow[];
-      events.push(...rows);
-      if (rows.length < EVENT_QUERY_BATCH_SIZE) break;
+      const rowsById = new Map(((pageRows ?? []) as EventRow[]).map((event) => [event.id, event]));
+      eventRows = eventIds.flatMap((eventId) => {
+        const event = rowsById.get(eventId);
+        return event ? [event] : [];
+      });
     }
-
-    const filteredEvents = filterAndSortEventsForList(events, query.status, query.sort);
-    totalItems = filteredEvents.length;
-    const requestedPagination = getEventListPagination(totalItems, query.pageSize, query.page);
-    eventRows = filteredEvents.slice(requestedPagination.rangeFrom, requestedPagination.rangeTo + 1);
   }
 
   const pagination = getEventListPagination(totalItems, query.pageSize, query.page);
@@ -194,28 +195,18 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
 
 function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean }) {
   const summary = getEventCardSummary(event);
-  const statusLabel = eventStatusLabels[event.status as keyof typeof eventStatusLabels] ?? "確認中";
 
   return (
     <Card className="transition-colors hover:border-moss/45">
       <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-skywash/70 px-3 py-1 text-xs font-bold text-pine">
-            {categoryLabels[event.category as keyof typeof categoryLabels]}
-          </span>
-          <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-muted">{statusLabel}</span>
-        </div>
-        <h2 className="text-xl font-bold text-ink">{event.title}</h2>
-        <div className="mt-4 grid gap-x-6 gap-y-3 text-sm text-muted sm:grid-cols-2 lg:grid-cols-3">
+        <span className="inline-flex rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
+          {eventDisplayStateLabels[summary.displayState]}
+        </span>
+        <h2 className="mt-3 text-xl font-bold text-ink">{event.title}</h2>
+        <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-3">
           <Meta icon={CalendarDays} text={formatSchedule(summary.schedule)} strong={summary.schedule.isConfirmed} />
           <Meta icon={MapPin} text={event.location_name?.trim() || "場所未設定"} />
           <Meta icon={UsersRound} text={`参加 ${summary.joinedCount}人`} />
-          <Meta icon={CalendarClock} text={`日程調整 ${summary.coordinationCount}件`} />
-          <Meta icon={ReceiptText} text={settlementLabels[summary.settlementState]} />
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm font-bold text-pine">
-          <span>{summary.nextAction}</span>
-          <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
         </div>
       </Link>
       {showCancel && !isEventLifecycleFinished(event) ? (

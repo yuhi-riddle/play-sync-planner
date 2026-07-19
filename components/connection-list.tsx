@@ -76,8 +76,22 @@ export function ConnectionList({
         </ul>
       </section>
 
-      <div className="overflow-x-auto pb-1">
-        <div role="tablist" aria-label="つながりを絞り込む" className="flex min-w-max gap-2">
+      <label className="grid gap-2 sm:hidden" htmlFor="connection-group-select">
+        <span className="text-sm font-bold text-ink">表示するつながり</span>
+        <select
+          id="connection-group-select"
+          value={activeTab}
+          onChange={(event) => setActiveTab(event.target.value as ConnectionTabId)}
+          className="min-h-11 w-full rounded-control border border-line bg-surface px-3 py-2 text-base font-bold text-ink focus:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20 sm:hidden"
+        >
+          {tabs.map((tab) => (
+            <option key={tab.id} value={tab.id}>{`${tab.label} (${tab.people.length}件)`}</option>
+          ))}
+        </select>
+      </label>
+
+      <div className="hidden pb-1 sm:block">
+        <div role="tablist" aria-label="つながりを絞り込む" className="flex flex-wrap gap-2">
           {tabs.map((tab, index) => {
             const selected = tab.id === active.id;
             return (

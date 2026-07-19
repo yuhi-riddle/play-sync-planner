@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createSupabaseServerClient, redirect } = vi.hoisted(() => ({
@@ -18,20 +18,33 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import EventsPage from "@/app/events/page";
 
-function createEventQuery(data: Array<Record<string, unknown>>, count: number) {
-  const query = {
+function createEventQuery(data: Array<Record<string, unknown>>) {
+  return {
     select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    range: vi.fn()
+    in: vi.fn().mockResolvedValue({ data, error: null })
   };
+}
 
-  query.range.mockImplementation((from: number, to: number) =>
-    Promise.resolve({ data: data.slice(from, to + 1), count, error: null })
-  );
+function createRpcResult(eventIds: string[], totalCount: number) {
+  return vi.fn().mockResolvedValue({
+    data: [{ event_ids: eventIds, total_count: totalCount }],
+    error: null
+  });
+}
 
-  return query;
+function makeEvent(id: string, title: string) {
+  return {
+    id,
+    title,
+    category: "other",
+    start_date: null,
+    end_date: null,
+    location_name: null,
+    status: "planning",
+    created_at: "2026-07-15T00:00:00Z",
+    plans: [],
+    event_members: []
+  };
 }
 
 function createDraftQuery(draft: Record<string, unknown> | null) {
@@ -52,21 +65,8 @@ describe("EventsPage", () => {
   });
 
   it("shows active events by default and exposes the saved draft count", async () => {
-    const eventQuery = createEventQuery(
-      [
-        {
-          id: "event-1",
-          title: "夏ライブ",
-          category: "live",
-          start_date: "2026-08-01",
-          end_date: "2026-08-01",
-          location_name: "東京",
-          status: "planning",
-          plans: [{ id: "plan-1" }]
-        }
-      ],
-      1
-    );
+    const eventQuery = createEventQuery([makeEvent("event-1", "夏ライブ")]);
+    const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery({
       id: "draft-1",
       payload: { title: "入力途中の旅行", category: "travel" },
@@ -74,62 +74,87 @@ describe("EventsPage", () => {
     });
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(eventQuery.in).not.toHaveBeenCalled();
-    expect(eventQuery.order).toHaveBeenCalledWith("created_at", { ascending: false });
-    expect(eventQuery.order).toHaveBeenCalledWith("id", { ascending: false });
-    expect(eventQuery.range).toHaveBeenCalledWith(0, 499);
     expect(screen.getByText("下書き 1件")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "夏ライブ" })).toBeInTheDocument();
   });
 
-  it("applies category in the database and status and sorting in the work-list calculation", async () => {
-    const eventQuery = createEventQuery(
-      [
-        {
-          id: "event-2",
-          title: "中止したライブ",
-          category: "live",
-          start_date: "2026-09-01",
-          end_date: "2026-09-01",
-          location_name: null,
-          status: "cancelled",
-          plans: []
-        }
-      ],
-      46
-    );
+  it("shows one concrete state and keeps the event card concise", async () => {
+    const eventQuery = createEventQuery([{
+      ...makeEvent("event-1", "週末の謎解き会"),
+      category: "nazotoki",
+      status: "interested",
+      location_name: "新宿",
+      event_members: [{ status: "joined" }],
+      plans: [{ status: "draft", settlement_status: "settling" }]
+    }]);
+    const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
 
-    render(
-      await EventsPage({
-        searchParams: Promise.resolve({
-          status: "cancelled",
-          category: "live",
-          sort: "soonest",
-          limit: "20",
-          page: "1"
-        })
-      })
-    );
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(eventQuery.in).not.toHaveBeenCalled();
-    expect(eventQuery.eq).toHaveBeenCalledWith("category", "live");
-    expect(eventQuery.order).toHaveBeenCalledWith("created_at", { ascending: false });
-    expect(eventQuery.range).toHaveBeenCalledWith(0, 499);
-    expect(screen.queryByRole("button", { name: "イベントを中止" })).not.toBeInTheDocument();
+    expect(screen.getByText("参加者待ち")).toBeInTheDocument();
+    expect(screen.getByText("新宿")).toBeInTheDocument();
+    expect(screen.getByText("参加 1人")).toBeInTheDocument();
+    const eventCardLink = screen.getByRole("link", { name: /週末の謎解き会/ });
+    expect(within(eventCardLink).queryByText("謎解き")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("清算中")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("参加者を確認")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("気になる")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
+  });
+
+  it("asks the database for one page and fetches only the returned event ids", async () => {
+    const eventQuery = createEventQuery([
+      makeEvent("event-2", "2番目"),
+      makeEvent("event-1", "1番目")
+    ]);
+    const rpc = createRpcResult(["event-1", "event-2"], 1001);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({
+      searchParams: Promise.resolve({
+        status: "completed",
+        category: "travel",
+        sort: "soonest",
+        limit: "20",
+        page: "2"
+      })
+    }));
+
+    expect(rpc).toHaveBeenCalledWith("list_owned_event_ids", {
+      p_filter: "completed",
+      p_category: "travel",
+      p_sort: "soonest",
+      p_limit: 20,
+      p_offset: 20
+    });
+    expect(eventQuery.in).toHaveBeenCalledWith("id", ["event-1", "event-2"]);
+    expect(screen.getAllByRole("heading", { level: 2, name: /番目/ }).map((heading) => heading.textContent)).toEqual([
+      "1番目",
+      "2番目"
+    ]);
+    expect(screen.getByText("21-40 / 1001件")).toBeInTheDocument();
   });
 
   it("shows the saved draft instead of querying event rows when draft is selected", async () => {
-    const eventQuery = createEventQuery([], 0);
+    const eventQuery = createEventQuery([]);
+    const rpc = vi.fn();
     const draftQuery = createDraftQuery({
       id: "draft-1",
       payload: { title: "入力途中の旅行", category: "travel", location_name: "札幌" },
@@ -137,12 +162,13 @@ describe("EventsPage", () => {
     });
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
 
     render(await EventsPage({ searchParams: Promise.resolve({ status: "draft" }) }));
 
-    expect(eventQuery.range).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "入力途中の旅行" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /入力途中の旅行/ })).toHaveAttribute(
       "href",
@@ -151,24 +177,12 @@ describe("EventsPage", () => {
   });
 
   it("redirects to the last available page when the requested page is out of range", async () => {
-    const eventQuery = createEventQuery(
-      Array.from({ length: 15 }, (_, index) => ({
-        id: `event-${index}`,
-        title: `イベント${index}`,
-        category: "other",
-        start_date: null,
-        end_date: null,
-        location_name: null,
-        status: "planning",
-        created_at: `2026-07-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
-        plans: [],
-        event_members: []
-      })),
-      15
-    );
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 15);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
 
@@ -177,30 +191,21 @@ describe("EventsPage", () => {
     expect(redirect).toHaveBeenCalledWith("/events?page=2");
   });
 
-  it("loads every event across database batches before filtering", async () => {
-    const events = Array.from({ length: 501 }, (_, index) => ({
-      id: `event-${index}`,
-      title: `イベント${index}`,
-      category: "other",
-      start_date: null,
-      end_date: null,
-      location_name: null,
-      status: "planning",
-      created_at: `2026-07-15T00:${String(index % 60).padStart(2, "0")}:00Z`,
-      plans: [],
-      event_members: []
-    }));
-    const eventQuery = createEventQuery(events, events.length);
+  it("passes an offset beyond the PostgreSQL integer range without overflowing", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 2_147_483_660);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+      rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
 
-    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+    render(await EventsPage({ searchParams: Promise.resolve({ page: "214748366" }) }));
 
-    expect(eventQuery.range).toHaveBeenNthCalledWith(1, 0, 499);
-    expect(eventQuery.range).toHaveBeenNthCalledWith(2, 500, 999);
-    expect(screen.getByText("1-10 / 501件")).toBeInTheDocument();
+    expect(rpc).toHaveBeenCalledWith("list_owned_event_ids", expect.objectContaining({
+      p_limit: 10,
+      p_offset: 2_147_483_650
+    }));
   });
 });

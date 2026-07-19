@@ -8,6 +8,7 @@ import { getUserDisplayName } from "@/lib/domain/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const sharedEventRequiredErrorCode = "PSP01";
 
 type ConnectionTarget = {
   currentUserId: string;
@@ -23,7 +24,7 @@ function requireTargetUserId(value: string): string {
   return userId;
 }
 
-async function requireConnectionTarget(userId: string, options: { allowBlocked?: boolean } = {}): Promise<ConnectionTarget> {
+async function requireConnectionTarget(userId: string): Promise<ConnectionTarget> {
   const target = await requireAuthenticatedTarget(userId);
   const { currentUserId, targetUserId } = target;
   const admin = createSupabaseAdminClient();
@@ -40,7 +41,7 @@ async function requireConnectionTarget(userId: string, options: { allowBlocked?:
     throw new Error("共通のイベントに参加しているユーザーだけを操作できます");
   }
 
-  if (blockResult.data && !options.allowBlocked) {
+  if (blockResult.data) {
     throw new Error("ブロック中のユーザーにはこの操作を行えません");
   }
 
@@ -140,37 +141,16 @@ export async function toggleFavoriteAction(userId: string): Promise<void> {
 }
 
 export async function blockUserAction(userId: string): Promise<void> {
-  const { currentUserId, targetUserId } = await requireConnectionTarget(userId, { allowBlocked: true });
-  const admin = createSupabaseAdminClient();
+  const { targetUserId } = await requireAuthenticatedTarget(userId);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("block_user_atomic", {
+    target_user_id: targetUserId
+  });
 
-  const [{ error: connectionsError }, { error: favoritesError }] = await Promise.all([
-    admin
-      .from("user_connections")
-      .delete()
-      .or(
-        `and(follower_user_id.eq.${currentUserId},followed_user_id.eq.${targetUserId}),and(follower_user_id.eq.${targetUserId},followed_user_id.eq.${currentUserId})`
-      ),
-    admin
-      .from("user_favorites")
-      .delete()
-      .or(
-        `and(user_id.eq.${currentUserId},favorite_user_id.eq.${targetUserId}),and(user_id.eq.${targetUserId},favorite_user_id.eq.${currentUserId})`
-      )
-  ]);
-
-  if (connectionsError || favoritesError) {
-    throw new Error("接続情報を削除できませんでした");
-  }
-
-  const { error: blockError } = await admin.from("user_blocks").upsert(
-    {
-      blocker_user_id: currentUserId,
-      blocked_user_id: targetUserId
-    },
-    { onConflict: "blocker_user_id,blocked_user_id" }
-  );
-
-  if (blockError) {
+  if (error) {
+    if (error.code === sharedEventRequiredErrorCode) {
+      throw new Error("共通のイベントに参加しているユーザーだけを操作できます");
+    }
     throw new Error("ブロックできませんでした");
   }
 

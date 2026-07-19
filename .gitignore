@@ -2,6 +2,7 @@
 node_modules/
 .env.local
 .env*.local
+.claude/settings.local.json
 .secrets/
 dev-server.log
 dev-server.err

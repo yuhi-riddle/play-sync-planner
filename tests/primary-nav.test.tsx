@@ -18,10 +18,10 @@ describe("PrimaryNav", () => {
   });
 
   it("shows the four primary destinations as icon buttons in a responsive grid", () => {
-    render(<PrimaryNav />);
+    render(<PrimaryNav isSignedIn />);
 
     const nav = screen.getByRole("navigation", { name: "主要な画面" });
-    expect(nav).toHaveClass("grid", "grid-cols-2", "sm:grid-cols-4");
+    expect(nav).toHaveClass("fixed", "bottom-0", "grid-cols-4", "sm:static", "sm:grid-cols-4");
 
     const destinations = [
       ["ホーム", "/"],
@@ -33,14 +33,14 @@ describe("PrimaryNav", () => {
     for (const [name, href] of destinations) {
       const link = within(nav).getByRole("link", { name });
       expect(link).toHaveAttribute("href", href);
-      expect(link).toHaveClass("min-h-11", "rounded-control", "border");
+      expect(link).toHaveClass("min-h-14", "rounded-control", "sm:min-h-11", "sm:border");
       expect(link.querySelector("svg")).toBeInTheDocument();
     }
   });
 
   it("marks the current destination with the Madoi selected-state tokens", () => {
     navigation.pathname = "/connections";
-    render(<PrimaryNav />);
+    render(<PrimaryNav isSignedIn />);
 
     const current = screen.getByRole("link", { name: "つながり" });
     expect(current).toHaveAttribute("aria-current", "page");
@@ -49,7 +49,13 @@ describe("PrimaryNav", () => {
 
   it("hides the primary navigation during profile onboarding", () => {
     navigation.pathname = "/onboarding/profile";
-    render(<PrimaryNav />);
+    render(<PrimaryNav isSignedIn />);
+
+    expect(screen.queryByRole("navigation", { name: "主要な画面" })).not.toBeInTheDocument();
+  });
+
+  it("hides the primary navigation when the visitor is signed out", () => {
+    render(<PrimaryNav isSignedIn={false} />);
 
     expect(screen.queryByRole("navigation", { name: "主要な画面" })).not.toBeInTheDocument();
   });
