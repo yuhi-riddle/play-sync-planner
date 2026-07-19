@@ -83,22 +83,34 @@
 - Create: `docs/performance-security-baseline.md`
 
 **Interfaces:**
-- Produces: `ALLOWED_ADMIN_CLIENT_FILES: readonly string[]`
+- Produces: `ADMIN_CLIENT_BASELINE_FILES: readonly string[]`
 - Produces: 変更前の取得件数、主要画面応答、管理クライアント利用箇所の記録。
 
-- [ ] **Step 1: 管理クライアント許可リストの失敗テストを書く**
+- [ ] **Step 1: 現在の管理クライアント利用箇所を固定する特性テストを書く**
 
 ```ts
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
-const ALLOWED_ADMIN_CLIENT_FILES = [
-  "lib/supabase/server.ts",
-  "lib/server/admin/cron-notifications.ts",
-  "lib/server/admin/public-answer.ts",
-  "lib/server/admin/public-invite.ts",
-  "lib/server/admin/public-settlement.ts",
-  "lib/server/admin/google-token-store.ts"
+const ADMIN_CLIENT_BASELINE_FILES = [
+  "app/api/cron/notifications/route.ts",
+  "app/api/events/[eventId]/availability/route.ts",
+  "app/connections/page.tsx",
+  "app/events/[eventId]/page.tsx",
+  "app/invites/[token]/page.tsx",
+  "app/plans/[planId]/settlement/page.tsx",
+  "app/plans/page.tsx",
+  "app/s/[token]/answer/page.tsx",
+  "app/s/[token]/settlement/page.tsx",
+  "lib/actions/answers.ts",
+  "lib/actions/calendar.ts",
+  "lib/actions/connections.ts",
+  "lib/actions/event-members.ts",
+  "lib/actions/event-messages.ts",
+  "lib/actions/plans.ts",
+  "lib/actions/settlements.ts",
+  "lib/google-calendar/access-token.ts",
+  "lib/supabase/server.ts"
 ] as const;
 
 function walk(directory: string): string[] {
@@ -116,21 +128,20 @@ function sourceFilesUsing(needle: string) {
     .map((path) => relative(process.cwd(), path).replaceAll("\\", "/"));
 }
 
-it("keeps the service-role client out of normal signed-in screens and actions", () => {
-  const offenders = sourceFilesUsing("createSupabaseAdminClient").filter(
-    (path) => !ALLOWED_ADMIN_CLIENT_FILES.includes(path as (typeof ALLOWED_ADMIN_CLIENT_FILES)[number])
+it("captures every current service-role client usage before hardening", () => {
+  expect(sourceFilesUsing("createSupabaseAdminClient").sort()).toEqual(
+    [...ADMIN_CLIENT_BASELINE_FILES].sort()
   );
-  expect(offenders).toEqual([]);
 });
 ```
 
 `sourceFilesUsing`は`app`と`lib`を再帰走査し、`node_modules`と`.next`を除外し、リポジトリ相対パスを`/`区切りで返す。
 
-- [ ] **Step 2: 失敗を確認する**
+- [ ] **Step 2: 特性テストが現在の状態で成功することを確認する**
 
 Run: `npm.cmd exec vitest -- run tests/admin-client-allowlist.test.ts --no-cache`
 
-Expected: `/connections`、`/plans`、イベント詳細、通常Server Actionが違反一覧に出てFAIL。
+Expected: 現在の18ファイルと一致してPASS。Task 8でこのテストを最終許可リストへ書き換えるまで、利用箇所が意図せず増えた場合だけFAIL。
 
 - [ ] **Step 3: 現状値を記録する**
 
