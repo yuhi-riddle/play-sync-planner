@@ -203,6 +203,51 @@ describe("event work state", () => {
     expect(getEventDisplayState(event, now)).toBe("schedule_creation_waiting");
   });
 
+  it("waits for the event when any confirmed plan is upcoming", () => {
+    const event = {
+      status: "confirmed",
+      plans: [
+        {
+          status: "date_confirmed",
+          settlement_status: "not_started",
+          confirmed_start_at: "2026-07-15T10:00:00+09:00",
+          confirmed_end_at: "2026-07-15T14:00:00+09:00"
+        },
+        {
+          status: "date_confirmed",
+          settlement_status: "not_started",
+          confirmed_start_at: "2026-08-01T10:00:00+09:00",
+          confirmed_end_at: "2026-08-01T12:00:00+09:00"
+        }
+      ]
+    };
+
+    expect(getEventSchedule(event, now).startAt).toBe("2026-07-15T10:00:00+09:00");
+    expect(getEventDisplayState(event, now)).toBe("event_waiting");
+  });
+
+  it("treats an all-day confirmed plan as upcoming only before midnight in Japan", () => {
+    const event = {
+      status: "confirmed",
+      plans: [
+        {
+          status: "date_confirmed",
+          settlement_status: "not_started",
+          confirmed_start_at: "2026-08-01",
+          confirmed_end_at: "2026-08-01",
+          is_all_day: true
+        },
+        {
+          status: "draft",
+          settlement_status: "not_started"
+        }
+      ]
+    };
+
+    expect(getEventDisplayState(event, new Date("2026-07-31T14:59:59Z"))).toBe("event_waiting");
+    expect(getEventDisplayState(event, new Date("2026-07-31T15:00:00Z"))).toBe("schedule_creation_waiting");
+  });
+
   it("derives one concrete display state by priority", () => {
     const cases = [
       [{ status: "done", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],
