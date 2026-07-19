@@ -7,9 +7,9 @@ revoke all on schema private from anon;
 grant usage on schema private to authenticated;
 grant usage on schema private to service_role;
 
-alter default privileges for role postgres in schema private revoke execute on functions from public;
-alter default privileges for role postgres in schema private revoke execute on functions from anon;
-alter default privileges for role postgres in schema private grant execute on functions to service_role;
+alter default privileges revoke execute on functions from public;
+alter default privileges revoke execute on functions from anon;
+alter default privileges in schema private grant execute on functions to service_role;
 
 create or replace function private.is_event_owner(target_event_id uuid)
 returns boolean

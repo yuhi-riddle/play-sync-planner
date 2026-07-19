@@ -71,13 +71,16 @@ describe("function privilege hardening migration", () => {
     const sql = migration();
 
     expect(sql).toContain(
-      "alter default privileges for role postgres in schema private revoke execute on functions from public;"
+      "alter default privileges revoke execute on functions from public;"
     );
     expect(sql).toContain(
-      "alter default privileges for role postgres in schema private revoke execute on functions from anon;"
+      "alter default privileges revoke execute on functions from anon;"
     );
     expect(sql).toContain(
-      "alter default privileges for role postgres in schema private grant execute on functions to service_role;"
+      "alter default privileges in schema private grant execute on functions to service_role;"
+    );
+    expect(sql).not.toMatch(
+      /alter default privileges(?: for role \w+)? in schema private revoke execute on functions from (?:public|anon);/
     );
   });
 
