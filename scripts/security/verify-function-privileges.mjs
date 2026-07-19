@@ -42,7 +42,7 @@ function isDenied(status) {
   return status === 401 || status === 403;
 }
 
-async function rpc({ baseUrl, apiKey, token, functionName, args, fetchImpl }) {
+async function rpc({ baseUrl, apiKey, token, functionName, args, fetchImpl, timeoutMs, setTimeoutImpl, clearTimeoutImpl }) {
   const headers = {
     apikey: apiKey,
     "content-type": "application/json"
@@ -52,13 +52,19 @@ async function rpc({ baseUrl, apiKey, token, functionName, args, fetchImpl }) {
     headers.authorization = `Bearer ${token}`;
   }
 
-  const response = await fetchImpl(`${baseUrl}/rest/v1/rpc/${functionName}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(args)
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeoutImpl(() => controller.abort(), timeoutMs);
 
-  return response;
+  try {
+    return await fetchImpl(`${baseUrl}/rest/v1/rpc/${functionName}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(args),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeoutImpl(timeoutId);
+  }
 }
 
 async function json(response) {
@@ -69,9 +75,9 @@ async function json(response) {
   }
 }
 
-async function checkAnonymous({ baseUrl, apiKey, fetchImpl }) {
+async function checkAnonymous({ baseUrl, apiKey, fetchImpl, requestOptions }) {
   for (const [functionName, args] of protectedCalls()) {
-    const response = await rpc({ baseUrl, apiKey, functionName, args, fetchImpl });
+    const response = await rpc({ baseUrl, apiKey, functionName, args, fetchImpl, ...requestOptions });
     if (!isDenied(response.status)) {
       return false;
     }
@@ -80,7 +86,7 @@ async function checkAnonymous({ baseUrl, apiKey, fetchImpl }) {
   return true;
 }
 
-async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterpartUserId, ownEventId, counterpartEventId, fetchImpl }) {
+async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterpartUserId, ownEventId, counterpartEventId, fetchImpl, requestOptions }) {
   for (const functionName of ["is_event_owner", "is_joined_event_member"]) {
     const response = await rpc({
       baseUrl,
@@ -88,7 +94,8 @@ async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterp
       token,
       functionName,
       args: { target_event_id: ownEventId },
-      fetchImpl
+      fetchImpl,
+      ...requestOptions
     });
 
     if (response.status !== 200 || (await json(response)) !== true) {
@@ -101,7 +108,8 @@ async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterp
       token,
       functionName,
       args: { target_event_id: counterpartEventId },
-      fetchImpl
+      fetchImpl,
+      ...requestOptions
     });
     if (!isDenied(counterpartResponse.status) && (counterpartResponse.status !== 200 || (await json(counterpartResponse)) !== false)) {
       return false;
@@ -113,8 +121,8 @@ async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterp
     ["is_user_blocked", { first_user_id: userId, second_user_id: counterpartUserId }],
     ["is_following", { follower_id: userId, followed_id: counterpartUserId }]
   ]) {
-    const response = await rpc({ baseUrl, apiKey, token, functionName, args, fetchImpl });
-    if (response.status !== 200 && !isDenied(response.status)) {
+    const response = await rpc({ baseUrl, apiKey, token, functionName, args, fetchImpl, ...requestOptions });
+    if (!isDenied(response.status) && (response.status !== 200 || (await json(response)) !== false)) {
       return false;
     }
   }
@@ -125,7 +133,8 @@ async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterp
     token,
     functionName: "list_owned_event_ids",
     args: { p_filter: "all", p_category: "all", p_sort: "latest", p_limit: 1, p_offset: 0 },
-    fetchImpl
+    fetchImpl,
+    ...requestOptions
   });
   const rows = await json(response);
   const eventIds = Array.isArray(rows) && Array.isArray(rows[0]?.event_ids) ? rows[0].event_ids : [];
@@ -133,13 +142,14 @@ async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterp
   return response.status === 200 && eventIds.includes(ownEventId) && !eventIds.includes(counterpartEventId);
 }
 
-export async function runSecurityProbe({ env = process.env, fetchImpl = fetch, write = console.error } = {}) {
+export async function runSecurityProbe({ env = process.env, fetchImpl = fetch, write = console.error, timeoutMs, setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout } = {}) {
   const baseUrl = normalizedUrl(env.SECURITY_TEST_SUPABASE_URL);
   const apiKey = env.SECURITY_TEST_ANON_KEY;
   const mode = env.SECURITY_TEST_MODE ?? "anon-only";
   const productionUrl = normalizedUrl(env.NEXT_PUBLIC_SUPABASE_URL);
+  const requestTimeoutMs = Number(timeoutMs ?? env.SECURITY_TEST_TIMEOUT_MS ?? 10_000);
 
-  if (!baseUrl || !apiKey || !["anon-only", "full"].includes(mode)) {
+  if (!baseUrl || !apiKey || !["anon-only", "full"].includes(mode) || !Number.isFinite(requestTimeoutMs) || requestTimeoutMs <= 0) {
     write("Security verification failed: invalid configuration.");
     return 1;
   }
@@ -150,7 +160,8 @@ export async function runSecurityProbe({ env = process.env, fetchImpl = fetch, w
   }
 
   try {
-    if (!(await checkAnonymous({ baseUrl, apiKey, fetchImpl }))) {
+    const requestOptions = { timeoutMs: requestTimeoutMs, setTimeoutImpl, clearTimeoutImpl };
+    if (!(await checkAnonymous({ baseUrl, apiKey, fetchImpl, requestOptions }))) {
       write("Security verification failed: anonymous access was not denied.");
       return 1;
     }
@@ -183,7 +194,7 @@ export async function runSecurityProbe({ env = process.env, fetchImpl = fetch, w
     }
 
     for (const user of users) {
-      if (!(await checkAuthenticatedUser({ baseUrl, apiKey, fetchImpl, ...user }))) {
+      if (!(await checkAuthenticatedUser({ baseUrl, apiKey, fetchImpl, requestOptions, ...user }))) {
         write("Security verification failed: authenticated access contract did not match.");
         return 1;
       }

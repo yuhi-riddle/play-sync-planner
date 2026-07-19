@@ -130,4 +130,66 @@ describe("database privilege verification script", () => {
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledTimes(22);
   });
+
+  it("rejects a full-mode relationship RPC response of true", async () => {
+    const fetchImpl = vi.fn(async (url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      const token = (init.headers as Record<string, string>).authorization;
+      if (!token) return response(403);
+
+      const userId = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()).sub;
+      const ownEventId = userId === userAId ? eventAId : eventBId;
+
+      if (url.endsWith("/list_owned_event_ids")) return response(200, [{ event_ids: [ownEventId], total_count: 1 }]);
+      if (url.endsWith("/is_event_owner") || url.endsWith("/is_joined_event_member")) {
+        return body.target_event_id === ownEventId ? response(200, true) : response(403);
+      }
+      if (url.endsWith("/have_shared_event")) return response(200, true);
+      return response(200, false);
+    });
+
+    const exitCode = await runSecurityProbe({
+      env: baseEnv({
+        SECURITY_TEST_MODE: "full",
+        SECURITY_TEST_USER_A_JWT: jwtFor(userAId),
+        SECURITY_TEST_USER_B_JWT: jwtFor(userBId),
+        SECURITY_TEST_USER_A_EVENT_ID: eventAId,
+        SECURITY_TEST_USER_B_EVENT_ID: eventBId
+      }),
+      fetchImpl,
+      write: vi.fn()
+    });
+
+    expect(exitCode).toBe(1);
+  });
+
+  it("aborts a hanging request when its timeout elapses", async () => {
+    let signal: AbortSignal | undefined;
+    const setTimeoutImpl = vi.fn((callback: () => void) => {
+      callback();
+      return 1;
+    });
+    const clearTimeoutImpl = vi.fn();
+    const fetchImpl = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      signal = init.signal ?? undefined;
+      if (signal?.aborted) {
+        reject(new DOMException("Aborted", "AbortError"));
+        return;
+      }
+      signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    }));
+
+    const exitCode = await runSecurityProbe({
+      env: baseEnv(),
+      fetchImpl,
+      write: vi.fn(),
+      timeoutMs: 1,
+      setTimeoutImpl,
+      clearTimeoutImpl
+    });
+
+    expect(exitCode).toBe(1);
+    expect(signal?.aborted).toBe(true);
+    expect(clearTimeoutImpl).toHaveBeenCalledWith(1);
+  }, 200);
 });
