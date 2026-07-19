@@ -341,9 +341,7 @@ begin
   left join lateral (
     select organizer_member.display_name
     from public.event_members as organizer_member
-    where organizer_member.event_id = invitation.event_id
-      and organizer_member.user_id = invitation.inviter_user_id
-      and organizer_member.status = 'joined'
+    where organizer_member.user_id = invitation.inviter_user_id
     order by organizer_member.created_at desc, organizer_member.event_id desc
     limit 1
   ) as organizer_member_name on true
@@ -392,7 +390,7 @@ begin
 
   v_month_start := date_trunc('month', p_month)::date;
   v_range_start := (v_month_start - 6)::timestamp at time zone 'Asia/Tokyo';
-  v_range_end := ((v_month_start + interval '1 month')::date + 6)::timestamp at time zone 'Asia/Tokyo';
+  v_range_end := ((v_month_start + interval '1 month')::date + 7)::timestamp at time zone 'Asia/Tokyo';
 
   return query
   select

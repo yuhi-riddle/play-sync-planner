@@ -21,6 +21,22 @@ function functionBody(sql: string, name: string) {
   return match![1];
 }
 
+function functionHeader(sql: string, name: string) {
+  const match = sql.match(
+    new RegExp(
+      `(create or replace function\\s+public\\.${name}\\([\\s\\S]*?)\\s+as \\$\\$`,
+      "i"
+    )
+  );
+
+  expect(match, `missing public.${name}`).not.toBeNull();
+  return match![1];
+}
+
+function hasHardenedDefinerSecurity(header: string) {
+  return /\bsecurity definer\b/i.test(header) && /set search_path = ''/i.test(header);
+}
+
 describe("bounded page query RPC migration", () => {
   it("declares the five page RPCs with their fixed signatures and return columns", () => {
     const sql = migration();
@@ -100,14 +116,53 @@ describe("bounded page query RPC migration", () => {
 
     expect(calendar).toContain("date_trunc('month', p_month)::date");
     expect(calendar).toContain("v_month_start - 6");
-    expect(calendar).toContain("v_month_start + interval '1 month'");
-    expect(calendar).toContain("+ 6");
     expect(calendar).toContain("candidate.start_at < v_range_end");
     expect(calendar).toContain("coalesce(candidate.end_at, candidate.start_at) >= v_range_start");
     expect(calendar).toContain("count(answer.id) filter (where answer.answer = 'yes')");
     expect(calendar).toContain("count(answer.id) filter (where answer.answer = 'maybe')");
     expect(calendar).toContain("count(answer.id) filter (where answer.answer = 'no')");
     expect(calendar).toContain("count(answer.id) filter (where answer.answer = 'unanswered')");
+  });
+
+  it("uses an exclusive calendar upper bound that includes the six following days", () => {
+    const calendar = functionBody(migration(), "list_calendar_items");
+
+    expect(calendar).toMatch(
+      /v_range_end := \(\(v_month_start \+ interval '1 month'\)::date \+ 7\)::timestamp at time zone 'Asia\/Tokyo';\s*[\s\S]*?candidate\.start_at < v_range_end/i
+    );
+  });
+
+  it("resolves invitation organizer names from nickname, then the latest membership name, then the default", () => {
+    const invitations = functionBody(migration(), "list_received_event_invitations");
+
+    expect(invitations).toContain(
+      "coalesce(nullif(btrim(organizer_profile.nickname), ''), nullif(btrim(organizer_member_name.display_name), ''), 'Madoiユーザー') as organizer_name"
+    );
+    expect(invitations).toMatch(
+      /left join lateral \(\s*select organizer_member\.display_name\s*from public\.event_members as organizer_member\s*where organizer_member\.user_id = invitation\.inviter_user_id\s*order by organizer_member\.created_at desc,\s*organizer_member\.event_id desc\s*limit 1\s*\) as organizer_member_name on true/i
+    );
+    expect(invitations).not.toContain("organizer_member.event_id = invitation.event_id");
+    expect(invitations).not.toContain("organizer_member.status = 'joined'");
+  });
+
+  it("does not let a later function header satisfy an earlier function's security check", () => {
+    const sql = `
+      create or replace function public.first()
+      returns void
+      language plpgsql
+      stable
+      as $$
+      create or replace function public.second()
+      returns void
+      language plpgsql
+      stable
+      security definer
+      set search_path = ''
+      as $$
+    `;
+
+    expect(hasHardenedDefinerSecurity(functionHeader(sql, "first"))).toBe(false);
+    expect(hasHardenedDefinerSecurity(functionHeader(sql, "second"))).toBe(true);
   });
 
   it("uses hardened definer functions with caller checks, safe grants, name fallbacks, and the message index", () => {
@@ -130,12 +185,9 @@ describe("bounded page query RPC migration", () => {
     expect(sql).toMatch(/^begin;[\s\S]*commit;\s*$/i);
     for (const name of functionNames) {
       const body = functionBody(sql, name);
-      expect(sql).toMatch(
-        new RegExp(
-          `create or replace function\\s+public\\.${name}\\([\\s\\S]*?language plpgsql\\s+stable\\s+security definer\\s+set search_path = ''`,
-          "i"
-        )
-      );
+      const header = functionHeader(sql, name);
+      expect(header).toMatch(/\bsecurity definer\b/i);
+      expect(header).toMatch(/set search_path = ''/i);
       expect(body).toContain("auth.uid()");
       expect(body).toMatch(/if v_actor is null then\s+raise exception 'Authentication required';\s+end if;/i);
     }
