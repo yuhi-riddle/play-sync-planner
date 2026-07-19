@@ -7,9 +7,14 @@ const migrationPath = resolve(
   process.cwd(),
   "supabase/migrations/020_event_list_performance_and_atomic_block.sql"
 );
+const hardeningMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/021_function_privilege_hardening.sql"
+);
 
 describe("event list performance and atomic block migration", () => {
   const migration = () => readFileSync(migrationPath, "utf8");
+  const hardeningMigration = () => readFileSync(hardeningMigrationPath, "utf8");
 
   it("returns ordered page ids and the full filtered count from one RPC", () => {
     const sql = migration();
@@ -45,16 +50,16 @@ describe("event list performance and atomic block migration", () => {
   });
 
   it("blocks and removes both directions of relationships in one database function", () => {
-    const sql = migration();
+    const sql = hardeningMigration();
     expect(sql).toContain("create or replace function public.block_user_atomic(target_user_id uuid)");
     expect(sql).toContain("insert into public.user_blocks");
     expect(sql).toContain("delete from public.user_connections");
     expect(sql).toContain("delete from public.user_favorites");
-    expect(sql).toContain("public.have_shared_event(current_user_id, target_user_id)");
+    expect(sql).toContain("private.have_shared_event(current_user_id, target_user_id)");
   });
 
   it("rejects unauthenticated, self, null, and unrelated block targets", () => {
-    const sql = migration();
+    const sql = hardeningMigration();
     expect(sql).toMatch(
       /if current_user_id is null then\s+raise exception 'Authentication required';\s+end if;/
     );
@@ -62,11 +67,11 @@ describe("event list performance and atomic block migration", () => {
       /if target_user_id is null or target_user_id = current_user_id then\s+raise exception 'Invalid block target';\s+end if;/
     );
     expect(sql).toMatch(
-      /if not public\.have_shared_event\(current_user_id, target_user_id\) then\s+raise exception using\s+errcode = 'PSP01',\s+message = 'A shared event is required';\s+end if;/
+      /if not private\.have_shared_event\(current_user_id, target_user_id\) then\s+raise exception using\s+errcode = 'PSP01',\s+message = 'A shared event is required';\s+end if;/
     );
   });
 
-  it("limits RPC execution to authenticated users and adds query indexes", () => {
+  it("keeps the list RPC restricted and adds query indexes", () => {
     const sql = migration();
     expect(sql.match(/security definer/g)).toHaveLength(2);
     expect(sql.match(/set search_path = public/g)).toHaveLength(2);
@@ -74,9 +79,13 @@ describe("event list performance and atomic block migration", () => {
     expect(sql).toContain("revoke all on function public.list_owned_event_ids(text, text, text, integer, bigint) from public");
     expect(sql).toContain("grant execute on function public.list_owned_event_ids(text, text, text, integer, bigint) to authenticated");
     expect(sql).not.toContain("grant execute on function public.list_owned_event_ids(text, text, text, integer, integer)");
-    expect(sql).toContain("revoke all on function public.block_user_atomic(uuid) from public");
-    expect(sql).toContain("grant execute on function public.block_user_atomic(uuid) to authenticated");
     expect(sql).toContain("events_owner_category_created_id_idx");
     expect(sql).toContain("plans_event_status_confirmed_idx");
+  });
+
+  it("keeps the refactored block RPC restricted to authenticated users", () => {
+    const sql = hardeningMigration();
+    expect(sql).toContain("revoke all on function public.block_user_atomic(uuid) from public");
+    expect(sql).toContain("grant execute on function public.block_user_atomic(uuid) to authenticated");
   });
 });
