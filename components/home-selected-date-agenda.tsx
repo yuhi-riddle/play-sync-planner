@@ -207,10 +207,10 @@ export function HomeSelectedDateAgenda({
   }
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     setGoogleState("loading");
 
-    fetch(`/api/google-calendar/freebusy?month=${activeMonth}`)
+    fetch(`/api/google-calendar/freebusy?month=${activeMonth}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("failed");
@@ -218,22 +218,21 @@ export function HomeSelectedDateAgenda({
         return (await response.json()) as GoogleCalendarResponse;
       })
       .then((response) => {
-        if (cancelled) {
+        if (controller.signal.aborted) {
           return;
         }
         setGoogleItems(googleItemsFromResponse(response));
         setGoogleState(response.connected ? "ready" : "disconnected");
       })
       .catch(() => {
-        if (cancelled) {
+        if (controller.signal.aborted) {
           return;
         }
-        setGoogleItems([]);
         setGoogleState("error");
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [activeMonth]);
 

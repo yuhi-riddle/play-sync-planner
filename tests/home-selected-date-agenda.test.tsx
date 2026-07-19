@@ -81,7 +81,7 @@ describe("HomeSelectedDateAgenda", () => {
       expect(screen.getByText("歯医者")).toBeInTheDocument();
     });
     expect(screen.queryByText("翌日の予定")).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith("/api/google-calendar/freebusy?month=2026-07");
+    expect(fetchMock).toHaveBeenCalledWith("/api/google-calendar/freebusy?month=2026-07", expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it("switches the selected date immediately and keeps the active notification filter", () => {

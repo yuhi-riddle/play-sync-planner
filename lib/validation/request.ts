@@ -3,6 +3,14 @@ import { z } from "zod";
 export const connectionCategorySchema = z.enum(["favorites", "mutual", "following", "shared", "blocked"]);
 export type ConnectionCategory = z.infer<typeof connectionCategorySchema>;
 
+export const calendarMonthSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+  .refine((value) => {
+    const [year, month] = value.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, 1)).getUTCMonth() === month - 1;
+  });
+
 const connectionCursorSchema = z.object({
   cursorAt: z.string().datetime({ offset: true }),
   cursorUserId: z.string().uuid()

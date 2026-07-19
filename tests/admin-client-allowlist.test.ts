@@ -8,7 +8,6 @@ const ADMIN_CLIENT_BASELINE_FILES = [
   "app/events/[eventId]/page.tsx",
   "app/invites/[token]/page.tsx",
   "app/plans/[planId]/settlement/page.tsx",
-  "app/plans/page.tsx",
   "app/s/[token]/answer/page.tsx",
   "app/s/[token]/settlement/page.tsx",
   "lib/actions/answers.ts",

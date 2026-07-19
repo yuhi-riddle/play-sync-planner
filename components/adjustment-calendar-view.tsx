@@ -195,22 +195,25 @@ export function AdjustmentCalendarView({
   candidates: AdjustmentCandidate[];
 }) {
   const [googleItems, setGoogleItems] = useState<HomeCalendarItem[]>([]);
+  const [googleItemsMonth, setGoogleItemsMonth] = useState<string | null>(null);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
+  const [refreshIndex, setRefreshIndex] = useState(0);
   const { year, month: monthNumber } = parseMonth(month);
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
   const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, candidates });
+  const visibleGoogleItems = googleItemsMonth === month ? googleItems : [];
   const googleCalendar = useMemo(
-    () => buildHomeCalendar({ year, month: monthNumber, selectedDateKey, items: googleItems }),
-    [googleItems, monthNumber, selectedDateKey, year]
+    () => buildHomeCalendar({ year, month: monthNumber, selectedDateKey, items: visibleGoogleItems }),
+    [monthNumber, selectedDateKey, visibleGoogleItems, year]
   );
   const timelineItems = sortTimelineItems(calendar.selectedCandidates, googleCalendar.selectedItems);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     setGoogleState("loading");
 
-    fetch(`/api/google-calendar/freebusy?month=${month}`)
+    fetch(`/api/google-calendar/freebusy?month=${month}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("failed");
@@ -218,24 +221,30 @@ export function AdjustmentCalendarView({
         return (await response.json()) as GoogleCalendarResponse;
       })
       .then((response) => {
-        if (cancelled) {
+        if (controller.signal.aborted) {
           return;
         }
         setGoogleItems(googleItemsFromResponse(response));
+        setGoogleItemsMonth(month);
         setGoogleState(response.connected ? "ready" : "disconnected");
       })
       .catch(() => {
-        if (cancelled) {
+        if (controller.signal.aborted) {
           return;
         }
-        setGoogleItems([]);
         setGoogleState("error");
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [month]);
+  }, [month, refreshIndex]);
+
+  function retryGoogleCalendar() {
+    if (googleState === "error") {
+      setRefreshIndex((value) => value + 1);
+    }
+  }
 
   return (
     <>
@@ -316,11 +325,21 @@ export function AdjustmentCalendarView({
             <p className="text-eyebrow uppercase text-pine">Timeline</p>
             <h2 className="mt-1 text-xl font-bold text-ink">{dateLabel(calendar.selectedDateKey)}</h2>
           </div>
-          <div className="text-sm text-muted">
+          <div className="text-sm text-muted" aria-live="polite">
             <p>○ 行ける / △ 微妙 / × 行けない</p>
             {googleState === "loading" ? <p className="text-xs text-muted">Google Calendarを確認中</p> : null}
             {googleState === "disconnected" ? <p className="text-xs text-muted">Google Calendarは未連携です</p> : null}
             {googleState === "error" ? <p className="text-xs text-clay-ink">Google Calendarを取得できませんでした</p> : null}
+            {googleState === "error" ? (
+              <button
+                type="button"
+                onClick={retryGoogleCalendar}
+                className="mt-2 min-h-11 rounded-full border border-line px-3 py-2 text-xs font-bold text-pine transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-clay"
+                aria-label="Google Calendarを再試行"
+              >
+                再試行
+              </button>
+            ) : null}
           </div>
         </div>
 

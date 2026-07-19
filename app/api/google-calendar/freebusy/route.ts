@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ connected: false, busy: [] });
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5_000);
+
   try {
     let accessToken = integration.encrypted_access_token ? decryptToken(integration.encrypted_access_token) : "";
 
@@ -53,22 +56,20 @@ export async function GET(request: NextRequest) {
     const busy = await fetchCalendarEvents({
       accessToken,
       calendarId: integration.calendar_id ?? "primary",
-      month
+      month,
+      signal: controller.signal
     });
 
     return NextResponse.json({ connected: true, busy });
-  } catch (error) {
-    // 握り潰すと 502 の原因が追えなくなる（トークン失効か復号失敗かの区別がつかない）
-    console.error("[google-calendar/freebusy] failed", error);
-
+  } catch {
     return NextResponse.json(
       {
         connected: true,
-        busy: [],
-        // 原因は開発時だけ返す。本番でクライアントに内部エラーを晒さない
-        ...(process.env.NODE_ENV === "production" ? {} : { debug: String(error) })
+        busy: []
       },
       { status: 502 }
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

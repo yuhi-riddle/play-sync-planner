@@ -76,11 +76,13 @@ export async function fetchCalendarEvents({
   accessToken,
   calendarId = "primary",
   month,
+  signal,
   fetchImpl = fetch
 }: {
   accessToken: string;
   calendarId?: string;
   month: string;
+  signal: AbortSignal;
   fetchImpl?: typeof fetch;
 }): Promise<CalendarEventRange[]> {
   const { timeMin, timeMax } = monthTimeRange(month);
@@ -94,6 +96,7 @@ export async function fetchCalendarEvents({
 
   const response = await fetchImpl(url.toString(), {
     method: "GET",
+    signal,
     headers: {
       Authorization: `Bearer ${accessToken}`
     }

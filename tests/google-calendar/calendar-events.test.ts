@@ -79,7 +79,8 @@ describe("calendar event helpers", () => {
       })
     })) as unknown as typeof fetch;
 
-    const result = await fetchCalendarEvents({ accessToken: "access-token", month: "2026-07", fetchImpl });
+    const controller = new AbortController();
+    const result = await fetchCalendarEvents({ accessToken: "access-token", month: "2026-07", signal: controller.signal, fetchImpl });
 
     expect(result).toEqual([
       {
@@ -93,6 +94,7 @@ describe("calendar event helpers", () => {
       expect.stringContaining("https://www.googleapis.com/calendar/v3/calendars/primary/events"),
       expect.objectContaining({
         method: "GET",
+        signal: controller.signal,
         headers: expect.objectContaining({ Authorization: "Bearer access-token" })
       })
     );
