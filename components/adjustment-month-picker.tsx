@@ -1,13 +1,17 @@
 "use client";
 
 import React from "react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 
 export function AdjustmentMonthPicker({ currentMonth, label }: { currentMonth: string; label: string }) {
   const router = useRouter();
   const [month, setMonth] = useState(currentMonth);
+
+  useEffect(() => {
+    setMonth(currentMonth);
+  }, [currentMonth]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

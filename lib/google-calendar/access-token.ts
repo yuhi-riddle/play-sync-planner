@@ -18,17 +18,19 @@ function isExpired(value: string | null) {
 export async function resolveGoogleCalendarAccessToken({
   supabase,
   userId,
-  integration
+  integration,
+  signal
 }: {
   supabase: CalendarSupabaseClient;
   userId: string;
   integration: CalendarIntegrationRow;
+  signal?: AbortSignal;
 }) {
   let accessToken = integration.encrypted_access_token ? decryptToken(integration.encrypted_access_token) : "";
 
   if (!accessToken || isExpired(integration.token_expires_at)) {
     const refreshToken = decryptToken(integration.encrypted_refresh_token);
-    const refreshed = await refreshGoogleCalendarAccessToken({ refreshToken });
+    const refreshed = await refreshGoogleCalendarAccessToken({ refreshToken, signal });
     accessToken = refreshed.access_token;
     const { error } = await supabase
       .from("calendar_integrations")

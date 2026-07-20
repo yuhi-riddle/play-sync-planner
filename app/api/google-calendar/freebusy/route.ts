@@ -4,20 +4,21 @@ import { fetchCalendarEvents } from "@/lib/google-calendar/calendar-events";
 import { refreshGoogleCalendarAccessToken } from "@/lib/google-calendar/oauth";
 import { decryptToken, encryptToken } from "@/lib/google-calendar/token-crypto";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { calendarMonthSchema } from "@/lib/validation/request";
 
 function isExpired(value: string | null) {
   return !value || new Date(value).getTime() <= Date.now() + 60_000;
 }
 
 export async function GET(request: NextRequest) {
+  const month = request.nextUrl.searchParams.get("month") ?? "";
+  if (!calendarMonthSchema.safeParse(month).success) {
+    return NextResponse.json({ connected: true, busy: [] }, { status: 400 });
+  }
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ connected: false, busy: [] });
-  }
-
-  const month = request.nextUrl.searchParams.get("month") ?? "";
-  if (!/^\d{4}-\d{2}$/.test(month)) {
-    return NextResponse.json({ connected: true, busy: [] }, { status: 400 });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     if (!accessToken || isExpired(integration.token_expires_at)) {
       const refreshToken = decryptToken(integration.encrypted_refresh_token);
-      const refreshed = await refreshGoogleCalendarAccessToken({ refreshToken });
+      const refreshed = await refreshGoogleCalendarAccessToken({ refreshToken, signal: controller.signal });
       accessToken = refreshed.access_token;
       await supabase
         .from("calendar_integrations")

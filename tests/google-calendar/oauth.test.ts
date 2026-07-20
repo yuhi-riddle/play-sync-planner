@@ -57,8 +57,13 @@ describe("google calendar oauth", () => {
       json: async () => ({ access_token: "new-access", expires_in: 3600, scope: CALENDAR_EVENTS_SCOPE })
     })) as unknown as typeof fetch;
 
-    const result = await refreshGoogleCalendarAccessToken({ refreshToken: "refresh", fetchImpl });
+    const controller = new AbortController();
+    const result = await refreshGoogleCalendarAccessToken({ refreshToken: "refresh", signal: controller.signal, fetchImpl });
 
     expect(result.access_token).toBe("new-access");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://oauth2.googleapis.com/token",
+      expect.objectContaining({ signal: controller.signal })
+    );
   });
 });

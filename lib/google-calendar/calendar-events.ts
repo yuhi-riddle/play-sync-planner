@@ -1,5 +1,6 @@
 import type { BusyRange } from "@/lib/domain/calendar-availability";
 import type { ConfirmedCalendarEvent } from "@/lib/domain/calendar-sync";
+import { calendarMonthSchema } from "@/lib/validation/request";
 
 export type CalendarEventRange = BusyRange & {
   title: string | null;
@@ -58,17 +59,18 @@ export function normalizeCalendarEventsResponse(response: GoogleCalendarEventsRe
 }
 
 export function monthTimeRange(month: string) {
-  const match = /^(\d{4})-(\d{2})$/.exec(month);
-  if (!match) {
+  const parsed = calendarMonthSchema.safeParse(month);
+  if (!parsed.success) {
     throw new Error("month must be YYYY-MM");
   }
 
-  const year = Number(match[1]);
-  const monthIndex = Number(match[2]) - 1;
+  const [year, monthNumber] = parsed.data.split("-").map(Number);
+  const monthIndex = monthNumber - 1;
+  const tokyoOffsetMilliseconds = 9 * 60 * 60 * 1000;
 
   return {
-    timeMin: new Date(Date.UTC(year, monthIndex, 1)).toISOString(),
-    timeMax: new Date(Date.UTC(year, monthIndex + 1, 1)).toISOString()
+    timeMin: new Date(Date.UTC(year, monthIndex, 1) - tokyoOffsetMilliseconds).toISOString(),
+    timeMax: new Date(Date.UTC(year, monthIndex + 1, 1) - tokyoOffsetMilliseconds).toISOString()
   };
 }
 

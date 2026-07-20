@@ -41,11 +41,12 @@ export function buildGoogleCalendarAuthUrl({
   return url.toString();
 }
 
-async function postToken(body: URLSearchParams, fetchImpl: typeof fetch): Promise<GoogleTokenResponse> {
+async function postToken(body: URLSearchParams, fetchImpl: typeof fetch, signal?: AbortSignal): Promise<GoogleTokenResponse> {
   const response = await fetchImpl("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
+    body,
+    ...(signal ? { signal } : {})
   });
 
   if (!response.ok) {
@@ -76,9 +77,11 @@ export async function exchangeGoogleCalendarCode({
 
 export async function refreshGoogleCalendarAccessToken({
   refreshToken,
+  signal,
   fetchImpl = fetch
 }: {
   refreshToken: string;
+  signal?: AbortSignal;
   fetchImpl?: typeof fetch;
 }): Promise<GoogleTokenResponse> {
   return postToken(
@@ -88,6 +91,7 @@ export async function refreshGoogleCalendarAccessToken({
       client_secret: requireEnv("GOOGLE_CALENDAR_CLIENT_SECRET"),
       grant_type: "refresh_token"
     }),
-    fetchImpl
+    fetchImpl,
+    signal
   );
 }

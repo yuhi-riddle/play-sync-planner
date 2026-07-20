@@ -58,8 +58,8 @@ describe("calendar event helpers", () => {
 
   it("builds an inclusive month query range", () => {
     expect(monthTimeRange("2026-07")).toEqual({
-      timeMin: "2026-07-01T00:00:00.000Z",
-      timeMax: "2026-08-01T00:00:00.000Z"
+      timeMin: "2026-06-30T15:00:00.000Z",
+      timeMax: "2026-07-31T15:00:00.000Z"
     });
   });
 
