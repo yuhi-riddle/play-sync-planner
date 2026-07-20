@@ -1,11 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
+import { expect, it } from "vitest";
+
 const ADMIN_CLIENT_BASELINE_FILES = [
   // /connections uses the session/RLS client and is intentionally excluded from this service-role baseline.
   "app/api/cron/notifications/route.ts",
   "app/api/events/[eventId]/availability/route.ts",
-  "app/events/[eventId]/page.tsx",
   "app/invites/[token]/page.tsx",
   "app/plans/[planId]/settlement/page.tsx",
   "app/s/[token]/answer/page.tsx",
