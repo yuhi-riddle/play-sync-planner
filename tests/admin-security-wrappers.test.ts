@@ -7,6 +7,7 @@ const { createSupabaseAdminClient } = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient }));
 
 import { getEventCalendarIntegrations } from "@/lib/server/admin/google-token-store";
+import { recordWebVital } from "@/lib/server/admin/cron-notifications";
 import { recordPublicSettlementPayment } from "@/lib/server/admin/public-settlement";
 
 const token = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -88,6 +89,30 @@ describe("bounded security admin wrappers", () => {
     expect(rpc).toHaveBeenCalledWith("get_event_calendar_integrations", {
       p_event_id: eventId,
       p_owner_user_id: ownerUserId
+    });
+  });
+
+  it("records a web vital only through its bounded service RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 0, error: null });
+    const from = vi.fn(() => {
+      throw new Error("web vital wrapper must not build arbitrary table queries");
+    });
+    createSupabaseAdminClient.mockReturnValue({ from, rpc });
+
+    await expect(recordWebVital({
+      page: "events",
+      name: "INP",
+      value: 180,
+      device: "desktop"
+    }, "a".repeat(64))).resolves.toBe(0);
+
+    expect(from).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("record_web_vital", {
+      page_template: "events",
+      metric_name: "INP",
+      metric_value: 180,
+      device_class: "desktop",
+      subject_hash: `\\x${"a".repeat(64)}`
     });
   });
 });

@@ -4,6 +4,7 @@ import {
   type PlanNotificationPlan
 } from "@/lib/domain/site-notifications";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import type { WebVitalInput } from "@/lib/domain/web-vitals";
 
 type RetentionOperation =
   | "purge_expired_security_data"
@@ -24,6 +25,34 @@ export class CronRetentionError extends Error {
     super("保持期限を過ぎたデータを削除できませんでした。");
     this.name = "CronRetentionError";
   }
+}
+
+function requireSubjectHash(subjectHash: string) {
+  if (!/^[0-9a-f]{64}$/i.test(subjectHash)) {
+    throw new Error("Invalid performance measurement subject");
+  }
+  return `\\x${subjectHash.toLowerCase()}`;
+}
+
+export async function recordWebVital(
+  input: WebVitalInput,
+  subjectHash: string
+): Promise<number> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.rpc("record_web_vital", {
+    page_template: input.page,
+    metric_name: input.name,
+    metric_value: input.value,
+    device_class: input.device,
+    subject_hash: requireSubjectHash(subjectHash)
+  });
+  if (error) throw new Error("Performance measurement unavailable");
+
+  const retryAfter = Number(data);
+  if (!Number.isSafeInteger(retryAfter) || retryAfter < 0 || retryAfter > 60) {
+    throw new Error("Invalid performance measurement result");
+  }
+  return retryAfter;
 }
 
 export async function purgeCronRetention(): Promise<void> {

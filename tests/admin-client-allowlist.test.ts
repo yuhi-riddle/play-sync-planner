@@ -28,7 +28,7 @@ function sourceFilesUsing(needle: string) {
     .map((path) => relative(process.cwd(), path).replaceAll("\\", "/"));
 }
 
-it("allows the service-role client only inside five bounded admin modules", () => {
+it("allows the service-role client only inside six bounded admin modules", () => {
   expect(sourceFilesUsing("createSupabaseAdminClient").sort()).toEqual([...ADMIN_CLIENT_BASELINE_FILES].sort());
 });
 

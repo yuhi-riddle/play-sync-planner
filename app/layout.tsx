@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AuthNav } from "@/components/auth-nav";
 import { MobileEventFab } from "@/components/mobile-event-fab";
 import { PrimaryNav } from "@/components/primary-nav";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { brand } from "@/lib/brand";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="ja">
       <body>
+        <WebVitalsReporter />
         <a
           href="#main-content"
           className="fixed left-4 top-4 z-[60] -translate-y-24 rounded-full bg-ink px-4 py-2 text-body font-bold text-white shadow-lift transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
