@@ -201,8 +201,6 @@ describe("safe server timing", () => {
 
     expect(safeLog).toHaveBeenCalledWith({
       operation: "performance.web_vital.record",
-      code: "completed",
-      status: 200,
       durationMs: expect.any(Number)
     });
     expect(JSON.stringify(safeLog.mock.calls)).not.toContain("private-result");
@@ -216,9 +214,24 @@ describe("safe server timing", () => {
 
     expect(safeLog).toHaveBeenCalledWith(expect.objectContaining({
       operation: "performance.web_vital.record",
-      code: "failed",
-      status: 500
+      durationMs: expect.any(Number)
     }));
+    expect(safeLog.mock.calls.at(-1)?.[0]).not.toHaveProperty("code");
+    expect(safeLog.mock.calls.at(-1)?.[0]).not.toHaveProperty("status");
     expect(JSON.stringify(safeLog.mock.calls)).not.toContain("must-not-be-logged");
+  });
+
+  it.each([
+    "events.list",
+    "calendar.list",
+    "connections.load",
+    "event-detail.load"
+  ] as const)("allows the bounded page-load operation %s", async (operation) => {
+    await timed(operation, async () => undefined);
+
+    expect(safeLog).toHaveBeenLastCalledWith({
+      operation,
+      durationMs: expect.any(Number)
+    });
   });
 });

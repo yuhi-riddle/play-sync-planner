@@ -2,6 +2,9 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+const { safeLog } = vi.hoisted(() => ({ safeLog: vi.fn() }));
+vi.mock("@/lib/server/safe-log", () => ({ safeLog }));
+
 import ConnectionsLoading from "@/app/connections/loading";
 import { loadConnectionsPageData } from "@/lib/connections/page-data";
 
@@ -54,6 +57,10 @@ describe("connections page data", () => {
       counts: { mutual: 1 },
       invitations: [{ id: "invite", eventTitle: "会" }],
       items: [{ userId: row.user_id }]
+    });
+    expect(safeLog).toHaveBeenCalledWith({
+      operation: "connections.load",
+      durationMs: expect.any(Number)
     });
   });
 

@@ -1,9 +1,18 @@
 import { safeLog } from "@/lib/server/safe-log";
 
-export type TimedOperation = "performance.web_vital.record";
+export type TimedOperation =
+  | "performance.web_vital.record"
+  | "events.list"
+  | "calendar.list"
+  | "connections.load"
+  | "event-detail.load";
 
 const timedOperations = new Set<TimedOperation>([
-  "performance.web_vital.record"
+  "performance.web_vital.record",
+  "events.list",
+  "calendar.list",
+  "connections.load",
+  "event-detail.load"
 ]);
 
 export async function timed<T>(
@@ -15,20 +24,12 @@ export async function timed<T>(
   }
 
   const startedAt = performance.now();
-  let code = "completed";
-  let status = 200;
 
   try {
     return await fn();
-  } catch (error) {
-    code = "failed";
-    status = 500;
-    throw error;
   } finally {
     safeLog({
       operation,
-      code,
-      status,
       durationMs: Math.max(0, Math.round(performance.now() - startedAt))
     });
   }

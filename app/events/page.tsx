@@ -20,6 +20,7 @@ import {
   type EventListItem
 } from "@/lib/event-filter";
 import { formatDate, formatDateTimeRange } from "@/lib/format";
+import { timed } from "@/lib/server/timing";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -108,26 +109,29 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   let totalItems = visibleDraft ? 1 : 0;
 
   if (query.status !== "draft") {
-    const requestedOffset = (query.page - 1) * query.pageSize;
-    const { data: rpcRows, error: rpcError } = await supabase.rpc("list_owned_event_ids", {
-      p_filter: query.status,
-      p_category: query.category,
-      p_sort: query.sort,
-      p_limit: query.pageSize,
-      p_offset: requestedOffset
-    });
-    if (rpcError) throw new Error(rpcError.message);
+    const result = await timed("events.list", async () => {
+      const requestedOffset = (query.page - 1) * query.pageSize;
+      const { data: rpcRows, error: rpcError } = await supabase.rpc("list_owned_event_ids", {
+        p_filter: query.status,
+        p_category: query.category,
+        p_sort: query.sort,
+        p_limit: query.pageSize,
+        p_offset: requestedOffset
+      });
+      if (rpcError) throw new Error(rpcError.message);
 
-    const rpcRow = (rpcRows?.[0] ?? null) as EventListRpcRow | null;
-    const eventIds = rpcRow?.event_ids ?? [];
-    totalItems = Number(rpcRow?.total_count ?? 0);
+      const rpcRow = (rpcRows?.[0] ?? null) as EventListRpcRow | null;
+      const eventIds = rpcRow?.event_ids ?? [];
+      const resultTotalItems = Number(rpcRow?.total_count ?? 0);
+      const requestedPagination = getEventListPagination(resultTotalItems, query.pageSize, query.page);
+      if (requestedPagination.page !== query.page) {
+        redirect(buildEventListHref(query, requestedPagination.page));
+      }
 
-    const requestedPagination = getEventListPagination(totalItems, query.pageSize, query.page);
-    if (requestedPagination.page !== query.page) {
-      redirect(buildEventListHref(query, requestedPagination.page));
-    }
+      if (eventIds.length === 0) {
+        return { eventRows: [] as EventRow[], totalItems: resultTotalItems };
+      }
 
-    if (eventIds.length > 0) {
       const { data: pageRows, error: pageError } = await supabase
         .from("events")
         .select(
@@ -137,11 +141,16 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       if (pageError) throw new Error(pageError.message);
 
       const rowsById = new Map(((pageRows ?? []) as EventRow[]).map((event) => [event.id, event]));
-      eventRows = eventIds.flatMap((eventId) => {
-        const event = rowsById.get(eventId);
-        return event ? [event] : [];
-      });
-    }
+      return {
+        eventRows: eventIds.flatMap((eventId) => {
+          const event = rowsById.get(eventId);
+          return event ? [event] : [];
+        }),
+        totalItems: resultTotalItems
+      };
+    });
+    eventRows = result.eventRows;
+    totalItems = result.totalItems;
   }
 
   const pagination = getEventListPagination(totalItems, query.pageSize, query.page);

@@ -226,6 +226,19 @@ describe("safe route errors and logs", () => {
     }));
     info.mockRestore();
   });
+
+  it("logs timing entries with only operation and duration", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    safeLog({ operation: "events.list", durationMs: 41 });
+
+    expect(info).toHaveBeenCalledWith(JSON.stringify({
+      operation: "events.list",
+      durationMs: 41
+    }));
+    expect(info.mock.calls[0]?.[0]).not.toContain("code");
+    expect(info.mock.calls[0]?.[0]).not.toContain("status");
+    info.mockRestore();
+  });
 });
 
 if (false) {

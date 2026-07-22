@@ -4,8 +4,9 @@ import React from "react";
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient } = vi.hoisted(() => ({
-  createSupabaseServerClient: vi.fn()
+const { createSupabaseServerClient, timed } = vi.hoisted(() => ({
+  createSupabaseServerClient: vi.fn(),
+  timed: vi.fn(async (_operation: string, fn: () => Promise<unknown>) => fn())
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -16,6 +17,7 @@ vi.mock("@/components/adjustment-calendar-view", () => ({
   AdjustmentCalendarView: ({ month, candidates }: { month: string; candidates: unknown[] }) =>
     React.createElement("div", { "data-month": month, "data-candidates": candidates.length })
 }));
+vi.mock("@/lib/server/timing", () => ({ timed }));
 
 import PlansPage from "@/app/plans/page";
 
@@ -37,6 +39,7 @@ describe("PlansPage month-scoped calendar data", () => {
 
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith("list_calendar_items", { p_month: "2026-07-01" });
+    expect(timed).toHaveBeenCalledWith("calendar.list", expect.any(Function));
   });
 
   it("falls back to the current Tokyo month for an invalid month", async () => {

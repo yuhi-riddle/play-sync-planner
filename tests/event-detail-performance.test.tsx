@@ -3,6 +3,9 @@ import { resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+const { safeLog } = vi.hoisted(() => ({ safeLog: vi.fn() }));
+vi.mock("@/lib/server/safe-log", () => ({ safeLog }));
+
 import { loadEventDetailData } from "@/lib/event-detail-data";
 
 const eventPagePath = resolve(process.cwd(), "app/events/[eventId]/page.tsx");
@@ -69,6 +72,10 @@ describe("event detail performance boundary", () => {
     expect(result?.event.title).toBe("夏ライブ");
     expect(result?.chat.error).toBeTruthy();
     expect(messagesQuery.limit).toHaveBeenCalledWith(51);
+    expect(safeLog).toHaveBeenCalledWith({
+      operation: "event-detail.load",
+      durationMs: expect.any(Number)
+    });
   });
 
   it("keeps the overview available and exposes chat retry when membership lookup fails", async () => {

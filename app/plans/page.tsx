@@ -4,6 +4,7 @@ import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
 import { ButtonLink, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
+import { timed } from "@/lib/server/timing";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 import { calendarMonthSchema } from "@/lib/validation/request";
 
@@ -106,7 +107,10 @@ export default async function PlansPage({
     );
   }
 
-  const { data } = await supabase.rpc("list_calendar_items", { p_month: `${currentMonth}-01` });
+  const { data } = await timed(
+    "calendar.list",
+    async () => supabase.rpc("list_calendar_items", { p_month: `${currentMonth}-01` })
+  );
   const candidates = ((data ?? []) as CalendarItemRow[]).map(toCandidate);
 
   return (

@@ -1,4 +1,5 @@
 import type { EventMessage } from "@/lib/domain/event-chat";
+import { timed } from "@/lib/server/timing";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type EventRow = {
@@ -101,7 +102,15 @@ async function loadInitialChat(supabase: EventDetailSupabase, eventId: string, c
   };
 }
 
-export async function loadEventDetailData({
+export function loadEventDetailData(input: {
+  supabase: EventDetailSupabase;
+  eventId: string;
+  currentUserId: string | null;
+}): Promise<EventDetailData | null> {
+  return timed("event-detail.load", () => loadEventDetailDataUntimed(input));
+}
+
+async function loadEventDetailDataUntimed({
   supabase,
   eventId,
   currentUserId

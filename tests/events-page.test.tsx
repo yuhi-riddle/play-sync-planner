@@ -2,9 +2,10 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, redirect } = vi.hoisted(() => ({
+const { createSupabaseServerClient, redirect, timed } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  redirect: vi.fn()
+  redirect: vi.fn(),
+  timed: vi.fn(async (_operation: string, fn: () => Promise<unknown>) => fn())
 }));
 
 vi.mock("next/navigation", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   hasSupabaseEnv: () => true
 }));
+vi.mock("@/lib/server/timing", () => ({ timed }));
 
 import EventsPage from "@/app/events/page";
 
@@ -82,6 +84,7 @@ describe("EventsPage", () => {
 
     expect(screen.getByText("下書き 1件")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "夏ライブ" })).toBeInTheDocument();
+    expect(timed).toHaveBeenCalledWith("events.list", expect.any(Function));
   });
 
   it("shows one concrete state and keeps the event card concise", async () => {

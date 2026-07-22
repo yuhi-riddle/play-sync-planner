@@ -5,6 +5,7 @@ import {
   encodeConnectionCursor,
   type ConnectionCategory
 } from "@/lib/validation/request";
+import { timed } from "@/lib/server/timing";
 
 const pageSize = 20;
 
@@ -44,7 +45,11 @@ function toCandidate(row: ConnectionRow): ConnectionCandidate {
   };
 }
 
-export async function loadConnectionsPageData(client: ConnectionsPageRpcClient, category: ConnectionCategory) {
+export function loadConnectionsPageData(client: ConnectionsPageRpcClient, category: ConnectionCategory) {
+  return timed("connections.load", () => loadConnectionsPageDataUntimed(client, category));
+}
+
+async function loadConnectionsPageDataUntimed(client: ConnectionsPageRpcClient, category: ConnectionCategory) {
   const [countsResult, invitationsResult, connectionsResult] = await Promise.all([
     client.rpc("get_connection_counts"),
     client.rpc("list_received_event_invitations", { p_limit: pageSize }),
