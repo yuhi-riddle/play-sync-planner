@@ -5,10 +5,42 @@ import {
 } from "@/lib/domain/site-notifications";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
+type RetentionOperation =
+  | "purge_expired_security_data"
+  | "purge_expired_web_vitals";
+
 export class CronNotificationsError extends Error {
   constructor() {
     super("通知を作成できませんでした。");
     this.name = "CronNotificationsError";
+  }
+}
+
+export class CronRetentionError extends Error {
+  constructor(
+    readonly operation: RetentionOperation,
+    readonly databaseCode: string
+  ) {
+    super("保持期限を過ぎたデータを削除できませんでした。");
+    this.name = "CronRetentionError";
+  }
+}
+
+export async function purgeCronRetention(): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const operations: RetentionOperation[] = [
+    "purge_expired_security_data",
+    "purge_expired_web_vitals"
+  ];
+
+  for (const operation of operations) {
+    const { error } = await supabase.rpc(operation);
+    if (error) {
+      const databaseCode = /^[A-Z0-9]{5,10}$/.test(error.code ?? "")
+        ? error.code
+        : "database_error";
+      throw new CronRetentionError(operation, databaseCode);
+    }
   }
 }
 

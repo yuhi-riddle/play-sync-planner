@@ -9,4 +9,10 @@ describe("Next.js upload configuration", () => {
 
     expect(config).toContain('bodySizeLimit: "3mb"');
   });
+
+  it("does not advertise the Next.js runtime", () => {
+    const config = readFileSync(resolve(process.cwd(), "next.config.ts"), "utf8");
+
+    expect(config).toContain("poweredByHeader: false");
+  });
 });

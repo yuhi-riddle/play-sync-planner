@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { createCronNotifications } from "@/lib/server/admin/cron-notifications";
+import {
+  CronRetentionError,
+  purgeCronRetention
+} from "@/lib/server/admin/cron-notifications";
 import { isAuthorizedCron } from "@/lib/server/cron-auth";
 import { safeLog } from "@/lib/server/safe-log";
 import { hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const startedAt = Date.now();
+
   if (!process.env.CRON_SECRET) {
     safeLog({
-      operation: "cron.notifications",
+      operation: "cron.retention",
       code: "not_configured",
       status: 503,
       durationMs: Date.now() - startedAt
@@ -22,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   if (!isAuthorizedCron(request)) {
     safeLog({
-      operation: "cron.notifications",
+      operation: "cron.retention",
       code: "unauthorized",
       status: 401,
       durationMs: Date.now() - startedAt
@@ -32,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   if (!hasSupabaseAdminEnv()) {
     safeLog({
-      operation: "cron.notifications",
+      operation: "cron.retention",
       code: "admin_env_missing",
       status: 500,
       durationMs: Date.now() - startedAt
@@ -44,15 +48,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const created = await createCronNotifications(new Date());
-    return NextResponse.json({ created });
-  } catch {
+    await purgeCronRetention();
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const retentionError = error instanceof CronRetentionError ? error : null;
     safeLog({
-      operation: "cron.notifications",
-      code: "database_error",
+      operation: retentionError
+        ? `cron.retention.${retentionError.operation}`
+        : "cron.retention",
+      code: retentionError?.databaseCode ?? "database_error",
       status: 500,
       durationMs: Date.now() - startedAt
     });
-    return NextResponse.json({ error: "通知を作成できませんでした。" }, { status: 500 });
+    return NextResponse.json(
+      { error: "保持期限を過ぎたデータを削除できませんでした。" },
+      { status: 500 }
+    );
   }
 }
