@@ -4,6 +4,7 @@ import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
+  canonicalizePerformanceUrl,
   requirePerfValue,
   safePerformanceConfig,
   writeJsonArtifact
@@ -18,40 +19,39 @@ export const LIGHTHOUSE_CPU_SLOWDOWN = 4;
 export const LIGHTHOUSE_LCP_LIMIT_MS = 3_000;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-function safeAppOrigin(env) {
-  const rawValue = requirePerfValue(env, "PERF_APP_URL");
-  let url;
+function knownAppOrigin(value, name) {
+  if (typeof value !== "string" || !value.trim()) return null;
   try {
-    url = new URL(rawValue);
+    return canonicalizePerformanceUrl(value).canonicalOrigin;
   } catch {
-    throw new Error("PERF_APP_URL is malformed.");
+    throw new Error(`${name} is malformed.`);
   }
-  const isLocal = LOCAL_HOSTS.has(url.hostname);
-  if (
-    (url.protocol !== "https:" && !(isLocal && url.protocol === "http:")) ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    (url.pathname !== "/" && url.pathname !== "")
-  ) {
-    throw new Error("PERF_APP_URL is malformed.");
+}
+
+function expectedHostname(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase().replace(/\.$/, "");
+  return /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(normalized) ? normalized : null;
+}
+
+export function safeLighthouseTarget(env) {
+  const rawValue = requirePerfValue(env, "PERF_APP_URL");
+  const target = canonicalizePerformanceUrl(rawValue);
+  const knownTargets = [
+    knownAppOrigin(env.NEXT_PUBLIC_SITE_URL, "NEXT_PUBLIC_SITE_URL"),
+    knownAppOrigin(env.PERF_PRODUCTION_APP_URL, "PERF_PRODUCTION_APP_URL")
+  ].filter(Boolean);
+
+  if (!target.isLoopback && knownTargets.length === 0) {
+    throw new Error("A known public or production application URL is required for remote Lighthouse runs.");
   }
-  if (!isLocal && env.PERF_EXPECTED_APP_HOST !== url.hostname) {
+  if (!target.isLoopback && expectedHostname(env.PERF_EXPECTED_APP_HOST) !== target.hostname) {
     throw new Error("PERF_EXPECTED_APP_HOST must exactly match the remote test application.");
   }
-  if (env.PERF_PRODUCTION_APP_URL) {
-    let productionOrigin;
-    try {
-      productionOrigin = new URL(env.PERF_PRODUCTION_APP_URL).origin;
-    } catch {
-      throw new Error("PERF_PRODUCTION_APP_URL is malformed.");
-    }
-    if (productionOrigin === url.origin) throw new Error("Production Lighthouse runs are not allowed.");
+  if (knownTargets.includes(target.canonicalOrigin)) {
+    throw new Error("Lighthouse target must not reuse a public or production application URL.");
   }
-  return url.origin;
+  return target.normalizedOrigin;
 }
 
 function routeDefinitions(env) {
@@ -119,7 +119,7 @@ async function runOnce(options) {
 export async function runLighthouseChecks({ env = process.env, write = console.error } = {}) {
   try {
     const config = safePerformanceConfig(env);
-    const appOrigin = safeAppOrigin(env);
+    const appOrigin = safeLighthouseTarget(env);
     const userDataDir = requirePerfValue(env, "PERF_CHROME_USER_DATA_DIR");
     const profileDirectory = requirePerfValue(env, "PERF_CHROME_PROFILE_DIRECTORY");
     const results = [];
@@ -140,7 +140,7 @@ export async function runLighthouseChecks({ env = process.env, write = console.e
     await writeJsonArtifact("lighthouse.json", {
       schemaVersion: 1,
       runId: config.runId,
-      targetRef: config.projectRef,
+      targetRef: config.targetRef,
       measuredAt: new Date().toISOString(),
       runsPerRoute: LIGHTHOUSE_RUNS,
       throttling: {

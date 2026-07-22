@@ -158,7 +158,7 @@ export async function runRpcBenchmarks({ env = process.env, write = console.erro
     await writeJsonArtifact("rpc-benchmark.json", {
       schemaVersion: 1,
       runId: config.runId,
-      targetRef: config.projectRef,
+      targetRef: config.targetRef,
       measuredAt: new Date().toISOString(),
       thresholdMs: RPC_P95_LIMIT_MS,
       passed,

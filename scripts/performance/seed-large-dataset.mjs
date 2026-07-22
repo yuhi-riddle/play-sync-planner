@@ -34,7 +34,7 @@ function emptyManifest(config) {
   return {
     schemaVersion: 1,
     runId: config.runId,
-    targetRef: config.projectRef,
+    targetRef: config.targetRef,
     label: performanceLabel(config.runId, "dataset"),
     createdAt: new Date().toISOString(),
     complete: false,
@@ -70,14 +70,13 @@ async function mapInGroups(values, size, operation) {
 
 async function createCandidateUsers(client, config, manifest) {
   const indexes = Array.from({ length: DATASET_TARGETS.connectionCandidates }, (_, index) => index);
-  const label = performanceLabel(config.runId, "connection candidate");
   for (const group of chunkRows(indexes, 25)) {
     const outcomes = await Promise.allSettled(group.map(async (index) => {
       const { data, error } = await client.auth.admin.createUser({
         email: `perf-${config.runId}-${index}-${randomUUID()}@example.invalid`,
         password: `${randomUUID()}-${randomUUID()}`,
         email_confirm: true,
-        user_metadata: { display_name: `${label} ${index}` },
+        user_metadata: { full_name: performanceNickname(config.runId, index) },
         app_metadata: { performance_run_id: config.runId }
       });
       if (error || !data.user?.id) throw new Error("Performance test user creation failed.");
@@ -91,6 +90,13 @@ async function createCandidateUsers(client, config, manifest) {
     }
   }
   return manifest.ids.users;
+}
+
+export function performanceNickname(runId, index) {
+  if (!Number.isSafeInteger(index) || index < 0) throw new Error("Invalid performance profile index.");
+  const nickname = performanceLabel(runId, `c${index.toString(36)}`);
+  if (nickname.length > 40) throw new Error("Performance profile nickname exceeds 40 characters.");
+  return nickname;
 }
 
 function buildEvents(ownerUserId, runId) {
@@ -143,7 +149,7 @@ async function seed(client, config, env) {
   const candidateUserIds = await createCandidateUsers(client, config, manifest);
   const profiles = candidateUserIds.map((userId, index) => ({
     user_id: userId,
-    nickname: performanceLabel(config.runId, `candidate ${index}`)
+    nickname: performanceNickname(config.runId, index)
   }));
   for (const batch of chunkRows(profiles)) {
     const { error } = await client.from("profiles").upsert(batch, { onConflict: "user_id" });
@@ -206,7 +212,7 @@ async function cleanup(client, config) {
     assertExactCleanupIds({
       runId: config.runId,
       manifestRunId: manifest.runId,
-      targetRef: config.projectRef,
+      targetRef: config.targetRef,
       manifestTargetRef: manifest.targetRef,
       ids: manifest.ids?.[name]
     })
