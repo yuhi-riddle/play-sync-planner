@@ -69,6 +69,15 @@ describe("rate limits and security audit migration", () => {
     expect(sql).not.toMatch(/grant\s+(?:select|insert|update|delete|all).*private\.(?:rate_limit_buckets|security_audit_logs)/i);
   });
 
+  it("preserves private schema usage required by existing RLS helpers", () => {
+    const sql = migration();
+
+    expect(sql).toContain("grant usage on schema private to authenticated;");
+    expect(sql).toContain("grant usage on schema private to service_role;");
+    expect(sql).not.toContain("revoke all on schema private from authenticated;");
+    expect(sql).not.toContain("revoke all on schema private from service_role;");
+  });
+
   it("uses the fixed operation allowlist and 60-second limits", () => {
     const sql = migration();
     const limits = new Map<string, number>([
