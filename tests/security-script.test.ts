@@ -57,7 +57,11 @@ describe("database privilege verification script", () => {
   });
 
   it("requires every protected RPC to reject anonymous requests", async () => {
-    const fetchImpl = vi.fn(async () => response(403));
+    const fetchImpl = vi.fn(async (url: string, init: RequestInit) => {
+      void url;
+      void init;
+      return response(403);
+    });
     const write = vi.fn();
 
     const exitCode = await runSecurityProbe({
@@ -72,7 +76,7 @@ describe("database privilege verification script", () => {
     for (const [url, init] of fetchImpl.mock.calls) {
       expect(url).toMatch(/\/rest\/v1\/rpc\//);
       expect(init.headers).toMatchObject({ apikey: "anon-key" });
-      expect(init.headers.authorization).toBeUndefined();
+      expect(new Headers(init.headers).has("authorization")).toBe(false);
     }
   });
 
@@ -85,7 +89,6 @@ describe("database privilege verification script", () => {
       }
       const userId = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()).sub;
       const ownEventId = userId === userAId ? eventAId : eventBId;
-      const counterpartEventId = userId === userAId ? eventBId : eventAId;
       const counterpartUserId = userId === userAId ? userBId : userAId;
 
       if (url.endsWith("/list_owned_event_ids")) {

@@ -177,7 +177,12 @@ on public.user_favorites
 using (user_id = auth.uid())
 with check (
   user_id = auth.uid()
-  and public.is_following(user_id, favorite_user_id)
+  and exists (
+    select 1
+    from public.user_connections
+    where public.user_connections.follower_user_id = user_id
+      and public.user_connections.followed_user_id = favorite_user_id
+  )
   and private.have_shared_event(user_id, favorite_user_id)
   and not private.is_user_blocked(user_id, favorite_user_id)
 );

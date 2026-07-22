@@ -42,39 +42,13 @@ async function requireAuthenticatedTarget(userId: string): Promise<ConnectionTar
   };
 }
 
-async function requireConnectionTarget(userId: string): Promise<ConnectionTarget> {
-  const target = await requireAuthenticatedTarget(userId);
-  const [sharedEventResult, blockResult] = await Promise.all([
-    target.supabase.rpc("have_shared_event", {
-      first_user_id: target.currentUserId,
-      second_user_id: target.targetUserId
-    }),
-    target.supabase.rpc("is_user_blocked", {
-      first_user_id: target.currentUserId,
-      second_user_id: target.targetUserId
-    })
-  ]);
-
-  if (sharedEventResult.error || blockResult.error) {
-    throw new Error("つながりの状態を確認できませんでした。");
-  }
-  if (!sharedEventResult.data) {
-    throw new Error("共通のイベントに参加しているユーザーだけを操作できます。");
-  }
-  if (blockResult.data) {
-    throw new Error("ブロック中のユーザーにはこの操作を行えません。");
-  }
-
-  return target;
-}
-
 function revalidateConnections(eventId?: string) {
   revalidatePath("/connections");
   if (eventId) revalidatePath(`/events/${eventId}`);
 }
 
 export async function followUserAction(userId: string): Promise<void> {
-  const { currentUserId, targetUserId, supabase } = await requireConnectionTarget(userId);
+  const { currentUserId, targetUserId, supabase } = await requireAuthenticatedTarget(userId);
   const { error } = await supabase.from("user_connections").upsert(
     {
       follower_user_id: currentUserId,
@@ -88,7 +62,7 @@ export async function followUserAction(userId: string): Promise<void> {
 }
 
 export async function unfollowUserAction(userId: string): Promise<void> {
-  const { currentUserId, targetUserId, supabase } = await requireConnectionTarget(userId);
+  const { currentUserId, targetUserId, supabase } = await requireAuthenticatedTarget(userId);
   const { error } = await supabase
     .from("user_connections")
     .delete()
@@ -100,7 +74,7 @@ export async function unfollowUserAction(userId: string): Promise<void> {
 }
 
 export async function toggleFavoriteAction(userId: string): Promise<void> {
-  const { currentUserId, targetUserId, supabase } = await requireConnectionTarget(userId);
+  const { currentUserId, targetUserId, supabase } = await requireAuthenticatedTarget(userId);
   const [{ data: following, error: followingError }, { data: favorite, error: favoriteError }] =
     await Promise.all([
       supabase

@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
+import type { User } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { createSupabaseServerClient } = vi.hoisted(() => ({
@@ -37,7 +38,14 @@ describe("AuthNav profile", () => {
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockResolvedValue({ count: 0 })
     };
-    const user = { id: "user-1", email: "user@example.com", user_metadata: {} };
+    const user: User = {
+      id: "user-1",
+      email: "user@example.com",
+      user_metadata: {},
+      app_metadata: {},
+      aud: "authenticated",
+      created_at: "2026-07-15T00:00:00Z"
+    };
     createSupabaseServerClient.mockResolvedValue({
       from: vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery))
     });
@@ -71,7 +79,14 @@ describe("AuthNav profile", () => {
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockResolvedValue({ count: 0 })
     };
-    const user = { id: "user-1", email: "user@example.com", user_metadata: {} };
+    const user: User = {
+      id: "user-1",
+      email: "user@example.com",
+      user_metadata: {},
+      app_metadata: {},
+      aud: "authenticated",
+      created_at: "2026-07-15T00:00:00Z"
+    };
     createSupabaseServerClient.mockResolvedValue({
       from: vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery))
     });
