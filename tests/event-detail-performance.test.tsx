@@ -29,6 +29,7 @@ describe("event detail performance boundary", () => {
     expect(source).not.toContain("createSupabaseAdminClient");
     expect(source).not.toContain("loadInviteCandidates");
     expect(source).not.toContain('list_event_invite_candidates');
+    expect(source).toMatch(/<EventChat\s+key=\{eventId\}/);
   });
 
   it("uses a 51-row chat query so the first page can return at most 50 messages", () => {

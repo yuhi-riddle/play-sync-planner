@@ -90,6 +90,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
 
       <Card>
         <EventChat
+          key={eventId}
           eventId={eventId}
           messages={chat.messages}
           nextCursor={chat.nextCursor}
