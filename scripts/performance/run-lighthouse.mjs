@@ -22,7 +22,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 function knownAppOrigin(value, name) {
   if (typeof value !== "string" || !value.trim()) return null;
   try {
-    return canonicalizePerformanceUrl(value).canonicalOrigin;
+    return canonicalizePerformanceUrl(value);
   } catch {
     throw new Error(`${name} is malformed.`);
   }
@@ -42,13 +42,13 @@ export function safeLighthouseTarget(env) {
     knownAppOrigin(env.PERF_PRODUCTION_APP_URL, "PERF_PRODUCTION_APP_URL")
   ].filter(Boolean);
 
-  if (!target.isLoopback && knownTargets.length === 0) {
-    throw new Error("A known public or production application URL is required for remote Lighthouse runs.");
+  if (!target.isLoopback && !knownTargets.some((knownTarget) => !knownTarget.isLoopback)) {
+    throw new Error("A known non-loopback public or production application URL is required for remote Lighthouse runs.");
   }
   if (!target.isLoopback && expectedHostname(env.PERF_EXPECTED_APP_HOST) !== target.hostname) {
     throw new Error("PERF_EXPECTED_APP_HOST must exactly match the remote test application.");
   }
-  if (knownTargets.includes(target.canonicalOrigin)) {
+  if (knownTargets.some((knownTarget) => knownTarget.canonicalOrigin === target.canonicalOrigin)) {
     throw new Error("Lighthouse target must not reuse a public or production application URL.");
   }
   return target.normalizedOrigin;

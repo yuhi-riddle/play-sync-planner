@@ -4,7 +4,7 @@ import { dirname, resolve, sep } from "node:path";
 export const MAX_WRITE_BATCH_SIZE = 500;
 
 const RUN_ID_PATTERN = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/i;
-const RUN_ID_MAX_LENGTH = 28;
+const RUN_ID_MAX_LENGTH = 64;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/;
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);

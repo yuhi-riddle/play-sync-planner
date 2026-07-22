@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 import { createClient } from "@supabase/supabase-js";
@@ -70,10 +70,11 @@ async function mapInGroups(values, size, operation) {
 
 async function createCandidateUsers(client, config, manifest) {
   const indexes = Array.from({ length: DATASET_TARGETS.connectionCandidates }, (_, index) => index);
+  const runHash = performanceRunHash(config.runId);
   for (const group of chunkRows(indexes, 25)) {
     const outcomes = await Promise.allSettled(group.map(async (index) => {
       const { data, error } = await client.auth.admin.createUser({
-        email: `perf-${config.runId}-${index}-${randomUUID()}@example.invalid`,
+        email: `perf-${runHash}-${index}-${randomUUID()}@example.invalid`,
         password: `${randomUUID()}-${randomUUID()}`,
         email_confirm: true,
         user_metadata: { full_name: performanceNickname(config.runId, index) },
@@ -92,9 +93,15 @@ async function createCandidateUsers(client, config, manifest) {
   return manifest.ids.users;
 }
 
+function performanceRunHash(runId) {
+  performanceLabel(runId, "validate");
+  return createHash("sha256").update(runId, "utf8").digest("hex").slice(0, 16);
+}
+
 export function performanceNickname(runId, index) {
   if (!Number.isSafeInteger(index) || index < 0) throw new Error("Invalid performance profile index.");
-  const nickname = performanceLabel(runId, `c${index.toString(36)}`);
+  // Profile nicknames have a hard 40-character DB limit and are not dataset titles or generated keys.
+  const nickname = `[perf-user:${performanceRunHash(runId)}-${index.toString(36)}]`;
   if (nickname.length > 40) throw new Error("Performance profile nickname exceeds 40 characters.");
   return nickname;
 }

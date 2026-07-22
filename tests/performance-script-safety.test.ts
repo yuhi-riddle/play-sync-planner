@@ -129,17 +129,33 @@ describe("performance target safety", () => {
     ]);
   });
 
-  it("keeps the exact run prefix and a deterministic profile nickname within 40 characters", () => {
-    const longestRunId = "a".repeat(28);
-    const nickname = performanceNickname(longestRunId, 5_000);
-
-    expect(nickname.startsWith(`[perf:${longestRunId}]`)).toBe(true);
-    expect(nickname).toHaveLength(40);
-    expect(performanceNickname(longestRunId, 5_000)).toBe(nickname);
+  it("allows safe run IDs through 64 characters and rejects unsafe or longer values", () => {
+    for (const length of [29, 64]) {
+      expect(() => assertSafePerformanceTarget({
+        PERF_SUPABASE_URL: localEnv.PERF_SUPABASE_URL,
+        PERF_RUN_ID: "a".repeat(length)
+      })).not.toThrow();
+    }
     expect(() => assertSafePerformanceTarget({
       PERF_SUPABASE_URL: localEnv.PERF_SUPABASE_URL,
-      PERF_RUN_ID: "a".repeat(29)
+      PERF_RUN_ID: "a".repeat(65)
     })).toThrow("PERF_RUN_ID");
+    expect(() => assertSafePerformanceTarget({
+      PERF_SUPABASE_URL: localEnv.PERF_SUPABASE_URL,
+      PERF_RUN_ID: "unsafe/run"
+    })).toThrow("PERF_RUN_ID");
+  });
+
+  it("uses a deterministic hashed profile label because nickname is not a title or generated key", () => {
+    const longestRunId = "a".repeat(64);
+    const nickname = performanceNickname(longestRunId, Number.MAX_SAFE_INTEGER);
+
+    expect(nickname).toMatch(/^\[perf-user:[0-9a-f]{16}-[a-z0-9]+\]$/);
+    expect(nickname.length).toBeLessThanOrEqual(40);
+    expect(nickname.startsWith(`[perf:${longestRunId}]`)).toBe(false);
+    expect(performanceNickname(longestRunId, Number.MAX_SAFE_INTEGER)).toBe(nickname);
+    expect(performanceNickname(`b${"a".repeat(63)}`, Number.MAX_SAFE_INTEGER)).not.toBe(nickname);
+    expect(performanceNickname(longestRunId, 5_000).length).toBeLessThanOrEqual(40);
   });
 
   it("allows cleanup only for exact UUIDs recorded by the same run", () => {
@@ -232,5 +248,9 @@ describe("large-data and measurement contracts", () => {
       PERF_APP_URL: "http://127.0.0.1:3000",
       NEXT_PUBLIC_SITE_URL: "http://localhost.:3000"
     })).toThrow("public");
+    expect(() => safeLighthouseTarget({
+      ...remote,
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+    })).toThrow("non-loopback");
   });
 });
