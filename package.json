@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "security:verify-db": "node scripts/security/verify-function-privileges.mjs"
+    "security:verify-db": "node scripts/security/verify-function-privileges.mjs",
+    "perf:seed": "node scripts/performance/seed-large-dataset.mjs",
+    "perf:rpc": "node scripts/performance/benchmark-rpcs.mjs",
+    "perf:lighthouse": "node scripts/performance/run-lighthouse.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -31,6 +34,7 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.0.0",
     "jsdom": "^25.0.1",
+    "lighthouse": "^13.4.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
