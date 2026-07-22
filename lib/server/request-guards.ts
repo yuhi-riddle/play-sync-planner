@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const uuidSchema = z.string().uuid();
+const publicTokenPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export type EventAccessRole = "owner" | "joined" | "owner-or-joined";
 export type SessionSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -48,6 +49,19 @@ export function requireUuid(value: string): string {
   }
 
   return parsed.data;
+}
+
+export function normalizePublicToken(token: string): string {
+  const normalized = token.trim().toLowerCase();
+  if (!publicTokenPattern.test(normalized)) {
+    throw new RequestGuardError(
+      400,
+      "invalid_request",
+      "共有リンクが正しくありません。"
+    );
+  }
+
+  return normalized;
 }
 
 export async function requireUser(): Promise<{

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { normalizeEventMessageBody } from "@/lib/domain/event-chat";
 import {
+  RateLimitError,
   rateLimitErrorFromDatabase
 } from "@/lib/server/rate-limit";
 import {
@@ -27,13 +28,25 @@ export async function createEventMessageAction(
   }
 
   const body = normalizeEventMessageBody(String(formData.get("body") ?? ""));
-  const { error } = await supabase.rpc("post_event_message", {
+  const { data: messageId, error } = await supabase.rpc("post_event_message", {
     p_event_id: eventId,
     p_body: body
   });
 
   const rateLimitError = rateLimitErrorFromDatabase(error);
   if (rateLimitError) throw rateLimitError;
+  if (messageId === "00000000-0000-0000-0000-000000000429") {
+    throw new RateLimitError(60);
+  }
+  if (messageId === "00000000-0000-0000-0000-000000000403") {
+    throw new Error("このチャットは参加者だけが利用できます。");
+  }
+  if (messageId === "00000000-0000-0000-0000-000000000409") {
+    throw new Error("中止されたイベントには投稿できません。");
+  }
+  if (messageId === "00000000-0000-0000-0000-000000000400") {
+    throw new Error("メッセージが正しくありません。");
+  }
   if (error?.code === "42501") {
     throw new Error("このチャットは参加者だけが利用できます。");
   }

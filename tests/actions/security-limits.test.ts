@@ -43,34 +43,40 @@ describe("security boundaries for actions and routes", () => {
     expect(connections).not.toMatch(/from\("event_user_invitations"\)[\s\S]*?\.(?:insert|update)\(/);
   });
 
-  it("applies the expected database-backed operations in mutation modules", () => {
-    expect(source("lib/actions/connections.ts")).toContain(
-      'consumeAuthenticatedLimit("connection_update")'
-    );
-    expect(source("lib/actions/event-members.ts")).toContain(
-      'consumeAuthenticatedLimit("event_member_update")'
-    );
-    expect(source("lib/actions/events.ts")).toContain(
-      'consumeAuthenticatedLimit("event_update")'
-    );
-    expect(source("lib/actions/plans.ts")).toContain(
-      'consumeAuthenticatedLimit("plan_update")'
-    );
-    expect(source("lib/actions/profile.ts")).toContain(
-      'consumeAuthenticatedLimit("profile_update")'
-    );
-    expect(source("lib/actions/settlements.ts")).toContain(
-      'consumeAuthenticatedLimit("settlement_update")'
-    );
+  it("does not double-charge direct DML that database triggers already limit", () => {
+    for (const path of [
+      "lib/actions/connections.ts",
+      "lib/actions/event-members.ts",
+      "lib/actions/events.ts",
+      "lib/actions/plans.ts",
+      "lib/actions/profile.ts",
+      "lib/actions/settlements.ts",
+      "app/api/google-calendar/disconnect/route.ts"
+    ]) {
+      expect(source(path), path).not.toContain("consumeAuthenticatedLimit");
+    }
+
+    // These operations include an external API or service-role write, so a
+    // database DML trigger cannot cover the whole operation.
     expect(source("lib/actions/calendar.ts")).toContain(
       'consumeAuthenticatedLimit("google_calendar_update")'
     );
-    expect(source("lib/actions/answers.ts")).toContain(
-      'consumePublicLimit("public_answer", token)'
+    expect(source("app/api/google-calendar/callback/route.ts")).toContain(
+      'consumeAuthenticatedLimit("google_calendar_update")'
     );
-    expect(source("lib/actions/settlements.ts")).toContain(
-      'consumePublicLimit("public_payment", token)'
-    );
+  });
+
+  it("passes one normalized public token to lookup, rate limit, mutation, and redirect", () => {
+    const answers = source("lib/actions/answers.ts");
+    expect(answers).toContain("const normalizedToken = normalizePublicToken(token)");
+    expect(answers).toContain("getPublicAnswerData(normalizedToken)");
+    expect(answers).toContain('consumePublicLimit("public_answer", normalizedToken)');
+
+    const settlements = source("lib/actions/settlements.ts");
+    expect(settlements).toContain("const normalizedToken = normalizePublicToken(token)");
+    expect(settlements).toContain('consumePublicLimit("public_payment", normalizedToken)');
+    expect(settlements).toMatch(/recordPublicSettlementPayment\(\{[\s\S]*?token: normalizedToken,/);
+    expect(settlements).toContain("`/s/${normalizedToken}/settlement`");
   });
 
   it("limits Google availability after the common owner guard and uses common route errors", () => {
@@ -81,6 +87,9 @@ describe("security boundaries for actions and routes", () => {
     );
     expect(guardIndex).toBeGreaterThan(-1);
     expect(limitIndex).toBeGreaterThan(guardIndex);
+    expect(route).toContain('from "@/lib/server/admin/google-token-store"');
+    expect(route).toContain("getEventCalendarIntegrations({");
+    expect(route).not.toContain('.rpc("get_event_calendar_integrations"');
     expect(route).toContain("toRouteError(error)");
   });
 
@@ -119,15 +128,29 @@ describe("security boundaries for actions and routes", () => {
     );
   });
 
-  it("audits successful Google connection changes without exposing token data", () => {
+  it("uses fixed service-only Google audit wrappers without exposing token data", () => {
+    const callback = source("app/api/google-calendar/callback/route.ts");
+    expect(callback).toContain("recordGoogleCalendarConnectAudit(user.id)");
+    expect(callback).not.toContain('.rpc("record_security_audit"');
+
+    const disconnect = source("app/api/google-calendar/disconnect/route.ts");
+    expect(disconnect).toContain("recordGoogleCalendarDisconnectAudit(user.id)");
+    expect(disconnect).not.toContain('.rpc("record_security_audit"');
+
+    for (const contents of [callback, disconnect]) {
+      expect(contents).not.toMatch(/safeLog\([^\n]*(?:token|cookie|url|error)/i);
+    }
+  });
+
+  it("does not expose the generic audit RPC to authenticated callers", () => {
     for (const path of [
+      "lib/actions/connections.ts",
+      "lib/actions/event-members.ts",
+      "lib/server/rate-limit.ts",
       "app/api/google-calendar/callback/route.ts",
       "app/api/google-calendar/disconnect/route.ts"
     ]) {
-      const contents = source(path);
-      expect(contents, path).toContain('.rpc("record_security_audit"');
-      expect(contents, path).toContain('"google_calendar_');
-      expect(contents, path).not.toMatch(/safeLog\([^\n]*(?:token|cookie|url|error)/i);
+      expect(source(path), path).not.toContain('.rpc("record_security_audit"');
     }
   });
 });

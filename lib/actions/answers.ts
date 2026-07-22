@@ -13,10 +13,12 @@ import {
   savePublicAnswer
 } from "@/lib/server/admin/public-answer";
 import { consumePublicLimit } from "@/lib/server/rate-limit";
+import { normalizePublicToken } from "@/lib/server/request-guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function submitAvailabilityAnswersAction(token: string, formData: FormData) {
-  const data = await getPublicAnswerData(token);
+  const normalizedToken = normalizePublicToken(token);
+  const data = await getPublicAnswerData(normalizedToken);
   if (!data) throw new Error("共有リンクが見つかりません。");
 
   const now = new Date();
@@ -53,7 +55,7 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     userId: currentUserId
   });
 
-  await consumePublicLimit("public_answer", token);
+  await consumePublicLimit("public_answer", normalizedToken);
   await savePublicAnswer({
     linkId: data.linkId,
     planId: data.planId,
@@ -85,5 +87,5 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     currentUserId
   });
 
-  redirect(`/s/${token}/answer/complete`);
+  redirect(`/s/${normalizedToken}/answer/complete`);
 }

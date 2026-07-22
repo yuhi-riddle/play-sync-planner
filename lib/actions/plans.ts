@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { formDataToObject } from "@/lib/form-data";
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
-import { rateLimitErrorFromDatabase, consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
+import { rateLimitErrorFromDatabase } from "@/lib/server/rate-limit";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/validators";
 
@@ -54,7 +54,6 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     throw new Error("主催者を含む参加者を集めてから日程調整を作成してください。");
   }
 
-  await consumeAuthenticatedLimit("plan_update");
 
   const { data: plan, error: planError } = await supabase
     .from("plans")
@@ -117,7 +116,6 @@ export async function updatePlanAction(planId: string, formData: FormData) {
 
   const values = planSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
-  await consumeAuthenticatedLimit("plan_update");
   const { data: plan, error: planError } = await supabase
     .from("plans")
     .update({

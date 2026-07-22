@@ -11,10 +11,10 @@ import {
 import { formDataToObject } from "@/lib/form-data";
 import { recordPublicSettlementPayment } from "@/lib/server/admin/public-settlement";
 import {
-  consumeAuthenticatedLimit,
   consumePublicLimit,
   rateLimitErrorFromDatabase
 } from "@/lib/server/rate-limit";
+import { normalizePublicToken } from "@/lib/server/request-guards";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import {
   expenseSchema,
@@ -220,8 +220,6 @@ export async function createExpenseAction(planId: string, formData: FormData) {
 
   assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 
-  await consumeAuthenticatedLimit("settlement_update");
-
   const { data: expense, error: expenseError } = await supabase
     .from("expenses")
     .insert({
@@ -292,8 +290,6 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
   }
   assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 
-  await consumeAuthenticatedLimit("settlement_update");
-
   const { error: updateError } = await supabase
     .from("expenses")
     .update({
@@ -351,8 +347,6 @@ export async function deleteExpenseAction(expenseId: string) {
 
   await assertExpenseCanChange({ supabase, planId: expense.plan_id });
 
-  await consumeAuthenticatedLimit("settlement_update");
-
   const { error: deleteError } = await supabase.from("expenses").delete().eq("id", expenseId);
   if (deleteError) {
     throw new Error("立替支払いを削除できませんでした。");
@@ -396,10 +390,11 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 }
 
 export async function recordPublicSettlementPaymentAction(token: string, settlementId: string, formData: FormData) {
+  const normalizedToken = normalizePublicToken(token);
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
-  await consumePublicLimit("public_payment", token);
+  await consumePublicLimit("public_payment", normalizedToken);
   const planId = await recordPublicSettlementPayment({
-    token,
+    token: normalizedToken,
     settlementId,
     amount: values.amount,
     paymentMethod: values.payment_method,
@@ -409,8 +404,8 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
 
   revalidatePath(`/plans/${planId}`);
   revalidatePath(`/plans/${planId}/settlement`);
-  revalidatePath(`/s/${token}/settlement`);
-  redirect(`/s/${token}/settlement?paid=1`);
+  revalidatePath(`/s/${normalizedToken}/settlement`);
+  redirect(`/s/${normalizedToken}/settlement?paid=1`);
 }
 
 export async function confirmSettlementPaymentAction(paymentId: string) {
@@ -453,8 +448,6 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
     throw new Error("主催者だけが支払い先メモを編集できます");
   }
 
-  await consumeAuthenticatedLimit("settlement_update");
-
   const { error: updateError } = await supabase
     .from("settlements")
     .update({
@@ -482,8 +475,6 @@ export async function markSettlementReminderSentAction(planId: string, formData:
   const recipientNames = namesFromFormData(formData.get("recipient_names"));
   const reminderMessage = optionalString(formData.get("reminder_message"));
   const reminderType = settlementReminderTypeFromFormData(formData.get("reminder_type"));
-
-  await consumeAuthenticatedLimit("settlement_update");
 
   const { error } = await supabase.from("settlement_reminder_logs").insert({
     plan_id: planId,

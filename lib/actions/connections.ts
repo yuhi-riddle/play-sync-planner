@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import {
-  consumeAuthenticatedLimit,
-  rateLimitErrorFromDatabase
-} from "@/lib/server/rate-limit";
+import { RateLimitError, rateLimitErrorFromDatabase } from "@/lib/server/rate-limit";
 import {
   RequestGuardError,
   requireEventAccess,
@@ -78,7 +75,6 @@ function revalidateConnections(eventId?: string) {
 
 export async function followUserAction(userId: string): Promise<void> {
   const { currentUserId, targetUserId, supabase } = await requireConnectionTarget(userId);
-  await consumeAuthenticatedLimit("connection_update");
   const { error } = await supabase.from("user_connections").upsert(
     {
       follower_user_id: currentUserId,
@@ -93,7 +89,6 @@ export async function followUserAction(userId: string): Promise<void> {
 
 export async function unfollowUserAction(userId: string): Promise<void> {
   const { currentUserId, targetUserId, supabase } = await requireConnectionTarget(userId);
-  await consumeAuthenticatedLimit("connection_update");
   const { error } = await supabase
     .from("user_connections")
     .delete()
@@ -129,7 +124,6 @@ export async function toggleFavoriteAction(userId: string): Promise<void> {
     throw new Error("フォローしている人だけをお気に入りに追加できます。");
   }
 
-  await consumeAuthenticatedLimit("connection_update");
   const { error } = favorite
     ? await supabase
         .from("user_favorites")
@@ -162,7 +156,6 @@ export async function blockUserAction(userId: string): Promise<void> {
 
 export async function unblockUserAction(userId: string): Promise<void> {
   const { currentUserId, targetUserId, supabase } = await requireAuthenticatedTarget(userId);
-  await consumeAuthenticatedLimit("connection_update");
   const { error } = await supabase
     .from("user_blocks")
     .delete()
@@ -170,12 +163,6 @@ export async function unblockUserAction(userId: string): Promise<void> {
     .eq("blocked_user_id", targetUserId);
 
   if (error) throw new Error("ブロックを解除できませんでした。");
-  await supabase.rpc("record_security_audit", {
-    operation: "connection_unblock",
-    target_type: "user",
-    target_id: targetUserId,
-    outcome: "success"
-  });
   revalidateConnections();
 }
 
@@ -199,13 +186,23 @@ export async function createEventUserInvitationsAction(
     throw new Error("自分自身は招待できません。");
   }
 
-  const { error } = await access.supabase.rpc("create_event_user_invitations", {
+  const { data: createdCount, error } = await access.supabase.rpc("create_event_user_invitations", {
     p_event_id: eventId,
     p_invitee_user_ids: targetUserIds
   });
 
   const rateLimitError = rateLimitErrorFromDatabase(error);
   if (rateLimitError) throw rateLimitError;
+  if (createdCount === -429) throw new RateLimitError(60);
+  if (createdCount === -409) {
+    throw new Error("参加済み、または招待済みの人が含まれています。");
+  }
+  if (createdCount === -403) {
+    throw new Error("招待できない人が含まれています。");
+  }
+  if (createdCount === -400) {
+    throw new Error("招待する人を1〜20人で選んでください。");
+  }
   if (error?.code === "23505") {
     throw new Error("参加済み、または招待済みの人が含まれています。");
   }
@@ -242,6 +239,18 @@ export async function respondToEventUserInvitationAction(
 
   const rateLimitError = rateLimitErrorFromDatabase(error);
   if (rateLimitError) throw rateLimitError;
+  if (eventId === "00000000-0000-0000-0000-000000000429") {
+    throw new RateLimitError(60);
+  }
+  if (eventId === "00000000-0000-0000-0000-000000000403") {
+    throw new Error("この招待には返答できません。");
+  }
+  if (eventId === "00000000-0000-0000-0000-000000000409") {
+    throw new Error("この招待にはすでに返答しています。");
+  }
+  if (eventId === "00000000-0000-0000-0000-000000000400") {
+    throw new Error("招待への返答が正しくありません。");
+  }
   if (error?.code === "42501") throw new Error("この招待には返答できません。");
   if (error?.code === "55000") throw new Error("この招待にはすでに返答しています。");
   if (error || !eventId) throw new Error("招待への返答を保存できませんでした。");

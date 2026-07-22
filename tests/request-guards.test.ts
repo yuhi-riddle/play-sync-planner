@@ -28,7 +28,8 @@ vi.mock("@/lib/server/admin/public-settlement", () => ({
 
 import {
   requireEventAccess,
-  requireUser
+  requireUser,
+  normalizePublicToken
 } from "@/lib/server/request-guards";
 import {
   RateLimitConfigurationError,
@@ -157,26 +158,37 @@ describe("database-backed rate limits", () => {
     });
   });
 
-  it("sends only an HMAC of the public token to the bounded admin wrapper", async () => {
+  it("normalizes equivalent public UUID tokens before HMAC", async () => {
     consumePublicAnswerRateLimit.mockResolvedValue({ error: null });
-    const token = "raw-share-token-never-sent-to-rate-limit-rpc";
+    const token = "  AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA  ";
+    const normalizedToken = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     const expected = createHmac("sha256", process.env.RATE_LIMIT_HMAC_SECRET!)
-      .update("public_answer:" + token)
+      .update("public_answer:" + normalizedToken)
       .digest("hex");
 
     await consumePublicLimit("public_answer", token);
 
+    expect(normalizePublicToken(token)).toBe(normalizedToken);
     expect(consumePublicAnswerRateLimit).toHaveBeenCalledWith(expected);
     expect(JSON.stringify(consumePublicAnswerRateLimit.mock.calls)).not.toContain(token);
+    expect(consumePublicSettlementRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid public token before calling the rate-limit database wrapper", async () => {
+    await expect(
+      consumePublicLimit("public_answer", "not-a-share-token")
+    ).rejects.toMatchObject({ status: 400, code: "invalid_request" });
+
+    expect(consumePublicAnswerRateLimit).not.toHaveBeenCalled();
     expect(consumePublicSettlementRateLimit).not.toHaveBeenCalled();
   });
 
   it("fails closed when the HMAC secret is missing or too short", async () => {
     process.env.RATE_LIMIT_HMAC_SECRET = "short";
 
-    await expect(consumePublicLimit("public_payment", "token")).rejects.toBeInstanceOf(
-      RateLimitConfigurationError
-    );
+    await expect(
+      consumePublicLimit("public_payment", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+    ).rejects.toBeInstanceOf(RateLimitConfigurationError);
     expect(consumePublicSettlementRateLimit).not.toHaveBeenCalled();
   });
 });

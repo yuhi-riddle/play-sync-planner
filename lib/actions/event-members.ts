@@ -5,10 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getUserDisplayName } from "@/lib/domain/profile";
-import {
-  consumeAuthenticatedLimit,
-  rateLimitErrorFromDatabase
-} from "@/lib/server/rate-limit";
+import { rateLimitErrorFromDatabase } from "@/lib/server/rate-limit";
 import {
   RequestGuardError,
   requireEventAccess,
@@ -32,7 +29,6 @@ function revalidateEvent(eventId: string) {
 
 export async function createEventInviteAction(eventId: string) {
   const { supabase, user } = await requireEventOwner(eventId);
-  await consumeAuthenticatedLimit("event_member_update");
   const { error } = await supabase.from("event_invite_links").insert({
     event_id: eventId,
     token: randomUUID(),
@@ -46,7 +42,6 @@ export async function createEventInviteAction(eventId: string) {
 
 export async function closeEventInvitesAction(eventId: string) {
   const { supabase } = await requireEventOwner(eventId);
-  await consumeAuthenticatedLimit("event_member_update");
   const { error } = await supabase
     .from("event_invite_links")
     .update({ status: "closed", closed_at: new Date().toISOString() })
@@ -54,12 +49,6 @@ export async function closeEventInvitesAction(eventId: string) {
     .eq("status", "open");
 
   if (error) throw new Error("招待リンクを閉じられませんでした。");
-  await supabase.rpc("record_security_audit", {
-    operation: "event_invitation_revoke",
-    target_type: "event",
-    target_id: eventId,
-    outcome: "success"
-  });
   revalidateEvent(eventId);
 }
 
@@ -73,8 +62,6 @@ export async function revokeAndCreateEventInviteAction(eventId: string) {
     .maybeSingle();
 
   if (findError) throw new Error("招待リンクを確認できませんでした。");
-  await consumeAuthenticatedLimit("event_member_update");
-
   if (currentInvite) {
     const { error } = await supabase
       .from("event_invite_links")
@@ -91,12 +78,6 @@ export async function revokeAndCreateEventInviteAction(eventId: string) {
   });
   if (error) throw new Error("新しい招待リンクを作成できませんでした。");
 
-  await supabase.rpc("record_security_audit", {
-    operation: "event_invitation_revoke",
-    target_type: "event",
-    target_id: eventId,
-    outcome: "success"
-  });
   revalidateEvent(eventId);
 }
 

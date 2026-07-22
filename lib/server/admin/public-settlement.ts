@@ -1,15 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
-import { summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
-import {
-  buildNotificationCandidate,
-  type NotificationCandidate
-} from "@/lib/domain/site-notifications";
-
-type ParticipantRelation = { display_name: string | null; user_id?: string | null }
-  | Array<{ display_name: string | null; user_id?: string | null }>
-  | null;
-
 export type PublicSettlementData = {
   linkId: string;
   plan: {
@@ -18,7 +8,10 @@ export type PublicSettlementData = {
     confirmed_start_at: string | null;
     confirmed_end_at: string | null;
     is_all_day: boolean;
-    events: { title: string | null; location_name: string | null } | Array<{ title: string | null; location_name: string | null }> | null;
+    events:
+      | { title: string | null; location_name: string | null }
+      | Array<{ title: string | null; location_name: string | null }>
+      | null;
     expenses?: Array<Record<string, unknown>>;
     settlements?: Array<Record<string, unknown>>;
   };
@@ -60,7 +53,7 @@ function requireSubjectHash(subjectHash: string) {
 
 function requirePublicToken(token: string) {
   const value = token.trim().toLowerCase();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)
     ? value
     : null;
 }
@@ -91,53 +84,6 @@ export async function getPublicSettlementData(token: string): Promise<PublicSett
   };
 }
 
-function participant(value: ParticipantRelation) {
-  return firstRelation(value);
-}
-
-async function createConfirmationNotification(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  settlementId: string,
-  paymentId: string
-) {
-  const { data: settlement } = await supabase
-    .from("settlements")
-    .select(
-      "plan_id, plans(title, events(title)), from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name, user_id)"
-    )
-    .eq("id", settlementId)
-    .maybeSingle();
-  if (!settlement) return;
-
-  const receiver = participant(settlement.to_participant as ParticipantRelation);
-  if (!receiver?.user_id) return;
-  const payer = participant(settlement.from_participant as ParticipantRelation);
-  const plan = firstRelation(settlement.plans);
-  const event = firstRelation(plan?.events ?? null);
-  const title = [event?.title, plan?.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
-  const candidate: NotificationCandidate = buildNotificationCandidate({
-    userId: receiver.user_id,
-    kind: "confirmation_due",
-    planId: settlement.plan_id,
-    title,
-    href: `/plans/${settlement.plan_id}/settlement#confirmation`,
-    dueAt: `payment:${paymentId}`,
-    participantNames: [payer?.display_name?.trim() || "参加者"]
-  });
-
-  await supabase.from("notifications").upsert(
-    {
-      user_id: candidate.userId,
-      kind: candidate.kind,
-      title: candidate.title,
-      body: candidate.body,
-      href: candidate.href,
-      dedupe_key: candidate.dedupeKey
-    },
-    { onConflict: "user_id,dedupe_key", ignoreDuplicates: true }
-  );
-}
-
 export async function recordPublicSettlementPayment(input: PublicPaymentInput): Promise<string> {
   const validatedToken = requirePublicToken(input.token);
   const validatedSettlementId = requirePublicToken(input.settlementId);
@@ -164,77 +110,20 @@ export async function recordPublicSettlementPayment(input: PublicPaymentInput): 
     throw new Error("共有リンクが見つかりません");
   }
 
-  const { data: settlement, error } = await supabase
-    .from("settlements")
-    .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at)")
-    .eq("id", validatedSettlementId)
-    .eq("plan_id", link.plan_id)
-    .maybeSingle();
-  if (error || !settlement) {
-    throw new Error("清算内容が見つかりません");
-  }
-
-  const payments = settlement.settlement_payments ?? [];
-  const progress = summarizeSettlementPaymentProgress(
-    settlement.amount,
-    payments.map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    }))
-  );
-  if (input.amount > progress.remainingAmount) {
-    throw new Error("支払い金額が残額を超えています");
-  }
-
-  const { data: payment, error: insertError } = await supabase
-    .from("settlement_payments")
-    .insert({
-      settlement_id: settlement.id,
-      paid_by_participant_id: settlement.from_participant_id,
-      amount: input.amount,
-      payment_method: input.paymentMethod,
-      payment_url: input.paymentUrl,
-      memo: input.memo
-    })
-    .select("id")
-    .single();
-  if (insertError || !payment) {
-    throw new Error("支払い記録を保存できませんでした");
-  }
-
-  const next = summarizeSettlementPaymentProgress(settlement.amount, [
-    ...payments.map((row) => ({
-      amount: row.amount,
-      confirmedAt: row.confirmed_at
-    })),
-    { amount: input.amount, confirmedAt: null }
-  ]);
-  const { error: updateError } = await supabase
-    .from("settlements")
-    .update({
-      status: next.status === "paid" || next.status === "confirmed" ? next.status : "unpaid",
-      paid_at: next.paidAmount > 0 ? new Date().toISOString() : null
-    })
-    .eq("id", settlement.id);
-  if (updateError) {
-    throw new Error("支払い記録を保存できませんでした");
-  }
-
-  const { error: planError } = await supabase
-    .from("plans")
-    .update({ settlement_status: "settling" })
-    .eq("id", settlement.plan_id);
-  if (planError) throw new Error("支払い記録を保存できませんでした");
-  await createConfirmationNotification(supabase, settlement.id, payment.id);
-  const { error: auditError } = await supabase.rpc("record_security_audit", {
-    operation: "public_payment",
-    target_type: "settlement",
-    target_id: settlement.id,
-    outcome: "success"
+  const { data: planId, error } = await supabase.rpc("record_public_settlement_payment", {
+    p_share_link_id: link.id,
+    p_settlement_id: validatedSettlementId,
+    p_amount: input.amount,
+    p_payment_method: input.paymentMethod,
+    p_payment_url: input.paymentUrl,
+    p_memo: input.memo
   });
-  if (auditError) throw new Error("支払いの監査記録を保存できませんでした");
+  const validatedPlanId = typeof planId === "string" ? requirePublicToken(planId) : null;
+  if (error || !validatedPlanId || validatedPlanId !== link.plan_id) {
+    throw new Error("支払い記録を保存できませんでした");
+  }
 
-  return settlement.plan_id;
+  return validatedPlanId;
 }
 
 export async function consumePublicSettlementRateLimit(

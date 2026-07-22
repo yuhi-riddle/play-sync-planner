@@ -4,6 +4,13 @@ import { createCronNotifications } from "@/lib/server/admin/cron-notifications";
 import { hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { error: "Cron is not configured" },
+      { status: 503 }
+    );
+  }
+
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -24,12 +31,6 @@ export async function GET(request: NextRequest) {
 }
 
 function isAuthorized(request: NextRequest) {
-  if (process.env.NODE_ENV !== "production") return true;
-
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    return request.headers.get("authorization") === `Bearer ${secret}`;
-  }
-
-  return request.headers.get("user-agent") === "vercel-cron/1.0";
+  return Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
 }

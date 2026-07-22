@@ -69,11 +69,11 @@ as $$
   end;
 $$;
 
-create or replace function private.consume_rate_limit(
+create or replace function private.try_consume_rate_limit(
   p_operation text,
   p_subject_hash bytea
 )
-returns void
+returns integer
 language plpgsql
 security definer
 set search_path = ''
@@ -124,11 +124,107 @@ begin
       )
     );
 
+    return retry_seconds;
+  end if;
+
+  return 0;
+end;
+$$;
+
+create or replace function private.consume_rate_limit(
+  p_operation text,
+  p_subject_hash bytea
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  retry_seconds integer;
+begin
+  retry_seconds := private.try_consume_rate_limit(p_operation, p_subject_hash);
+  if retry_seconds > 0 then
     raise exception using
       errcode = 'PSP02',
       message = 'Rate limit exceeded',
       detail = retry_seconds::text;
   end if;
+end;
+$$;
+
+create or replace function private.try_consume_authenticated_rate_limit_once(
+  p_operation text
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  setting_name text := 'request.rate_limit_' || p_operation;
+  prior_result text;
+  retry_seconds integer;
+begin
+  if current_user_id is null then
+    raise exception using
+      errcode = '28000',
+      message = 'Authentication required';
+  end if;
+
+  if p_operation in ('public_answer', 'public_payment') then
+    raise exception using
+      errcode = '22023',
+      message = 'Unsupported authenticated rate limit operation';
+  end if;
+
+  prior_result := current_setting(setting_name, true);
+  if prior_result is not null and prior_result <> '' then
+    return prior_result::integer;
+  end if;
+
+  retry_seconds := private.try_consume_rate_limit(
+    p_operation,
+    extensions.digest(current_user_id::text, 'sha256')
+  );
+  perform set_config(setting_name, retry_seconds::text, true);
+  return retry_seconds;
+end;
+$$;
+
+create or replace function private.consume_authenticated_rate_limit_once(
+  p_operation text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  retry_seconds integer;
+begin
+  retry_seconds := private.try_consume_authenticated_rate_limit_once(p_operation);
+  if retry_seconds > 0 then
+    raise exception using
+      errcode = 'PSP02',
+      message = 'Rate limit exceeded',
+      detail = retry_seconds::text;
+  end if;
+end;
+$$;
+
+create or replace function private.enforce_authenticated_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.role() = 'authenticated' then
+    perform private.consume_authenticated_rate_limit_once(tg_argv[0]);
+  end if;
+  return null;
 end;
 $$;
 
@@ -153,10 +249,7 @@ begin
       message = 'Unsupported authenticated rate limit operation';
   end if;
 
-  perform private.consume_rate_limit(
-    operation,
-    extensions.digest(current_user_id::text, 'sha256')
-  );
+  perform private.consume_authenticated_rate_limit_once(operation);
 end;
 $$;
 
@@ -199,16 +292,11 @@ set search_path = ''
 as $$
 declare
   caller_role text := auth.role();
-  audit_actor_user_id uuid;
 begin
-  if caller_role = 'service_role' then
-    audit_actor_user_id := null;
-  elsif auth.uid() is not null then
-    audit_actor_user_id := auth.uid();
-  else
+  if caller_role <> 'service_role' then
     raise exception using
-      errcode = '28000',
-      message = 'Authentication required';
+      errcode = '42501',
+      message = 'Service role required';
   end if;
 
   if outcome not in ('success', 'denied') then
@@ -262,7 +350,7 @@ begin
     outcome
   )
   values (
-    audit_actor_user_id,
+    null,
     operation,
     target_type,
     target_id,
@@ -313,6 +401,7 @@ declare
   event_status text;
   event_title text;
   created_message_id uuid;
+  retry_seconds integer;
 begin
   if current_user_id is null then
     raise exception using
@@ -320,13 +409,28 @@ begin
       message = 'Authentication required';
   end if;
 
+  retry_seconds := private.try_consume_authenticated_rate_limit_once(
+    'event_message_post'
+  );
+  if retry_seconds > 0 then
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_message_post', 'event', p_event_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000429'::uuid;
+  end if;
+
   if p_event_id is null
     or p_body is null
     or char_length(trim(p_body)) = 0
     or char_length(p_body) > 2000 then
-    raise exception using
-      errcode = '22023',
-      message = 'Invalid event message';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_message_post', 'event', p_event_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000400'::uuid;
   end if;
 
   select public.events.status, public.events.title
@@ -335,27 +439,31 @@ begin
   where public.events.id = p_event_id;
 
   if not found then
-    raise exception using
-      errcode = '42501',
-      message = 'Event access denied';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_message_post', 'event', p_event_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000403'::uuid;
   end if;
 
   if not private.is_joined_event_member(p_event_id) then
-    raise exception using
-      errcode = '42501',
-      message = 'Event membership required';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_message_post', 'event', p_event_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000403'::uuid;
   end if;
 
   if event_status = 'cancelled' then
-    raise exception using
-      errcode = '55000',
-      message = 'Cancelled event';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_message_post', 'event', p_event_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000409'::uuid;
   end if;
-
-  perform private.consume_rate_limit(
-    'event_message_post',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
 
   insert into public.event_messages (
     event_id,
@@ -432,6 +540,7 @@ declare
   event_title text;
   invitee_user_id uuid;
   created_count integer;
+  retry_seconds integer;
 begin
   if current_user_id is null then
     raise exception using
@@ -439,11 +548,26 @@ begin
       message = 'Authentication required';
   end if;
 
+  retry_seconds := private.try_consume_authenticated_rate_limit_once(
+    'event_invitation_create'
+  );
+  if retry_seconds > 0 then
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+    );
+    return -429;
+  end if;
+
   if p_event_id is null
     or cardinality(p_invitee_user_ids) not between 1 and 20 then
-    raise exception using
-      errcode = '22023',
-      message = 'Invalid invitation targets';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+    );
+    return -400;
   end if;
 
   select array_agg(distinct candidate)
@@ -453,15 +577,21 @@ begin
 
   if coalesce(cardinality(normalized_invitee_user_ids), 0) = 0
     or current_user_id = any(normalized_invitee_user_ids) then
-    raise exception using
-      errcode = '22023',
-      message = 'Invalid invitation targets';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+    );
+    return -400;
   end if;
 
   if not private.is_event_owner(p_event_id) then
-    raise exception using
-      errcode = '42501',
-      message = 'Event owner required';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+    );
+    return -403;
   end if;
 
   select public.events.title
@@ -471,9 +601,12 @@ begin
 
   foreach invitee_user_id in array normalized_invitee_user_ids loop
     if private.is_user_blocked(current_user_id, invitee_user_id) then
-      raise exception using
-        errcode = '42501',
-        message = 'Blocked invitation target';
+      insert into private.security_audit_logs (
+        actor_user_id, operation, target_type, target_id, outcome
+      ) values (
+        current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+      );
+      return -403;
     end if;
 
     if not (
@@ -491,9 +624,12 @@ begin
           and public.user_favorites.favorite_user_id = invitee_user_id
       )
     ) then
-      raise exception using
-        errcode = '42501',
-        message = 'Ineligible invitation target';
+      insert into private.security_audit_logs (
+        actor_user_id, operation, target_type, target_id, outcome
+      ) values (
+        current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+      );
+      return -403;
     end if;
 
     if exists (
@@ -503,9 +639,12 @@ begin
         and public.event_members.user_id = invitee_user_id
         and public.event_members.status = 'joined'
     ) then
-      raise exception using
-        errcode = '23505',
-        message = 'Existing event member';
+      insert into private.security_audit_logs (
+        actor_user_id, operation, target_type, target_id, outcome
+      ) values (
+        current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+      );
+      return -409;
     end if;
 
     if exists (
@@ -515,16 +654,14 @@ begin
         and public.event_user_invitations.invitee_user_id = invitee_user_id
         and public.event_user_invitations.status in ('pending', 'accepted')
     ) then
-      raise exception using
-        errcode = '23505',
-        message = 'Existing event invitation';
+      insert into private.security_audit_logs (
+        actor_user_id, operation, target_type, target_id, outcome
+      ) values (
+        current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied'
+      );
+      return -409;
     end if;
   end loop;
-
-  perform private.consume_rate_limit(
-    'event_invitation_create',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
 
   insert into public.event_user_invitations (
     event_id,
@@ -599,6 +736,7 @@ declare
   invitation_record public.event_user_invitations%rowtype;
   member_display_name text;
   audit_operation text;
+  retry_seconds integer;
 begin
   if current_user_id is null then
     raise exception using
@@ -606,10 +744,25 @@ begin
       message = 'Authentication required';
   end if;
 
+  retry_seconds := private.try_consume_authenticated_rate_limit_once(
+    'event_invitation_respond'
+  );
+  if retry_seconds > 0 then
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_respond', 'invitation', p_invitation_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000429'::uuid;
+  end if;
+
   if p_invitation_id is null or p_response not in ('accepted', 'declined') then
-    raise exception using
-      errcode = '22023',
-      message = 'Invalid invitation response';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_respond', 'invitation', p_invitation_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000400'::uuid;
   end if;
 
   select public.event_user_invitations.*
@@ -621,32 +774,41 @@ begin
   for update;
 
   if not found then
-    raise exception using
-      errcode = '42501',
-      message = 'Invitation response denied';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_respond', 'invitation', p_invitation_id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000403'::uuid;
   end if;
 
   if invitation_record.status = 'accepted' and p_response = 'accepted' then
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_accept', 'invitation', invitation_record.id, 'success'
+    );
     return invitation_record.event_id;
   end if;
 
   if invitation_record.status <> 'pending' then
-    raise exception using
-      errcode = '55000',
-      message = 'Invitation already answered';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_respond', 'invitation', invitation_record.id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000409'::uuid;
   end if;
 
   if private.is_user_blocked(invitation_record.inviter_user_id, current_user_id)
     or not private.have_shared_event(invitation_record.inviter_user_id, current_user_id) then
-    raise exception using
-      errcode = '42501',
-      message = 'Invitation relationship denied';
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      current_user_id, 'event_invitation_respond', 'invitation', invitation_record.id, 'denied'
+    );
+    return '00000000-0000-0000-0000-000000000403'::uuid;
   end if;
-
-  perform private.consume_rate_limit(
-    'event_invitation_respond',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
 
   update public.event_user_invitations
   set
@@ -744,10 +906,7 @@ begin
       message = 'A shared event is required';
   end if;
 
-  perform private.consume_rate_limit(
-    'connection_update',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
+  perform private.consume_authenticated_rate_limit_once('connection_update');
 
   insert into public.user_blocks (blocker_user_id, blocked_user_id)
   values (current_user_id, target_user_id)
@@ -778,7 +937,10 @@ begin
 end;
 $$;
 
-create or replace function public.get_event_calendar_integrations(p_event_id uuid)
+create or replace function public.get_event_calendar_integrations(
+  p_event_id uuid,
+  p_owner_user_id uuid
+)
 returns table (
   user_id uuid,
   calendar_id text,
@@ -791,23 +953,27 @@ security definer
 set search_path = ''
 as $$
 declare
-  current_user_id uuid := auth.uid();
   event_status text;
 begin
-  if current_user_id is null then
+  if auth.role() <> 'service_role' then
     raise exception using
-      errcode = '28000',
-      message = 'Authentication required';
+      errcode = '42501',
+      message = 'Service role required';
+  end if;
+
+  if p_event_id is null or p_owner_user_id is null then
+    raise exception using
+      errcode = '22023',
+      message = 'Invalid event owner lookup';
   end if;
 
   select public.events.status
   into event_status
   from public.events
   where public.events.id = p_event_id
-    and public.events.owner_user_id = current_user_id;
+    and public.events.owner_user_id = p_owner_user_id;
 
   if not found
-    or not private.is_event_owner(p_event_id)
     or event_status not in ('interested', 'planning') then
     raise exception using
       errcode = '42501',
@@ -922,10 +1088,7 @@ begin
       message = 'Calendar integration required';
   end if;
 
-  perform private.consume_rate_limit(
-    'event_member_update',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
+  perform private.consume_authenticated_rate_limit_once('event_member_update');
 
   insert into public.event_members (
     event_id,
@@ -998,10 +1161,7 @@ begin
       message = 'Plan owner access required';
   end if;
 
-  perform private.consume_rate_limit(
-    'plan_update',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
+  perform private.consume_authenticated_rate_limit_once('plan_update');
 
   delete from public.availability_answers
   where public.availability_answers.candidate_date_id in (
@@ -1130,10 +1290,7 @@ begin
       message = 'Settlement payment exceeds remaining amount';
   end if;
 
-  perform private.consume_rate_limit(
-    'settlement_update',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
+  perform private.consume_authenticated_rate_limit_once('settlement_update');
 
   insert into public.settlement_payments (
     settlement_id,
@@ -1187,6 +1344,173 @@ begin
 end;
 $$;
 
+create or replace function public.record_public_settlement_payment(
+  p_share_link_id uuid,
+  p_settlement_id uuid,
+  p_amount integer,
+  p_payment_method text,
+  p_payment_url text,
+  p_memo text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_plan_id uuid;
+  from_participant_id uuid;
+  to_user_id uuid;
+  settlement_amount integer;
+  paid_amount integer;
+  created_payment_id uuid;
+  notification_title text;
+  payer_name text;
+begin
+  if auth.role() <> 'service_role' then
+    raise exception using
+      errcode = '42501',
+      message = 'Service role required';
+  end if;
+
+  if p_share_link_id is null
+    or p_settlement_id is null
+    or p_amount is null
+    or p_amount <= 0
+    or char_length(coalesce(p_payment_method, '')) > 100
+    or char_length(coalesce(p_payment_url, '')) > 2048
+    or char_length(coalesce(p_memo, '')) > 1000 then
+    raise exception using
+      errcode = '22023',
+      message = 'Invalid public settlement payment';
+  end if;
+
+  select
+    target_settlement.plan_id,
+    target_settlement.from_participant_id,
+    target_settlement.amount,
+    receiver.user_id,
+    payer.display_name,
+    left(
+      coalesce(
+        nullif(trim(public.events.title), ''),
+        nullif(trim(public.plans.title), ''),
+        '日程調整'
+      ),
+      120
+    )
+  into
+    target_plan_id,
+    from_participant_id,
+    settlement_amount,
+    to_user_id,
+    payer_name,
+    notification_title
+  from public.settlements as target_settlement
+  join public.share_links
+    on public.share_links.plan_id = target_settlement.plan_id
+   and public.share_links.id = p_share_link_id
+   and public.share_links.purpose = 'answer'
+   and (
+     public.share_links.expires_at is null
+     or public.share_links.expires_at > clock_timestamp()
+   )
+  join public.plans on public.plans.id = target_settlement.plan_id
+  join public.events on public.events.id = public.plans.event_id
+  join public.participants as payer on payer.id = target_settlement.from_participant_id
+  join public.participants as receiver on receiver.id = target_settlement.to_participant_id
+  where target_settlement.id = p_settlement_id
+  for update of target_settlement;
+
+  if not found then
+    raise exception using
+      errcode = '42501',
+      message = 'Public settlement access denied';
+  end if;
+
+  select coalesce(sum(public.settlement_payments.amount), 0)::integer
+  into paid_amount
+  from public.settlement_payments
+  where public.settlement_payments.settlement_id = p_settlement_id;
+
+  if p_amount > settlement_amount - paid_amount then
+    raise exception using
+      errcode = '22023',
+      message = 'Settlement payment exceeds remaining amount';
+  end if;
+
+  insert into public.settlement_payments (
+    settlement_id,
+    paid_by_participant_id,
+    amount,
+    payment_method,
+    payment_url,
+    memo
+  )
+  values (
+    p_settlement_id,
+    from_participant_id,
+    p_amount,
+    nullif(trim(p_payment_method), ''),
+    nullif(trim(p_payment_url), ''),
+    nullif(trim(p_memo), '')
+  )
+  returning id into created_payment_id;
+
+  update public.settlements
+  set
+    status = case when paid_amount + p_amount >= settlement_amount then 'paid' else 'unpaid' end,
+    paid_at = now()
+  where public.settlements.id = p_settlement_id;
+
+  update public.plans
+  set settlement_status = 'settling'
+  where public.plans.id = target_plan_id;
+
+  if to_user_id is not null then
+    insert into public.notifications (
+      user_id,
+      kind,
+      title,
+      body,
+      href,
+      dedupe_key
+    )
+    values (
+      to_user_id,
+      'confirmation_due',
+      '受け取り確認待ちがあります',
+      left(
+        notification_title || ' で ' ||
+        coalesce(nullif(trim(payer_name), ''), '参加者') ||
+        'さんの受け取り確認待ちがあります。',
+        500
+      ),
+      '/plans/' || target_plan_id::text || '/settlement#confirmation',
+      'confirmation_due:' || target_plan_id::text || ':payment:' || created_payment_id::text
+    )
+    on conflict (user_id, dedupe_key) do nothing;
+  end if;
+
+  insert into private.security_audit_logs (
+    actor_user_id,
+    operation,
+    target_type,
+    target_id,
+    outcome
+  )
+  values (
+    null,
+    'public_payment',
+    'settlement',
+    p_settlement_id,
+    'success'
+  );
+
+  return target_plan_id;
+end;
+$$;
+
 create or replace function public.confirm_settlement_payment(p_payment_id uuid)
 returns uuid
 language plpgsql
@@ -1231,10 +1555,7 @@ begin
       message = 'Settlement confirmation access required';
   end if;
 
-  perform private.consume_rate_limit(
-    'settlement_update',
-    extensions.digest(current_user_id::text, 'sha256')
-  );
+  perform private.consume_authenticated_rate_limit_once('settlement_update');
 
   update public.settlement_payments
   set confirmed_at = coalesce(confirmed_at, confirmed_time)
@@ -1473,14 +1794,213 @@ begin
 end;
 $$;
 
+create or replace function private.audit_authenticated_user_unblock()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.role() = 'authenticated' and old.blocker_user_id = auth.uid() then
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      auth.uid(), 'connection_unblock', 'user', old.blocked_user_id, 'success'
+    );
+  end if;
+  return old;
+end;
+$$;
+
+create or replace function private.audit_authenticated_invite_link_revoke()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.role() = 'authenticated'
+    and old.status = 'open'
+    and new.status in ('closed', 'revoked') then
+    insert into private.security_audit_logs (
+      actor_user_id, operation, target_type, target_id, outcome
+    ) values (
+      auth.uid(), 'event_invitation_revoke', 'event', new.event_id, 'success'
+    );
+  end if;
+  return new;
+end;
+$$;
+
+create trigger rate_limit_events
+before insert or update or delete on public.events
+for each statement execute function private.enforce_authenticated_rate_limit('event_update');
+
+create trigger rate_limit_event_drafts
+before insert or update or delete on public.event_drafts
+for each statement execute function private.enforce_authenticated_rate_limit('event_update');
+
+create trigger rate_limit_plans
+before insert or update or delete on public.plans
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_candidate_dates
+before insert or update or delete on public.candidate_dates
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_participants
+before insert or update or delete on public.participants
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_share_links
+before insert or update or delete on public.share_links
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_availability_answers
+before insert or update or delete on public.availability_answers
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_plan_reminder_settings
+before insert or update or delete on public.plan_reminder_settings
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_plan_reminder_logs
+before insert or update or delete on public.plan_reminder_logs
+for each statement execute function private.enforce_authenticated_rate_limit('plan_update');
+
+create trigger rate_limit_event_members
+before insert or update or delete on public.event_members
+for each statement execute function private.enforce_authenticated_rate_limit('event_member_update');
+
+create trigger rate_limit_event_invite_links
+before insert or update or delete on public.event_invite_links
+for each statement execute function private.enforce_authenticated_rate_limit('event_member_update');
+
+create trigger rate_limit_event_messages
+before insert or update or delete on public.event_messages
+for each statement execute function private.enforce_authenticated_rate_limit('event_message_post');
+
+create trigger rate_limit_user_connections
+before insert or update or delete on public.user_connections
+for each statement execute function private.enforce_authenticated_rate_limit('connection_update');
+
+create trigger rate_limit_user_favorites
+before insert or update or delete on public.user_favorites
+for each statement execute function private.enforce_authenticated_rate_limit('connection_update');
+
+create trigger rate_limit_user_blocks
+before insert or update or delete on public.user_blocks
+for each statement execute function private.enforce_authenticated_rate_limit('connection_update');
+
+create trigger rate_limit_event_user_invitations_create
+before insert on public.event_user_invitations
+for each statement execute function private.enforce_authenticated_rate_limit('event_invitation_create');
+
+create trigger rate_limit_event_user_invitations_respond
+before update or delete on public.event_user_invitations
+for each statement execute function private.enforce_authenticated_rate_limit('event_invitation_respond');
+
+create trigger rate_limit_profiles
+before insert or update or delete on public.profiles
+for each statement execute function private.enforce_authenticated_rate_limit('profile_update');
+
+create trigger rate_limit_user_consents
+before insert or update or delete on public.user_consents
+for each statement execute function private.enforce_authenticated_rate_limit('profile_update');
+
+create trigger rate_limit_expenses
+before insert or update or delete on public.expenses
+for each statement execute function private.enforce_authenticated_rate_limit('settlement_update');
+
+create trigger rate_limit_expense_splits
+before insert or update or delete on public.expense_splits
+for each statement execute function private.enforce_authenticated_rate_limit('settlement_update');
+
+create trigger rate_limit_settlements
+before insert or update or delete on public.settlements
+for each statement execute function private.enforce_authenticated_rate_limit('settlement_update');
+
+create trigger rate_limit_settlement_payments
+before insert or update or delete on public.settlement_payments
+for each statement execute function private.enforce_authenticated_rate_limit('settlement_update');
+
+create trigger rate_limit_payment_proofs
+before insert or update or delete on public.payment_proofs
+for each statement execute function private.enforce_authenticated_rate_limit('settlement_update');
+
+create trigger rate_limit_settlement_reminder_logs
+before insert or update or delete on public.settlement_reminder_logs
+for each statement execute function private.enforce_authenticated_rate_limit('settlement_update');
+
+create trigger rate_limit_calendar_integrations
+before insert or update or delete on public.calendar_integrations
+for each statement execute function private.enforce_authenticated_rate_limit('google_calendar_update');
+
+create trigger rate_limit_notifications
+before update or delete on public.notifications
+for each statement execute function private.enforce_authenticated_rate_limit('profile_update');
+
+create trigger audit_authenticated_user_unblock
+after delete on public.user_blocks
+for each row execute function private.audit_authenticated_user_unblock();
+
+create trigger audit_authenticated_invite_link_revoke
+after update on public.event_invite_links
+for each row execute function private.audit_authenticated_invite_link_revoke();
+
+drop policy if exists "Users can manage own notifications" on public.notifications;
+
+create policy "Users can view own notifications"
+on public.notifications
+for select
+to authenticated
+using (user_id = auth.uid());
+
+create policy "Users can update own notifications"
+on public.notifications
+for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+create policy "Users can delete own notifications"
+on public.notifications
+for delete
+to authenticated
+using (user_id = auth.uid());
+
 revoke all on function private.rate_limit_for(text) from public;
 revoke all on function private.rate_limit_for(text) from anon;
 revoke all on function private.rate_limit_for(text) from authenticated;
 revoke all on function private.rate_limit_for(text) from service_role;
+revoke all on function private.try_consume_rate_limit(text, bytea) from public;
+revoke all on function private.try_consume_rate_limit(text, bytea) from anon;
+revoke all on function private.try_consume_rate_limit(text, bytea) from authenticated;
+revoke all on function private.try_consume_rate_limit(text, bytea) from service_role;
 revoke all on function private.consume_rate_limit(text, bytea) from public;
 revoke all on function private.consume_rate_limit(text, bytea) from anon;
 revoke all on function private.consume_rate_limit(text, bytea) from authenticated;
 revoke all on function private.consume_rate_limit(text, bytea) from service_role;
+revoke all on function private.try_consume_authenticated_rate_limit_once(text) from public;
+revoke all on function private.try_consume_authenticated_rate_limit_once(text) from anon;
+revoke all on function private.try_consume_authenticated_rate_limit_once(text) from authenticated;
+revoke all on function private.try_consume_authenticated_rate_limit_once(text) from service_role;
+revoke all on function private.consume_authenticated_rate_limit_once(text) from public;
+revoke all on function private.consume_authenticated_rate_limit_once(text) from anon;
+revoke all on function private.consume_authenticated_rate_limit_once(text) from authenticated;
+revoke all on function private.consume_authenticated_rate_limit_once(text) from service_role;
+revoke all on function private.enforce_authenticated_rate_limit() from public;
+revoke all on function private.enforce_authenticated_rate_limit() from anon;
+revoke all on function private.enforce_authenticated_rate_limit() from authenticated;
+revoke all on function private.enforce_authenticated_rate_limit() from service_role;
+revoke all on function private.audit_authenticated_user_unblock() from public;
+revoke all on function private.audit_authenticated_user_unblock() from anon;
+revoke all on function private.audit_authenticated_user_unblock() from authenticated;
+revoke all on function private.audit_authenticated_user_unblock() from service_role;
+revoke all on function private.audit_authenticated_invite_link_revoke() from public;
+revoke all on function private.audit_authenticated_invite_link_revoke() from anon;
+revoke all on function private.audit_authenticated_invite_link_revoke() from authenticated;
+revoke all on function private.audit_authenticated_invite_link_revoke() from service_role;
 
 revoke all on function public.consume_authenticated_rate_limit(text) from public;
 revoke all on function public.consume_authenticated_rate_limit(text) from anon;
@@ -1494,7 +2014,7 @@ grant execute on function public.consume_public_rate_limit(text, bytea) to servi
 
 revoke all on function public.record_security_audit(text, text, uuid, text) from public;
 revoke all on function public.record_security_audit(text, text, uuid, text) from anon;
-grant execute on function public.record_security_audit(text, text, uuid, text) to authenticated;
+revoke all on function public.record_security_audit(text, text, uuid, text) from authenticated;
 grant execute on function public.record_security_audit(text, text, uuid, text) to service_role;
 
 revoke all on function public.purge_expired_security_data() from public;
@@ -1522,10 +2042,10 @@ revoke all on function public.block_user_atomic(uuid) from anon;
 revoke all on function public.block_user_atomic(uuid) from service_role;
 grant execute on function public.block_user_atomic(uuid) to authenticated;
 
-revoke all on function public.get_event_calendar_integrations(uuid) from public;
-revoke all on function public.get_event_calendar_integrations(uuid) from anon;
-revoke all on function public.get_event_calendar_integrations(uuid) from service_role;
-grant execute on function public.get_event_calendar_integrations(uuid) to authenticated;
+revoke all on function public.get_event_calendar_integrations(uuid, uuid) from public;
+revoke all on function public.get_event_calendar_integrations(uuid, uuid) from anon;
+revoke all on function public.get_event_calendar_integrations(uuid, uuid) from authenticated;
+grant execute on function public.get_event_calendar_integrations(uuid, uuid) to service_role;
 
 revoke all on function public.get_plan_calendar_attendee_emails(uuid) from public;
 revoke all on function public.get_plan_calendar_attendee_emails(uuid) from anon;
@@ -1546,6 +2066,11 @@ revoke all on function public.record_settlement_payment(uuid, integer, text, tex
 revoke all on function public.record_settlement_payment(uuid, integer, text, text, text) from anon;
 revoke all on function public.record_settlement_payment(uuid, integer, text, text, text) from service_role;
 grant execute on function public.record_settlement_payment(uuid, integer, text, text, text) to authenticated;
+
+revoke all on function public.record_public_settlement_payment(uuid, uuid, integer, text, text, text) from public;
+revoke all on function public.record_public_settlement_payment(uuid, uuid, integer, text, text, text) from anon;
+revoke all on function public.record_public_settlement_payment(uuid, uuid, integer, text, text, text) from authenticated;
+grant execute on function public.record_public_settlement_payment(uuid, uuid, integer, text, text, text) to service_role;
 
 revoke all on function public.confirm_settlement_payment(uuid) from public;
 revoke all on function public.confirm_settlement_payment(uuid) from anon;

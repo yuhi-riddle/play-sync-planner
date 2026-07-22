@@ -8,7 +8,7 @@ import {
   consumePublicSettlementRateLimit,
   recordPublicSettlementRateLimitDenial
 } from "@/lib/server/admin/public-settlement";
-import { requireUser } from "@/lib/server/request-guards";
+import { normalizePublicToken, requireUser } from "@/lib/server/request-guards";
 
 export type AuthenticatedRateLimitOperation =
   | "event_message_post"
@@ -66,21 +66,6 @@ export function rateLimitErrorFromDatabase(
     : null;
 }
 
-async function recordAuthenticatedDenial(
-  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"]
-) {
-  try {
-    await supabase.rpc("record_security_audit", {
-      operation: "rate_limit_denied",
-      target_type: "rate_limit",
-      target_id: null,
-      outcome: "denied"
-    });
-  } catch {
-    // Rate-limit enforcement must not depend on best-effort audit recording.
-  }
-}
-
 export async function consumeAuthenticatedLimit(
   operation: AuthenticatedRateLimitOperation
 ): Promise<void> {
@@ -93,7 +78,6 @@ export async function consumeAuthenticatedLimit(
 
   const rateLimitError = rateLimitErrorFromDatabase(error);
   if (rateLimitError) {
-    await recordAuthenticatedDenial(supabase);
     throw rateLimitError;
   }
 
@@ -137,7 +121,8 @@ export async function consumePublicLimit(
   operation: PublicRateLimitOperation,
   token: string
 ): Promise<void> {
-  const subjectHash = publicSubjectHash(operation, token);
+  const normalizedToken = normalizePublicToken(token);
+  const subjectHash = publicSubjectHash(operation, normalizedToken);
 
   if (operation === "public_answer") {
     await handlePublicResult(

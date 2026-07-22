@@ -73,11 +73,9 @@ describe("unblockUserAction", () => {
     query.delete.mockReturnValue(query);
     query.eq.mockReturnValueOnce(query).mockResolvedValueOnce({ error: null });
     const from = vi.fn(() => query);
-    const rpc = vi.fn().mockResolvedValue({ error: null });
     createSupabaseServerClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: currentUserId } }, error: null }) },
-      from,
-      rpc
+      from
     });
 
     await unblockUserAction(blockedUserId);
@@ -87,12 +85,6 @@ describe("unblockUserAction", () => {
     expect(query.delete).toHaveBeenCalledTimes(1);
     expect(query.eq).toHaveBeenNthCalledWith(1, "blocker_user_id", currentUserId);
     expect(query.eq).toHaveBeenNthCalledWith(2, "blocked_user_id", blockedUserId);
-    expect(rpc).toHaveBeenCalledWith("consume_authenticated_rate_limit", {
-      operation: "connection_update"
-    });
-    expect(rpc).toHaveBeenCalledWith("record_security_audit", expect.objectContaining({
-      operation: "connection_unblock"
-    }));
     expect(revalidatePath).toHaveBeenCalledWith("/connections");
   });
 });

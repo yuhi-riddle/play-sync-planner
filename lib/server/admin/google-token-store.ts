@@ -13,6 +13,14 @@ function requireUserId(userId: string) {
   if (!uuidPattern.test(userId)) throw new GoogleTokenStoreError();
 }
 
+export type EventCalendarIntegration = {
+  user_id: string;
+  calendar_id: string | null;
+  encrypted_access_token: string | null;
+  encrypted_refresh_token: string | null;
+  token_expires_at: string | null;
+};
+
 function requireEncryptedToken(value: string) {
   if (value.length === 0 || value.length > 16_384) throw new GoogleTokenStoreError();
 }
@@ -71,4 +79,42 @@ export async function storeRefreshedGoogleCalendarToken(input: {
     .eq("user_id", input.userId)
     .eq("provider", "google");
   if (error) throw new GoogleTokenStoreError();
+}
+
+export async function getEventCalendarIntegrations(input: {
+  eventId: string;
+  ownerUserId: string;
+}): Promise<EventCalendarIntegration[]> {
+  requireUserId(input.eventId);
+  requireUserId(input.ownerUserId);
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.rpc("get_event_calendar_integrations", {
+    p_event_id: input.eventId,
+    p_owner_user_id: input.ownerUserId
+  });
+  if (error || !Array.isArray(data)) throw new GoogleTokenStoreError();
+  return data as EventCalendarIntegration[];
+}
+
+async function recordGoogleCalendarAudit(
+  userId: string,
+  operation: "google_calendar_connect" | "google_calendar_disconnect"
+) {
+  requireUserId(userId);
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.rpc("record_security_audit", {
+    operation,
+    target_type: "calendar_integration",
+    target_id: userId,
+    outcome: "success"
+  });
+  if (error) throw new GoogleTokenStoreError();
+}
+
+export async function recordGoogleCalendarConnectAudit(userId: string): Promise<void> {
+  await recordGoogleCalendarAudit(userId, "google_calendar_connect");
+}
+
+export async function recordGoogleCalendarDisconnectAudit(userId: string): Promise<void> {
+  await recordGoogleCalendarAudit(userId, "google_calendar_disconnect");
 }

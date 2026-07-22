@@ -4,9 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { exchangeGoogleCalendarCode } from "@/lib/google-calendar/oauth";
 import { encryptToken } from "@/lib/google-calendar/token-crypto";
-import { storeGoogleCalendarIntegration } from "@/lib/server/admin/google-token-store";
+import {
+  recordGoogleCalendarConnectAudit,
+  storeGoogleCalendarIntegration
+} from "@/lib/server/admin/google-token-store";
 import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
-import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 
 function callbackUrl(request: NextRequest, nextPath: string, status: "connected" | "error") {
   const url = new URL(nextPath, request.url);
@@ -43,7 +46,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(callbackUrl(request, nextPath, "error"));
     }
 
-    const supabase = await createSupabaseServerClient();
     const expiresAt = token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null;
     await storeGoogleCalendarIntegration({
       userId: user.id,
@@ -53,16 +55,7 @@ export async function GET(request: NextRequest) {
       tokenExpiresAt: expiresAt,
       scope: token.scope ?? null
     });
-    const { error: auditError } = await supabase.rpc("record_security_audit", {
-      operation: "google_calendar_connect",
-      target_type: "calendar_integration",
-      target_id: user.id,
-      outcome: "success"
-    });
-
-    if (auditError) {
-      return NextResponse.redirect(callbackUrl(request, nextPath, "error"));
-    }
+    await recordGoogleCalendarConnectAudit(user.id);
 
     return NextResponse.redirect(callbackUrl(request, nextPath, "connected"));
   } catch {

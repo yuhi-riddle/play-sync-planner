@@ -9,19 +9,15 @@ import {
   CalendarFreeBusyError,
   fetchCalendarFreeBusy
 } from "@/lib/google-calendar/freebusy";
+import {
+  getEventCalendarIntegrations,
+  type EventCalendarIntegration
+} from "@/lib/server/admin/google-token-store";
 import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
 import { requireEventAccess } from "@/lib/server/request-guards";
 import { RouteError, toRouteError } from "@/lib/server/route-errors";
 
 export const dynamic = "force-dynamic";
-
-type CalendarIntegrationRpcRow = {
-  user_id: string;
-  calendar_id: string | null;
-  encrypted_access_token: string | null;
-  encrypted_refresh_token: string | null;
-  token_expires_at: string | null;
-};
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +25,7 @@ export async function GET(
 ) {
   try {
     const { eventId } = await params;
-    const { supabase } = await requireEventAccess(eventId, "owner");
+    const { user } = await requireEventAccess(eventId, "owner");
 
     const month = request.nextUrl.searchParams.get("month");
     if (!month) {
@@ -44,22 +40,16 @@ export async function GET(
     }
 
     await consumeAuthenticatedLimit("google_availability");
-    const { data: integrations, error: integrationsError } = await supabase.rpc(
-      "get_event_calendar_integrations",
-      { p_event_id: eventId }
-    );
-    if (integrationsError) {
-      if (integrationsError.code === "42501") {
-        throw new RouteError(
-          403,
-          "event_access_denied",
-          "日程調整中の主催者だけが空き状況を集計できます。"
-        );
-      }
+    let integrationRows: EventCalendarIntegration[];
+    try {
+      integrationRows = await getEventCalendarIntegrations({
+        eventId,
+        ownerUserId: user.id
+      });
+    } catch {
       throw new RouteError(500, "calendar_lookup_failed", "カレンダー連携を確認できませんでした。");
     }
 
-    const integrationRows = (integrations ?? []) as CalendarIntegrationRpcRow[];
     if (
       integrationRows.length === 0 ||
       integrationRows.some((integration) => !integration.encrypted_refresh_token)
