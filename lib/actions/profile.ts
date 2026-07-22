@@ -13,6 +13,7 @@ import {
   validateAvatarFile,
   type ProfileActionState
 } from "@/lib/domain/profile";
+import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const PROFILE_MIGRATION_MESSAGE =
@@ -56,6 +57,8 @@ export async function updateProfileAction(
   if (profileError) {
     return errorState(isProfileSchemaUnavailable(profileError) ? PROFILE_MIGRATION_MESSAGE : "プロフィールを読み込めませんでした。");
   }
+
+  await consumeAuthenticatedLimit("profile_update");
 
   let uploadedPath: string | null = null;
   let avatarPath = currentProfile?.avatar_path ?? null;

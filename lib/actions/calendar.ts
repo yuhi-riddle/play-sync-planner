@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { buildConfirmedCalendarEvent } from "@/lib/domain/calendar-sync";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { insertCalendarEvent } from "@/lib/google-calendar/calendar-events";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 type PlanCalendarRow = {
   id: string;
@@ -60,17 +61,24 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
     redirect("/settings?calendar=required");
   }
 
-  const participantUserIds = [
-    ...new Set((planRow.participants ?? []).filter((participant) => participant.status === "confirmed").flatMap((participant) => (participant.user_id ? [participant.user_id] : [])))
-  ].filter((participantUserId) => participantUserId !== userId);
-
-  const { data: attendeeIntegrations } =
-    participantUserIds.length > 0
-      ? await createSupabaseAdminClient().from("calendar_integrations").select("account_email").eq("provider", "google").in("user_id", participantUserIds)
-      : { data: [] };
-  const attendeeEmails = [...new Set((attendeeIntegrations ?? []).flatMap((integration) => (integration.account_email ? [integration.account_email] : [])))];
+  const { data: attendeeIntegrations, error: attendeeError } = await supabase.rpc(
+    "get_plan_calendar_attendee_emails",
+    { p_plan_id: planId }
+  );
+  if (attendeeError) throw new Error("参加者のカレンダー情報を確認できませんでした。");
+  const attendeeEmails = [
+    ...new Set(
+      ((attendeeIntegrations ?? []) as Array<{ account_email: string | null }>)
+        .map((row) => row.account_email)
+        .filter((email): email is string => Boolean(email))
+    )
+  ];
   const event = Array.isArray(planRow.events) ? planRow.events[0] : planRow.events;
-  const accessToken = await resolveGoogleCalendarAccessToken({ supabase, userId, integration: integration as CalendarIntegrationRow });
+  await consumeAuthenticatedLimit("google_calendar_update");
+  const accessToken = await resolveGoogleCalendarAccessToken({
+    userId,
+    integration: integration as CalendarIntegrationRow
+  });
   const inserted = await insertCalendarEvent({
     accessToken,
     calendarId: (integration as CalendarIntegrationRow).calendar_id ?? "primary",
@@ -87,11 +95,12 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
     }
   });
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("plans")
     .update({ google_calendar_event_id: inserted.id ?? "created" })
     .eq("id", planId)
     .eq("owner_user_id", userId);
+  if (updateError) throw new Error("Google カレンダーの登録状態を保存できませんでした。");
 
   revalidatePath("/");
   revalidatePath(`/plans/${planId}`);

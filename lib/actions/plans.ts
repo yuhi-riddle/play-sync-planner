@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import { formDataToObject } from "@/lib/form-data";
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
-import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { rateLimitErrorFromDatabase, consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/validators";
 
 function toIsoDateTime(value: string): string {
@@ -40,7 +40,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     .eq("status", "joined");
 
   if (membersError) {
-    throw new Error(membersError.message);
+    throw new Error("参加者を確認できませんでした。");
   }
 
   const members = (eventMembers ?? []).map((member) => ({
@@ -53,6 +53,8 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   if (!canStartPlanFromMembers(members) || !members.some((member) => member.userId === userId && member.role === "organizer" && member.status === "joined")) {
     throw new Error("主催者を含む参加者を集めてから日程調整を作成してください。");
   }
+
+  await consumeAuthenticatedLimit("plan_update");
 
   const { data: plan, error: planError } = await supabase
     .from("plans")
@@ -70,7 +72,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     .single();
 
   if (planError) {
-    throw new Error(planError.message);
+    throw new Error("日程調整を作成できませんでした。");
   }
 
   const participants = buildPlanParticipantsFromMembers(members, plan.id);
@@ -99,7 +101,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   ]);
 
   if (participantsError || datesError || linkError || reminderError) {
-    throw new Error(participantsError?.message ?? datesError?.message ?? linkError?.message ?? reminderError?.message);
+    throw new Error("日程調整の初期設定を保存できませんでした。");
   }
 
   revalidatePath("/");
@@ -115,6 +117,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
 
   const values = planSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
+  await consumeAuthenticatedLimit("plan_update");
   const { data: plan, error: planError } = await supabase
     .from("plans")
     .update({
@@ -128,7 +131,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     .single();
 
   if (planError) {
-    throw new Error(planError.message);
+    throw new Error("日程調整を更新できませんでした。");
   }
 
   const shouldReplaceParticipants = formData.has("participantNames");
@@ -177,7 +180,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
   ]);
 
   if (participantsError || datesError || reminderError) {
-    throw new Error(participantsError?.message ?? datesError?.message ?? reminderError?.message);
+    throw new Error("日程調整の候補日を更新できませんでした。");
   }
 
   revalidatePath("/");
@@ -193,86 +196,18 @@ export async function restartPlanAdjustmentAction(planId: string) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: plan, error: planError } = await supabase
-    .from("plans")
-    .select("id, event_id, owner_user_id, title")
-    .eq("id", planId)
-    .eq("owner_user_id", userId)
-    .single();
-
-  if (planError || !plan) {
+  const { data: eventId, error } = await supabase.rpc("restart_plan_adjustment", {
+    p_plan_id: planId
+  });
+  const rateLimitError = rateLimitErrorFromDatabase(error);
+  if (rateLimitError) throw rateLimitError;
+  if (error?.code === "42501") {
     throw new Error("この日程調整を再開する権限がありません。");
   }
-
-  const admin = createSupabaseAdminClient();
-  const { data: candidateDates, error: candidateDatesError } = await admin
-    .from("candidate_dates")
-    .select("id")
-    .eq("plan_id", planId);
-  if (candidateDatesError) {
-    throw new Error(candidateDatesError.message);
-  }
-
-  const candidateDateIds = (candidateDates ?? []).map((candidateDate) => candidateDate.id);
-  if (candidateDateIds.length > 0) {
-    const { error } = await admin.from("availability_answers").delete().in("candidate_date_id", candidateDateIds);
-    if (error) {
-      throw new Error(error.message);
-    }
-  }
-
-  const [{ error: planUpdateError }, { error: eventUpdateError }, { error: participantsUpdateError }] = await Promise.all([
-    admin
-      .from("plans")
-      .update({ status: "collecting_answers", confirmed_start_at: null, confirmed_end_at: null, is_all_day: false })
-      .eq("id", planId),
-    admin.from("events").update({ status: "planning" }).eq("id", plan.event_id),
-    admin.from("participants").update({ status: "invited" }).eq("plan_id", planId)
-  ]);
-  if (planUpdateError || eventUpdateError || participantsUpdateError) {
-    throw new Error(planUpdateError?.message ?? eventUpdateError?.message ?? participantsUpdateError?.message);
-  }
-
-  const [{ data: participants, error: participantsError }, { data: shareLink, error: shareLinkError }] = await Promise.all([
-    admin.from("participants").select("user_id").eq("plan_id", planId).not("user_id", "is", null),
-    admin.from("share_links").select("token").eq("plan_id", planId).eq("purpose", "answer").maybeSingle()
-  ]);
-  if (participantsError || shareLinkError) {
-    throw new Error(participantsError?.message ?? shareLinkError?.message);
-  }
-
-  const notificationTime = new Date().toISOString();
-  const notifications = (participants ?? []).flatMap((participant) => {
-    if (!participant.user_id || !shareLink?.token) {
-      return [];
-    }
-    const notification = buildNotificationCandidate({
-      userId: participant.user_id,
-      kind: "unanswered",
-      planId,
-      title: plan.title ?? "日程調整",
-      href: `/s/${shareLink.token}/answer`,
-      dueAt: `restart:${notificationTime}`
-    });
-    return [{
-      user_id: notification.userId,
-      kind: notification.kind,
-      title: notification.title,
-      body: notification.body,
-      href: notification.href,
-      dedupe_key: notification.dedupeKey,
-      read_at: null
-    }];
-  });
-  if (notifications.length > 0) {
-    const { error } = await admin.from("notifications").upsert(notifications, { onConflict: "user_id,dedupe_key" });
-    if (error) {
-      throw new Error(error.message);
-    }
-  }
+  if (error || !eventId) throw new Error("日程調整を再開できませんでした。");
 
   revalidatePath("/");
-  revalidatePath(`/events/${plan.event_id}`);
+  revalidatePath(`/events/${eventId}`);
   revalidatePath(`/plans/${planId}`);
   redirect(`/plans/${planId}`);
 }

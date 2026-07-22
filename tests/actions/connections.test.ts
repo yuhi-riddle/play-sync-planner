@@ -1,18 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, revalidatePath } = vi.hoisted(() => ({
-  createSupabaseAdminClient: vi.fn(),
+const { createSupabaseServerClient, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  getCurrentUser
+  createSupabaseServerClient
 }));
 
 import { blockUserAction, unblockUserAction } from "@/lib/actions/connections";
@@ -23,23 +19,25 @@ const blockedUserId = "22222222-2222-4222-8222-222222222222";
 describe("blockUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("delegates the whole block operation to one atomic RPC", async () => {
     const rpc = vi.fn().mockResolvedValue({ error: null });
-    createSupabaseServerClient.mockResolvedValue({ rpc });
+    createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: currentUserId } }, error: null }) },
+      rpc
+    });
 
     await blockUserAction(blockedUserId);
 
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith("block_user_atomic", { target_user_id: blockedUserId });
-    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
     expect(revalidatePath).toHaveBeenCalledWith("/connections");
   });
 
   it("preserves the existing message when the target no longer shares an event", async () => {
     createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: currentUserId } }, error: null }) },
       rpc: vi.fn().mockResolvedValue({
         error: { code: "PSP01", message: "A shared event is required" }
       })
@@ -53,6 +51,7 @@ describe("blockUserAction", () => {
 
   it("uses the general block error for an unexpected database failure", async () => {
     createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: currentUserId } }, error: null }) },
       rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
     });
 
@@ -64,7 +63,6 @@ describe("blockUserAction", () => {
 describe("unblockUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("removes only the current user's block and does not restore follows or favorites", async () => {
@@ -75,7 +73,12 @@ describe("unblockUserAction", () => {
     query.delete.mockReturnValue(query);
     query.eq.mockReturnValueOnce(query).mockResolvedValueOnce({ error: null });
     const from = vi.fn(() => query);
-    createSupabaseAdminClient.mockReturnValue({ from });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    createSupabaseServerClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: currentUserId } }, error: null }) },
+      from,
+      rpc
+    });
 
     await unblockUserAction(blockedUserId);
 
@@ -84,6 +87,12 @@ describe("unblockUserAction", () => {
     expect(query.delete).toHaveBeenCalledTimes(1);
     expect(query.eq).toHaveBeenNthCalledWith(1, "blocker_user_id", currentUserId);
     expect(query.eq).toHaveBeenNthCalledWith(2, "blocked_user_id", blockedUserId);
+    expect(rpc).toHaveBeenCalledWith("consume_authenticated_rate_limit", {
+      operation: "connection_update"
+    });
+    expect(rpc).toHaveBeenCalledWith("record_security_audit", expect.objectContaining({
+      operation: "connection_unblock"
+    }));
     expect(revalidatePath).toHaveBeenCalledWith("/connections");
   });
 });

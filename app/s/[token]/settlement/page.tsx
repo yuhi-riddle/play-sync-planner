@@ -12,7 +12,8 @@ import { Card, PageHeader } from "@/components/ui";
 import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlements";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
 import { formatDateTimeRange } from "@/lib/format";
-import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
+import { getPublicSettlementData } from "@/lib/server/admin/public-settlement";
+import { hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -75,24 +76,12 @@ export default async function PublicSettlementPage({
     );
   }
 
-  const supabase = createSupabaseAdminClient();
-  const { data: link } = await supabase
-    .from("share_links")
-    .select(
-      "token, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_method, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name), settlement_payments(amount, confirmed_at)))"
-    )
-    .eq("token", token)
-    .eq("purpose", "answer")
-    .single();
-
-  if (!link) {
+  const data = await getPublicSettlementData(token);
+  if (!data) {
     notFound();
   }
 
-  const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as PublicPlanRow | null;
-  if (!plan) {
-    notFound();
-  }
+  const plan = data.plan as PublicPlanRow;
 
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
   const calendarShareUrl =

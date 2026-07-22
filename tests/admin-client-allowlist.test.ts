@@ -4,21 +4,11 @@ import { join, relative, resolve } from "node:path";
 import { expect, it } from "vitest";
 
 const ADMIN_CLIENT_BASELINE_FILES = [
-  // /connections uses the session/RLS client and is intentionally excluded from this service-role baseline.
-  "app/api/cron/notifications/route.ts",
-  "app/api/events/[eventId]/availability/route.ts",
-  "app/invites/[token]/page.tsx",
-  "app/plans/[planId]/settlement/page.tsx",
-  "app/s/[token]/answer/page.tsx",
-  "app/s/[token]/settlement/page.tsx",
-  "lib/actions/answers.ts",
-  "lib/actions/calendar.ts",
-  "lib/actions/connections.ts",
-  "lib/actions/event-members.ts",
-  "lib/actions/event-messages.ts",
-  "lib/actions/plans.ts",
-  "lib/actions/settlements.ts",
-  "lib/google-calendar/access-token.ts",
+  "lib/server/admin/cron-notifications.ts",
+  "lib/server/admin/google-token-store.ts",
+  "lib/server/admin/public-answer.ts",
+  "lib/server/admin/public-invite.ts",
+  "lib/server/admin/public-settlement.ts",
   "lib/supabase/server.ts"
 ] as const;
 
@@ -38,6 +28,16 @@ function sourceFilesUsing(needle: string) {
     .map((path) => relative(process.cwd(), path).replaceAll("\\", "/"));
 }
 
-it("captures every current service-role client usage before hardening", () => {
+it("allows the service-role client only inside five bounded admin modules", () => {
   expect(sourceFilesUsing("createSupabaseAdminClient").sort()).toEqual([...ADMIN_CLIENT_BASELINE_FILES].sort());
+});
+
+it("keeps admin clients and arbitrary query builders private to each wrapper", () => {
+  for (const path of ADMIN_CLIENT_BASELINE_FILES.filter(
+    (path) => path.startsWith("lib/server/admin/")
+  )) {
+    const contents = readFileSync(resolve(process.cwd(), path), "utf8");
+    expect(contents, path).not.toMatch(/export[^\n]*(?:SupabaseClient|AdminClient)/);
+    expect(contents, path).not.toMatch(/return\s+(?:supabase|admin)\s*;/);
+  }
 });

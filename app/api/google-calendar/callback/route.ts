@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { exchangeGoogleCalendarCode } from "@/lib/google-calendar/oauth";
 import { encryptToken } from "@/lib/google-calendar/token-crypto";
+import { storeGoogleCalendarIntegration } from "@/lib/server/admin/google-token-store";
+import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 function callbackUrl(request: NextRequest, nextPath: string, status: "connected" | "error") {
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await consumeAuthenticatedLimit("google_calendar_update");
     const token = await exchangeGoogleCalendarCode({ code });
     if (!token.refresh_token) {
       return NextResponse.redirect(callbackUrl(request, nextPath, "error"));
@@ -42,21 +45,22 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     const expiresAt = token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null;
-    const { error } = await supabase.from("calendar_integrations").upsert(
-      {
-        user_id: user.id,
-        provider: "google",
-        calendar_id: "primary",
-        account_email: user.email,
-        encrypted_access_token: encryptToken(token.access_token),
-        encrypted_refresh_token: encryptToken(token.refresh_token),
-        token_expires_at: expiresAt,
-        scope: token.scope
-      },
-      { onConflict: "user_id,provider" }
-    );
+    await storeGoogleCalendarIntegration({
+      userId: user.id,
+      accountEmail: user.email ?? null,
+      encryptedAccessToken: encryptToken(token.access_token),
+      encryptedRefreshToken: encryptToken(token.refresh_token),
+      tokenExpiresAt: expiresAt,
+      scope: token.scope ?? null
+    });
+    const { error: auditError } = await supabase.rpc("record_security_audit", {
+      operation: "google_calendar_connect",
+      target_type: "calendar_integration",
+      target_id: user.id,
+      outcome: "success"
+    });
 
-    if (error) {
+    if (auditError) {
       return NextResponse.redirect(callbackUrl(request, nextPath, "error"));
     }
 

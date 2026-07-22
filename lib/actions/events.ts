@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { formDataToObject } from "@/lib/form-data";
 import { getAfterEventCreatePath } from "@/lib/domain/event-flow";
 import { getUserDisplayName } from "@/lib/domain/profile";
+import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { eventSchema } from "@/lib/validators";
 
@@ -17,6 +18,7 @@ export async function createEventAction(formData: FormData) {
 
   const values = eventSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
+  await consumeAuthenticatedLimit("event_update");
   const { data, error } = await supabase
     .from("events")
     .insert({
@@ -27,7 +29,7 @@ export async function createEventAction(formData: FormData) {
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error("イベントを作成できませんでした。");
   }
 
   const [{ error: memberError }, { error: inviteError }] = await Promise.all([
@@ -48,7 +50,7 @@ export async function createEventAction(formData: FormData) {
 
   if (memberError || inviteError) {
     await supabase.from("events").delete().eq("id", data.id);
-    throw new Error(memberError?.message ?? inviteError?.message);
+    throw new Error("イベントの初期設定を保存できませんでした。");
   }
 
   await supabase.from("event_drafts").delete().eq("owner_user_id", user.id);
@@ -72,10 +74,11 @@ export async function saveEventDraftAction(formData: FormData) {
     memo: formData.get("memo")?.toString() ?? ""
   };
   const supabase = await createSupabaseServerClient();
+  await consumeAuthenticatedLimit("event_update");
   const { error } = await supabase.from("event_drafts").upsert({ owner_user_id: user.id, payload }, { onConflict: "owner_user_id" });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error("下書きを保存できませんでした。");
   }
 
   revalidatePath("/");
@@ -89,9 +92,10 @@ export async function discardEventDraftAction() {
   }
 
   const supabase = await createSupabaseServerClient();
+  await consumeAuthenticatedLimit("event_update");
   const { error } = await supabase.from("event_drafts").delete().eq("owner_user_id", user.id);
   if (error) {
-    throw new Error(error.message);
+    throw new Error("下書きを削除できませんでした。");
   }
 
   revalidatePath("/");
@@ -105,9 +109,10 @@ export async function cancelEventAction(eventId: string) {
   }
 
   const supabase = await createSupabaseServerClient();
+  await consumeAuthenticatedLimit("event_update");
   const { error } = await supabase.from("events").update({ status: "cancelled" }).eq("id", eventId).eq("owner_user_id", user.id);
   if (error) {
-    throw new Error(error.message);
+    throw new Error("イベントを中止できませんでした。");
   }
 
   await Promise.all([
@@ -129,10 +134,11 @@ export async function updateEventAction(eventId: string, formData: FormData) {
 
   const values = eventSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
+  await consumeAuthenticatedLimit("event_update");
   const { error } = await supabase.from("events").update(values).eq("id", eventId).eq("owner_user_id", user.id);
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error("イベントを更新できませんでした。");
   }
 
   revalidatePath("/");

@@ -1,100 +1,126 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { monthRangeInTokyo, buildAvailabilitySlots } from "@/lib/domain/group-availability";
-import { canReadGroupAvailability } from "@/lib/domain/calendar-availability-access";
-import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
-import { CalendarFreeBusyError, fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
-import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server";
+import { buildAvailabilitySlots, monthRangeInTokyo } from "@/lib/domain/group-availability";
+import {
+  resolveGoogleCalendarAccessToken,
+  type CalendarIntegrationRow
+} from "@/lib/google-calendar/access-token";
+import {
+  CalendarFreeBusyError,
+  fetchCalendarFreeBusy
+} from "@/lib/google-calendar/freebusy";
+import { consumeAuthenticatedLimit } from "@/lib/server/rate-limit";
+import { requireEventAccess } from "@/lib/server/request-guards";
+import { RouteError, toRouteError } from "@/lib/server/route-errors";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
-  const { eventId } = await params;
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "ログインが必要です。" }, { status: 401 });
-  }
+type CalendarIntegrationRpcRow = {
+  user_id: string;
+  calendar_id: string | null;
+  encrypted_access_token: string | null;
+  encrypted_refresh_token: string | null;
+  token_expires_at: string | null;
+};
 
-  const month = request.nextUrl.searchParams.get("month");
-  if (!month) {
-    return NextResponse.json({ error: "month を YYYY-MM 形式で指定してください。" }, { status: 400 });
-  }
-
-  let range: ReturnType<typeof monthRangeInTokyo>;
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
   try {
-    range = monthRangeInTokyo(month);
-  } catch {
-    return NextResponse.json({ error: "month を YYYY-MM 形式で指定してください。" }, { status: 400 });
-  }
+    const { eventId } = await params;
+    const { supabase } = await requireEventAccess(eventId, "owner");
 
-  const admin = createSupabaseAdminClient();
-  const { data: event, error: eventError } = await admin
-    .from("events")
-    .select("owner_user_id, status")
-    .eq("id", eventId)
-    .maybeSingle();
+    const month = request.nextUrl.searchParams.get("month");
+    if (!month) {
+      throw new RouteError(400, "invalid_month", "month を YYYY-MM 形式で指定してください。");
+    }
 
-  if (eventError || !canReadGroupAvailability({ eventStatus: event?.status, isOwner: event?.owner_user_id === user.id })) {
-    return NextResponse.json({ error: "日程調整中の主催者だけが空き状況を集計できます。" }, { status: 403 });
-  }
+    let range: ReturnType<typeof monthRangeInTokyo>;
+    try {
+      range = monthRangeInTokyo(month);
+    } catch {
+      throw new RouteError(400, "invalid_month", "month を YYYY-MM 形式で指定してください。");
+    }
 
-  const { data: members, error: membersError } = await admin
-    .from("event_members")
-    .select("user_id")
-    .eq("event_id", eventId)
-    .eq("status", "joined");
-
-  if (membersError) {
-    return NextResponse.json({ error: "参加者を取得できませんでした。" }, { status: 500 });
-  }
-
-  const memberUserIds = [...new Set((members ?? []).map((member) => member.user_id))];
-  const { data: integrations, error: integrationsError } = await admin
-    .from("calendar_integrations")
-    .select("user_id, calendar_id, encrypted_access_token, encrypted_refresh_token, token_expires_at")
-    .eq("provider", "google")
-    .in("user_id", memberUserIds);
-
-  if (integrationsError) {
-    return NextResponse.json({ error: "Google Calendar 連携を確認できませんでした。" }, { status: 500 });
-  }
-
-  if ((integrations ?? []).length !== memberUserIds.length) {
-    return NextResponse.json({ error: "参加者全員の Google Calendar 連携が必要です。" }, { status: 409 });
-  }
-
-  try {
-    const busyByParticipant = await Promise.all(
-      (integrations ?? []).map(async (integration) => {
-        const accessToken = await resolveGoogleCalendarAccessToken({
-          supabase: admin,
-          userId: integration.user_id,
-          integration: integration as CalendarIntegrationRow
-        });
-        return fetchCalendarFreeBusy({
-          accessToken,
-          calendarId: integration.calendar_id ?? "primary",
-          timeMin: range.start,
-          timeMax: range.end
-        });
-      })
+    await consumeAuthenticatedLimit("google_availability");
+    const { data: integrations, error: integrationsError } = await supabase.rpc(
+      "get_event_calendar_integrations",
+      { p_event_id: eventId }
     );
+    if (integrationsError) {
+      if (integrationsError.code === "42501") {
+        throw new RouteError(
+          403,
+          "event_access_denied",
+          "日程調整中の主催者だけが空き状況を集計できます。"
+        );
+      }
+      throw new RouteError(500, "calendar_lookup_failed", "カレンダー連携を確認できませんでした。");
+    }
+
+    const integrationRows = (integrations ?? []) as CalendarIntegrationRpcRow[];
+    if (
+      integrationRows.length === 0 ||
+      integrationRows.some((integration) => !integration.encrypted_refresh_token)
+    ) {
+      throw new RouteError(
+        409,
+        "calendar_integration_required",
+        "参加者全員の Google カレンダー連携が必要です。"
+      );
+    }
+
+    let busyByParticipant;
+    try {
+      busyByParticipant = await Promise.all(
+        integrationRows.map(async (integration) => {
+          const accessToken = await resolveGoogleCalendarAccessToken({
+            userId: integration.user_id,
+            integration: integration as CalendarIntegrationRow
+          });
+          return fetchCalendarFreeBusy({
+            accessToken,
+            calendarId: integration.calendar_id ?? "primary",
+            timeMin: range.start,
+            timeMax: range.end
+          });
+        })
+      );
+    } catch (error) {
+      if (
+        error instanceof CalendarFreeBusyError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        throw new RouteError(
+          409,
+          "calendar_reconnect_required",
+          "Google カレンダーの再連携が必要です。"
+        );
+      }
+      throw new RouteError(
+        502,
+        "calendar_fetch_failed",
+        "空き状況を取得できませんでした。時間をおいて再試行してください。"
+      );
+    }
+
     const slots = buildAvailabilitySlots({
-      participantCount: memberUserIds.length,
+      participantCount: integrationRows.length,
       busyByParticipant,
       range
     });
 
-    return NextResponse.json({
-      month,
-      updatedAt: new Date().toISOString(),
-      participantCount: memberUserIds.length,
-      slots
-    });
+    return NextResponse.json(
+      {
+        month,
+        updatedAt: new Date().toISOString(),
+        participantCount: integrationRows.length,
+        slots
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (error) {
-    if (error instanceof CalendarFreeBusyError && (error.status === 401 || error.status === 403)) {
-      return NextResponse.json({ error: "Google Calendar の再連携が必要です。", code: "calendar_reconnect_required" }, { status: 409 });
-    }
-    return NextResponse.json({ error: "空き状況を取得できませんでした。時間をおいて再試行してください。" }, { status: 502 });
+    return toRouteError(error);
   }
 }

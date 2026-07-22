@@ -2,47 +2,44 @@ import { notFound, redirect } from "next/navigation";
 
 import { Card, PageHeader, SecondaryLink, SubmitButton } from "@/components/ui";
 import { joinEventFromInviteAction } from "@/lib/actions/event-members";
-import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server";
+import { getPublicInvite } from "@/lib/server/admin/public-invite";
+import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function EventInvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const invitePath = `/invites/${token}`;
-  const admin = createSupabaseAdminClient();
-  const { data: invite } = await admin
-    .from("event_invite_links")
-    .select("event_id, status, events(title)")
-    .eq("token", token)
-    .maybeSingle();
+  const invite = await getPublicInvite(token);
 
   if (!invite) {
     notFound();
   }
 
-  const eventTitle = (invite.events as { title?: string | null } | null)?.title ?? "このイベント";
+  const eventTitle = invite.eventTitle;
   const user = await getCurrentUser();
 
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(invitePath)}`);
   }
 
-  const { data: integration } = await admin
+  const supabase = await createSupabaseServerClient();
+  const { data: integration } = await supabase
     .from("calendar_integrations")
     .select("id")
     .eq("user_id", user.id)
     .eq("provider", "google")
     .maybeSingle();
 
-  const { data: membership } = await admin
+  const { data: membership } = await supabase
     .from("event_members")
     .select("status")
-    .eq("event_id", invite.event_id)
+    .eq("event_id", invite.eventId)
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (membership?.status === "joined") {
-    redirect(`/events/${invite.event_id}`);
+    redirect(`/events/${invite.eventId}`);
   }
 
   if (invite.status !== "open") {

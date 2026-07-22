@@ -6,13 +6,16 @@ import { redirect } from "next/navigation";
 import {
   buildEqualExpenseSplits,
   calculateSettlementTransfers,
-  summarizeSettlementPaymentProgress,
   validateIndividualSplits
 } from "@/lib/domain/settlement";
-import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
-import { canConfirmSettlementPayment } from "@/lib/domain/participant-identity";
 import { formDataToObject } from "@/lib/form-data";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { recordPublicSettlementPayment } from "@/lib/server/admin/public-settlement";
+import {
+  consumeAuthenticatedLimit,
+  consumePublicLimit,
+  rateLimitErrorFromDatabase
+} from "@/lib/server/rate-limit";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import {
   expenseSchema,
   settlementPaymentInstructionSchema,
@@ -35,79 +38,6 @@ type ExpenseRow = {
     amount: number;
   }>;
 };
-
-type SettlementPaymentRow = {
-  id?: string;
-  amount: number;
-  confirmed_at: string | null;
-};
-
-type NotificationParticipantRelation =
-  | { display_name: string | null; user_id?: string | null }
-  | Array<{ display_name: string | null; user_id?: string | null }>
-  | null;
-
-function firstNotificationParticipant(value: NotificationParticipantRelation) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function notificationParticipantName(value: NotificationParticipantRelation) {
-  return firstNotificationParticipant(value)?.display_name?.trim() || "参加者";
-}
-
-function notificationPlanTitle(plan: { title?: string | null; events?: { title: string | null } | { title: string | null }[] | null }) {
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
-  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
-}
-
-async function notifySettlementConfirmationDue({
-  settlementId,
-  paymentId
-}: {
-  settlementId: string;
-  paymentId: string;
-}) {
-  const admin = createSupabaseAdminClient();
-  const { data: settlement, error } = await admin
-    .from("settlements")
-    .select(
-      "id, plan_id, plans(title, events(title)), from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name, user_id)"
-    )
-    .eq("id", settlementId)
-    .single();
-
-  if (error || !settlement) {
-    return;
-  }
-
-  const receiver = firstNotificationParticipant(settlement.to_participant as NotificationParticipantRelation);
-  if (!receiver?.user_id) {
-    return;
-  }
-
-  const plan = Array.isArray(settlement.plans) ? settlement.plans[0] : settlement.plans;
-  const candidate = buildNotificationCandidate({
-    userId: receiver.user_id,
-    kind: "confirmation_due",
-    planId: settlement.plan_id,
-    title: notificationPlanTitle(plan ?? {}),
-    href: `/plans/${settlement.plan_id}/settlement#confirmation`,
-    dueAt: `payment:${paymentId}`,
-    participantNames: [notificationParticipantName(settlement.from_participant as NotificationParticipantRelation)]
-  });
-
-  await admin.from("notifications").upsert(
-    {
-      user_id: candidate.userId,
-      kind: candidate.kind,
-      title: candidate.title,
-      body: candidate.body,
-      href: candidate.href,
-      dedupe_key: candidate.dedupeKey
-    },
-    { onConflict: "user_id,dedupe_key", ignoreDuplicates: true }
-  );
-}
 
 function optionalString(value: FormDataEntryValue | null) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -168,7 +98,7 @@ async function recomputeSettlements(planId: string, participants: ParticipantRow
     .eq("plan_id", planId);
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error("立替支払いを読み込めませんでした。");
   }
 
   const transfers = calculateSettlementTransfers({
@@ -201,7 +131,7 @@ async function recomputeSettlements(planId: string, participants: ParticipantRow
     );
 
     if (insertError) {
-      throw new Error(insertError.message);
+      throw new Error("清算内容を再計算できませんでした。");
     }
   }
 
@@ -225,7 +155,7 @@ async function hasSettlementPayments({
     .limit(1);
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error("支払い状況を確認できませんでした。");
   }
 
   return (data ?? []).length > 0;
@@ -250,7 +180,7 @@ async function assertExpenseCanChange({
     .limit(1);
 
   if (lockedError) {
-    throw new Error(lockedError.message);
+    throw new Error("清算状況を確認できませんでした。");
   }
 
   if ((lockedSettlements ?? []).length > 0) {
@@ -290,6 +220,8 @@ export async function createExpenseAction(planId: string, formData: FormData) {
 
   assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 
+  await consumeAuthenticatedLimit("settlement_update");
+
   const { data: expense, error: expenseError } = await supabase
     .from("expenses")
     .insert({
@@ -306,7 +238,7 @@ export async function createExpenseAction(planId: string, formData: FormData) {
     .single();
 
   if (expenseError) {
-    throw new Error(expenseError.message);
+    throw new Error("立替支払いを保存できませんでした。");
   }
 
   const { error: splitsError } = await supabase.from("expense_splits").insert(
@@ -318,7 +250,7 @@ export async function createExpenseAction(planId: string, formData: FormData) {
   );
 
   if (splitsError) {
-    throw new Error(splitsError.message);
+    throw new Error("負担額を保存できませんでした。");
   }
 
   await recomputeSettlements(planId, participants);
@@ -360,6 +292,8 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
   }
   assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 
+  await consumeAuthenticatedLimit("settlement_update");
+
   const { error: updateError } = await supabase
     .from("expenses")
     .update({
@@ -374,7 +308,7 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
     .eq("id", expenseId);
 
   if (updateError) {
-    throw new Error(updateError.message);
+    throw new Error("立替支払いを更新できませんでした。");
   }
 
   await supabase.from("expense_splits").delete().eq("expense_id", expenseId);
@@ -387,7 +321,7 @@ export async function updateExpenseAction(expenseId: string, formData: FormData)
   );
 
   if (splitsError) {
-    throw new Error(splitsError.message);
+    throw new Error("負担額を更新できませんでした。");
   }
 
   await recomputeSettlements(expense.plan_id, participants);
@@ -417,9 +351,11 @@ export async function deleteExpenseAction(expenseId: string) {
 
   await assertExpenseCanChange({ supabase, planId: expense.plan_id });
 
+  await consumeAuthenticatedLimit("settlement_update");
+
   const { error: deleteError } = await supabase.from("expenses").delete().eq("id", expenseId);
   if (deleteError) {
-    throw new Error(deleteError.message);
+    throw new Error("立替支払いを削除できませんでした。");
   }
 
   const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
@@ -440,148 +376,39 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
-  const { data: settlement, error } = await supabase
-    .from("settlements")
-    .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at), plans(owner_user_id)")
-    .eq("id", settlementId)
-    .single();
-
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
-  if (error || !settlement || plan?.owner_user_id !== userId) {
-    throw new Error("主催者だけが支払い記録を追加できます");
+  const { data: planId, error } = await supabase.rpc("record_settlement_payment", {
+    p_settlement_id: settlementId,
+    p_amount: values.amount,
+    p_payment_method: values.payment_method,
+    p_payment_url: values.payment_url,
+    p_memo: values.memo
+  });
+  const rateLimitError = rateLimitErrorFromDatabase(error);
+  if (rateLimitError) throw rateLimitError;
+  if (error?.code === "42501") {
+    throw new Error("主催者だけが支払い記録を追加できます。");
   }
+  if (error?.code === "22023") throw new Error("支払い金額を確認してください。");
+  if (error || !planId) throw new Error("支払い記録を保存できませんでした。");
 
-  const currentProgress = summarizeSettlementPaymentProgress(
-    settlement.amount,
-    ((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    }))
-  );
-
-  if (values.amount > currentProgress.remainingAmount) {
-    throw new Error("支払い金額が残額を超えています");
-  }
-
-  const { data: insertedPayment, error: insertError } = await supabase
-    .from("settlement_payments")
-    .insert({
-      settlement_id: settlementId,
-      paid_by_participant_id: settlement.from_participant_id,
-      amount: values.amount,
-      payment_method: values.payment_method,
-      payment_url: values.payment_url,
-      memo: values.memo
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  const nextProgress = summarizeSettlementPaymentProgress(settlement.amount, [
-    ...((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    })),
-    { amount: values.amount, confirmedAt: null }
-  ]);
-
-  await supabase
-    .from("settlements")
-    .update({
-      status: nextProgress.status === "paid" || nextProgress.status === "confirmed" ? nextProgress.status : "unpaid",
-      paid_at: nextProgress.paidAmount > 0 ? new Date().toISOString() : null
-    })
-    .eq("id", settlementId);
-
-  await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
-  if (insertedPayment?.id) {
-    await notifySettlementConfirmationDue({ settlementId, paymentId: insertedPayment.id });
-  }
-
-  revalidatePath(`/plans/${settlement.plan_id}`);
-  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath(`/plans/${planId}/settlement`);
 }
 
 export async function recordPublicSettlementPaymentAction(token: string, settlementId: string, formData: FormData) {
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
-  const supabase = createSupabaseAdminClient();
-  const { data: link, error: linkError } = await supabase
-    .from("share_links")
-    .select("plan_id")
-    .eq("token", token)
-    .eq("purpose", "answer")
-    .single();
+  await consumePublicLimit("public_payment", token);
+  const planId = await recordPublicSettlementPayment({
+    token,
+    settlementId,
+    amount: values.amount,
+    paymentMethod: values.payment_method,
+    paymentUrl: values.payment_url,
+    memo: values.memo
+  });
 
-  if (linkError || !link) {
-    throw new Error("共有リンクが見つかりません");
-  }
-
-  const { data: settlement, error } = await supabase
-    .from("settlements")
-    .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at)")
-    .eq("id", settlementId)
-    .eq("plan_id", link.plan_id)
-    .single();
-
-  if (error || !settlement) {
-    throw new Error("清算内容が見つかりません");
-  }
-
-  const currentProgress = summarizeSettlementPaymentProgress(
-    settlement.amount,
-    ((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    }))
-  );
-
-  if (values.amount > currentProgress.remainingAmount) {
-    throw new Error("支払い金額が残額を超えています");
-  }
-
-  const { data: insertedPayment, error: insertError } = await supabase
-    .from("settlement_payments")
-    .insert({
-      settlement_id: settlement.id,
-      paid_by_participant_id: settlement.from_participant_id,
-      amount: values.amount,
-      payment_method: values.payment_method,
-      payment_url: values.payment_url,
-      memo: values.memo
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  const nextProgress = summarizeSettlementPaymentProgress(settlement.amount, [
-    ...((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    })),
-    { amount: values.amount, confirmedAt: null }
-  ]);
-
-  await supabase
-    .from("settlements")
-    .update({
-      status: nextProgress.status === "paid" || nextProgress.status === "confirmed" ? nextProgress.status : "unpaid",
-      paid_at: nextProgress.paidAmount > 0 ? new Date().toISOString() : null
-    })
-    .eq("id", settlement.id);
-
-  await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
-  if (insertedPayment?.id) {
-    await notifySettlementConfirmationDue({ settlementId: settlement.id, paymentId: insertedPayment.id });
-  }
-
-  revalidatePath(`/plans/${settlement.plan_id}`);
-  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath(`/plans/${planId}/settlement`);
   revalidatePath(`/s/${token}/settlement`);
   redirect(`/s/${token}/settlement?paid=1`);
 }
@@ -592,74 +419,19 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     redirect("/login");
   }
 
-  const supabase = createSupabaseAdminClient();
-  const { data: payment, error } = await supabase
-    .from("settlement_payments")
-    .select(
-      "id, settlement_id, settlements(id, plan_id, amount, to_participant:participants!settlements_to_participant_id_fkey(user_id), settlement_payments(id, amount, confirmed_at), plans(owner_user_id))"
-    )
-    .eq("id", paymentId)
-    .single();
-
-  const settlement = Array.isArray(payment?.settlements) ? payment?.settlements[0] : payment?.settlements;
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
-  const receiver = Array.isArray(settlement?.to_participant) ? settlement?.to_participant[0] : settlement?.to_participant;
-  if (
-    error ||
-    !payment ||
-    !settlement ||
-    !plan ||
-    !canConfirmSettlementPayment({ currentUserId: userId, receiverUserId: receiver?.user_id ?? null })
-  ) {
-    throw new Error("主催者だけが受け取り確認できます");
+  const supabase = await createSupabaseServerClient();
+  const { data: planId, error } = await supabase.rpc("confirm_settlement_payment", {
+    p_payment_id: paymentId
+  });
+  const rateLimitError = rateLimitErrorFromDatabase(error);
+  if (rateLimitError) throw rateLimitError;
+  if (error?.code === "42501") {
+    throw new Error("受取人だけが受け取り確認できます。");
   }
+  if (error || !planId) throw new Error("受け取り確認を保存できませんでした。");
 
-  const confirmedAt = new Date().toISOString();
-  const { error: updatePaymentError } = await supabase
-    .from("settlement_payments")
-    .update({ confirmed_at: confirmedAt })
-    .eq("id", paymentId);
-
-  if (updatePaymentError) {
-    throw new Error(updatePaymentError.message);
-  }
-
-  const payments = ((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((row) => ({
-    id: row.id,
-    amount: row.amount,
-    confirmedAt: row.id === paymentId ? confirmedAt : row.confirmed_at
-  }));
-  const nextProgress = summarizeSettlementPaymentProgress(settlement.amount, payments);
-
-  await supabase
-    .from("settlements")
-    .update({
-      status: nextProgress.status === "paid" || nextProgress.status === "confirmed" ? nextProgress.status : "unpaid",
-      confirmed_at: nextProgress.status === "confirmed" ? confirmedAt : null
-    })
-    .eq("id", settlement.id);
-
-  const { data: openSettlements } = await supabase
-    .from("settlements")
-    .select("id")
-    .eq("plan_id", settlement.plan_id)
-    .neq("status", "confirmed")
-    .limit(1);
-
-  await supabase
-    .from("plans")
-    .update({ settlement_status: (openSettlements ?? []).length === 0 ? "settled" : "settling" })
-    .eq("id", settlement.plan_id);
-
-  await supabase
-    .from("notifications")
-    .update({ read_at: confirmedAt })
-    .eq("user_id", userId)
-    .eq("dedupe_key", `confirmation_due:${settlement.plan_id}:payment:${paymentId}`)
-    .is("read_at", null);
-
-  revalidatePath(`/plans/${settlement.plan_id}`);
-  revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath(`/plans/${planId}/settlement`);
 }
 
 export async function updateSettlementPaymentInstructionAction(settlementId: string, formData: FormData) {
@@ -681,6 +453,8 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
     throw new Error("主催者だけが支払い先メモを編集できます");
   }
 
+  await consumeAuthenticatedLimit("settlement_update");
+
   const { error: updateError } = await supabase
     .from("settlements")
     .update({
@@ -691,7 +465,7 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
     .eq("id", settlementId);
 
   if (updateError) {
-    throw new Error(updateError.message);
+    throw new Error("支払い先メモを更新できませんでした。");
   }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
@@ -709,6 +483,8 @@ export async function markSettlementReminderSentAction(planId: string, formData:
   const reminderMessage = optionalString(formData.get("reminder_message"));
   const reminderType = settlementReminderTypeFromFormData(formData.get("reminder_type"));
 
+  await consumeAuthenticatedLimit("settlement_update");
+
   const { error } = await supabase.from("settlement_reminder_logs").insert({
     plan_id: planId,
     actor_user_id: userId,
@@ -718,7 +494,7 @@ export async function markSettlementReminderSentAction(planId: string, formData:
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error("催促の記録を保存できませんでした。");
   }
 
   revalidatePath(`/plans/${planId}/settlement`);

@@ -1,31 +1,27 @@
 "use server";
 
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getUserDisplayName } from "@/lib/domain/profile";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import {
+  consumeAuthenticatedLimit,
+  rateLimitErrorFromDatabase
+} from "@/lib/server/rate-limit";
+import {
+  RequestGuardError,
+  requireEventAccess,
+  requireUser
+} from "@/lib/server/request-guards";
 
 async function requireEventOwner(eventId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
+  try {
+    return await requireEventAccess(eventId, "owner");
+  } catch (error) {
+    if (error instanceof RequestGuardError && error.status === 401) redirect("/login");
+    throw error;
   }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: event, error } = await supabase
-    .from("events")
-    .select("id")
-    .eq("id", eventId)
-    .eq("owner_user_id", user.id)
-    .single();
-
-  if (error || !event) {
-    throw new Error("このイベントを管理する権限がありません。");
-  }
-
-  return { supabase, user };
 }
 
 function revalidateEvent(eventId: string) {
@@ -36,6 +32,7 @@ function revalidateEvent(eventId: string) {
 
 export async function createEventInviteAction(eventId: string) {
   const { supabase, user } = await requireEventOwner(eventId);
+  await consumeAuthenticatedLimit("event_member_update");
   const { error } = await supabase.from("event_invite_links").insert({
     event_id: eventId,
     token: randomUUID(),
@@ -43,25 +40,26 @@ export async function createEventInviteAction(eventId: string) {
     created_by_user_id: user.id
   });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  if (error) throw new Error("招待リンクを作成できませんでした。");
   revalidateEvent(eventId);
 }
 
 export async function closeEventInvitesAction(eventId: string) {
   const { supabase } = await requireEventOwner(eventId);
+  await consumeAuthenticatedLimit("event_member_update");
   const { error } = await supabase
     .from("event_invite_links")
     .update({ status: "closed", closed_at: new Date().toISOString() })
     .eq("event_id", eventId)
     .eq("status", "open");
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  if (error) throw new Error("招待リンクを閉じられませんでした。");
+  await supabase.rpc("record_security_audit", {
+    operation: "event_invitation_revoke",
+    target_type: "event",
+    target_id: eventId,
+    outcome: "success"
+  });
   revalidateEvent(eventId);
 }
 
@@ -74,84 +72,70 @@ export async function revokeAndCreateEventInviteAction(eventId: string) {
     .eq("status", "open")
     .maybeSingle();
 
-  if (findError) {
-    throw new Error(findError.message);
-  }
+  if (findError) throw new Error("招待リンクを確認できませんでした。");
+  await consumeAuthenticatedLimit("event_member_update");
 
   if (currentInvite) {
-    const { error: revokeError } = await supabase
+    const { error } = await supabase
       .from("event_invite_links")
       .update({ status: "revoked", closed_at: new Date().toISOString() })
       .eq("id", currentInvite.id);
-
-    if (revokeError) {
-      throw new Error(revokeError.message);
-    }
+    if (error) throw new Error("招待リンクを無効にできませんでした。");
   }
 
-  const { error: createError } = await supabase.from("event_invite_links").insert({
+  const { error } = await supabase.from("event_invite_links").insert({
     event_id: eventId,
     token: randomUUID(),
     status: "open",
     created_by_user_id: user.id
   });
+  if (error) throw new Error("新しい招待リンクを作成できませんでした。");
 
-  if (createError) {
-    throw new Error(createError.message);
-  }
-
+  await supabase.rpc("record_security_audit", {
+    operation: "event_invitation_revoke",
+    target_type: "event",
+    target_id: eventId,
+    outcome: "success"
+  });
   revalidateEvent(eventId);
 }
 
 export async function joinEventFromInviteAction(token: string) {
-  const user = await getCurrentUser();
   const invitePath = `/invites/${token}`;
-
-  if (!user) {
-    redirect(`/login?next=${encodeURIComponent(invitePath)}`);
+  let session: Awaited<ReturnType<typeof requireUser>>;
+  try {
+    session = await requireUser();
+  } catch (error) {
+    if (error instanceof RequestGuardError && error.status === 401) {
+      redirect(`/login?next=${encodeURIComponent(invitePath)}`);
+    }
+    throw error;
   }
 
-  const admin = createSupabaseAdminClient();
-  const { data: invite, error: inviteError } = await admin
-    .from("event_invite_links")
-    .select("event_id, status")
-    .eq("token", token)
-    .maybeSingle();
-
-  if (inviteError || !invite || invite.status !== "open") {
-    throw new Error("この招待リンクは利用できません。");
-  }
-
-  const { data: integration, error: integrationError } = await admin
+  const { data: integration, error: integrationError } = await session.supabase
     .from("calendar_integrations")
     .select("id")
-    .eq("user_id", user.id)
+    .eq("user_id", session.user.id)
     .eq("provider", "google")
     .maybeSingle();
-
-  if (integrationError) {
-    throw new Error(integrationError.message);
-  }
-
+  if (integrationError) throw new Error("カレンダー連携を確認できませんでした。");
   if (!integration) {
     redirect(`/api/google-calendar/connect?next=${encodeURIComponent(invitePath)}`);
   }
 
-  const { error: memberError } = await admin.from("event_members").upsert(
-    {
-      event_id: invite.event_id,
-      user_id: user.id,
-      display_name: getUserDisplayName(user),
-      role: "member",
-      status: "joined"
-    },
-    { onConflict: "event_id,user_id" }
-  );
+  const { data: eventId, error } = await session.supabase.rpc("join_event_from_invite", {
+    p_token: token,
+    p_display_name: getUserDisplayName(session.user)
+  });
 
-  if (memberError) {
-    throw new Error(memberError.message);
+  const rateLimitError = rateLimitErrorFromDatabase(error);
+  if (rateLimitError) throw rateLimitError;
+  if (error?.code === "42501") throw new Error("この招待リンクは利用できません。");
+  if (error?.code === "55000") {
+    redirect(`/api/google-calendar/connect?next=${encodeURIComponent(invitePath)}`);
   }
+  if (error || !eventId) throw new Error("イベントに参加できませんでした。");
 
-  revalidateEvent(invite.event_id);
-  redirect(`/events/${invite.event_id}`);
+  revalidateEvent(eventId);
+  redirect(`/events/${eventId}`);
 }

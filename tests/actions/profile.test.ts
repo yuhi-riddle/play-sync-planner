@@ -44,9 +44,15 @@ describe("updateProfileAction", () => {
     };
     const upsert = vi.fn().mockResolvedValue({ error: null });
     const updateUser = vi.fn().mockResolvedValue({ error: null });
+    const getUser = vi.fn().mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null
+    });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
     createSupabaseServerClient.mockResolvedValue({
       from: vi.fn(() => ({ ...profileQuery, upsert })),
-      auth: { updateUser },
+      auth: { getUser, updateUser },
+      rpc,
       storage: { from: vi.fn() }
     });
     const formData = new FormData();
@@ -63,6 +69,9 @@ describe("updateProfileAction", () => {
     );
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
     expect(revalidatePath).toHaveBeenCalledWith("/settings");
+    expect(rpc).toHaveBeenCalledWith("consume_authenticated_rate_limit", {
+      operation: "profile_update"
+    });
     expect(updateUser).toHaveBeenCalledWith({
       data: {
         nickname: "ゆうやん",
