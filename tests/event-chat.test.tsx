@@ -110,4 +110,54 @@ describe("EventChat", () => {
     expect(screen.getByText("newly posted")).toBeInTheDocument();
     expect(screen.getByText(message.body)).toBeInTheDocument();
   });
+
+  it("restores posting after an authorized retry recovers a failed membership check", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(page([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <EventChat
+        eventId={eventId}
+        messages={[]}
+        initialError="membership lookup failed"
+        action={vi.fn()}
+        canPost={false}
+        canRecoverPostingPermission
+      />
+    );
+
+    expect(screen.queryByRole("textbox", { name: "メッセージ" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再試行" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/events/${eventId}/messages`, expect.objectContaining({ signal: expect.anything() })));
+    expect(await screen.findByRole("textbox", { name: "メッセージ" })).toBeInTheDocument();
+  });
+
+  it("keeps a nonparticipant unable to post after a successful page request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(page([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<EventChat eventId={eventId} messages={[]} initialError="load failed" action={vi.fn()} canPost={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "再試行" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("textbox", { name: "メッセージ" })).not.toBeInTheDocument();
+  });
+
+  it("replaces messages instead of merging them when the event changes", () => {
+    const view = render(<EventChat eventId={eventId} messages={[message]} action={vi.fn()} canPost />);
+
+    view.rerender(
+      <EventChat
+        eventId="22222222-2222-4222-8222-222222222222"
+        messages={[{ ...message, id: "message-2", body: "other event", createdAt: "2026-07-14T09:00:00.000Z" }]}
+        action={vi.fn()}
+        canPost={false}
+      />
+    );
+
+    expect(screen.getByText("other event")).toBeInTheDocument();
+    expect(screen.queryByText(message.body)).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "メッセージ" })).not.toBeInTheDocument();
+  });
 });

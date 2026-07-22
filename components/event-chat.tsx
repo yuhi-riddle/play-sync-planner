@@ -39,6 +39,7 @@ export function EventChat({
   initialError = null,
   action,
   canPost,
+  canRecoverPostingPermission = false,
   unavailableReason
 }: {
   eventId: string;
@@ -47,6 +48,7 @@ export function EventChat({
   initialError?: string | null;
   action: (formData: FormData) => Promise<void>;
   canPost: boolean;
+  canRecoverPostingPermission?: boolean;
   unavailableReason?: string;
 }) {
   const [visibleMessages, setVisibleMessages] = useState(messages);
@@ -54,10 +56,12 @@ export function EventChat({
   const [loadError, setLoadError] = useState<string | null>(initialError);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
+  const [effectiveCanPost, setEffectiveCanPost] = useState(canPost);
   const [isPending, startTransition] = useTransition();
   const controllerRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
   const failedRequestRef = useRef<FailedRequest | null>(initialError ? { cursor: null } : null);
+  const previousEventIdRef = useRef(eventId);
 
   function abortActiveRequest() {
     controllerRef.current?.abort();
@@ -68,13 +72,19 @@ export function EventChat({
   useEffect(() => () => abortActiveRequest(), []);
 
   useEffect(() => {
+    const eventChanged = previousEventIdRef.current !== eventId;
+    previousEventIdRef.current = eventId;
     abortActiveRequest();
-    setVisibleMessages((current) => mergeChronologically(current, messages));
+    setVisibleMessages((current) => eventChanged ? messages : mergeChronologically(current, messages));
     setVisibleCursor(nextCursor);
     setLoadError(initialError);
     setIsLoadingMore(false);
     failedRequestRef.current = initialError ? { cursor: null } : null;
-  }, [initialError, messages, nextCursor]);
+  }, [eventId, initialError, messages, nextCursor]);
+
+  useEffect(() => {
+    setEffectiveCanPost(canPost);
+  }, [canPost, eventId]);
 
   async function loadMessages(cursor: string | null) {
     if (inFlightRef.current) return;
@@ -101,6 +111,7 @@ export function EventChat({
       setVisibleCursor(page.nextCursor);
       setLoadError(null);
       failedRequestRef.current = null;
+      if (canRecoverPostingPermission && cursor === null) setEffectiveCanPost(true);
     } catch (cause) {
       if (controller.signal.aborted || (cause instanceof Error && cause.name === "AbortError")) return;
       if (controllerRef.current !== controller) return;
@@ -191,7 +202,7 @@ export function EventChat({
         </div>
       ) : null}
 
-      {canPost ? (
+      {effectiveCanPost ? (
         <form onSubmit={submit} className="space-y-3 rounded-control border border-line bg-surface p-4">
           <label className="block text-sm font-medium text-ink" htmlFor="event-chat-message">
             メッセージ

@@ -637,4 +637,25 @@ revoke all on function public.list_event_invite_candidates(uuid, text, timestamp
 grant execute on function public.list_event_invite_candidates(uuid, text, timestamptz, uuid, integer) to authenticated;
 grant execute on function public.list_event_invite_candidates(uuid, text, timestamptz, uuid, integer) to service_role;
 
+-- The event detail loader needs same-event member names/counts and the nearest
+-- plan. Keep this read scope to owners and joined members, using the hardened
+-- security-definer helpers so RLS does not recurse through these tables.
+create policy "Joined members can view event members"
+on public.event_members
+for select
+to authenticated
+using (
+  private.is_event_owner(event_id)
+  or private.is_joined_event_member(event_id)
+);
+
+create policy "Joined members can view plans"
+on public.plans
+for select
+to authenticated
+using (
+  private.is_event_owner(event_id)
+  or private.is_joined_event_member(event_id)
+);
+
 commit;

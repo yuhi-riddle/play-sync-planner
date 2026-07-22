@@ -96,6 +96,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
           initialError={chat.error}
           action={createEventMessageAction.bind(null, eventId)}
           canPost={chat.isJoined && event.status !== "cancelled"}
+          canRecoverPostingPermission={Boolean(chat.error && !chat.isJoined && event.status !== "cancelled")}
           unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
         />
       </Card>
