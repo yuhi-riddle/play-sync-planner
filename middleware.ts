@@ -67,9 +67,12 @@ export async function middleware(request: NextRequest) {
   const cspHeader = process.env.CSP_REPORT_ONLY === "true"
     ? "Content-Security-Policy-Report-Only"
     : "Content-Security-Policy";
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
-  requestHeaders.set(cspHeader, csp);
+  const requestHeaders = createForwardedRequestHeaders(
+    request.headers,
+    nonce,
+    cspHeader,
+    csp
+  );
 
   let response = createNextResponse(requestHeaders, cspHeader, csp);
   if (isPublicRequest(request.nextUrl.pathname)) {
@@ -87,7 +90,13 @@ export async function middleware(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll: (cookiesToSet: Parameters<SetAllCookies>[0]) => {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = createNextResponse(requestHeaders, cspHeader, csp);
+        const refreshedRequestHeaders = createForwardedRequestHeaders(
+          request.headers,
+          nonce,
+          cspHeader,
+          csp
+        );
+        response = createNextResponse(refreshedRequestHeaders, cspHeader, csp);
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       }
     }
@@ -154,7 +163,21 @@ function getOrigin(url: string | undefined): string | undefined {
 function isPublicRequest(pathname: string): boolean {
   return publicPaths.has(pathname)
     || pathname.startsWith("/auth/")
-    || pathname.startsWith("/api/");
+    || pathname.startsWith("/api/")
+    || pathname.startsWith("/s/")
+    || pathname.startsWith("/invites/");
+}
+
+function createForwardedRequestHeaders(
+  source: Headers,
+  nonce: string,
+  cspHeader: string,
+  csp: string
+): Headers {
+  const headers = new Headers(source);
+  headers.set("x-nonce", nonce);
+  headers.set(cspHeader, csp);
+  return headers;
 }
 
 function createNextResponse(
