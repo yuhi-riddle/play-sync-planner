@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { buildHomeCalendar, findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 
 const items: HomeCalendarItem[] = [
   {
@@ -81,5 +81,40 @@ describe("buildHomeCalendar", () => {
     });
 
     expect(calendar.selectedItems.map((item) => item.id)).toEqual(["confirmed-1", "candidate-1"]);
+  });
+});
+
+describe("findNextConfirmedItem", () => {
+  const now = new Date("2026-07-12T09:00:00+09:00");
+
+  it("returns null when there are no confirmed items", () => {
+    expect(findNextConfirmedItem([], now)).toBeNull();
+  });
+
+  it("returns null when confirmed items are all in the past", () => {
+    const pastItems: HomeCalendarItem[] = [
+      { id: "confirmed-past", kind: "confirmed", title: "終わった会", startAt: "2026-07-10T13:00:00+09:00" }
+    ];
+
+    expect(findNextConfirmedItem(pastItems, now)).toBeNull();
+  });
+
+  it("picks the soonest confirmed item among today and future items, ignoring collecting items", () => {
+    const mixedItems: HomeCalendarItem[] = [
+      { id: "collecting-1", kind: "collecting", title: "調整中の会", startAt: "2026-07-12T10:00:00+09:00" },
+      { id: "confirmed-later", kind: "confirmed", title: "来週の会", startAt: "2026-07-19T13:00:00+09:00" },
+      { id: "confirmed-today", kind: "confirmed", title: "今日の会", startAt: "2026-07-12T18:00:00+09:00" }
+    ];
+
+    expect(findNextConfirmedItem(mixedItems, now)?.id).toBe("confirmed-today");
+  });
+
+  it("returns the earliest of same-day confirmed items when several exist", () => {
+    const sameDayItems: HomeCalendarItem[] = [
+      { id: "confirmed-evening", kind: "confirmed", title: "夜の会", startAt: "2026-07-12T20:00:00+09:00" },
+      { id: "confirmed-noon", kind: "confirmed", title: "昼の会", startAt: "2026-07-12T12:00:00+09:00" }
+    ];
+
+    expect(findNextConfirmedItem(sameDayItems, now)?.id).toBe("confirmed-noon");
   });
 });
