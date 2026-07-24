@@ -128,4 +128,19 @@ describe("ConnectionList", () => {
 
     await waitFor(() => expect(unblockUserAction).toHaveBeenCalledWith(blockedUser.userId));
   });
+
+  it("switches the mobile connection group from one dropdown", () => {
+    render(
+      <ConnectionList favorites={[favorite]} mutualFollows={[]} following={[following]} candidates={[candidate]} blockedUsers={[blockedUser]} />
+    );
+
+    const select = screen.getByRole("combobox", { name: "表示するつながり" });
+    expect(select).toHaveClass("sm:hidden");
+    expect(screen.getByRole("option", { name: "お気に入り (1件)" })).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: "following" } });
+    expect(screen.getByText("はるかさん")).toBeInTheDocument();
+    expect(screen.queryByText("あきらさん")).not.toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: "つながりを絞り込む" }).parentElement).toHaveClass("hidden", "sm:block");
+  });
 });
