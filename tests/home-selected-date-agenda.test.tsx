@@ -108,4 +108,19 @@ describe("HomeSelectedDateAgenda", () => {
     expect(screen.getByRole("heading", { name: "7月19日(日)" })).toBeInTheDocument();
     expect(screen.getByText("来週の予定")).toBeInTheDocument();
     expect(navigationMocks.replace).toHaveBeenCalledWith("/?action=deadline&date=2026-07-19", { scroll: false });
-  });});
+  });
+
+  it("keeps all seven date buttons in shrinkable columns", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-19" todayDateKey="2026-07-19" initialItems={[]} />
+    );
+
+    const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
+    expect(dateGrid).toHaveClass("grid-cols-[repeat(7,minmax(0,1fr))]", "gap-0.5", "sm:gap-1");
+    expect(dateGrid?.querySelectorAll("button")).toHaveLength(7);
+    for (const button of Array.from(dateGrid?.querySelectorAll("button") ?? [])) {
+      expect(button).toHaveClass("min-w-0", "px-0.5");
+    }
+  });
+});
