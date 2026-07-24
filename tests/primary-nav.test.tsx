@@ -17,11 +17,11 @@ describe("PrimaryNav", () => {
     navigation.pathname = "/";
   });
 
-  it("shows the four primary destinations as icon buttons in a responsive grid", () => {
+  it("shows the four primary destinations as icon buttons in a fixed mobile bar and a static desktop row", () => {
     render(<PrimaryNav />);
 
     const nav = screen.getByRole("navigation", { name: "主要な画面" });
-    expect(nav).toHaveClass("grid", "grid-cols-2", "sm:grid-cols-4");
+    expect(nav).toHaveClass("fixed", "bottom-0", "grid-cols-4", "sm:static", "sm:grid-cols-4");
 
     const destinations = [
       ["ホーム", "/"],
@@ -33,7 +33,7 @@ describe("PrimaryNav", () => {
     for (const [name, href] of destinations) {
       const link = within(nav).getByRole("link", { name });
       expect(link).toHaveAttribute("href", href);
-      expect(link).toHaveClass("min-h-11", "rounded-control", "border");
+      expect(link).toHaveClass("min-h-14", "rounded-control", "sm:min-h-11", "sm:border");
       expect(link.querySelector("svg")).toBeInTheDocument();
     }
   });

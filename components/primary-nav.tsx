@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { CalendarDays, CalendarRange, House, UsersRound } from "lucide-react";
 
+import { shouldShowPrimaryNavigation } from "@/lib/navigation-visibility";
+
 /**
- * ヘッダー直下の主要ナビ。
- * docs/design/03_screen_flow.md の「常時表示の左メニューや下部タブは置かない」方針に沿い、
- * サイドバーでも下部タブでもないボタン型の導線に留めている。
+ * スマートフォンでは画面下部に固定し、デスクトップではヘッダー直下の静的な行として表示する主要ナビ。
+ * 表示するパスの判定は lib/navigation-visibility.ts に切り出し、集中操作画面では出さない。
  */
 const items = [
   { href: "/", label: "ホーム", icon: House },
@@ -17,9 +18,6 @@ const items = [
   { href: "/connections", label: "つながり", icon: UsersRound }
 ];
 
-/** 未ログインで見る画面（共有リンクの回答など）ではナビを出さない。 */
-const hiddenPrefixes = ["/login", "/consent", "/auth/", "/onboarding/", "/s/", "/invites/", "/terms", "/privacy"];
-
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
@@ -27,12 +25,15 @@ function isActive(pathname: string, href: string) {
 export function PrimaryNav() {
   const pathname = usePathname();
 
-  if (hiddenPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+  if (!shouldShowPrimaryNavigation(pathname)) {
     return null;
   }
 
   return (
-    <nav className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="主要な画面">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 gap-1 border-t border-line bg-surface/95 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lift backdrop-blur-md sm:static sm:mb-5 sm:grid-cols-4 sm:gap-2 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"
+      aria-label="主要な画面"
+    >
       {items.map((item) => {
         const active = isActive(pathname, item.href);
         const Icon = item.icon;
@@ -43,14 +44,12 @@ export function PrimaryNav() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={clsx(
-              "inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-control border px-2 py-2 text-center text-body font-bold shadow-raise transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2",
-              active
-                ? "border-moss bg-mist text-pine"
-                : "border-line bg-surface text-muted hover:border-moss hover:text-pine"
+              "inline-flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 py-2 text-center text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:min-h-11 sm:border sm:px-2 sm:text-body sm:shadow-raise",
+              active ? "border-moss bg-mist text-pine" : "border-line bg-surface text-muted hover:text-pine"
             )}
           >
-            <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-            <span>{item.label}</span>
+            <Icon aria-hidden="true" className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            <span className="truncate">{item.label}</span>
           </Link>
         );
       })}

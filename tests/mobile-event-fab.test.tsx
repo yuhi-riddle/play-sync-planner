@@ -10,12 +10,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("MobileEventFab", () => {
-  it("shows an event creation link on the events page", () => {
+  it("shows an event creation link positioned above the fixed bottom navigation", () => {
     vi.mocked(usePathname).mockReturnValue("/events");
 
     render(<MobileEventFab />);
 
-    expect(screen.getByRole("link", { name: "イベントを作る" })).toHaveAttribute("href", "/events/new");
+    const link = screen.getByRole("link", { name: "イベントを作る" });
+    expect(link).toHaveAttribute("href", "/events/new");
+    expect(link.className).toContain("safe-area-inset-bottom");
   });
 
   it("hides on the event creation page", () => {

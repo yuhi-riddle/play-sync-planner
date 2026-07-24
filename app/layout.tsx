@@ -42,13 +42,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <AuthNav />
             </div>
           </header>
-          <div className="mx-auto max-w-[1440px] px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:px-8 xl:px-10">
+          <div className="mx-auto max-w-[1440px] px-4 pb-28 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:px-8 xl:px-10">
             <PrimaryNav />
             <main id="main-content" tabIndex={-1}>
               {children}
             </main>
           </div>
-          <footer className="mx-auto max-w-[1440px] px-4 pb-8 text-body text-muted sm:px-6 lg:px-8 xl:px-10">
+          <footer className="mx-auto max-w-[1440px] px-4 pb-28 text-body text-muted sm:px-6 sm:pb-8 lg:px-8 xl:px-10">
             <div className="flex flex-wrap gap-4 border-t border-line pt-5">
               <Link href="/terms" className="font-semibold hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay">
                 利用規約
