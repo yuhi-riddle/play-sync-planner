@@ -4,7 +4,7 @@ import { PaymentMethodField } from "@/components/payment-method-field";
 import { isPayPayMethod, PayPayActionPanel } from "@/components/paypay-action-panel";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
-import { Card, EmptyState, MadoiForm } from "@/components/ui";
+import { Badge, Card, EmptyState, MadoiForm, Stat } from "@/components/ui";
 import { getPaymentInstructionView, summarizeSettlementNextActions, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
 
 export type PublicSettlementExpense = {
@@ -62,10 +62,18 @@ export function PublicSettlementSummary({
         <p className="text-eyebrow uppercase text-pine">イベント</p>
         <h2 className="mt-2 text-2xl font-bold text-ink">{eventTitle}</h2>
         {planTitle ? <p className="mt-1 text-sm text-muted">{planTitle}</p> : null}
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <SummaryItem label="清算残額" value={formatYenText(overview.remainingAmount)} />
-          <SummaryItem label="支払い済み" value={formatYenText(overview.paidAmount)} />
-          <SummaryItem label="立替合計" value={formatYenText(expenses.reduce((total, expense) => total + expense.amount, 0))} />
+        <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
+          <Stat
+            label="清算残額"
+            value={formatYenText(overview.remainingAmount)}
+            emphasis="primary"
+            tone={overview.remainingAmount > 0 ? "warn" : undefined}
+          />
+          {overview.remainingAmount === 0 ? <Badge tone="done">清算完了</Badge> : null}
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Stat label="支払い済み" value={formatYenText(overview.paidAmount)} />
+          <Stat label="立替合計" value={formatYenText(expenses.reduce((total, expense) => total + expense.amount, 0))} />
         </div>
       </Card>
 
@@ -191,15 +199,6 @@ export function PublicSettlementSummary({
           )}
         </div>
       </Card>
-    </div>
-  );
-}
-
-function SummaryItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-control border border-line bg-surface p-4">
-      <p className="text-eyebrow uppercase text-pine">{label}</p>
-      <p className="mt-2 text-lg font-bold text-ink">{value}</p>
     </div>
   );
 }

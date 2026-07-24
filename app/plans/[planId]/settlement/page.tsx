@@ -10,7 +10,7 @@ import { SettlementCompletionNotice } from "@/components/settlement-completion-n
 import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
-import { Card, EmptyState, MadoiForm, PageHeader, SecondaryLink } from "@/components/ui";
+import { Badge, Card, EmptyState, MadoiForm, PageHeader, SecondaryLink, Stat } from "@/components/ui";
 import {
   confirmSettlementPaymentAction,
   createExpenseAction,
@@ -285,20 +285,35 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     <div className="space-y-6">
       {pageHeader}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryTile label="立替合計" value={formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))} detail={`${expenses.length}件の支払い履歴`} />
-        <SummaryTile label="清算残額" value={formatYen(settlementOverview.remainingAmount)} detail={unpaidSettlements.length > 0 ? `${unpaidSettlements.length}件の支払い待ち` : "清算済みです"} />
-        <SummaryTile
-          label="支払い済み"
-          value={formatYen(settlementOverview.paidAmount)}
-          detail={`確認済み ${formatYen(settlementOverview.confirmedAmount)}`}
-        />
-        <SummaryTile
-          label="参加者"
-          value={`${participants.length}人`}
-          detail={participants.length > 0 ? "支払い対象にできます" : "共有リンクから参加者を追加してください"}
-        />
-      </section>
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <Stat
+            label="清算残額"
+            value={formatYen(settlementOverview.remainingAmount)}
+            sub={unpaidSettlements.length > 0 ? `${unpaidSettlements.length}件の支払い待ち` : "清算済みです"}
+            emphasis="primary"
+            tone={settlementOverview.remainingAmount > 0 ? "warn" : undefined}
+          />
+          {settlementOverview.remainingAmount === 0 ? <Badge tone="done">清算完了</Badge> : null}
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <Stat
+            label="立替合計"
+            value={formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))}
+            sub={`${expenses.length}件の支払い履歴`}
+          />
+          <Stat
+            label="支払い済み"
+            value={formatYen(settlementOverview.paidAmount)}
+            sub={`確認済み ${formatYen(settlementOverview.confirmedAmount)}`}
+          />
+          <Stat
+            label="参加者"
+            value={`${participants.length}人`}
+            sub={participants.length > 0 ? "支払い対象にできます" : "共有リンクから参加者を追加してください"}
+          />
+        </div>
+      </Card>
 
       <Card>
         <h2 className="text-lg font-semibold text-ink">清算の進捗</h2>
@@ -651,16 +666,6 @@ function SettlementReminderLogItem({ log }: { log: SettlementReminderLogView }) 
       </div>
       <span className="text-xs text-muted">{formatDateTime(log.sentAt)}</span>
     </div>
-  );
-}
-
-function SummaryTile({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-eyebrow uppercase text-pine">{label}</p>
-      <p className="mt-2 text-xl font-bold text-ink">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
-    </Card>
   );
 }
 
