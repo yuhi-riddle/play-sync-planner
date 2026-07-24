@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildEventListHref,
   countEventsByCategory,
+  eventDisplayStateLabels,
   filterAndSortEventsForList,
   getEventCardSummary,
+  getEventDisplayState,
   getEventSchedule,
   getEventListPagination,
   getEventListSort,
@@ -196,8 +198,46 @@ describe("event work state", () => {
       joinedCount: 2,
       coordinationCount: 1,
       settlementState: "needed",
-      nextAction: "清算を確認",
+      displayState: "settlement_waiting",
       schedule: { isConfirmed: true }
+    });
+  });
+
+  it("derives one concrete display state by priority", () => {
+    const cases = [
+      [{ status: "done", plans: [{ settlement_status: "needed" }] }, "settlement_waiting"],
+      [{ status: "cancelled", plans: [{ settlement_status: "not_started" }] }, "cancelled"],
+      [{ status: "done", plans: [{ settlement_status: "settled" }] }, "completed"],
+      [{ status: "planning", plans: [{ status: "collecting_answers", settlement_status: "not_started" }] }, "answer_waiting"],
+      [
+        {
+          status: "confirmed",
+          plans: [
+            {
+              status: "date_confirmed",
+              settlement_status: "not_started",
+              confirmed_start_at: "2026-08-01T10:00:00+09:00"
+            }
+          ]
+        },
+        "event_waiting"
+      ],
+      [{ status: "interested", plans: [] }, "participant_waiting"],
+      [{ status: "planning", plans: [] }, "schedule_creation_waiting"]
+    ] as const;
+
+    for (const [event, expected] of cases) {
+      expect(getEventDisplayState(event, now)).toBe(expected);
+    }
+
+    expect(eventDisplayStateLabels).toEqual({
+      participant_waiting: "参加者待ち",
+      schedule_creation_waiting: "日程作成待ち",
+      answer_waiting: "回答待ち",
+      event_waiting: "開催待ち",
+      settlement_waiting: "清算待ち",
+      completed: "完了",
+      cancelled: "中止"
     });
   });
 

@@ -44,7 +44,7 @@ export function EventListControls({
         <label className="text-body font-medium text-muted">
           状態
           <select name="status" defaultValue={query.status} className={selectClassName}>
-            <option value="active">対応中</option>
+            <option value="active">進行中</option>
             <option value="draft">下書き ({draftCount})</option>
             <option value="cancelled">中止</option>
             <option value="completed">完了</option>
