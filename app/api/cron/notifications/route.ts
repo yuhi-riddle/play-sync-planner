@@ -64,9 +64,9 @@ function isAuthorized(request: NextRequest) {
   }
 
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    return request.headers.get("authorization") === `Bearer ${secret}`;
+  if (!secret) {
+    return false;
   }
 
-  return request.headers.get("user-agent") === "vercel-cron/1.0";
+  return request.headers.get("authorization") === `Bearer ${secret}`;
 }
