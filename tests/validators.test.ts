@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { eventSchema, expenseSchema, planSchema, settlementPaymentInstructionSchema, settlementPaymentSchema } from "@/lib/validators";
+import {
+  eventDraftSchema,
+  eventSchema,
+  expenseSchema,
+  planSchema,
+  settlementPaymentInstructionSchema,
+  settlementPaymentSchema
+} from "@/lib/validators";
 
 describe("eventSchema", () => {
   it("accepts a minimal event", () => {
@@ -57,6 +64,44 @@ describe("eventSchema", () => {
     });
 
     expect(result.status).toBe("interested");
+  });
+});
+
+describe("eventDraftSchema", () => {
+  it("accepts a partially filled draft with no title or category yet", () => {
+    const result = eventDraftSchema.parse({ category: "", title: "", url: "", location_name: "", memo: "" });
+
+    expect(result).toEqual({ category: null, title: null, url: null, location_name: null, memo: null });
+  });
+
+  it("keeps a valid partial draft as-is", () => {
+    const result = eventDraftSchema.parse({
+      category: "nazotoki",
+      title: "入力途中の旅行",
+      url: "",
+      location_name: "札幌",
+      memo: ""
+    });
+
+    expect(result).toEqual({ category: "nazotoki", title: "入力途中の旅行", url: null, location_name: "札幌", memo: null });
+  });
+
+  it("rejects an unknown category value", () => {
+    expect(() =>
+      eventDraftSchema.parse({ category: "not-a-real-category", title: "", url: "", location_name: "", memo: "" })
+    ).toThrow();
+  });
+
+  it("rejects a javascript: URL", () => {
+    expect(() =>
+      eventDraftSchema.parse({
+        category: "",
+        title: "",
+        url: "javascript:alert(1)",
+        location_name: "",
+        memo: ""
+      })
+    ).toThrow("URLは https://... の形式で入力してください");
   });
 });
 
@@ -276,6 +321,21 @@ describe("expenseSchema", () => {
     expect(result.payment_url).toBeNull();
   });
 
+  it("rejects an amount above the safe upper bound", () => {
+    expect(() =>
+      expenseSchema.parse({
+        title: "チケット代",
+        payer_participant_id: "alice",
+        amount: "100000001",
+        split_mode: "equal",
+        split_participant_ids: ["alice"],
+        memo: "",
+        payment_method: "",
+        payment_url: ""
+      })
+    ).toThrow("金額は1億円以下で入力してください");
+  });
+
   it("accepts individual split expenses when the total matches the amount", () => {
     const result = expenseSchema.parse({
       title: "先払い",
@@ -412,6 +472,24 @@ describe("settlementPaymentInstructionSchema", () => {
       settlementPaymentInstructionSchema.parse({
         payment_method: "PayPay",
         payment_url: "not-a-url",
+        memo: ""
+      })
+    ).toThrow("URLは https://... の形式で入力してください");
+  });
+
+  it("rejects non-http(s) URL schemes such as javascript:", () => {
+    expect(() =>
+      settlementPaymentInstructionSchema.parse({
+        payment_method: "PayPay",
+        payment_url: "javascript:alert(document.cookie)",
+        memo: ""
+      })
+    ).toThrow("URLは https://... の形式で入力してください");
+
+    expect(() =>
+      settlementPaymentInstructionSchema.parse({
+        payment_method: "PayPay",
+        payment_url: "data:text/html,<script>alert(1)</script>",
         memo: ""
       })
     ).toThrow("URLは https://... の形式で入力してください");
