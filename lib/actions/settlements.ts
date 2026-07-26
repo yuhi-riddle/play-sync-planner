@@ -510,13 +510,17 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
   const supabase = createSupabaseAdminClient();
   const { data: link, error: linkError } = await supabase
     .from("share_links")
-    .select("plan_id")
+    .select("plan_id, status")
     .eq("token", token)
     .eq("purpose", "answer")
     .single();
 
   if (linkError || !link) {
     throw new Error("共有リンクが見つかりません");
+  }
+
+  if (link.status === "revoked") {
+    throw new Error("この共有リンクは無効化されています。主催者に新しいリンクを確認してください");
   }
 
   const { data: settlement, error } = await supabase

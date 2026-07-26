@@ -103,6 +103,7 @@ type ReminderLogRow = {
 type ShareLinkRow = {
   token: string;
   purpose: string;
+  status?: string | null;
 };
 
 const settlementStatusLabels: Record<SettlementPaymentProgress["status"], string> = {
@@ -141,7 +142,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status, user_id), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name, user_id), expense_splits(id, participant_id, amount, participants(id, display_name, user_id))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name, user_id))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
+      "id, title, owner_user_id, events(id, title), share_links(token, purpose, status), participants(id, display_name, status, user_id), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name, user_id), expense_splits(id, participant_id, amount, participants(id, display_name, user_id))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name, user_id))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
     )
     .eq("id", planId)
     .single();
@@ -175,7 +176,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const protocol = host.includes("localhost") ? "http" : "https";
   const origin = `${protocol}://${host}`;
   const ownerSettlementUrl = `${origin.replace(/\/$/, "")}/plans/${plan.id}/settlement`;
-  const answerShareLink = ((plan.share_links ?? []) as ShareLinkRow[]).find((link) => link.purpose === "answer");
+  const answerShareLink = ((plan.share_links ?? []) as ShareLinkRow[]).find(
+    (link) => link.purpose === "answer" && (link.status ?? "open") === "open"
+  );
   const publicSettlementUrl = answerShareLink ? buildPublicSettlementUrl(origin, answerShareLink.token) : null;
   const createExpense = createExpenseAction.bind(null, plan.id);
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);

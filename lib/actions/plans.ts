@@ -235,7 +235,13 @@ export async function restartPlanAdjustmentAction(planId: string) {
 
   const [{ data: participants, error: participantsError }, { data: shareLink, error: shareLinkError }] = await Promise.all([
     admin.from("participants").select("user_id").eq("plan_id", planId).not("user_id", "is", null),
-    admin.from("share_links").select("token").eq("plan_id", planId).eq("purpose", "answer").maybeSingle()
+    admin
+      .from("share_links")
+      .select("token")
+      .eq("plan_id", planId)
+      .eq("purpose", "answer")
+      .eq("status", "open")
+      .maybeSingle()
   ]);
   if (participantsError || shareLinkError) {
     throw new Error(participantsError?.message ?? shareLinkError?.message);

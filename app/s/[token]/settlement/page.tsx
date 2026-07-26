@@ -8,7 +8,7 @@ import {
 import { CalendarShareLink } from "@/components/calendar-share-link";
 import { PaymentRecordedNotice } from "@/components/payment-recorded-notice";
 import { SetupPanel } from "@/components/state-panels";
-import { Card, PageHeader } from "@/components/ui";
+import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlements";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
 import { formatDateTimeRange } from "@/lib/format";
@@ -79,7 +79,7 @@ export default async function PublicSettlementPage({
   const { data: link } = await supabase
     .from("share_links")
     .select(
-      "token, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_method, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name), settlement_payments(amount, confirmed_at)))"
+      "token, status, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_method, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name), settlement_payments(amount, confirmed_at)))"
     )
     .eq("token", token)
     .eq("purpose", "answer")
@@ -87,6 +87,17 @@ export default async function PublicSettlementPage({
 
   if (!link) {
     notFound();
+  }
+
+  if (link.status === "revoked") {
+    return (
+      <div className="space-y-6">
+        <PageHeader eyebrow="Settlement" title="支払い・清算" />
+        <Card>
+          <EmptyState>このリンクは無効化されています。主催者に新しいリンクを確認してください。</EmptyState>
+        </Card>
+      </div>
+    );
   }
 
   const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as PublicPlanRow | null;

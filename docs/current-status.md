@@ -113,6 +113,14 @@ Phase 1 は完了済みです。
 - 清算画面の合計金額の主役化(清算残額を主要指標として表示)
 - 通知一覧の未読・既読の面とバッジトーンによるメリハリ
 
+### 共有リンクの無効化・再発行
+
+- 主催者が日程回答・公開清算の共有リンクを無効化できる(`share_links.status`)
+- 無効化したあと、新しいリンクを再発行できる。古いリンクは使えなくなる
+- 無効化されたリンクは、回答ページ・公開清算ページとも「無効化されています」と案内する
+- 回答送信と公開清算からの支払い記録も、無効化されたトークンを受け付けない
+- イベント招待リンク(`event_invite_links`)の無効化・再発行は以前から実装済み
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
@@ -225,6 +233,7 @@ Phase 1 は完了済みです。
 - [ ] `009_site_notifications.sql` を適用済み。
 - [ ] `020_event_list_performance_and_atomic_block.sql` を適用済み。
 - [ ] `021_settlement_payment_total_guard.sql` を適用済み。
+- [ ] `022_share_link_revocation.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。
