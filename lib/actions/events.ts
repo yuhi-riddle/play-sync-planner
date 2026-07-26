@@ -7,7 +7,7 @@ import { formDataToObject } from "@/lib/form-data";
 import { getAfterEventCreatePath } from "@/lib/domain/event-flow";
 import { getUserDisplayName } from "@/lib/domain/profile";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { eventSchema } from "@/lib/validators";
+import { eventDraftSchema, eventSchema } from "@/lib/validators";
 
 export async function createEventAction(formData: FormData) {
   const user = await getCurrentUser();
@@ -64,13 +64,7 @@ export async function saveEventDraftAction(formData: FormData) {
     redirect("/login");
   }
 
-  const payload = {
-    category: formData.get("category")?.toString() ?? "",
-    title: formData.get("title")?.toString() ?? "",
-    url: formData.get("url")?.toString() ?? "",
-    location_name: formData.get("location_name")?.toString() ?? "",
-    memo: formData.get("memo")?.toString() ?? ""
-  };
+  const payload = eventDraftSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("event_drafts").upsert({ owner_user_id: user.id, payload }, { onConflict: "owner_user_id" });
 
