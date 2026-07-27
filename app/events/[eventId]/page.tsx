@@ -11,7 +11,15 @@ import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/compo
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
 import { createEventMessageAction } from "@/lib/actions/event-messages";
 import { createEventUserInvitationsAction } from "@/lib/actions/connections";
+import { EventTaskList, type EventTaskMember } from "@/components/event-task-list";
+import {
+  createEventTaskAction,
+  deleteEventTaskAction,
+  toggleEventTaskDoneAction,
+  updateEventTaskAssigneeAction
+} from "@/lib/actions/event-tasks";
 import { cancelEventAction, duplicateEventAction } from "@/lib/actions/events";
+import type { EventTask } from "@/lib/domain/event-tasks";
 import { categoryLabels, planStatusLabels } from "@/lib/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import type { EventMessage } from "@/lib/domain/event-chat";
@@ -49,6 +57,14 @@ type EventMessageRow = {
   created_at: string;
 };
 
+type EventTaskRow = {
+  id: string;
+  title: string;
+  assignee_user_id: string | null;
+  done_at: string | null;
+  sort_order: number;
+};
+
 export default async function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const supabase = await createSupabaseServerClient();
@@ -76,8 +92,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
   ]);
   const typedInvite = invite as Invite | null;
   const isOwner = currentUserId === event.owner_user_id;
-  const inviteCandidates = isOwner && currentUserId ? await loadInviteCandidates(eventId, currentUserId) : [];
-  const chat = currentUserId ? await loadEventChat(eventId, currentUserId) : { isJoined: false, messages: [] };
+  // 招待候補・チャット・分担リストは互いに独立しているので並列で取る。
+  const [inviteCandidates, chat, { tasks: eventTasks, members: taskMembers }] = await Promise.all([
+    isOwner && currentUserId ? loadInviteCandidates(eventId, currentUserId) : Promise.resolve([]),
+    currentUserId ? loadEventChat(eventId, currentUserId) : Promise.resolve({ isJoined: false, messages: [] }),
+    loadEventTasks(eventId)
+  ]);
   const canStartAdjustment = typedInvite?.status === "closed";
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
 
@@ -150,6 +170,18 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       ) : null}
 
       <Card>
+        <EventTaskList
+          tasks={eventTasks}
+          members={taskMembers}
+          canEdit={chat.isJoined && event.status !== "cancelled"}
+          createAction={createEventTaskAction.bind(null, eventId)}
+          toggleAction={(taskId) => toggleEventTaskDoneAction.bind(null, eventId, taskId)}
+          assignAction={(taskId) => updateEventTaskAssigneeAction.bind(null, eventId, taskId)}
+          deleteAction={(taskId) => deleteEventTaskAction.bind(null, eventId, taskId)}
+        />
+      </Card>
+
+      <Card>
         <EventChat
           messages={chat.messages}
           action={createEventMessageAction.bind(null, eventId)}
@@ -183,6 +215,38 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       </div>
     </div>
   );
+}
+
+async function loadEventTasks(
+  eventId: string
+): Promise<{ tasks: EventTask[]; members: EventTaskMember[] }> {
+  const admin = createSupabaseAdminClient();
+  const [{ data: taskRows }, { data: memberRows }] = await Promise.all([
+    admin
+      .from("event_tasks")
+      .select("id, title, assignee_user_id, done_at, sort_order")
+      .eq("event_id", eventId)
+      .order("sort_order", { ascending: true })
+      .limit(100),
+    admin.from("event_members").select("user_id, display_name").eq("event_id", eventId).eq("status", "joined")
+  ]);
+
+  const members = ((memberRows ?? []) as { user_id: string; display_name: string }[]).map((member) => ({
+    userId: member.user_id,
+    displayName: member.display_name
+  }));
+  const nameByUserId = new Map(members.map((member) => [member.userId, member.displayName]));
+
+  const tasks = ((taskRows ?? []) as EventTaskRow[]).map<EventTask>((row) => ({
+    id: row.id,
+    title: row.title,
+    assigneeUserId: row.assignee_user_id,
+    assigneeName: row.assignee_user_id ? nameByUserId.get(row.assignee_user_id) ?? null : null,
+    doneAt: row.done_at,
+    sortOrder: row.sort_order
+  }));
+
+  return { tasks, members };
 }
 
 async function loadEventChat(eventId: string, currentUserId: string): Promise<{ isJoined: boolean; messages: EventMessage[] }> {
