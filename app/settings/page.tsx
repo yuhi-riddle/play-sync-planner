@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AccountEmailCard } from "@/components/account-email-card";
 import { CalendarConnectionCard } from "@/components/calendar-connection-card";
 import { ProfileSettingsCard } from "@/components/profile-settings-card";
@@ -85,6 +87,18 @@ export default async function SettingsPage({
         updatedAt={calendarIntegration?.updated_at ?? null}
         status={query.calendar}
       />
+      <Card className="max-w-2xl">
+        <h2 className="text-title text-ink">退会</h2>
+        <p className="mt-1 text-caption text-muted">
+          Madoiの利用をやめる場合は、退会の手続きに進めます。退会すると元に戻せません。
+        </p>
+        <Link
+          href="/settings/withdraw"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-clay hover:text-clay-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        >
+          退会の手続きへ
+        </Link>
+      </Card>
     </div>
   );
 }

@@ -121,6 +121,17 @@ Phase 1 は完了済みです。
 - 回答送信と公開清算からの支払い記録も、無効化されたトークンを受け付けない
 - イベント招待リンク(`event_invite_links`)の無効化・再発行は以前から実装済み
 
+### 退会(アカウント削除)
+
+- 設定画面から退会の手続きへ進める。表示名の入力による確認を必須にしている
+- 未完了の清算がある場合は件数を警告する(退会自体は止めない)
+- 消すもの: つながり(フォロー・お気に入り・ブロック)、アプリ内招待、通知、イベントの下書き、Google Calendar連携、プロフィール画像とニックネーム
+- 残すもの: イベント・日程・立替・清算の記録、同意記録、日程調整の参加者名(清算の相手が分からなくなるため)
+- 表示名は `profiles` と `event_members` で「退会したユーザー」に置き換える
+- `auth.users` は削除しない。`events.owner_user_id` が `on delete cascade` のため、消すと他の参加者の清算記録まで巻き添えになる
+- 再ログインは `user_metadata.withdrawn_at` を見て middleware で遮断する(追加のDB問い合わせは発生しない)
+- プライバシーポリシーに「8. 退会と削除」を追加した
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
@@ -234,6 +245,7 @@ Phase 1 は完了済みです。
 - [ ] `020_event_list_performance_and_atomic_block.sql` を適用済み。
 - [ ] `021_settlement_payment_total_guard.sql` を適用済み。
 - [ ] `022_share_link_revocation.sql` を適用済み。
+- [ ] `023_account_deletion.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。
