@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 
 import { AuthNav } from "@/components/auth-nav";
@@ -12,8 +12,14 @@ export const metadata: Metadata = {
   title: brand.name,
   description: brand.description,
   icons: {
-    icon: "/icon.svg"
+    icon: "/icon.svg",
+    apple: "/icons/icon-192.png"
   }
+};
+
+// ホーム画面から開いたときにブラウザのUI色を揃える（pine）。
+export const viewport: Viewport = {
+  themeColor: "#344f43"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
