@@ -1,3 +1,4 @@
+import { CopyPlus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -10,7 +11,7 @@ import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/compo
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
 import { createEventMessageAction } from "@/lib/actions/event-messages";
 import { createEventUserInvitationsAction } from "@/lib/actions/connections";
-import { cancelEventAction } from "@/lib/actions/events";
+import { cancelEventAction, duplicateEventAction } from "@/lib/actions/events";
 import { categoryLabels, planStatusLabels } from "@/lib/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import type { EventMessage } from "@/lib/domain/event-chat";
@@ -99,12 +100,25 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
         <div>
           <GoogleMapsDirectionsLink destination={event.location_name} />
         </div>
-        {isOwner ? (
-          <div className="mt-5 flex flex-wrap gap-3">
-            <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
-            <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
-          </div>
-        ) : null}
+        <div className="mt-5 flex flex-wrap gap-3">
+          {isOwner ? (
+            <>
+              <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
+              <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+            </>
+          ) : null}
+          {chat.isJoined ? (
+            <form action={duplicateEventAction.bind(null, event.id)}>
+              <button
+                type="submit"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              >
+                <CopyPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+                このメンバーでもう一度
+              </button>
+            </form>
+          ) : null}
+        </div>
       </Card>
 
       {isOwner ? (
