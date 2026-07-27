@@ -4,7 +4,7 @@ import { ReceiptText } from "lucide-react";
 import React, { useState } from "react";
 
 import { PaymentMethodField } from "@/components/payment-method-field";
-import { MadoiForm, MadoiSelect, TextArea, TextField } from "@/components/ui";
+import { MadoiForm, MadoiSelect, SubmitButton, TextArea, TextField } from "@/components/ui";
 
 type ParticipantOption = {
   id: string;
@@ -190,13 +190,9 @@ export function ExpenseForm({
       </label>
       <TextArea label="メモ" name="memo" defaultValue={initialValues?.memo} rows={3} placeholder="例: 予約番号、当日必要な情報、購入ページの補足など" />
 
-      <button
-        type="submit"
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-      >
-        <ReceiptText aria-hidden="true" className="h-4 w-4" />
+      <SubmitButton className="text-sm" icon={<ReceiptText aria-hidden="true" className="h-4 w-4" />} pendingChildren="保存中…">
         {submitLabel}
-      </button>
+      </SubmitButton>
     </MadoiForm>
   );
 }

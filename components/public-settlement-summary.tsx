@@ -4,7 +4,7 @@ import { PaymentMethodField } from "@/components/payment-method-field";
 import { isPayPayMethod, PayPayActionPanel } from "@/components/paypay-action-panel";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
-import { Badge, Card, EmptyState, MadoiForm, Stat } from "@/components/ui";
+import { Badge, Card, EmptyState, MadoiForm, Stat, SubmitButton } from "@/components/ui";
 import { getPaymentInstructionView, summarizeSettlementNextActions, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
 
 export type PublicSettlementExpense = {
@@ -159,12 +159,7 @@ export function PublicSettlementSummary({
                             className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
                           />
                         </label>
-                        <button
-                          type="submit"
-                          className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                        >
-                          支払いを記録
-                        </button>
+                        <SubmitButton pendingChildren="記録中…">支払いを記録</SubmitButton>
                       </MadoiForm>
                     </details>
                   ) : null}

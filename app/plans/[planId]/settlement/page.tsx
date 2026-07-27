@@ -10,7 +10,7 @@ import { SettlementCompletionNotice } from "@/components/settlement-completion-n
 import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
-import { Badge, Card, EmptyState, MadoiForm, PageHeader, SecondaryLink, Stat } from "@/components/ui";
+import { Badge, Card, EmptyState, MadoiForm, PageHeader, SecondaryLink, Stat, SubmitButton } from "@/components/ui";
 import {
   confirmSettlementPaymentAction,
   createExpenseAction,
@@ -773,12 +773,9 @@ function SettlementActions({
                 className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
-            <button
-              type="submit"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
-            >
+            <SubmitButton className="w-full text-sm sm:w-auto" pendingChildren="記録中…">
               支払いを記録
-            </button>
+            </SubmitButton>
           </MadoiForm>
         </details>
       ) : null}
@@ -804,12 +801,13 @@ function SettlementActions({
                 ) : null}
                 {canConfirm && !payment.confirmed_at ? (
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>
-                    <button
-                      type="submit"
-                      className="inline-flex min-h-9 w-full items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                    <SubmitButton
+                      variant="secondary"
+                      className="min-h-9 w-full px-3 py-1 text-xs sm:w-auto"
+                      pendingChildren="確認中…"
                     >
                       受け取り確認
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>

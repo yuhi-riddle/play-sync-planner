@@ -111,7 +111,7 @@ AIがUIを書くときに参照するルール。値の定義は [tokens.css](./
 ## コンポーネント
 
 **NG: ページ側に長い Tailwind 文字列でバッジ・統計・アラートを組む**
-**代替: `components/ui.tsx` のプリミティブを使う**
+**代替: `components/ui.tsx` のプリミティブを使う**（import元は `@/components/ui` のまま。実装は表示系を `ui-server.tsx`、操作系を `ui-client.tsx` に分けて `ui.tsx` が再エクスポートしている。追加・編集は分割先のファイルで行う）
 
 | 用途 | プリミティブ |
 |---|---|

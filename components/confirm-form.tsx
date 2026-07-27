@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { confirmPlanAction } from "@/lib/actions/confirm";
 import type { CandidateAnswerSummary } from "@/lib/domain/confirmation";
 import { formatDateTimeRange } from "@/lib/format";
-import { MadoiForm } from "@/components/ui";
+import { MadoiForm, SubmitButton } from "@/components/ui";
 
 function AnswerStat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
@@ -149,13 +149,9 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
               >
                 戻る
               </button>
-              <button
-                ref={confirmButtonRef}
-                type="submit"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-              >
+              <SubmitButton ref={confirmButtonRef} className="text-sm" pendingChildren="確定中…">
                 この日程で確定
-              </button>
+              </SubmitButton>
             </div>
           </section>
         </div>

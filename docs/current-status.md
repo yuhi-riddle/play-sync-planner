@@ -171,6 +171,18 @@ Phase 1 は完了済みです。
 - Vercel Cronの配線は見送った。`docs/gas-notification-schedule.md` に既にGASから1時間ごとに呼び出す手順があり、
   Vercel無料プランのcron頻度制限を回避する目的で用意されているため。vercel.jsonを追加すると二重実行になる
 
+### 品質改善: 二重送信の遮断
+
+- `components/ui.tsx` を分割した。`ui-server.tsx`(表示だけ、hooks無し)と `ui-client.tsx`(操作系、`"use client"`)に分け、
+  `ui.tsx` は再エクスポートのバレルにした。import元(`@/components/ui`)は変えていないので、既存の48ファイルは無修正で通る。
+  以前は `Card` を1つ使うだけでファイル全体の `"use client"` が付き、hooksを使わない表示系までクライアント境界になっていた
+- `SubmitButton` に `useFormStatus` を追加し、送信中は自動で無効化・`aria-busy`・ラベル差し替え(`pendingChildren`)ができるようにした。
+  `variant`(primary/secondary)・`icon`・`className`・`ref` 転送にも対応
+- 二重送信されやすい送信ボタンを `SubmitButton` に置き換えた: 公開清算ページの支払い記録、主催者側の支払い記録・受け取り確認、
+  立替登録、日程確定
+- 満額の二重送信は migration 021 のDBトリガーで既に防げているが、分割払いの重複はUI側の対策が無いと素通りするため、この対応が必要だった
+- 冪等キーによる根本対応(DBマイグレーション)は今回のスコープ外。必要になれば別途相談する
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
