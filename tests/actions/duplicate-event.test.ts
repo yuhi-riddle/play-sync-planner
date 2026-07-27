@@ -43,17 +43,18 @@ function createSupabaseMock({
   const inserts: Recorded = [];
 
   const from = vi.fn((table: string) => {
-    const builder: Record<string, unknown> = {};
-    builder.select = vi.fn(() => builder);
-    builder.eq = vi.fn(() => builder);
-    builder.insert = vi.fn((values: unknown) => {
+    const insertFn = vi.fn((values: unknown) => {
       inserts.push({ table, values });
       return builder;
     });
+    const builder: Record<string, unknown> = {};
+    builder.select = vi.fn(() => builder);
+    builder.eq = vi.fn(() => builder);
+    builder.insert = insertFn;
     builder.single = vi.fn(async () => {
       if (table === "events") {
         // 参照時はコピー元、insert 後は新しいIDを返す。
-        return builder.insert.mock.calls.length > 0
+        return insertFn.mock.calls.length > 0
           ? { data: { id: newEventId }, error: null }
           : { data: sourceEvent, error: null };
       }

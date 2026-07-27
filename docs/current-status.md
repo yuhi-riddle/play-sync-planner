@@ -156,6 +156,21 @@ Phase 1 は完了済みです。
   (イベント作成・イベント編集・日程調整作成・日程調整編集・日程確定)すべてに戻る導線を追加した
 - プッシュ通知は含まない(後続Phaseで扱う)
 
+### 品質改善: 土台
+
+- `next` を `15.5.22` に更新した。`npm audit --omit=dev` の high 3件のうち、next本体の脆弱性は解消。
+  postcss・sharpはnext内部で固定バージョンを指定しているため残っている(next側の対応待ち。実際の攻撃面はビルド時ツールに限られ、
+  このアプリはpostcssで外部入力を処理せず、next/imageも使っていないため実害は低いと判断)
+- `npm run typecheck`(`tsc --noEmit`)を追加した
+- `.github/workflows/ci.yml` を追加。push/PRで lint → typecheck → test → build を自動実行する
+- `next.config.ts` にセキュリティヘッダを追加: X-Content-Type-Options, X-Frame-Options: DENY,
+  Referrer-Policy: strict-origin-when-cross-origin(公開清算リンクのトークン漏洩対策), Permissions-Policy,
+  Content-Security-Policy-Report-Only(まだ強制はしない)
+- `app/robots.ts` で `/s/` `/invites/` `/api/` `/auth/` をクロール禁止にした
+- `app/s/[token]/layout.tsx` と `app/invites/[token]/page.tsx` に `robots: { index: false }` を追加(robots.txt無視のクローラ対策)
+- Vercel Cronの配線は見送った。`docs/gas-notification-schedule.md` に既にGASから1時間ごとに呼び出す手順があり、
+  Vercel無料プランのcron頻度制限を回避する目的で用意されているため。vercel.jsonを追加すると二重実行になる
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
