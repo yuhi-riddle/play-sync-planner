@@ -32,7 +32,7 @@ describe("ReceivedEventInvitations", () => {
   });
 
   it("accepts an invitation and shows the result inline", async () => {
-    respondToEventUserInvitationAction.mockResolvedValue(undefined);
+    respondToEventUserInvitationAction.mockResolvedValue({ status: "success" });
     render(<ReceivedEventInvitations invitations={[invitation]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "参加する" }));
@@ -42,7 +42,10 @@ describe("ReceivedEventInvitations", () => {
   });
 
   it("shows an inline error when declining fails", async () => {
-    respondToEventUserInvitationAction.mockRejectedValue(new Error("招待を更新できませんでした"));
+    respondToEventUserInvitationAction.mockResolvedValue({
+      status: "error",
+      message: "招待を更新できませんでした"
+    });
     render(<ReceivedEventInvitations invitations={[invitation]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "今回は見送る" }));

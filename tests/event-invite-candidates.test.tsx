@@ -34,7 +34,7 @@ const followedOnly = {
 
 describe("EventInviteCandidates", () => {
   it("lets the organizer select people and sends only their ids", async () => {
-    const action = vi.fn().mockResolvedValue(undefined);
+    const action = vi.fn().mockResolvedValue({ status: "success" });
     render(<EventInviteCandidates candidates={[favorite, recent]} action={action} />);
 
     const invitation = screen.getAllByRole("checkbox")[0];

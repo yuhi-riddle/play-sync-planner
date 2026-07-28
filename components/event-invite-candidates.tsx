@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useTransition } from "react";
 
+import type { ActionState } from "@/lib/domain/action-state";
 import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/connections";
 
 export function EventInviteCandidates({
@@ -9,7 +10,7 @@ export function EventInviteCandidates({
   action
 }: {
   candidates: ConnectionCandidate[];
-  action: (inviteeUserIds: string[]) => Promise<void>;
+  action: (inviteeUserIds: string[]) => Promise<ActionState>;
 }) {
   const orderedCandidates = useMemo(() => sortInviteCandidates(candidates), [candidates]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -32,7 +33,11 @@ export function EventInviteCandidates({
     setMessage(null);
     startTransition(async () => {
       try {
-        await action(selectedIds);
+        const result = await action(selectedIds);
+        if (result.status === "error") {
+          setError(result.message ?? "招待を送れませんでした。");
+          return;
+        }
         setSelectedIds([]);
         setMessage("招待を送りました");
       } catch (cause) {
