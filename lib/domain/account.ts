@@ -1,13 +1,12 @@
+import type { ActionState } from "@/lib/domain/action-state";
+
 /**
  * 退会後に残る記録（イベント・清算）で使う表示名。
  * profiles_nickname_check の1〜40文字に収まる必要がある。
  */
 export const WITHDRAWN_DISPLAY_NAME = "退会したユーザー";
 
-export type AccountActionState = {
-  status: "idle" | "error";
-  message?: string;
-};
+export type AccountActionState = ActionState;
 
 export const ACCOUNT_ACTION_INITIAL_STATE: AccountActionState = { status: "idle" };
 

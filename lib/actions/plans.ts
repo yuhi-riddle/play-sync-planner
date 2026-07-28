@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { formDataToObject } from "@/lib/form-data";
+import { errorState, failWith, type ActionState } from "@/lib/domain/action-state";
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
 import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
@@ -25,13 +26,22 @@ function normalizeReminderOffsets(values: { reminder_offset_minutes: number | nu
   return Array.from(new Set(offsets)).sort((a, b) => b - a);
 }
 
-export async function createPlanAction(eventId: string, formData: FormData) {
+export async function createPlanAction(
+  eventId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
   const userId = await getCurrentUserId();
   if (!userId) {
     redirect("/login");
   }
 
-  const values = planSchema.parse(formDataToObject(formData));
+  const parsed = planSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return errorState(parsed.error.issues[0]?.message ?? "入力内容を確認してください。");
+  }
+  const values = parsed.data;
+
   const supabase = await createSupabaseServerClient();
   const { data: eventMembers, error: membersError } = await supabase
     .from("event_members")
@@ -40,7 +50,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     .eq("status", "joined");
 
   if (membersError) {
-    throw new Error(membersError.message);
+    return failWith("参加者を読み込めませんでした。", membersError);
   }
 
   const members = (eventMembers ?? []).map((member) => ({
@@ -51,7 +61,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     status: member.status
   })) as EventMember[];
   if (!canStartPlanFromMembers(members) || !members.some((member) => member.userId === userId && member.role === "organizer" && member.status === "joined")) {
-    throw new Error("主催者を含む参加者を集めてから日程調整を作成してください。");
+    return errorState("主催者を含む参加者を集めてから日程調整を作成してください。");
   }
 
   const { data: plan, error: planError } = await supabase
@@ -70,7 +80,7 @@ export async function createPlanAction(eventId: string, formData: FormData) {
     .single();
 
   if (planError) {
-    throw new Error(planError.message);
+    return failWith("日程調整を作成できませんでした。", planError);
   }
 
   const participants = buildPlanParticipantsFromMembers(members, plan.id);
@@ -99,7 +109,10 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   ]);
 
   if (participantsError || datesError || linkError || reminderError) {
-    throw new Error(participantsError?.message ?? datesError?.message ?? linkError?.message ?? reminderError?.message);
+    return failWith(
+      "日程調整を作成できませんでした。",
+      participantsError ?? datesError ?? linkError ?? reminderError
+    );
   }
 
   revalidatePath("/");
@@ -107,13 +120,22 @@ export async function createPlanAction(eventId: string, formData: FormData) {
   redirect(`/plans/${plan.id}`);
 }
 
-export async function updatePlanAction(planId: string, formData: FormData) {
+export async function updatePlanAction(
+  planId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
   const userId = await getCurrentUserId();
   if (!userId) {
     redirect("/login");
   }
 
-  const values = planSchema.parse(formDataToObject(formData));
+  const parsed = planSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return errorState(parsed.error.issues[0]?.message ?? "入力内容を確認してください。");
+  }
+  const values = parsed.data;
+
   const supabase = await createSupabaseServerClient();
   const { data: plan, error: planError } = await supabase
     .from("plans")
@@ -128,7 +150,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     .single();
 
   if (planError) {
-    throw new Error(planError.message);
+    return failWith("日程調整を更新できませんでした。", planError);
   }
 
   const shouldReplaceParticipants = formData.has("participantNames");
@@ -177,7 +199,7 @@ export async function updatePlanAction(planId: string, formData: FormData) {
   ]);
 
   if (participantsError || datesError || reminderError) {
-    throw new Error(participantsError?.message ?? datesError?.message ?? reminderError?.message);
+    return failWith("日程調整を更新できませんでした。", participantsError ?? datesError ?? reminderError);
   }
 
   revalidatePath("/");

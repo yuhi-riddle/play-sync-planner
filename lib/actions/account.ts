@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { errorState } from "@/lib/domain/action-state";
 import {
   WITHDRAWN_DISPLAY_NAME,
   isWithdrawalConfirmed,
@@ -15,10 +16,6 @@ import {
   getCurrentUser,
   hasSupabaseAdminEnv
 } from "@/lib/supabase/server";
-
-function errorState(message: string): AccountActionState {
-  return { status: "error", message };
-}
 
 /**
  * 退会処理。

@@ -3,15 +3,18 @@
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import React from "react";
 import type { RefObject } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
 import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar-availability-panel";
 import { GroupAvailabilityCalendar } from "@/components/group-availability-calendar";
 import { MadoiSelect, TextArea } from "@/components/ui";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/calendar";
+import type { ActionState } from "@/lib/domain/action-state";
 import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar-availability";
 import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib/format";
+
+const INITIAL_ACTION_STATE: ActionState = { status: "idle" };
 
 type PlanRecord = {
   title?: string | null;
@@ -436,7 +439,7 @@ export function PlanForm({
   participantCount,
   calendarAvailability
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   plan?: PlanRecord;
   submitLabel: string;
   eventCategory?: string | null;
@@ -444,6 +447,7 @@ export function PlanForm({
   participantCount?: number;
   calendarAvailability?: { enabled: boolean };
 }) {
+  const [actionState, formAction, isSubmitting] = useActionState(action, INITIAL_ACTION_STATE);
   const initialCandidateDates = plan?.candidate_dates?.length
     ? plan.candidate_dates.map((candidate) => ({
         start: toDateTimeLocalValue(candidate.start_at),
@@ -662,7 +666,7 @@ export function PlanForm({
   }
 
   return (
-    <form action={action} className="grid gap-6">
+    <form action={formAction} className="grid gap-6">
       {candidateDates.map((candidateDateValue) => (
         <React.Fragment key={candidateDateValue.start}>
           <input type="hidden" name="candidateDates" value={candidateDateValue.start} />
@@ -932,9 +936,9 @@ export function PlanForm({
         </section>
       ) : null}
 
-      {message ? (
+      {message || (actionState.status === "error" && actionState.message) ? (
         <p className="rounded-control border border-clay/20 bg-clay/10 p-3 text-sm font-medium text-ink" aria-live="polite">
-          {message}
+          {message || actionState.message}
         </p>
       ) : null}
 
@@ -961,10 +965,10 @@ export function PlanForm({
         ) : (
           <button
             type="submit"
-            disabled={!canReview}
+            disabled={!canReview || isSubmitting}
             className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
           >
-            {submitLabel}
+            {isSubmitting ? "送信中…" : submitLabel}
           </button>
         )}
       </div>

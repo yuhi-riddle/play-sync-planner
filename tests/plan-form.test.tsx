@@ -49,6 +49,34 @@ describe("PlanForm", () => {
     expect(document.querySelector('input[name="answer_deadline_at"]')).toHaveAttribute("value", "2026-07-14T22:08");
   });
 
+  it("サーバーからのエラーを表示し、入力し直した候補日時を消さない", async () => {
+    const action = vi.fn().mockResolvedValue({ status: "error", message: "回答期限は最初の候補日時より前にしてください。" });
+    render(<PlanForm action={action} submitLabel="この内容で日程調整を始める" participantCount={3} />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    await waitFor(() => expect(screen.getByLabelText("開始時")).toHaveFocus());
+    chooseOption("開始時", "10");
+    chooseOption("開始分", "07");
+    chooseOption("終了時", "12");
+    chooseOption("終了分", "07");
+    fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    fireEvent.click(screen.getByLabelText(/7月14日.*を選択/));
+    await waitFor(() => expect(screen.getByLabelText("回答期限時")).toHaveFocus());
+    chooseOption("回答期限時", "22");
+    chooseOption("回答期限分", "08");
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    fireEvent.click(screen.getByRole("button", { name: "この内容で日程調整を始める" }));
+
+    expect(await screen.findByText("回答期限は最初の候補日時より前にしてください。")).toBeInTheDocument();
+    // ページ全体がエラー画面に置き換わっていれば、この見出しも候補日時の入力値も消えているはず。
+    expect(screen.getByRole("heading", { name: "内容を確認する" })).toBeInTheDocument();
+    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T10:07");
+  });
+
   it("blocks review when the answer deadline is after the first candidate", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 

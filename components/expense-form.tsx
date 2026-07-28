@@ -1,10 +1,13 @@
 "use client";
 
 import { ReceiptText } from "lucide-react";
-import React, { useState } from "react";
+import React, { useActionState, useState } from "react";
 
 import { PaymentMethodField } from "@/components/payment-method-field";
 import { MadoiForm, MadoiSelect, SubmitButton, TextArea, TextField } from "@/components/ui";
+import type { ActionState } from "@/lib/domain/action-state";
+
+const INITIAL_ACTION_STATE: ActionState = { status: "idle" };
 
 type ParticipantOption = {
   id: string;
@@ -31,10 +34,11 @@ export function ExpenseForm({
   submitLabel = "支払いを追加"
 }: {
   participants: ParticipantOption[];
-  action: (formData: FormData) => void | Promise<void>;
+  action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   initialValues?: ExpenseFormInitialValues;
   submitLabel?: string;
 }) {
+  const [actionState, formAction] = useActionState(action, INITIAL_ACTION_STATE);
   const [splitMode, setSplitMode] = useState<"equal" | "individual">(initialValues?.splitMode ?? "equal");
   const [selectedIds, setSelectedIds] = useState(
     () => new Set(initialValues?.splitParticipantIds?.length ? initialValues.splitParticipantIds : participants.map((participant) => participant.id))
@@ -60,7 +64,11 @@ export function ExpenseForm({
   }
 
   return (
-    <MadoiForm action={action} className="grid gap-5">
+    <MadoiForm
+      action={formAction}
+      serverError={actionState.status === "error" ? actionState.message : undefined}
+      className="grid gap-5"
+    >
       <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
         <TextField
           label="支払い内容"

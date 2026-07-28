@@ -18,7 +18,10 @@ type MadoiFormError = {
   message: string;
 };
 
-type MadoiFormProps = Omit<React.ComponentPropsWithoutRef<"form">, "onSubmit" | "noValidate">;
+type MadoiFormProps = Omit<React.ComponentPropsWithoutRef<"form">, "onSubmit" | "noValidate"> & {
+  /** Server Actionが返したエラー文言。クライアント側の入力検証と同じAlertに表示する。 */
+  serverError?: string;
+};
 
 function isFormField(element: Element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement {
   return (
@@ -103,7 +106,7 @@ function focusFirstInvalidField(form: HTMLFormElement) {
   firstInvalidField.focus({ preventScroll: true });
 }
 
-export function MadoiForm({ children, className, action, ...props }: MadoiFormProps) {
+export function MadoiForm({ children, className, action, serverError, ...props }: MadoiFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [errors, setErrors] = useState<MadoiFormError[]>([]);
 
@@ -130,6 +133,10 @@ export function MadoiForm({ children, className, action, ...props }: MadoiFormPr
               <li key={error.key}>{error.message}</li>
             ))}
           </ul>
+        </Alert>
+      ) : serverError ? (
+        <Alert tone="error" assertive>
+          {serverError}
         </Alert>
       ) : null}
       {children}
