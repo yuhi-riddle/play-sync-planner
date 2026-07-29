@@ -204,6 +204,30 @@ Phase 1 は完了済みです。
   client側 `catch` に `unstable_rethrow(cause)` を追加。将来 Server Action に `redirect()` が入っても、
   クライアント側の汎用catchが握りつぶさないようにするための保険
 
+### 品質改善: 体感速度
+
+- `lib/supabase/server.ts` の `createSupabaseServerClient` / `getCurrentUser` / `getCurrentUserId` を
+  `React.cache()` でラップした。1リクエスト内(レイアウトの `AuthNav` とページ本体など)で複数回呼ばれても
+  `auth.getUser()` は1回に集約される。ただし `React.cache()` の重複排除は実際のServer Componentレンダリング文脈
+  (内部のAsyncLocalStorageベースのディスパッチャ)に依存するため、vitest単体では検証できない
+  (`node -e` でcache()単体の挙動を確認し、テストは「ラップしても壊れていないこと」の回帰確認にとどめた)
+- `AuthNav` の `profiles` 取得は意図的に変更していない。`onboarding_completed_at` はテスト上もDB値が
+  主たる情報源になっており、`user_metadata` は補助的なフォールバックに過ぎないため、削るとメタデータ未同期の
+  既存ユーザーで導線が壊れる恐れがある
+- `/plans`(カレンダー)ページのクエリに月範囲フィルタを追加した。`candidate_dates!inner` と
+  `monthRangeInTokyo(currentMonth)` の `gte`/`lt` で、表示月に候補日が無いplanごとfetchしないようにした
+  (以前は参加済み全イベントの全候補日・全回答をlimitなしで取得していた)
+- `lib/actions/answers.ts` に `revalidatePath("/")` と `revalidatePath("/plans/{planId}")` を追加した。
+  回答送信後にこの2つが無効化されていなかったため、主催者が開いたままのタブがルーターキャッシュ経由で
+  古い表示のままになりうる抜けだった
+- `lib/actions/profile.ts` の重複した `revalidatePath("/settings")` を削除した(直前の
+  `revalidatePath("/", "layout")` がルートレイアウト配下の全ページを無効化するため冗長だった)
+- 見送った項目: `events/[eventId]/page.tsx` の `admin.auth.admin.getUserById` によるN+1は、
+  対象がすでに小さく絞られた候補ユーザーのみかつ並列実行済みのため、`listUsers()`(全件取得+ページング)へ
+  置き換えると逆にユーザー数が増えたときに悪化する。計画にあった「直列awaitのPromise.all化」対象箇所は、
+  別コミット(イベント複製・分担リスト追加)で構造が変わり、2つのPromise.allの間に本物のデータ依存
+  (2つ目が1つ目の結果の `currentUserId`/`isOwner` を使う)ができていたため統合できなかった
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
