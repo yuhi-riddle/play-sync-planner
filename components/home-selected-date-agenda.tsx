@@ -8,17 +8,8 @@ import { clsx } from "clsx";
 
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home-agenda";
 import { formatDateTimeRange } from "@/lib/format";
+import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { Badge, Card, EmptyState, SectionHeading, type BadgeTone } from "@/components/ui";
-
-type GoogleCalendarResponse = {
-  connected: boolean;
-  busy: Array<{
-    start: string;
-    end: string;
-    title: string | null;
-    location: string | null;
-  }>;
-};
 
 function toDateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -87,21 +78,6 @@ function weekdayTone(dateKey: string) {
     return "text-pine";
   }
   return "text-muted";
-}
-
-function googleItemsFromResponse(response: GoogleCalendarResponse): HomeAgendaItem[] {
-  if (!response.connected) {
-    return [];
-  }
-
-  return response.busy.map((busyRange, index) => ({
-    id: `google-${busyRange.start}-${index}`,
-    kind: "google",
-    title: busyRange.title || "予定あり",
-    location: busyRange.location,
-    startAt: busyRange.start,
-    endAt: busyRange.end
-  }));
 }
 
 function itemBadge(kind: HomeAgendaItem["kind"]): { label: string; tone: BadgeTone } {

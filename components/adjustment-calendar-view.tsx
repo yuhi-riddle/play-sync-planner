@@ -13,86 +13,15 @@ import {
   type AdjustmentCandidate,
   type CalendarDay
 } from "@/lib/domain/adjustment-calendar";
+import { dayCellClass, weekdayClass } from "@/lib/calendar-styles";
+import { dateLabel as formatDateLabel, defaultDateForMonth, monthLabel, moveMonth, parseMonth } from "@/lib/domain/calendar-month";
 import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 import { formatDateTimeRange } from "@/lib/format";
+import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
-type GoogleCalendarResponse = {
-  connected: boolean;
-  busy: Array<{
-    start: string;
-    end: string;
-    title: string | null;
-    location: string | null;
-  }>;
-};
-
-function parseMonth(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  return { year, month: monthNumber };
-}
-
-function monthParam(year: number, month: number) {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
-
-function moveMonth(month: string, amount: number) {
-  const { year, month: monthNumber } = parseMonth(month);
-  const date = new Date(year, monthNumber - 1 + amount, 1);
-  return monthParam(date.getFullYear(), date.getMonth() + 1);
-}
-
-function defaultDateForMonth(month: string) {
-  return `${month}-01`;
-}
-
-function monthLabel(month: string) {
-  const { year, month: monthNumber } = parseMonth(month);
-  return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(new Date(year, monthNumber - 1, 1));
-}
-
 function dateLabel(dateKey: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short"
-  }).format(new Date(`${dateKey}T00:00:00`));
-}
-
-function weekdayClass(index: number) {
-  if (index === 0) {
-    return "text-clay-ink";
-  }
-
-  if (index === 6) {
-    return "text-sky-700";
-  }
-
-  return "text-muted";
-}
-
-function dayCellClass(day: CalendarDay) {
-  const dayIndex = day.date.getDay();
-  const isHoliday = isJapaneseHoliday(day.dateKey);
-
-  if (day.isSelected) {
-    return "border-pine bg-moss/18 text-ink shadow-soft";
-  }
-
-  if (!day.isCurrentMonth) {
-    return "border-line bg-surface text-muted hover:border-moss/35";
-  }
-
-  if (dayIndex === 0 || isHoliday) {
-    return "border-line bg-clay/8 text-clay-ink hover:border-clay/45";
-  }
-
-  if (dayIndex === 6) {
-    return "border-line bg-skywash/55 text-sky-800 hover:border-sky-300";
-  }
-
-  return "border-line bg-surface text-ink hover:border-moss/45";
+  return formatDateLabel(dateKey, { includeYear: true });
 }
 
 function dayAriaLabel(day: CalendarDay, googleCount: number) {
@@ -106,21 +35,6 @@ function dayAriaLabel(day: CalendarDay, googleCount: number) {
   });
 
   return `${summary}。この日の候補を見る`;
-}
-
-function googleItemsFromResponse(response: GoogleCalendarResponse): HomeCalendarItem[] {
-  if (!response.connected) {
-    return [];
-  }
-
-  return response.busy.map((busyRange, index) => ({
-    id: `google-${busyRange.start}-${index}`,
-    kind: "google",
-    title: busyRange.title || "予定あり",
-    location: busyRange.location,
-    startAt: busyRange.start,
-    endAt: busyRange.end
-  }));
 }
 
 function buildSearchHref(dateKey: string) {
