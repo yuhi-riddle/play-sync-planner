@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import React, { useMemo, useState, useTransition } from "react";
 
 import type { ActionState } from "@/lib/domain/action-state";
@@ -41,6 +42,7 @@ export function EventInviteCandidates({
         setSelectedIds([]);
         setMessage("招待を送りました");
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "招待を送れませんでした。");
       }
     });

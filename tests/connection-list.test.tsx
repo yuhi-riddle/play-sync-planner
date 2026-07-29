@@ -2,17 +2,24 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { unblockUserAction } = vi.hoisted(() => ({
-  unblockUserAction: vi.fn().mockResolvedValue(undefined)
+const { unblockUserAction, unfollowUserAction } = vi.hoisted(() => ({
+  unblockUserAction: vi.fn().mockResolvedValue(undefined),
+  unfollowUserAction: vi.fn()
 }));
 
 vi.mock("@/lib/actions/connections", () => ({
   blockUserAction: vi.fn(),
   followUserAction: vi.fn(),
   toggleFavoriteAction: vi.fn(),
-  unfollowUserAction: vi.fn(),
+  unfollowUserAction,
   unblockUserAction
 }));
+
+vi.mock("next/navigation", () => ({
+  unstable_rethrow: vi.fn()
+}));
+
+import { unstable_rethrow } from "next/navigation";
 
 import { ConnectionList } from "@/components/connection-list";
 
@@ -142,5 +149,26 @@ describe("ConnectionList", () => {
     expect(screen.getByText("はるかさん")).toBeInTheDocument();
     expect(screen.queryByText("あきらさん")).not.toBeInTheDocument();
     expect(screen.getByRole("tablist", { name: "つながりを絞り込む" }).parentElement).toHaveClass("hidden", "sm:block");
+  });
+
+  it("passes unfollow errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
+    const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
+    unfollowUserAction.mockRejectedValueOnce(redirectError);
+    render(<ConnectionList favorites={[]} following={[following]} candidates={[]} blockedUsers={[]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "フォローを解除" }));
+
+    await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
+  });
+
+  it("passes unblock errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
+    const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
+    unblockUserAction.mockRejectedValueOnce(redirectError);
+    render(<ConnectionList favorites={[]} following={[]} candidates={[]} blockedUsers={[blockedUser]} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "ブロック中 1件" }));
+    fireEvent.click(screen.getByRole("button", { name: "なぎささんのブロックを解除" }));
+
+    await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });
 });

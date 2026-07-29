@@ -2,6 +2,12 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("next/navigation", () => ({
+  unstable_rethrow: vi.fn()
+}));
+
+import { unstable_rethrow } from "next/navigation";
+
 import { EventInviteCandidates } from "@/components/event-invite-candidates";
 
 const favorite = {
@@ -52,5 +58,16 @@ describe("EventInviteCandidates", () => {
 
     expect(screen.getByText("一緒に参加した人や、フォロー中・お気に入りの人から選べます。")).toBeInTheDocument();
     expect(screen.getByText("フォロー中")).toBeInTheDocument();
+  });
+
+  it("passes caught errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
+    const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
+    const action = vi.fn().mockRejectedValue(redirectError);
+    render(<EventInviteCandidates candidates={[favorite]} action={action} />);
+
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Madoiで招待を送る" }));
+
+    await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });
 });

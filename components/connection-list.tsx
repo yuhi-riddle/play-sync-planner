@@ -1,6 +1,7 @@
 "use client";
 
 import { Heart, ShieldBan, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import React, { useRef, useState, useTransition } from "react";
 import type { KeyboardEvent } from "react";
 
@@ -158,6 +159,7 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
           setError(result.message ?? "操作を完了できませんでした。");
         }
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "操作を完了できませんでした。");
       }
     });
@@ -237,6 +239,7 @@ function BlockedUserRow({ person }: { person: BlockedUser }) {
           setError(result.message ?? "ブロックを解除できませんでした。");
         }
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "ブロックを解除できませんでした。");
       }
     });

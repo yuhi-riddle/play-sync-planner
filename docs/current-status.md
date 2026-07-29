@@ -1,6 +1,6 @@
 # Madoi 現在の実装状況
 
-最終更新: 2026-07-15
+最終更新: 2026-07-29
 
 このドキュメントは、いま何ができていて、何が残っているのかを固定するための棚卸しです。
 小さな改善を増やし続けるのではなく、次の区切りに向けて必要な作業だけを見えるようにします。
@@ -182,6 +182,27 @@ Phase 1 は完了済みです。
   立替登録、日程確定
 - 満額の二重送信は migration 021 のDBトリガーで既に防げているが、分割払いの重複はUI側の対策が無いと素通りするため、この対応が必要だった
 - 冪等キーによる根本対応(DBマイグレーション)は今回のスコープ外。必要になれば別途相談する
+
+### 品質改善: エラーがユーザーに届くようにする
+
+- Next.js は本番ビルドで Server Action の未処理例外メッセージをクライアントに渡さないため、
+  丁寧に書いた日本語エラーがすべて汎用エラーに化けていた問題に対応した
+- `lib/domain/action-state.ts` に共通の `ActionState`(`{status, message, fieldErrors}`)を追加。
+  `ProfileActionState` / `AccountActionState` はこの型を再エクスポートする形に統合した
+- `createPlanAction` / `updatePlanAction` / `createExpenseAction` / `updateExpenseAction` を
+  `safeParse` + `ActionState` の返り値方式に移行し、`PlanForm` / `ExpenseForm` が `serverError` として
+  既存の `Alert` に表示するようにした(throw方式だとエラー時にウィザードの入力内容が消えていた)
+- `lib/actions/connections.ts` のフォロー・お気に入り・ブロック・招待系7関数も同様に返り値方式へ移行し、
+  `connection-list.tsx` / `event-invite-candidates.tsx` / `received-event-invitations.tsx` が
+  `result.status` を見て表示を切り替えるようにした
+- `app/error.tsx` / `app/global-error.tsx` が `error.digest` を画面に小さく表示し、`console.error` に原因を残すようにした
+- セグメント単位のエラー境界を追加: `app/events/[eventId]/error.tsx`(イベント一覧へ戻れる)、
+  `app/plans/[planId]/error.tsx`(日程調整一覧へ戻れる)、`app/s/[token]/error.tsx`(ゲスト向けなので戻り先リンクなし)
+- トークン自体が存在しない場合の404を専用文言にした: `app/s/[token]/not-found.tsx` / `app/invites/[token]/not-found.tsx`。
+  「このリンクは無効か、期限が切れています」という文言で、F2の「無効化されています」(無効化済みリンク)とは区別している
+- `connection-list.tsx` / `event-chat.tsx` / `received-event-invitations.tsx` / `event-invite-candidates.tsx` の
+  client側 `catch` に `unstable_rethrow(cause)` を追加。将来 Server Action に `redirect()` が入っても、
+  クライアント側の汎用catchが握りつぶさないようにするための保険
 
 ## 残っている作業
 
