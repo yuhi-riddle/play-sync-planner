@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/availability";
@@ -165,6 +166,8 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     }
   }
 
+  revalidatePath("/");
+  revalidatePath(`/plans/${link.plan_id}`);
   redirect(`/s/${token}/answer/complete`);
 }
 

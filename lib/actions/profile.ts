@@ -111,7 +111,6 @@ export async function updateProfileAction(
   }
 
   revalidatePath("/", "layout");
-  revalidatePath("/settings");
 
   if (mode === "onboarding") {
     redirect(safeNextPath(formData.get("next")?.toString()));
