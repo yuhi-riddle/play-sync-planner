@@ -29,6 +29,12 @@ body {
   background: rgba(223, 125, 105, 0.3);
 }
 
+/* キーボード操作時だけリングを出す(マウスクリックでは出さない)。個別要素のTailwindクラスが無い場合の保険。 */
+:focus-visible {
+  outline: 2px solid #df7d69;
+  outline-offset: 2px;
+}
+
 .app-shell {
   position: relative;
   isolation: isolate;

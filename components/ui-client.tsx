@@ -181,7 +181,7 @@ export function TextField({
     <label className="block text-body font-medium text-ink">
       <span className="text-muted">{label}</span>
       <input
-        className="mt-2 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus-visible:border-moss focus-visible:ring-2 focus-visible:ring-moss/20"
         name={name}
         type={type}
         defaultValue={defaultValue ?? ""}
@@ -319,7 +319,7 @@ export function MadoiSelect({
         onClick={() => setOpen((current) => !current)}
         onKeyDown={handleKeyDown}
         className={clsx(
-          "flex w-full items-center justify-between gap-3 rounded-control border border-line-strong bg-surface text-left text-base text-ink transition-colors hover:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20",
+          "flex w-full items-center justify-between gap-3 rounded-control border border-line-strong bg-surface text-left text-base text-ink transition-colors hover:border-moss focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss/20",
           compact ? "min-h-11 px-3 py-2" : "min-h-11 px-3 py-2"
         )}
       >
@@ -343,7 +343,7 @@ export function MadoiSelect({
                 disabled={option.disabled}
                 onClick={() => selectValue(option.value)}
                 className={clsx(
-                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left text-body font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay",
                   selected ? "bg-mist text-pine" : "text-ink hover:bg-sunken",
                   option.disabled && "pointer-events-none text-subtle"
                 )}
@@ -392,7 +392,7 @@ export function TextArea({
     <label className="block text-body font-medium text-ink">
       <span className="text-muted">{label}</span>
       <textarea
-        className="mt-2 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
+        className="mt-2 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus-visible:border-moss focus-visible:ring-2 focus-visible:ring-moss/20"
         name={name}
         defaultValue={defaultValue ?? ""}
         rows={rows}
@@ -472,7 +472,7 @@ export const SubmitButton = React.forwardRef<
       disabled={pending}
       aria-busy={pending}
       className={clsx(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-2 text-body font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
         submitButtonVariantClasses[variant],
         className
       )}
