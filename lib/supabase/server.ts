@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
@@ -16,7 +17,7 @@ export function hasSupabaseAdminEnv(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-export async function createSupabaseServerClient() {
+export const createSupabaseServerClient = cache(async () => {
   if (!hasSupabaseEnv()) {
     throw new Error("Supabaseの環境変数が設定されていません");
   }
@@ -43,7 +44,7 @@ export async function createSupabaseServerClient() {
       }
     }
   );
-}
+});
 
 export function createSupabaseAdminClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -58,20 +59,16 @@ export function createSupabaseAdminClient() {
   });
 }
 
-export async function getCurrentUserId() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
+export const getCurrentUserId = cache(async () => {
+  const user = await getCurrentUser();
   return user?.id ?? null;
-}
+});
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
 
   return user;
-}
+});
