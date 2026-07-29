@@ -15,6 +15,21 @@ function reportMetric(name: string, value: number) {
   handler?.({ name, value });
 }
 
+// next/web-vitals の useReportWebVitals は effect の dep が [reportWebVitalsFn] であり、
+// cleanup も無い。つまり参照が変わるたびに「古いリスナーを残したまま」新しいリスナーが
+// 積み増しされる（実運用でのバグの正体）。これを再現するため、直前の呼び出しと参照が
+// 異なる場合だけ新規リスナー登録とみなし、蓄積された全リスナーへ発火させる。
+function reportMetricToAllAccumulatedListeners(name: string, value: number) {
+  let previous: unknown;
+  for (const call of useReportWebVitals.mock.calls) {
+    const handler = call[0];
+    if (handler !== previous) {
+      handler?.({ name, value });
+      previous = handler;
+    }
+  }
+}
+
 type LayoutShiftEntryInit = { value: number; startTime: number; hadRecentInput: boolean };
 
 class MockPerformanceObserver {
@@ -228,6 +243,39 @@ describe("WebVitalsReporter", () => {
         "/api/performance/vitals",
         JSON.stringify({ page: "events", name: "CLS", value: 0.05, device: "desktop" })
       );
+    });
+  });
+
+  describe("useReportWebVitalsへ渡すコールバックの参照安定性", () => {
+    it("pathnameが変わって再レンダリングされても、渡す関数の参照は同一である", () => {
+      const { rerender } = render(<WebVitalsReporter />);
+      const firstCallback = useReportWebVitals.mock.calls.at(-1)?.[0];
+
+      usePathname.mockReturnValue("/plans");
+      rerender(<WebVitalsReporter />);
+      const secondCallback = useReportWebVitals.mock.calls.at(-1)?.[0];
+
+      usePathname.mockReturnValue("/settings");
+      rerender(<WebVitalsReporter />);
+      const thirdCallback = useReportWebVitals.mock.calls.at(-1)?.[0];
+
+      expect(secondCallback).toBe(firstCallback);
+      expect(thirdCallback).toBe(firstCallback);
+    });
+
+    it("複数回の遷移のあとLCPを1回発火させても、送信は1回だけである", () => {
+      const { rerender } = render(<WebVitalsReporter />);
+
+      usePathname.mockReturnValue("/plans");
+      rerender(<WebVitalsReporter />);
+      usePathname.mockReturnValue("/settings");
+      rerender(<WebVitalsReporter />);
+      usePathname.mockReturnValue("/events");
+      rerender(<WebVitalsReporter />);
+
+      reportMetricToAllAccumulatedListeners("LCP", 1200);
+
+      expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     });
   });
 });

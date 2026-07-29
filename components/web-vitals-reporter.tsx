@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useReportWebVitals } from "next/web-vitals";
 
@@ -50,20 +50,29 @@ export function WebVitalsReporter() {
   // 新しいObserverに再配信してくるため、消費済みの時刻で線引きする。
   const consumedUntilRef = useRef(0);
 
-  useReportWebVitals((metric) => {
-    if (!sampled || !isAllowedWebVitalName(metric.name)) return;
-    // CLS はページ単位のセッションウィンドウ集計が必要なため、ここでは扱わず
-    // 下の PerformanceObserver ベースの計測に任せる。
-    if (metric.name === "CLS") return;
-    if (!reasonableMetricValue(metric.name, metric.value)) return;
+  // useReportWebVitals（next/web-vitals）は内部の useEffect の依存配列に
+  // このコールバック自身を入れており、cleanup も無い。参照が毎回変わると
+  // 古いリスナーを残したまま新しいリスナーが積み増しされ、多重送信につながる。
+  // useCallback で参照を安定させ、依存は sampled のみにする（pathname を入れない）。
+  const reportWebVitals = useCallback(
+    (metric: { name: string; value: number }) => {
+      if (!sampled || !isAllowedWebVitalName(metric.name)) return;
+      // CLS はページ単位のセッションウィンドウ集計が必要なため、ここでは扱わず
+      // 下の PerformanceObserver ベースの計測に任せる。
+      if (metric.name === "CLS") return;
+      if (!reasonableMetricValue(metric.name, metric.value)) return;
 
-    send({
-      page: mapPathnameToPageTemplate(window.location.pathname),
-      name: metric.name,
-      value: metric.value,
-      device: currentDevice()
-    });
-  });
+      send({
+        page: mapPathnameToPageTemplate(window.location.pathname),
+        name: metric.name,
+        value: metric.value,
+        device: currentDevice()
+      });
+    },
+    [sampled]
+  );
+
+  useReportWebVitals(reportWebVitals);
 
   // CLS はドキュメント全体で累積するのではなく、ページ（pathname）ごとに
   // 計測ウィンドウを区切って集計する。こうしないと「どのページでズレたか」が分からない。
