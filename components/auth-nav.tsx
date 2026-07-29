@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
-import { Bell, LogOut, Settings, UserRound } from "lucide-react";
+import { Bell, LogOut, UserRound } from "lucide-react";
 import React from "react";
 
 import { signOutAction } from "@/lib/actions/auth";
@@ -42,7 +42,7 @@ export async function AuthNav({ user }: { user: User | null }) {
   );
 
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_repeat(3,2.75rem)] items-center gap-1 text-sm sm:flex sm:w-auto sm:gap-2">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_repeat(2,2.75rem)] items-center gap-1 text-sm sm:flex sm:w-auto sm:gap-2">
       <Link
         href={profileHref}
         className="flex min-h-11 min-w-0 items-center gap-2 rounded-full border border-line bg-surface px-2 py-1.5 text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:px-3"
@@ -76,15 +76,6 @@ export async function AuthNav({ user }: { user: User | null }) {
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         ) : null}
-      </Link>
-      <Link
-        href={state.settingsHref}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface p-0 text-sm font-bold text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
-        aria-label="設定"
-        title="設定"
-      >
-        <Settings aria-hidden="true" className="h-4 w-4" />
-        <span className="hidden sm:inline">設定</span>
       </Link>
       <form action={signOutAction} className="h-11 w-11">
         <button

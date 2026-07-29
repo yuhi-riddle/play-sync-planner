@@ -48,7 +48,7 @@ describe("AuthNav profile", () => {
     const profileLink = screen.getByRole("link", { name: "プロフィールを開く（ゆうやん）" });
     expect(profileLink).toHaveAttribute("href", "/settings#profile");
     expect(profileLink).toHaveAttribute("title", "プロフィールを開く");
-    expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/settings");
+    expect(screen.queryByRole("link", { name: "設定" })).not.toBeInTheDocument();
     expect(screen.getByText("ゆうやん")).toBeInTheDocument();
     expect(screen.getByText("ゆうやん")).not.toHaveClass("hidden");
     expect(screen.getByRole("img", { name: "ゆうやんのプロフィール画像" })).toHaveAttribute(
@@ -85,7 +85,7 @@ describe("AuthNav profile", () => {
     expect(profileLink.parentElement).toHaveClass(
       "grid",
       "w-full",
-      "grid-cols-[minmax(0,1fr)_repeat(3,2.75rem)]",
+      "grid-cols-[minmax(0,1fr)_repeat(2,2.75rem)]",
       "sm:flex",
       "sm:w-auto"
     );
