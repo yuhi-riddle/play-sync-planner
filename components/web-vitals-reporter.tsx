@@ -7,8 +7,8 @@ import { useReportWebVitals } from "next/web-vitals";
 import { maxSessionWindowValue, type LayoutShiftSample } from "@/lib/domain/cls";
 import { isAllowedWebVitalName, mapPathnameToPageTemplate, type WebVitalInput } from "@/lib/domain/web-vitals";
 
-// 「重い」報告の原因調査のため一時的に100%計測にしている。傾向が掴めたら5%程度へ戻す。
-export const SAMPLE_RATE = 1;
+// 通常運用は5%サンプリング。原因調査時のみ一時的に1へ引き上げる。
+export const SAMPLE_RATE = 0.05;
 
 // layout-shift エントリは lib.dom.d.ts にまだ型定義がないため、必要なプロパティだけ持つ形で扱う。
 interface LayoutShiftEntry extends PerformanceEntry {
