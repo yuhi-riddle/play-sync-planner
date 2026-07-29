@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUserId, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId, redirect, revalidatePath } = vi.hoisted(() => ({
+  createSupabaseAdminClient: vi.fn(),
   createSupabaseServerClient: vi.fn(),
   getCurrentUserId: vi.fn(),
   redirect: vi.fn(),
@@ -17,12 +18,49 @@ vi.mock("next/navigation", () => ({
   }
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAdminClient: vi.fn(),
+  createSupabaseAdminClient,
   createSupabaseServerClient,
   getCurrentUserId
 }));
 
-import { createExpenseAction, updateExpenseAction } from "@/lib/actions/settlements";
+import { createExpenseAction, deleteExpenseAction, recordPublicSettlementPaymentAction, updateExpenseAction } from "@/lib/actions/settlements";
+
+type MockResult = { data?: unknown; error?: unknown };
+type RecordedCall = { method: string; args: unknown[] };
+
+/** thenable + どのメソッドも呼び出しを記録しつつ同じ結果に解決する、テーブル横断で使うクエリビルダーモック。 */
+function chainable(result: MockResult, calls?: RecordedCall[]) {
+  const proxy: unknown = new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (prop === "then") {
+          return (resolve: (value: unknown) => void) => resolve(result);
+        }
+        if (prop === "single" || prop === "maybeSingle") {
+          return () => Promise.resolve(result);
+        }
+        return (...args: unknown[]) => {
+          calls?.push({ method: String(prop), args });
+          return proxy;
+        };
+      }
+    }
+  );
+  return proxy;
+}
+
+/** テーブルごとに呼び出し順で結果(と任意で呼び出し記録)を返すクライアントのモック。 */
+function tableSequenceClient(responses: Record<string, Array<{ result: MockResult; calls?: RecordedCall[] }>>) {
+  const callIndex: Record<string, number> = {};
+  const from = vi.fn((table: string) => {
+    const index = callIndex[table] ?? 0;
+    callIndex[table] = index + 1;
+    const entry = responses[table]?.[index] ?? { result: { data: null, error: null } };
+    return chainable(entry.result, entry.calls);
+  });
+  return { from };
+}
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const planId = "22222222-2222-4222-8222-222222222222";
@@ -141,5 +179,89 @@ describe("updateExpenseAction", () => {
     expect(typeof result.message).toBe("string");
     expect(updateCalls).toEqual([]);
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("recomputeSettlements(deleteExpenseAction経由)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
+  });
+
+  it("支払い済み・確認済みのsettlementsは消さず、未払い分だけをdeleteの対象にする", async () => {
+    const settlementsDeleteCalls: RecordedCall[] = [];
+    const client = tableSequenceClient({
+      expenses: [
+        {
+          result: {
+            data: {
+              id: expenseId,
+              plan_id: planId,
+              plans: { owner_user_id: userId, participants: [{ id: otherParticipantId, display_name: "参加者A" }] }
+            },
+            error: null
+          }
+        },
+        { result: { error: null } },
+        { result: { data: [], error: null } }
+      ],
+      settlement_payments: [{ result: { data: [], error: null } }],
+      settlements: [{ result: { data: [], error: null } }, { result: { data: null, error: null }, calls: settlementsDeleteCalls }],
+      plans: [{ result: { data: null, error: null } }]
+    });
+    createSupabaseServerClient.mockResolvedValue(client);
+
+    await deleteExpenseAction(expenseId);
+
+    expect(settlementsDeleteCalls).toContainEqual({ method: "delete", args: [] });
+    expect(settlementsDeleteCalls).toContainEqual({ method: "eq", args: ["plan_id", planId] });
+    expect(settlementsDeleteCalls).toContainEqual({ method: "eq", args: ["status", "unpaid"] });
+  });
+});
+
+describe("assertExpenseCanChange(deleteExpenseAction経由)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
+  });
+
+  it("清算支払いが始まっている場合は立替の削除を拒否する", async () => {
+    const client = tableSequenceClient({
+      expenses: [
+        {
+          result: {
+            data: { id: expenseId, plan_id: planId, plans: { owner_user_id: userId, participants: [] } },
+            error: null
+          }
+        }
+      ],
+      settlement_payments: [{ result: { data: [{ id: "payment-1" }], error: null } }]
+    });
+    createSupabaseServerClient.mockResolvedValue(client);
+
+    await expect(deleteExpenseAction(expenseId)).rejects.toThrow(
+      "清算支払いが始まっているため、立替支払いは変更できません"
+    );
+  });
+});
+
+describe("recordPublicSettlementPaymentAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("トークンの計画に属さないsettlementIdを拒否する(唯一の未認証書き込み経路)", async () => {
+    const admin = tableSequenceClient({
+      share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
+      settlements: [{ result: { data: null, error: { message: "not found" } } }]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    const formData = new FormData();
+    formData.set("amount", "1000");
+
+    await expect(
+      recordPublicSettlementPaymentAction("token-1", "settlement-not-in-this-plan", formData)
+    ).rejects.toThrow("清算内容が見つかりません");
   });
 });
