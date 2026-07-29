@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AuthNav } from "@/components/auth-nav";
 import { MobileEventFab } from "@/components/mobile-event-fab";
 import { PrimaryNav } from "@/components/primary-nav";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { brand } from "@/lib/brand";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </footer>
           <MobileEventFab isSignedIn={isSignedIn} />
         </div>
+        <WebVitalsReporter />
       </body>
     </html>
   );

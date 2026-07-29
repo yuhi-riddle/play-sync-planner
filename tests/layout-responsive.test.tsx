@@ -29,6 +29,9 @@ vi.mock("@/components/primary-nav", () => ({
     return null;
   }
 }));
+vi.mock("@/components/web-vitals-reporter", () => ({
+  WebVitalsReporter: () => null
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: mocks.createSupabaseServerClient,
   hasSupabaseEnv: mocks.hasSupabaseEnv
