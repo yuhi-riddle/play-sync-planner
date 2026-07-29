@@ -228,6 +228,25 @@ Phase 1 は完了済みです。
   別コミット(イベント複製・分担リスト追加)で構造が変わり、2つのPromise.allの間に本物のデータ依存
   (2つ目が1つ目の結果の `currentUserId`/`isOwner` を使う)ができていたため統合できなかった
 
+### 品質改善: アクセシビリティ
+
+- `lib/domain/home-calendar.ts` に `buildDayAriaLabel()` を追加した。カレンダーの各日セルは
+  調整中/確定/Google/重複の色つきドットが `aria-hidden="true"` で、日付だけしかラベルが無かったため、
+  「7月15日、調整中の予定あり、確定した予定あり」のように種別を文章化してから
+  `home-month-calendar.tsx` / `adjustment-calendar-view.tsx` の `aria-label` に差し込んだ
+  (両カレンダーの日オブジェクトの形が違うため、正確な件数ではなく種別の有無で統一している)
+- 祝日は `isHoliday` として同じ関数に渡し、ラベル内に「(祝日)」を付けた
+- `plan-form.tsx` の候補日カレンダーの `aria-label` に、Googleカレンダーの既存予定件数を追記した
+- 両カレンダーの凡例(上部の色ドット+テキストの説明行)に `aria-hidden="true"` が付いていなかった箇所を
+  日セル側のドットと揃えた
+- `components/ui-server.tsx` / `ui-client.tsx` の共有プリミティブを `focus:` から `focus-visible:` に統一した。
+  マウスクリックではリングを出さず、キーボード操作時だけ出す。`app/globals.css` に `:focus-visible` の
+  ベースライン(個別クラスが無い要素向けの保険)も追加した
+- `eslint-plugin-jsx-a11y` の `recommended` を追加した。検出された7件は
+  すべて `label-has-associated-control` の誤検知(`MadoiSelect` という独自comboboxをネイティブcontrolとして
+  認識できない/デフォルトdepth=2を超えてネストしたラベルテキスト)だったため、
+  マークアップを崩さず `controlComponents` / `depth` のルール設定で解消した
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
