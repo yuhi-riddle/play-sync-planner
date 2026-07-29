@@ -6,6 +6,11 @@ import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server
 
 export const dynamic = "force-dynamic";
 
+// トークンだけで参加できる公開URLなので、検索エンジンに載せない。
+export const metadata = {
+  robots: { index: false, follow: false }
+};
+
 export default async function EventInvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const invitePath = `/invites/${token}`;

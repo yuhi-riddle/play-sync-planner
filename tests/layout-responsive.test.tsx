@@ -73,4 +73,16 @@ describe("RootLayout responsive header", () => {
     expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: true });
     expect(mocks.mobileEventFab).toHaveBeenCalledWith({ isSignedIn: true });
   });
+
+  it("keeps body content and the footer clear of the fixed mobile navigation", async () => {
+    vi.stubGlobal("React", React);
+    const layout = await RootLayout({ children: "本文" });
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(layout), "text/html");
+
+    const mainWrapperClasses = document.querySelector("main")?.parentElement?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(mainWrapperClasses).toEqual(expect.arrayContaining(["pb-28", "sm:pb-10"]));
+
+    const footerClasses = document.querySelector("footer")?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(footerClasses).toEqual(expect.arrayContaining(["pb-28", "sm:pb-8"]));
+  });
 });

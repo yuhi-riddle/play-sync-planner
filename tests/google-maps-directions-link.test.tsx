@@ -1,14 +1,17 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GoogleMapsDirectionsLink } from "@/components/google-maps-directions-link";
 import { buildGoogleMapsDirectionsUrl } from "@/lib/google-maps";
 
 describe("GoogleMapsDirectionsLink", () => {
+  beforeEach(() => {
+    vi.stubGlobal("React", React);
+  });
+
   it("builds directions without fixing the origin", () => {
     const value = buildGoogleMapsDirectionsUrl(" 渋谷駅 ");
-
     expect(value).not.toBeNull();
     const url = new URL(value!);
     expect(url.origin).toBe("https://www.google.com");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { buildDayAriaLabel, buildHomeCalendar, findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 
 const items: HomeCalendarItem[] = [
   {
@@ -81,5 +81,67 @@ describe("buildHomeCalendar", () => {
     });
 
     expect(calendar.selectedItems.map((item) => item.id)).toEqual(["confirmed-1", "candidate-1"]);
+  });
+});
+
+describe("findNextConfirmedItem", () => {
+  const now = new Date("2026-07-12T09:00:00+09:00");
+
+  it("returns null when there are no confirmed items", () => {
+    expect(findNextConfirmedItem([], now)).toBeNull();
+  });
+
+  it("returns null when confirmed items are all in the past", () => {
+    const pastItems: HomeCalendarItem[] = [
+      { id: "confirmed-past", kind: "confirmed", title: "終わった会", startAt: "2026-07-10T13:00:00+09:00" }
+    ];
+
+    expect(findNextConfirmedItem(pastItems, now)).toBeNull();
+  });
+
+  it("picks the soonest confirmed item among today and future items, ignoring collecting items", () => {
+    const mixedItems: HomeCalendarItem[] = [
+      { id: "collecting-1", kind: "collecting", title: "調整中の会", startAt: "2026-07-12T10:00:00+09:00" },
+      { id: "confirmed-later", kind: "confirmed", title: "来週の会", startAt: "2026-07-19T13:00:00+09:00" },
+      { id: "confirmed-today", kind: "confirmed", title: "今日の会", startAt: "2026-07-12T18:00:00+09:00" }
+    ];
+
+    expect(findNextConfirmedItem(mixedItems, now)?.id).toBe("confirmed-today");
+  });
+
+  it("returns the earliest of same-day confirmed items when several exist", () => {
+    const sameDayItems: HomeCalendarItem[] = [
+      { id: "confirmed-evening", kind: "confirmed", title: "夜の会", startAt: "2026-07-12T20:00:00+09:00" },
+      { id: "confirmed-noon", kind: "confirmed", title: "昼の会", startAt: "2026-07-12T12:00:00+09:00" }
+    ];
+
+    expect(findNextConfirmedItem(sameDayItems, now)?.id).toBe("confirmed-noon");
+  });
+});
+
+describe("buildDayAriaLabel", () => {
+  it("says there is nothing scheduled for an empty day", () => {
+    expect(buildDayAriaLabel({ date: new Date(2026, 6, 15) })).toBe("7月15日、予定なし");
+  });
+
+  it("lists every kind of item present that day", () => {
+    expect(
+      buildDayAriaLabel({
+        date: new Date(2026, 6, 15),
+        hasCollecting: true,
+        hasConfirmed: true,
+        hasGoogle: true
+      })
+    ).toBe("7月15日、調整中の予定あり、確定した予定あり、Google Calendarの予定あり");
+  });
+
+  it("marks a holiday distinctly from a revoked share link message", () => {
+    expect(buildDayAriaLabel({ date: new Date(2026, 6, 20), isHoliday: true })).toBe("7月20日(祝日)、予定なし");
+  });
+
+  it("mentions overlapping candidate times", () => {
+    expect(buildDayAriaLabel({ date: new Date(2026, 6, 15), hasCollecting: true, hasOverlap: true })).toBe(
+      "7月15日、調整中の予定あり、時間の重複あり"
+    );
   });
 });

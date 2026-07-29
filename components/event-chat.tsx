@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FormEvent, useState, useTransition } from "react";
+import { unstable_rethrow } from "next/navigation";
 
 import type { EventMessage } from "@/lib/domain/event-chat";
 
@@ -29,6 +30,7 @@ export function EventChat({
         await action(formData);
         form.reset();
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "メッセージを投稿できませんでした");
       }
     });

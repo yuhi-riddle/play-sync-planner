@@ -4,6 +4,7 @@ import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
 import { ButtonLink, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { toDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
+import { monthRangeInTokyo } from "@/lib/domain/group-availability";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -123,12 +124,17 @@ export default async function PlansPage({
     .eq("status", "joined");
   const joinedEventIds = [...new Set((memberships ?? []).map((membership) => membership.event_id))];
   const calendarClient = hasSupabaseAdminEnv() ? createSupabaseAdminClient() : supabase;
+  const monthRange = monthRangeInTokyo(currentMonth);
   const plansResult = joinedEventIds.length
     ? await calendarClient
         .from("plans")
-        .select("id, title, status, answer_deadline_at, events(title), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer))")
+        .select(
+          "id, title, status, answer_deadline_at, events(title), candidate_dates!inner(id, start_at, end_at, is_all_day, availability_answers(answer))"
+        )
         .in("event_id", joinedEventIds)
         .in("status", ["draft", "collecting_answers", "date_confirmed"])
+        .gte("candidate_dates.start_at", monthRange.start)
+        .lt("candidate_dates.start_at", monthRange.end)
         .order("created_at", { ascending: false })
     : { data: [] };
   const plans = plansResult.data;

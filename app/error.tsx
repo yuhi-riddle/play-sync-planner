@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 
-export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    // Supabaseの生エラーなど原因の詳細はここにだけ残す。画面には出さない。
+    console.error(error);
+  }, [error]);
+
   return (
     <div className="space-y-6">
       <section className="rounded-control border border-line bg-surface p-5 shadow-soft backdrop-blur">
@@ -11,6 +17,9 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
           一時的な通信エラーか、ページの読み込みに失敗した可能性があります。もう一度試すか、ホームに戻ってください。
         </p>
+        {error.digest ? (
+          <p className="mt-3 text-caption text-subtle">エラーコード: {error.digest}</p>
+        ) : null}
       </section>
 
       <section className="rounded-control border border-moss/16 bg-surface p-5 shadow-soft">

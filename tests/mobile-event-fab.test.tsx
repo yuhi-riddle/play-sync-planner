@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("MobileEventFab", () => {
-  it("shows an event creation link on the events page", () => {
+  it("shows an event creation link positioned above the fixed bottom navigation", () => {
     vi.mocked(usePathname).mockReturnValue("/events");
 
     render(<MobileEventFab isSignedIn />);

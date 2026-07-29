@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 
+import { errorState, failWith, type ActionState } from "@/lib/domain/action-state";
 import {
   buildEqualExpenseSplits,
   calculateSettlementTransfers,
@@ -250,7 +251,7 @@ async function assertExpenseCanChange({
     .limit(1);
 
   if (lockedError) {
-    throw new Error(lockedError.message);
+    throw new Error("清算状況を確認できませんでした。");
   }
 
   if ((lockedSettlements ?? []).length > 0) {
@@ -270,131 +271,159 @@ function splitsFromValues(values: ExpenseFormValues) {
       );
 }
 
-export async function createExpenseAction(planId: string, formData: FormData) {
+export async function createExpenseAction(
+  planId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
   const userId = await getCurrentUserId();
   if (!userId) {
     redirect("/login");
   }
 
-  const values = expenseSchema.parse(formDataToObject(formData));
-  const { supabase, participants } = await assertPlanOwner(planId, userId);
-  const participantIds = new Set(participants.map((participant) => participant.id));
-
-  if (!participantIds.has(values.payer_participant_id)) {
-    throw new Error("支払った人はこのイベントの参加者から選んでください");
+  const parsed = expenseSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return errorState(parsed.error.issues[0]?.message ?? "入力内容を確認してください。");
   }
+  const values = parsed.data;
 
-  await assertExpenseCanChange({ supabase, planId });
+  try {
+    const { supabase, participants } = await assertPlanOwner(planId, userId);
+    const participantIds = new Set(participants.map((participant) => participant.id));
 
-  const splits = splitsFromValues(values);
+    if (!participantIds.has(values.payer_participant_id)) {
+      return errorState("支払った人はこのイベントの参加者から選んでください");
+    }
 
-  assertParticipantIds(participantIds, splits.map((split) => split.participantId));
+    await assertExpenseCanChange({ supabase, planId });
 
-  const { data: expense, error: expenseError } = await supabase
-    .from("expenses")
-    .insert({
-      plan_id: planId,
-      payer_participant_id: values.payer_participant_id,
-      title: values.title,
-      amount: values.amount,
-      memo: values.memo,
-      payment_method: values.payment_method,
-      payment_url: values.payment_url,
-      is_important: values.is_important
-    })
-    .select("id")
-    .single();
+    const splits = splitsFromValues(values);
 
-  if (expenseError) {
-    throw new Error(expenseError.message);
+    assertParticipantIds(participantIds, splits.map((split) => split.participantId));
+
+    const { data: expense, error: expenseError } = await supabase
+      .from("expenses")
+      .insert({
+        plan_id: planId,
+        payer_participant_id: values.payer_participant_id,
+        title: values.title,
+        amount: values.amount,
+        memo: values.memo,
+        payment_method: values.payment_method,
+        payment_url: values.payment_url,
+        is_important: values.is_important
+      })
+      .select("id")
+      .single();
+
+    if (expenseError) {
+      return failWith("立替を登録できませんでした。", expenseError);
+    }
+
+    const { error: splitsError } = await supabase.from("expense_splits").insert(
+      splits.map((split) => ({
+        expense_id: expense.id,
+        participant_id: split.participantId,
+        amount: split.amount
+      }))
+    );
+
+    if (splitsError) {
+      return failWith("立替を登録できませんでした。", splitsError);
+    }
+
+    await recomputeSettlements(planId, participants);
+
+    revalidatePath(`/plans/${planId}`);
+    revalidatePath(`/plans/${planId}/settlement`);
+    redirect(`/plans/${planId}/settlement`);
+  } catch (cause) {
+    unstable_rethrow(cause);
+    return errorState(cause instanceof Error ? cause.message : "立替を登録できませんでした。");
   }
-
-  const { error: splitsError } = await supabase.from("expense_splits").insert(
-    splits.map((split) => ({
-      expense_id: expense.id,
-      participant_id: split.participantId,
-      amount: split.amount
-    }))
-  );
-
-  if (splitsError) {
-    throw new Error(splitsError.message);
-  }
-
-  await recomputeSettlements(planId, participants);
-
-  revalidatePath(`/plans/${planId}`);
-  revalidatePath(`/plans/${planId}/settlement`);
-  redirect(`/plans/${planId}/settlement`);
 }
 
-export async function updateExpenseAction(expenseId: string, formData: FormData) {
+export async function updateExpenseAction(
+  expenseId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
   const userId = await getCurrentUserId();
   if (!userId) {
     redirect("/login");
   }
 
-  const values = expenseSchema.parse(formDataToObject(formData));
-  const supabase = await createSupabaseServerClient();
-  const { data: expense, error } = await supabase
-    .from("expenses")
-    .select("id, plan_id, plans(owner_user_id, participants(id, display_name))")
-    .eq("id", expenseId)
-    .single();
-
-  const plan = Array.isArray(expense?.plans) ? expense?.plans[0] : expense?.plans;
-  if (error || !expense || plan?.owner_user_id !== userId) {
-    throw new Error("主催者だけが立替支払いを編集できます");
+  const parsed = expenseSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return errorState(parsed.error.issues[0]?.message ?? "入力内容を確認してください。");
   }
+  const values = parsed.data;
 
-  await assertExpenseCanChange({ supabase, planId: expense.plan_id });
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: expense, error } = await supabase
+      .from("expenses")
+      .select("id, plan_id, plans(owner_user_id, participants(id, display_name))")
+      .eq("id", expenseId)
+      .single();
 
-  const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
-    a.display_name.localeCompare(b.display_name, "ja")
-  );
-  const participantIds = new Set(participants.map((participant) => participant.id));
-  const splits = splitsFromValues(values);
+    const plan = Array.isArray(expense?.plans) ? expense?.plans[0] : expense?.plans;
+    if (error || !expense || plan?.owner_user_id !== userId) {
+      return errorState("主催者だけが立替支払いを編集できます");
+    }
 
-  if (!participantIds.has(values.payer_participant_id)) {
-    throw new Error("支払った人はこのイベントの参加者から選んでください");
+    await assertExpenseCanChange({ supabase, planId: expense.plan_id });
+
+    const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
+      a.display_name.localeCompare(b.display_name, "ja")
+    );
+    const participantIds = new Set(participants.map((participant) => participant.id));
+    const splits = splitsFromValues(values);
+
+    if (!participantIds.has(values.payer_participant_id)) {
+      return errorState("支払った人はこのイベントの参加者から選んでください");
+    }
+    assertParticipantIds(participantIds, splits.map((split) => split.participantId));
+
+    const { error: updateError } = await supabase
+      .from("expenses")
+      .update({
+        payer_participant_id: values.payer_participant_id,
+        title: values.title,
+        amount: values.amount,
+        memo: values.memo,
+        payment_method: values.payment_method,
+        payment_url: values.payment_url,
+        is_important: values.is_important
+      })
+      .eq("id", expenseId);
+
+    if (updateError) {
+      return failWith("立替を更新できませんでした。", updateError);
+    }
+
+    await supabase.from("expense_splits").delete().eq("expense_id", expenseId);
+    const { error: splitsError } = await supabase.from("expense_splits").insert(
+      splits.map((split) => ({
+        expense_id: expenseId,
+        participant_id: split.participantId,
+        amount: split.amount
+      }))
+    );
+
+    if (splitsError) {
+      return failWith("立替を更新できませんでした。", splitsError);
+    }
+
+    await recomputeSettlements(expense.plan_id, participants);
+
+    revalidatePath(`/plans/${expense.plan_id}`);
+    revalidatePath(`/plans/${expense.plan_id}/settlement`);
+    redirect(`/plans/${expense.plan_id}/settlement`);
+  } catch (cause) {
+    unstable_rethrow(cause);
+    return errorState(cause instanceof Error ? cause.message : "立替を更新できませんでした。");
   }
-  assertParticipantIds(participantIds, splits.map((split) => split.participantId));
-
-  const { error: updateError } = await supabase
-    .from("expenses")
-    .update({
-      payer_participant_id: values.payer_participant_id,
-      title: values.title,
-      amount: values.amount,
-      memo: values.memo,
-      payment_method: values.payment_method,
-      payment_url: values.payment_url,
-      is_important: values.is_important
-    })
-    .eq("id", expenseId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  await supabase.from("expense_splits").delete().eq("expense_id", expenseId);
-  const { error: splitsError } = await supabase.from("expense_splits").insert(
-    splits.map((split) => ({
-      expense_id: expenseId,
-      participant_id: split.participantId,
-      amount: split.amount
-    }))
-  );
-
-  if (splitsError) {
-    throw new Error(splitsError.message);
-  }
-
-  await recomputeSettlements(expense.plan_id, participants);
-
-  revalidatePath(`/plans/${expense.plan_id}`);
-  revalidatePath(`/plans/${expense.plan_id}/settlement`);
-  redirect(`/plans/${expense.plan_id}/settlement`);
 }
 
 export async function deleteExpenseAction(expenseId: string) {
@@ -510,13 +539,17 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
   const supabase = createSupabaseAdminClient();
   const { data: link, error: linkError } = await supabase
     .from("share_links")
-    .select("plan_id")
+    .select("plan_id, status")
     .eq("token", token)
     .eq("purpose", "answer")
     .single();
 
   if (linkError || !link) {
     throw new Error("共有リンクが見つかりません");
+  }
+
+  if (link.status === "revoked") {
+    throw new Error("この共有リンクは無効化されています。主催者に新しいリンクを確認してください");
   }
 
   const { data: settlement, error } = await supabase

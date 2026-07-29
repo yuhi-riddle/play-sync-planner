@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import clsx from "clsx";
 import { Bell, CheckCheck } from "lucide-react";
 
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/notifications";
-import { Card, EmptyState, PageHeader, SubmitButton } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader, SubmitButton, type BadgeTone } from "@/components/ui";
 import {
   filterNotificationsByReadState,
   type NotificationReadFilter
@@ -30,6 +31,11 @@ const kindLabels: Record<string, string> = {
   confirmation_due: "受け取り確認",
   event_invitation: "招待",
   event_message: "チャット"
+};
+
+const readStateBadge: Record<"unread" | "read", { label: string; tone: BadgeTone }> = {
+  unread: { label: "未読", tone: "warn" },
+  read: { label: "既読", tone: "neutral" }
 };
 
 export default async function NotificationsPage({
@@ -118,7 +124,10 @@ export default async function NotificationsPage({
             notifications.map((notification) => (
               <article
                 key={notification.id}
-                className="rounded-control border border-line bg-surface p-4 transition-colors hover:border-moss/45"
+                className={clsx(
+                  "rounded-control border border-line p-4 transition-colors hover:border-moss/45",
+                  notification.read_at ? "bg-sunken" : "bg-surface"
+                )}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <Link
@@ -132,9 +141,9 @@ export default async function NotificationsPage({
                       <span className="rounded-full bg-surface px-3 py-1 text-xs font-bold text-pine">
                         {kindLabels[notification.kind] ?? "通知"}
                       </span>
-                      <span className="rounded-full bg-clay/12 px-3 py-1 text-xs font-bold text-clay-ink">
-                        {notification.read_at ? "既読" : "未読"}
-                      </span>
+                      <Badge tone={readStateBadge[notification.read_at ? "read" : "unread"].tone}>
+                        {readStateBadge[notification.read_at ? "read" : "unread"].label}
+                      </Badge>
                     </span>
                     <span className="mt-3 block text-base font-bold text-ink group-hover:text-pine">{notification.title}</span>
                     <span className="mt-1 block text-sm leading-6 text-muted">{notification.body}</span>

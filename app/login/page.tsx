@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LoginConsentForm } from "@/components/login-consent-form";
-import { Card, PageHeader } from "@/components/ui";
+import { Alert, Card, PageHeader } from "@/components/ui";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { hasAcceptedLegalDocuments, PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
@@ -50,13 +50,22 @@ async function signInWithGoogle(formData: FormData) {
   }
 }
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ next?: string; withdrawn?: string }>;
+}) {
+  const { next, withdrawn } = await searchParams;
   const nextPath = safeNextPath(next);
 
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Welcome" title="はじめに確認してください" description="Madoi を使うには、利用規約とプライバシーポリシーへの同意、Google ログインが必要です。" />
+      {withdrawn === "1" ? (
+        <Alert tone="info" title="退会が完了しました">
+          ご利用ありがとうございました。このアカウントではログインできません。もう一度使う場合は、新しいアカウントを作成してください。
+        </Alert>
+      ) : null}
       <Card className="max-w-xl">
         {hasSupabaseEnv() ? (
           <LoginConsentForm action={signInWithGoogle} nextPath={nextPath} />

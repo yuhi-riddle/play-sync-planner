@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { ConfirmForm } from "@/components/confirm-form";
+import { BackLink } from "@/components/back-link";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { summarizeCandidateAnswers } from "@/lib/domain/confirmation";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
@@ -39,6 +40,7 @@ export default async function ConfirmPlanPage({ params }: { params: Promise<{ pl
 
   return (
     <div className="space-y-6">
+      <BackLink href={`/plans/${planId}`}>日程調整へ戻る</BackLink>
       <PageHeader eyebrow="Schedule"
         title="日程確定"
         description={plan.title ? `${plan.title} の候補から、確定する日程を選びます。` : "候補から、確定する日程を選びます。"}

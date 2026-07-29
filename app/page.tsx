@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bell, CalendarPlus, Check } from "lucide-react";
 import { clsx } from "clsx";
 
+import { HomeNextConfirmedEventCard } from "@/components/home-next-confirmed-event-card";
 import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
 import {
   Badge,
@@ -16,7 +17,7 @@ import {
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/events";
 import { getEventDraftResumePath } from "@/lib/domain/event-flow";
-import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 import {
   countNotificationsByActionFilter,
   filterNotificationsByActionFilter,
@@ -215,6 +216,7 @@ export default async function HomePage({
   const activeActionFilter = resolveNotificationActionFilter(requestedActionFilter, notificationCounts);
   const filteredNotifications = filterNotificationsByActionFilter(unreadNotifications, activeActionFilter).slice(0, 5);
   const calendarItems = toCalendarItems(planRows);
+  const nextConfirmedItem = findNextConfirmedItem(calendarItems, new Date());
 
   const actionCount = notificationCounts.all;
 
@@ -312,6 +314,8 @@ export default async function HomePage({
           )}
         </div>
       </Card>
+
+      {nextConfirmedItem ? <HomeNextConfirmedEventCard item={nextConfirmedItem} /> : null}
 
       <HomeSelectedDateAgenda selectedDateKey={baseDateKey} todayDateKey={todayDateKey} initialItems={calendarItems} />
     </div>

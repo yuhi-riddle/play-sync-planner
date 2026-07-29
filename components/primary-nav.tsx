@@ -8,8 +8,8 @@ import { CalendarDays, CalendarRange, House, UsersRound } from "lucide-react";
 import { shouldShowPrimaryNavigation } from "@/lib/navigation-visibility";
 
 /**
- * ヘッダー直下の主要ナビ。
- * モバイルでは固定下部ナビ、デスクトップでは本文上のボタン型導線として表示する。
+ * スマートフォンでは画面下部に固定し、デスクトップではヘッダー直下の静的な行として表示する主要ナビ。
+ * 表示するパスの判定は lib/navigation-visibility.ts に切り出し、集中操作画面では出さない。
  */
 const items = [
   { href: "/", label: "ホーム", icon: House },

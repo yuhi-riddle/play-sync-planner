@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/availability";
@@ -29,13 +30,17 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
   const currentUserId = user?.id ?? null;
   const { data: link, error: linkError } = await supabase
     .from("share_links")
-    .select("plan_id, expires_at, plans(id, title, owner_user_id, answer_deadline_at, events(title))")
+    .select("plan_id, expires_at, status, plans(id, title, owner_user_id, answer_deadline_at, events(title))")
     .eq("token", token)
     .eq("purpose", "answer")
     .single();
 
   if (linkError || !link) {
     throw new Error("共有リンクが見つかりません");
+  }
+
+  if (link.status === "revoked") {
+    throw new Error("この共有リンクは無効化されています。主催者に新しいリンクを確認してください");
   }
 
   const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as AnswerPlanRow | null;
@@ -161,6 +166,8 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     }
   }
 
+  revalidatePath("/");
+  revalidatePath(`/plans/${link.plan_id}`);
   redirect(`/s/${token}/answer/complete`);
 }
 

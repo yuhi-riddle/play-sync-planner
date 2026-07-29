@@ -1,4 +1,5 @@
 import { EventForm } from "@/components/event-form";
+import { BackLink } from "@/components/back-link";
 import { Card, PageHeader } from "@/components/ui";
 import { createEventAction, saveEventDraftAction } from "@/lib/actions/events";
 import { shouldResumeEventDraft } from "@/lib/domain/event-flow";
@@ -23,6 +24,7 @@ export default async function NewEventPage({
 
   return (
     <div className="space-y-6">
+      <BackLink href="/events">イベント一覧へ戻る</BackLink>
       <PageHeader eyebrow="Events" title="イベントを作る" description="まずはイベント名だけ決めます。作成後、そのまま候補日時と回答期限を入力します。" />
       <Card>
         <EventForm action={createEventAction} draftAction={saveEventDraftAction} event={draftEvent} submitLabel="参加者募集へ進む" />

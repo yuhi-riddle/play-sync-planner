@@ -1,10 +1,13 @@
 "use client";
 
 import { ReceiptText } from "lucide-react";
-import React, { useState } from "react";
+import React, { useActionState, useState } from "react";
 
 import { PaymentMethodField } from "@/components/payment-method-field";
-import { MadoiForm, MadoiSelect, TextArea, TextField } from "@/components/ui";
+import { MadoiForm, MadoiSelect, SubmitButton, TextArea, TextField } from "@/components/ui";
+import type { ActionState } from "@/lib/domain/action-state";
+
+const INITIAL_ACTION_STATE: ActionState = { status: "idle" };
 
 type ParticipantOption = {
   id: string;
@@ -31,10 +34,11 @@ export function ExpenseForm({
   submitLabel = "支払いを追加"
 }: {
   participants: ParticipantOption[];
-  action: (formData: FormData) => void | Promise<void>;
+  action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   initialValues?: ExpenseFormInitialValues;
   submitLabel?: string;
 }) {
+  const [actionState, formAction] = useActionState(action, INITIAL_ACTION_STATE);
   const [splitMode, setSplitMode] = useState<"equal" | "individual">(initialValues?.splitMode ?? "equal");
   const [selectedIds, setSelectedIds] = useState(
     () => new Set(initialValues?.splitParticipantIds?.length ? initialValues.splitParticipantIds : participants.map((participant) => participant.id))
@@ -60,7 +64,11 @@ export function ExpenseForm({
   }
 
   return (
-    <MadoiForm action={action} className="grid gap-5">
+    <MadoiForm
+      action={formAction}
+      serverError={actionState.status === "error" ? actionState.message : undefined}
+      className="grid gap-5"
+    >
       <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
         <TextField
           label="支払い内容"
@@ -190,13 +198,9 @@ export function ExpenseForm({
       </label>
       <TextArea label="メモ" name="memo" defaultValue={initialValues?.memo} rows={3} placeholder="例: 予約番号、当日必要な情報、購入ページの補足など" />
 
-      <button
-        type="submit"
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-      >
-        <ReceiptText aria-hidden="true" className="h-4 w-4" />
+      <SubmitButton className="text-sm" icon={<ReceiptText aria-hidden="true" className="h-4 w-4" />} pendingChildren="保存中…">
         {submitLabel}
-      </button>
+      </SubmitButton>
     </MadoiForm>
   );
 }

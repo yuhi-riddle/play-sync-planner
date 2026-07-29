@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ActionState } from "@/lib/domain/action-state";
+
 export const PROFILE_AVATAR_BUCKET = "profile-avatars";
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 export const PROFILE_AVATAR_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -13,10 +15,7 @@ export type ProfileRow = {
   updated_at?: string;
 };
 
-export type ProfileActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
+export type ProfileActionState = ActionState;
 
 export const PROFILE_ACTION_INITIAL_STATE: ProfileActionState = { status: "idle" };
 

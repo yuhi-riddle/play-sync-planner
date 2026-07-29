@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { safeNextPath } from "@/lib/auth/safe-next-path";
+import { errorState } from "@/lib/domain/action-state";
 import {
   PROFILE_AVATAR_BUCKET,
   getAvatarExtension,
@@ -17,10 +18,6 @@ import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/serve
 
 const PROFILE_MIGRATION_MESSAGE =
   "プロフィール機能の準備がまだ完了していません。管理者がmigration 019を適用してください。";
-
-function errorState(message: string): ProfileActionState {
-  return { status: "error", message };
-}
 
 export async function updateProfileAction(
   _previousState: ProfileActionState,
@@ -114,7 +111,6 @@ export async function updateProfileAction(
   }
 
   revalidatePath("/", "layout");
-  revalidatePath("/settings");
 
   if (mode === "onboarding") {
     redirect(safeNextPath(formData.get("next")?.toString()));

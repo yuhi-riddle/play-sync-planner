@@ -62,7 +62,7 @@ describe("updateProfileAction", () => {
       { onConflict: "user_id" }
     );
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
-    expect(revalidatePath).toHaveBeenCalledWith("/settings");
+    expect(revalidatePath).not.toHaveBeenCalledWith("/settings");
     expect(updateUser).toHaveBeenCalledWith({
       data: {
         nickname: "ゆうやん",

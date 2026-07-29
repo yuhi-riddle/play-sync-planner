@@ -2,6 +2,12 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("next/navigation", () => ({
+  unstable_rethrow: vi.fn()
+}));
+
+import { unstable_rethrow } from "next/navigation";
+
 import { EventChat } from "@/components/event-chat";
 
 const message = {
@@ -34,5 +40,15 @@ describe("EventChat", () => {
     fireEvent.click(screen.getByRole("button", { name: "投稿" }));
 
     await waitFor(() => expect(screen.getByText("メッセージを入力してください")).toHaveAttribute("aria-live", "polite"));
+  });
+
+  it("passes caught errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
+    const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
+    const action = vi.fn().mockRejectedValue(redirectError);
+    render(<EventChat messages={[]} action={action} canPost />);
+
+    fireEvent.click(screen.getByRole("button", { name: "投稿" }));
+
+    await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });
 });

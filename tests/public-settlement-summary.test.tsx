@@ -81,4 +81,60 @@ describe("PublicSettlementSummary", () => {
     expect(paymentRecordLabels[0]?.closest("details")).toHaveAttribute("open");
     expect(screen.getByRole("button", { name: "支払いを記録" })).toBeInTheDocument();
   });
+
+  it("emphasizes the remaining settlement amount over the other summary stats", () => {
+    render(
+      <PublicSettlementSummary
+        eventTitle="7月の謎解き会"
+        planTitle={null}
+        expenses={[
+          { id: "expense-1", title: "チケット代", amount: 7200, payerName: "鈴木", memo: null, isImportant: false },
+          { id: "expense-2", title: "送料", amount: 100, payerName: "鈴木", memo: null, isImportant: false }
+        ]}
+        settlements={[
+          { id: "settlement-1", fromName: "A", toName: "B", amount: 3600, paymentMethod: null, paymentUrl: null, memo: null, payments: [] },
+          { id: "settlement-2", fromName: "C", toName: "D", amount: 1000, paymentMethod: null, paymentUrl: null, memo: null, payments: [] }
+        ]}
+      />
+    );
+
+    expect(screen.getByText("4,600円").className).toMatch(/text-\[2\.5rem\]/);
+    expect(screen.getByText("0円").className).not.toMatch(/text-\[2\.5rem\]/);
+    expect(screen.getByText("7,300円").className).not.toMatch(/text-\[2\.5rem\]/);
+  });
+
+  it("shows a settlement complete badge only when nothing remains", () => {
+    const { rerender } = render(
+      <PublicSettlementSummary
+        eventTitle="7月の謎解き会"
+        planTitle={null}
+        expenses={[]}
+        settlements={[
+          {
+            id: "settlement-1",
+            fromName: "A",
+            toName: "B",
+            amount: 1000,
+            paymentMethod: null,
+            paymentUrl: null,
+            memo: null,
+            payments: [{ amount: 1000, confirmedAt: "2026-01-01T00:00:00Z" }]
+          }
+        ]}
+      />
+    );
+    expect(screen.getByText("清算完了")).toBeInTheDocument();
+
+    rerender(
+      <PublicSettlementSummary
+        eventTitle="7月の謎解き会"
+        planTitle={null}
+        expenses={[]}
+        settlements={[
+          { id: "settlement-1", fromName: "A", toName: "B", amount: 1000, paymentMethod: null, paymentUrl: null, memo: null, payments: [] }
+        ]}
+      />
+    );
+    expect(screen.queryByText("清算完了")).not.toBeInTheDocument();
+  });
 });

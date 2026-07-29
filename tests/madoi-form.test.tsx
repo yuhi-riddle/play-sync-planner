@@ -26,6 +26,26 @@ describe("MadoiForm", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
+  it("サーバーからのエラーをクライアント検証と同じAlertに表示する", () => {
+    render(
+      <MadoiForm action={vi.fn()} serverError="この内容では保存できませんでした。" className="grid gap-4">
+        <button type="submit">保存</button>
+      </MadoiForm>
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("この内容では保存できませんでした。");
+  });
+
+  it("サーバーエラーが無いときはAlertを出さない", () => {
+    render(
+      <MadoiForm action={vi.fn()} className="grid gap-4">
+        <button type="submit">保存</button>
+      </MadoiForm>
+    );
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("stores the selected custom option in a form field", () => {
     render(
       <MadoiForm action={vi.fn()} className="grid gap-4">

@@ -46,8 +46,11 @@ const nullableUrl = z.preprocess(
   z
     .string()
     .url("URLは https://... の形式で入力してください")
+    .refine((value) => /^https?:\/\//i.test(value), "URLは https://... の形式で入力してください")
     .nullable()
 );
+
+const MAX_YEN_AMOUNT = 100_000_000;
 
 const positiveInteger = (requiredMessage: string, positiveMessage: string) =>
   z.preprocess((value) => {
@@ -57,7 +60,7 @@ const positiveInteger = (requiredMessage: string, positiveMessage: string) =>
     }
 
     return Number(normalized);
-  }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).int("金額は1円単位で入力してください").positive(positiveMessage));
+  }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).int("金額は1円単位で入力してください").positive(positiveMessage).max(MAX_YEN_AMOUNT, "金額は1億円以下で入力してください"));
 
 const optionalStringList = () =>
   z.preprocess((value) => {
@@ -138,6 +141,14 @@ export const eventSchema = z.object({
   price: nullableInteger.default(null),
   capacity: nullableInteger.default(null),
   status: z.enum(EVENT_STATUSES).default("interested"),
+  memo: nullableText.default(null)
+});
+
+export const eventDraftSchema = z.object({
+  category: z.preprocess(emptyToNull, z.enum(EVENT_CATEGORIES).nullable()).default(null),
+  title: nullableText.default(null),
+  url: nullableUrl.default(null),
+  location_name: nullableText.default(null),
   memo: nullableText.default(null)
 });
 

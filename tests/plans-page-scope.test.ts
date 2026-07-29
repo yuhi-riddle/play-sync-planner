@@ -12,4 +12,13 @@ describe("calendar page scope", () => {
     expect(page).toContain('.in("event_id", joinedEventIds)');
     expect(page).not.toContain('.eq("owner_user_id", user.id)');
   });
+
+  it("scopes the plans query to the displayed month instead of fetching every candidate date", () => {
+    const page = readFileSync(resolve(process.cwd(), "app/plans/page.tsx"), "utf8");
+
+    expect(page).toContain("monthRangeInTokyo");
+    expect(page).toContain('.gte("candidate_dates.start_at"');
+    expect(page).toContain('.lt("candidate_dates.start_at"');
+    expect(page).toContain("candidate_dates!inner");
+  });
 });

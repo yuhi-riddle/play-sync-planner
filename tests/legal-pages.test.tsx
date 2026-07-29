@@ -20,4 +20,12 @@ describe("legal pages", () => {
     expect(screen.getByRole("heading", { name: "7. 保存期間" })).toBeInTheDocument();
     expect(screen.getByText(/日程回答用の共有リンク/)).toBeInTheDocument();
   });
+
+  it("退会の方法と、退会しても残る記録を説明する", async () => {
+    render(await PrivacyPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByRole("heading", { name: "8. 退会と削除" })).toBeInTheDocument();
+    expect(screen.getByText(/設定画面から退会/)).toBeInTheDocument();
+    expect(screen.getByText(/イベントと清算の記録は残ります/)).toBeInTheDocument();
+  });
 });

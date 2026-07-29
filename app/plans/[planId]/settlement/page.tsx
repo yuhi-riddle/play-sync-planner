@@ -10,7 +10,7 @@ import { SettlementCompletionNotice } from "@/components/settlement-completion-n
 import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
-import { Card, EmptyState, MadoiForm, PageHeader, SecondaryLink } from "@/components/ui";
+import { Badge, Card, EmptyState, MadoiForm, PageHeader, SecondaryLink, Stat, SubmitButton } from "@/components/ui";
 import {
   confirmSettlementPaymentAction,
   createExpenseAction,
@@ -32,7 +32,7 @@ import {
 } from "@/lib/domain/settlement";
 import { buildPublicSettlementUrl } from "@/lib/domain/plans";
 import { summarizeSettlementReminderLogs, type SettlementReminderLogView } from "@/lib/domain/reminder-log";
-import { formatDateTime, formatYen } from "@/lib/format";
+import { formatDateTime, formatYenText } from "@/lib/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +103,7 @@ type ReminderLogRow = {
 type ShareLinkRow = {
   token: string;
   purpose: string;
+  status?: string | null;
 };
 
 const settlementStatusLabels: Record<SettlementPaymentProgress["status"], string> = {
@@ -141,7 +142,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), share_links(token, purpose), participants(id, display_name, status, user_id), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name, user_id), expense_splits(id, participant_id, amount, participants(id, display_name, user_id))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name, user_id))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
+      "id, title, owner_user_id, events(id, title), share_links(token, purpose, status), participants(id, display_name, status, user_id), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name, user_id), expense_splits(id, participant_id, amount, participants(id, display_name, user_id))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name, user_id))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
     )
     .eq("id", planId)
     .single();
@@ -175,7 +176,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const protocol = host.includes("localhost") ? "http" : "https";
   const origin = `${protocol}://${host}`;
   const ownerSettlementUrl = `${origin.replace(/\/$/, "")}/plans/${plan.id}/settlement`;
-  const answerShareLink = ((plan.share_links ?? []) as ShareLinkRow[]).find((link) => link.purpose === "answer");
+  const answerShareLink = ((plan.share_links ?? []) as ShareLinkRow[]).find(
+    (link) => link.purpose === "answer" && (link.status ?? "open") === "open"
+  );
   const publicSettlementUrl = answerShareLink ? buildPublicSettlementUrl(origin, answerShareLink.token) : null;
   const createExpense = createExpenseAction.bind(null, plan.id);
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);
@@ -285,20 +288,35 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     <div className="space-y-6">
       {pageHeader}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryTile label="立替合計" value={formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))} detail={`${expenses.length}件の支払い履歴`} />
-        <SummaryTile label="清算残額" value={formatYen(settlementOverview.remainingAmount)} detail={unpaidSettlements.length > 0 ? `${unpaidSettlements.length}件の支払い待ち` : "清算済みです"} />
-        <SummaryTile
-          label="支払い済み"
-          value={formatYen(settlementOverview.paidAmount)}
-          detail={`確認済み ${formatYen(settlementOverview.confirmedAmount)}`}
-        />
-        <SummaryTile
-          label="参加者"
-          value={`${participants.length}人`}
-          detail={participants.length > 0 ? "支払い対象にできます" : "共有リンクから参加者を追加してください"}
-        />
-      </section>
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <Stat
+            label="清算残額"
+            value={formatYenText(settlementOverview.remainingAmount)}
+            sub={unpaidSettlements.length > 0 ? `${unpaidSettlements.length}件の支払い待ち` : "清算済みです"}
+            emphasis="primary"
+            tone={settlementOverview.remainingAmount > 0 ? "warn" : undefined}
+          />
+          {settlementOverview.remainingAmount === 0 ? <Badge tone="done">清算完了</Badge> : null}
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <Stat
+            label="立替合計"
+            value={formatYenText(expenses.reduce((total, expense) => total + expense.amount, 0))}
+            sub={`${expenses.length}件の支払い履歴`}
+          />
+          <Stat
+            label="支払い済み"
+            value={formatYenText(settlementOverview.paidAmount)}
+            sub={`確認済み ${formatYenText(settlementOverview.confirmedAmount)}`}
+          />
+          <Stat
+            label="参加者"
+            value={`${participants.length}人`}
+            sub={participants.length > 0 ? "支払い対象にできます" : "共有リンクから参加者を追加してください"}
+          />
+        </div>
+      </Card>
 
       <Card>
         <h2 className="text-lg font-semibold text-ink">清算の進捗</h2>
@@ -327,13 +345,13 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
             title="支払い待ち"
             emptyText="支払い待ちはありません。"
             items={settlementNextActions.paymentWaiting}
-            description={(item) => `${item.participantName}さん → ${item.counterpartyName}さんへ ${formatYen(item.amount)}`}
+            description={(item) => `${item.participantName}さん → ${item.counterpartyName}さんへ ${formatYenText(item.amount)}`}
           />
           <NextActionList
             title="受け取り確認待ち"
             emptyText="確認待ちはありません。"
             items={settlementNextActions.confirmationWaiting}
-            description={(item) => `${item.participantName}さんが ${item.counterpartyName}さんの支払い ${formatYen(item.amount)} を確認`}
+            description={(item) => `${item.participantName}さんが ${item.counterpartyName}さんの支払い ${formatYenText(item.amount)} を確認`}
           />
         </div>
       </Card>
@@ -390,11 +408,11 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                       <p className="text-sm font-bold text-ink">
                         {participantName(settlement.from_participant)} → {participantName(settlement.to_participant)}
                       </p>
-                      <p className="mt-2 text-2xl font-bold text-ink">{formatYen(settlement.amount)}</p>
+                      <p className="mt-2 text-2xl font-bold text-ink">{formatYenText(settlement.amount)}</p>
                       <p className="mt-1 text-sm text-muted">
-                        {settlementStatusLabels[progress.status]} / 支払い済み {formatYen(progress.paidAmount)} / 残り {formatYen(progress.remainingAmount)}
+                        {settlementStatusLabels[progress.status]} / 支払い済み {formatYenText(progress.paidAmount)} / 残り {formatYenText(progress.remainingAmount)}
                       </p>
-                      {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-muted">受け取り確認済み {formatYen(progress.confirmedAmount)}</p> : null}
+                      {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-muted">受け取り確認済み {formatYenText(progress.confirmedAmount)}</p> : null}
                       {settlement.amount > 0 ? (
                         <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
                           <div
@@ -451,12 +469,12 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
                         <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
-                          {participantName(split.participants)} {formatYen(split.amount)}
+                          {participantName(split.participants)} {formatYenText(split.amount)}
                         </span>
                       ))}
                     </div>
                   </div>
-                  <p className="text-xl font-bold text-ink">{formatYen(expense.amount)}</p>
+                  <p className="text-xl font-bold text-ink">{formatYenText(expense.amount)}</p>
                 </div>
                 {isOwner && settlementPaymentCount === 0 ? (
                   <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
@@ -654,16 +672,6 @@ function SettlementReminderLogItem({ log }: { log: SettlementReminderLogView }) 
   );
 }
 
-function SummaryTile({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-eyebrow uppercase text-pine">{label}</p>
-      <p className="mt-2 text-xl font-bold text-ink">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
-    </Card>
-  );
-}
-
 function SettlementActions({
   settlement,
   progress,
@@ -765,12 +773,9 @@ function SettlementActions({
                 className="mt-2 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
-            <button
-              type="submit"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
-            >
+            <SubmitButton className="w-full text-sm sm:w-auto" pendingChildren="記録中…">
               支払いを記録
-            </button>
+            </SubmitButton>
           </MadoiForm>
         </details>
       ) : null}
@@ -785,7 +790,7 @@ function SettlementActions({
               return (
               <div key={payment.id} className="grid gap-2 rounded-control border border-line bg-surface p-3 text-sm text-muted">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-ink">{formatYen(payment.amount)}</span>
+                  <span className="font-bold text-ink">{formatYenText(payment.amount)}</span>
                   <span className="text-xs">{payment.confirmed_at ? `確認済み ${formatDateTime(payment.confirmed_at)}` : `記録 ${formatDateTime(payment.paid_at)}`}</span>
                 </div>
                 {[payment.payment_method, payment.memo].filter(Boolean).length > 0 ? (
@@ -796,12 +801,13 @@ function SettlementActions({
                 ) : null}
                 {canConfirm && !payment.confirmed_at ? (
                   <form action={confirmSettlementPaymentAction.bind(null, payment.id)}>
-                    <button
-                      type="submit"
-                      className="inline-flex min-h-9 w-full items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-xs font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                    <SubmitButton
+                      variant="secondary"
+                      className="min-h-9 w-full px-3 py-1 text-xs sm:w-auto"
+                      pendingChildren="確認中…"
                     >
                       受け取り確認
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>

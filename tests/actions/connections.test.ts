@@ -8,7 +8,14 @@ const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, r
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn(),
+  unstable_rethrow: (cause: unknown) => {
+    if (cause instanceof Error && cause.message.startsWith("NEXT_REDIRECT")) {
+      throw cause;
+    }
+  }
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -30,8 +37,9 @@ describe("blockUserAction", () => {
     const rpc = vi.fn().mockResolvedValue({ error: null });
     createSupabaseServerClient.mockResolvedValue({ rpc });
 
-    await blockUserAction(blockedUserId);
+    const result = await blockUserAction(blockedUserId);
 
+    expect(result.status).toBe("success");
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith("block_user_atomic", { target_user_id: blockedUserId });
     expect(createSupabaseAdminClient).not.toHaveBeenCalled();
@@ -45,9 +53,9 @@ describe("blockUserAction", () => {
       })
     });
 
-    await expect(blockUserAction(blockedUserId)).rejects.toThrow(
-      "共通のイベントに参加しているユーザーだけを操作できます"
-    );
+    const result = await blockUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "共通のイベントに参加しているユーザーだけを操作できます" });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
@@ -56,7 +64,9 @@ describe("blockUserAction", () => {
       rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
     });
 
-    await expect(blockUserAction(blockedUserId)).rejects.toThrow("ブロックできませんでした");
+    const result = await blockUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "ブロックできませんでした" });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
@@ -77,8 +87,9 @@ describe("unblockUserAction", () => {
     const from = vi.fn(() => query);
     createSupabaseAdminClient.mockReturnValue({ from });
 
-    await unblockUserAction(blockedUserId);
+    const result = await unblockUserAction(blockedUserId);
 
+    expect(result.status).toBe("success");
     expect(from).toHaveBeenCalledTimes(1);
     expect(from).toHaveBeenCalledWith("user_blocks");
     expect(query.delete).toHaveBeenCalledTimes(1);

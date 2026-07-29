@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import React, { useState, useTransition } from "react";
 
 import { respondToEventUserInvitationAction } from "@/lib/actions/connections";
@@ -34,9 +35,14 @@ function ReceivedEventInvitationRow({ invitation }: { invitation: ReceivedEventI
     setError(null);
     startTransition(async () => {
       try {
-        await respondToEventUserInvitationAction(invitation.id, response);
+        const result = await respondToEventUserInvitationAction(invitation.id, response);
+        if (result.status === "error") {
+          setError(result.message ?? "招待を更新できませんでした");
+          return;
+        }
         setMessage(response === "accepted" ? "参加しました" : "今回は見送りました");
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "招待を更新できませんでした");
       }
     });

@@ -3,9 +3,7 @@
 import { Copy, ExternalLink } from "lucide-react";
 import React, { useState } from "react";
 
-function formatYen(amount: number) {
-  return amount.toLocaleString("ja-JP");
-}
+import { formatYenText } from "@/lib/format";
 
 export function isPayPayMethod(paymentMethod: string | null | undefined) {
   return /paypay/i.test(paymentMethod?.trim() ?? "");
@@ -46,7 +44,7 @@ export function PayPayActionPanel({
           className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
         >
           <Copy aria-hidden="true" className="mr-2 h-4 w-4" />
-          {copied ? "コピーしました" : `${formatYen(amount)}円をコピー`}
+          {copied ? "コピーしました" : `${formatYenText(amount)}をコピー`}
         </button>
         <button
           type="button"

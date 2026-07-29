@@ -1,3 +1,5 @@
+import { formatYenText as formatAmount } from "@/lib/format";
+
 export type SettlementParticipant = {
   id: string;
   displayName: string;
@@ -502,5 +504,5 @@ function toPoliteName(name: string) {
 
 function formatYenText(amount: number) {
   assertYenAmount(amount);
-  return `${amount.toLocaleString("ja-JP")}円`;
+  return formatAmount(amount);
 }

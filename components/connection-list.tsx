@@ -1,6 +1,7 @@
 "use client";
 
 import { Heart, ShieldBan, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import React, { useRef, useState, useTransition } from "react";
 import type { KeyboardEvent } from "react";
 
@@ -11,6 +12,7 @@ import {
   unfollowUserAction,
   unblockUserAction
 } from "@/lib/actions/connections";
+import type { ActionState } from "@/lib/domain/action-state";
 import { isMutualFollow, type BlockedUser, type ConnectionCandidate } from "@/lib/domain/connections";
 
 type ConnectionListProps = {
@@ -148,12 +150,16 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
   const [error, setError] = useState<string | null>(null);
   const [confirmingBlock, setConfirmingBlock] = useState(false);
 
-  function run(action: (userId: string) => Promise<void>) {
+  function run(action: (userId: string) => Promise<ActionState>) {
     setError(null);
     startTransition(async () => {
       try {
-        await action(person.userId);
+        const result = await action(person.userId);
+        if (result.status === "error") {
+          setError(result.message ?? "操作を完了できませんでした。");
+        }
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "操作を完了できませんでした。");
       }
     });
@@ -228,8 +234,12 @@ function BlockedUserRow({ person }: { person: BlockedUser }) {
     setError(null);
     startTransition(async () => {
       try {
-        await unblockUserAction(person.userId);
+        const result = await unblockUserAction(person.userId);
+        if (result.status === "error") {
+          setError(result.message ?? "ブロックを解除できませんでした。");
+        }
       } catch (cause) {
+        unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "ブロックを解除できませんでした。");
       }
     });

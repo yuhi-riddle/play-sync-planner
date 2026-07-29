@@ -10,6 +10,12 @@ vi.mock("@/lib/actions/connections", () => ({
   respondToEventUserInvitationAction
 }));
 
+vi.mock("next/navigation", () => ({
+  unstable_rethrow: vi.fn()
+}));
+
+import { unstable_rethrow } from "next/navigation";
+
 import { ReceivedEventInvitations } from "@/components/received-event-invitations";
 
 const invitation = {
@@ -32,7 +38,7 @@ describe("ReceivedEventInvitations", () => {
   });
 
   it("accepts an invitation and shows the result inline", async () => {
-    respondToEventUserInvitationAction.mockResolvedValue(undefined);
+    respondToEventUserInvitationAction.mockResolvedValue({ status: "success" });
     render(<ReceivedEventInvitations invitations={[invitation]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "参加する" }));
@@ -42,11 +48,24 @@ describe("ReceivedEventInvitations", () => {
   });
 
   it("shows an inline error when declining fails", async () => {
-    respondToEventUserInvitationAction.mockRejectedValue(new Error("招待を更新できませんでした"));
+    respondToEventUserInvitationAction.mockResolvedValue({
+      status: "error",
+      message: "招待を更新できませんでした"
+    });
     render(<ReceivedEventInvitations invitations={[invitation]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "今回は見送る" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("招待を更新できませんでした");
+  });
+
+  it("passes caught errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
+    const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
+    respondToEventUserInvitationAction.mockRejectedValueOnce(redirectError);
+    render(<ReceivedEventInvitations invitations={[invitation]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "参加する" }));
+
+    await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });
 });

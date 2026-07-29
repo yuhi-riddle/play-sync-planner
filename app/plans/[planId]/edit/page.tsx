@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { PlanForm } from "@/components/plan-form";
+import { BackLink } from "@/components/back-link";
 import { Card, PageHeader } from "@/components/ui";
 import { updatePlanAction } from "@/lib/actions/plans";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -33,6 +34,7 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
 
   return (
     <div className="space-y-6">
+      <BackLink href={`/plans/${planId}`}>日程調整へ戻る</BackLink>
       <PageHeader eyebrow="Schedule" title="日程調整を編集" description="候補日時と回答期限を更新します。" />
       <Card>
         <PlanForm

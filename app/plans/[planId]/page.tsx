@@ -22,6 +22,7 @@ import {
 import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
 import { restartPlanAdjustmentAction } from "@/lib/actions/plans";
 import { markReminderSentAction } from "@/lib/actions/reminders";
+import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/share-links";
 import { planStatusLabels } from "@/lib/constants";
 import {
   summarizeCandidateAnswers,
@@ -132,7 +133,7 @@ export default async function PlanDetailPage({
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "*, events(id, title, location_name), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at), plan_reminder_settings(reminder_offset_minutes, reminder_offsets_minutes), plan_reminder_logs(sent_at)"
+      "*, events(id, title, location_name), participants(id, display_name, status), candidate_dates(id, start_at, end_at, is_all_day, availability_answers(answer)), share_links(token, expires_at, status), plan_reminder_settings(reminder_offset_minutes, reminder_offsets_minutes), plan_reminder_logs(sent_at)"
     )
     .eq("id", planId)
     .single();
@@ -144,7 +145,9 @@ export default async function PlanDetailPage({
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost:3000";
   const protocol = host.includes("localhost") ? "http" : "https";
-  const shareToken = plan.share_links?.[0]?.token;
+  const shareToken = ((plan.share_links ?? []) as { token: string; status?: string | null }[]).find(
+    (link) => (link.status ?? "open") === "open"
+  )?.token;
   const shareUrl = shareToken ? `${protocol}://${host}/s/${shareToken}/answer` : null;
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
   const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
@@ -190,6 +193,9 @@ export default async function PlanDetailPage({
   const settlementStatus = getSettlementStatusView(plan.settlement_status);
   const isPlanOwner = currentUserId === plan.owner_user_id;
   const restartPlanAdjustment = restartPlanAdjustmentAction.bind(null, plan.id);
+  // 共有リンクの無効化と再発行は主催者だけの操作。
+  const revokeShareLink = isPlanOwner ? revokeShareLinkAction.bind(null, plan.id) : undefined;
+  const reissueShareLink = isPlanOwner ? reissueShareLinkAction.bind(null, plan.id) : undefined;
   const { data: calendarIntegration } = isConfirmed
     ? await supabase.from("calendar_integrations").select("id").eq("user_id", plan.owner_user_id).eq("provider", "google").maybeSingle()
     : { data: null };
@@ -360,7 +366,7 @@ export default async function PlanDetailPage({
               </div>
             )}
             <div className="mt-4">
-              <ShareLinkCard shareUrl={shareUrl} />
+              <ShareLinkCard shareUrl={shareUrl} revokeAction={revokeShareLink} reissueAction={reissueShareLink} />
             </div>
           </Card>
 

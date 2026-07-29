@@ -1,6 +1,12 @@
 "use client";
 
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+import { useEffect } from "react";
+
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
   return (
     <html lang="ja">
       <body>
@@ -29,6 +35,9 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
             <p style={{ margin: "12px 0 0", color: "rgba(35,38,43,0.68)", lineHeight: 1.8 }}>
               画面の表示に失敗しました。時間をおいて、もう一度試してください。
             </p>
+            {error.digest ? (
+              <p style={{ margin: "12px 0 0", color: "rgba(35,38,43,0.45)", fontSize: 12 }}>エラーコード: {error.digest}</p>
+            ) : null}
             <button
               type="button"
               onClick={reset}

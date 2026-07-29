@@ -2,6 +2,7 @@ import React from "react";
 
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { Card, EmptyState } from "@/components/ui";
+import { formatYenText } from "@/lib/format";
 
 export type SettlementConfirmationQueueItem = {
   id: string;
@@ -64,10 +65,6 @@ export function SettlementConfirmationQueue({
       </div>
     </Card>
   );
-}
-
-function formatYenText(amount: number) {
-  return `${amount.toLocaleString("ja-JP")}円`;
 }
 
 function formatDateTime(value: string) {

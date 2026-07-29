@@ -8,17 +8,8 @@ import { clsx } from "clsx";
 
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home-agenda";
 import { formatDateTimeRange } from "@/lib/format";
+import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { Badge, Card, EmptyState, SectionHeading, type BadgeTone } from "@/components/ui";
-
-type GoogleCalendarResponse = {
-  connected: boolean;
-  busy: Array<{
-    start: string;
-    end: string;
-    title: string | null;
-    location: string | null;
-  }>;
-};
 
 function toDateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -78,19 +69,15 @@ function weekdayLabel(dateKey: string) {
   return new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(dateFromKey(dateKey));
 }
 
-function googleItemsFromResponse(response: GoogleCalendarResponse): HomeAgendaItem[] {
-  if (!response.connected) {
-    return [];
+function weekdayTone(dateKey: string) {
+  const day = dateFromKey(dateKey).getDay();
+  if (day === 0) {
+    return "text-clay-ink";
   }
-
-  return response.busy.map((busyRange, index) => ({
-    id: `google-${busyRange.start}-${index}`,
-    kind: "google",
-    title: busyRange.title || "予定あり",
-    location: busyRange.location,
-    startAt: busyRange.start,
-    endAt: busyRange.end
-  }));
+  if (day === 6) {
+    return "text-pine";
+  }
+  return "text-muted";
 }
 
 function itemBadge(kind: HomeAgendaItem["kind"]): { label: string; tone: BadgeTone } {
@@ -277,25 +264,27 @@ export function HomeSelectedDateAgenda({
               </button>
             </div>
           </div>
-          <div
-            data-testid="home-week-grid"
-            className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-0.5 sm:gap-1"
-          >
-            {weekDays.map((dateKey) => (
-              <button
-                type="button"
-                key={dateKey}
-                onClick={() => selectDate(dateKey)}
-                aria-current={dateKey === activeDateKey ? "date" : undefined}
-                className={clsx(
-                  "grid min-h-14 min-w-0 place-items-center rounded-control border px-0.5 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1",
-                  dateKey === activeDateKey ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
-                )}
-              >
-                <span className="truncate text-[0.7rem] font-bold sm:text-caption">{weekdayLabel(dateKey)}</span>
-                <span className="mt-1 truncate text-xs font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
-              </button>
-            ))}
+          <div data-testid="home-week-grid" className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-0.5 sm:gap-1">
+            {weekDays.map((dateKey) => {
+              const active = dateKey === activeDateKey;
+              return (
+                <button
+                  type="button"
+                  key={dateKey}
+                  onClick={() => selectDate(dateKey)}
+                  aria-current={active ? "date" : undefined}
+                  className={clsx(
+                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-0.5 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1",
+                    active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
+                  )}
+                >
+                  <span className={clsx("truncate text-[0.7rem] font-bold sm:text-caption", active ? "text-white/75" : weekdayTone(dateKey))}>
+                    {weekdayLabel(dateKey)}
+                  </span>
+                  <span className="mt-1 truncate text-xs font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

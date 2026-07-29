@@ -17,7 +17,7 @@ describe("PrimaryNav", () => {
     navigation.pathname = "/";
   });
 
-  it("shows the four primary destinations as icon buttons in a responsive grid", () => {
+  it("shows the four primary destinations as icon buttons in a fixed mobile bar and a static desktop row", () => {
     render(<PrimaryNav isSignedIn />);
 
     const nav = screen.getByRole("navigation", { name: "主要な画面" });
