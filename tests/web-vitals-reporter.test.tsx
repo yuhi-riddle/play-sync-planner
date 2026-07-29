@@ -6,7 +6,7 @@ const { useReportWebVitals } = vi.hoisted(() => ({ useReportWebVitals: vi.fn() }
 
 vi.mock("next/web-vitals", () => ({ useReportWebVitals }));
 
-import { WebVitalsReporter } from "@/components/web-vitals-reporter";
+import { SAMPLE_RATE, WebVitalsReporter } from "@/components/web-vitals-reporter";
 
 function reportMetric(name: string, value: number) {
   const handler = useReportWebVitals.mock.calls.at(-1)?.[0];
@@ -50,7 +50,8 @@ describe("WebVitalsReporter", () => {
   });
 
   it("does not send anything when not sampled", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.99);
+    // Math.random() は [0, 1) なので、SAMPLE_RATE と同じ値を返せば必ず「対象外」側になる。
+    vi.spyOn(Math, "random").mockReturnValue(SAMPLE_RATE);
     render(<WebVitalsReporter />);
 
     reportMetric("LCP", 1200);

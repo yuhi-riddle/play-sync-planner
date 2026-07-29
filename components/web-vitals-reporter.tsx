@@ -5,8 +5,8 @@ import { useReportWebVitals } from "next/web-vitals";
 
 import { isAllowedWebVitalName, mapPathnameToPageTemplate, type WebVitalInput } from "@/lib/domain/web-vitals";
 
-// 全リクエストを送ると量が多いので、体感速度の把握には5%サンプリングで十分。
-const SAMPLE_RATE = 0.05;
+// 「重い」報告の原因調査のため一時的に100%計測にしている。傾向が掴めたら5%程度へ戻す。
+export const SAMPLE_RATE = 1;
 
 function reasonableMetricValue(name: WebVitalInput["name"], value: number) {
   if (!Number.isFinite(value) || value < 0) return false;
