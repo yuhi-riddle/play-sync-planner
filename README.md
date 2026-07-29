@@ -122,6 +122,10 @@ npm test
 npm run build
 ```
 
+## 年次メンテナンス
+
+- `lib/japanese-holidays.ts` の祝日データは `HOLIDAY_DATA_VALID_UNTIL` までしか無く、それ以降は無言で平日扱いになる。年1回、翌年分を追加すること
+
 ## ドキュメント
 
 - `docs/design/01_requirements.md`: 要件定義書

@@ -1,3 +1,5 @@
+export const HOLIDAY_DATA_VALID_UNTIL = "2027-11-23";
+
 const japaneseHolidayDates = new Set([
   "2026-01-01",
   "2026-01-12",
@@ -37,5 +39,9 @@ const japaneseHolidayDates = new Set([
 ]);
 
 export function isJapaneseHoliday(date: string): boolean {
+  if (process.env.NODE_ENV !== "production" && date > HOLIDAY_DATA_VALID_UNTIL) {
+    console.warn(`[japanese-holidays] ${date} は保持している祝日データ(${HOLIDAY_DATA_VALID_UNTIL}まで)の範囲外です。年次更新が必要な可能性があります。`);
+  }
+
   return japaneseHolidayDates.has(date);
 }
