@@ -22,4 +22,20 @@ describe("ルートごとの読み込み中スケルトン", () => {
 
     expect(screen.getByRole("status", { name: "読み込み中" })).toBeInTheDocument();
   });
+
+  // 実ページ（Card構成）に寄せて、小さすぎるスケルトンによる唐突な体感を防ぐ。
+  it.each([
+    ["ホーム", HomeLoading, 7, 2],
+    ["イベント詳細", EventLoading, 9, 3],
+    ["日程調整詳細", PlanLoading, 10, 3],
+    ["清算", SettlementLoading, 10, 3]
+  ])("%sのローディングは実ページの構造に見合うCardとSkeletonの数を描く", (_label, Loading, minSkeletons, minCards) => {
+    const { container } = render(<Loading />);
+
+    const skeletonCount = container.querySelectorAll('[aria-hidden="true"]').length;
+    const cardCount = container.querySelectorAll("section").length;
+
+    expect(skeletonCount).toBeGreaterThanOrEqual(minSkeletons);
+    expect(cardCount).toBeGreaterThanOrEqual(minCards);
+  });
 });

@@ -12,7 +12,15 @@ export default function Loading() {
       <Card className="space-y-3">
         <Skeleton className="h-5 w-1/4" />
         <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
+      </Card>
+      <Card className="space-y-3">
+        <Skeleton className="h-5 w-1/4" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </Card>
+      <Card className="space-y-3">
+        <Skeleton className="h-5 w-1/4" />
+        <Skeleton className="h-24 w-full" />
       </Card>
     </div>
   );

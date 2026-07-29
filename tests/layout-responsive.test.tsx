@@ -65,6 +65,17 @@ describe("RootLayout responsive header", () => {
     expect(document.querySelector("footer")).toHaveClass("pb-28", "sm:pb-8");
   });
 
+  it("gives <main> a minimum height so the footer stays off-screen while the route Suspense boundary resolves", async () => {
+    vi.stubGlobal("React", React);
+    const layout = await RootLayout({ children: "本文" });
+    const markup = renderToStaticMarkup(layout);
+    const parsedDocument = new DOMParser().parseFromString(markup, "text/html");
+    document.body.innerHTML = parsedDocument.body.innerHTML;
+
+    const mainClasses = document.querySelector("main")?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(mainClasses).toEqual(expect.arrayContaining(["min-h-[calc(100vh-10rem)]"]));
+  });
+
   it("gets authentication once and shares the result with every signed-in navigation", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });
