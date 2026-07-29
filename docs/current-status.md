@@ -380,10 +380,10 @@ Phase 1 は完了済みです。
 - [ ] `008_settlement_reminder_type.sql` を適用済み。
 - [ ] `009_site_notifications.sql` を適用済み。
 - [ ] `020_event_list_performance_and_atomic_block.sql` を適用済み。
-- [ ] `021_settlement_payment_total_guard.sql` を適用済み。
-- [ ] `022_share_link_revocation.sql` を適用済み。
-- [ ] `023_account_deletion.sql` を適用済み。
-- [ ] `024_event_tasks.sql` を適用済み。
+- [x] `021_settlement_payment_total_guard.sql` を適用済み。
+- [x] `022_share_link_revocation.sql` を適用済み。
+- [x] `023_account_deletion.sql` を適用済み。
+- [x] `024_event_tasks.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。
