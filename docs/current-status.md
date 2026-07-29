@@ -247,6 +247,28 @@ Phase 1 は完了済みです。
   認識できない/デフォルトdepth=2を超えてネストしたラベルテキスト)だったため、
   マークアップを崩さず `controlComponents` / `depth` のルール設定で解消した
 
+### 品質改善: 保守性・テスト
+
+- `lib/actions/settlements.ts`(725行)には実行テストが無かった。`deleteExpenseAction` /
+  `recordPublicSettlementPaymentAction` を通した回帰テストを追加し、
+  「未払いのsettlementsだけをdeleteする」「清算支払い開始後は立替を変更できない」
+  「トークンの計画に属さないsettlementIdは拒否する(唯一の未認証書き込み経路)」の3点を固定した。
+  いずれも既存実装は正しく動いており、バグ修正ではなくテストの追加
+- 清算まわりの金額表記を「1,000円」に統一した(ユーザー判断)。`lib/format.ts` に `formatYenText` を追加し、
+  `lib/domain/settlement.ts` / `public-settlement-summary.tsx` / `settlement-confirmation-queue.tsx` /
+  `paypay-action-panel.tsx` の重複実装と、主催者向け清算ページの `formatYen`(￥表記)をこれに揃えた。
+  使われなくなった `formatYen` は `lib/format.ts` から削除した
+- カレンダー系コンポーネントに22行重複していたヘルパーを共通化した: `lib/domain/calendar-month.ts`
+  (`parseMonth` / `monthParam` / `moveMonth` / `monthLabel` / `dateLabel`)、`lib/calendar-styles.ts`
+  (`weekdayClass` / `dayCellClass`)、`lib/google-calendar/free-busy-items.ts`(`googleItemsFromResponse`)。
+  `dateLabel` だけ年表示の有無が画面ごとに違ったため `includeYear` オプションで吸収し、表示は変えていない
+- `lib/japanese-holidays.ts` に `HOLIDAY_DATA_VALID_UNTIL`(`2027-11-23`)を追加し、
+  開発時のみそれ以降の日付で `console.warn` するようにした。範囲外の日付は例外を投げず `false` を返す仕様を
+  テストで固定した。README.mdに年次更新が必要な旨を追記した
+- `@vitest/coverage-v8` を追加し、`npm run test:coverage` で計測できるようにした(閾値は設定しない)。
+  現状値: Statements 65.35% / Branches 76.02% / Functions 76.91% / Lines 65.35%
+  (計測時点。`lib/actions/*` の一部ファイルはテストが薄く0%に近いものもある)
+
 ## 残っている作業
 
 今のビルドは、機能面ではかなり進んでいます。
