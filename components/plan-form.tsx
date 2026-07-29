@@ -351,6 +351,8 @@ function CalendarPicker({
           const availabilityLabel = dailyAvailability
             ? `、平均 空き ${dailyAvailability.averageAvailableCount}/${dailyAvailability.participantCount}人`
             : "";
+          const busyCount = busyCounts[cell.date] ?? 0;
+          const busyLabel = busyCount > 0 ? `、Googleカレンダーの予定${busyCount}件` : "";
           return (
             <button
               key={cell.date}
@@ -408,10 +410,10 @@ function CalendarPicker({
                 disabled && "pointer-events-none bg-surface text-muted line-through"
               )}
               aria-pressed={selected}
-              aria-label={`${formatDateLabel(cell.date)}を選択${availabilityLabel}`}
+              aria-label={`${formatDateLabel(cell.date)}を選択${availabilityLabel}${busyLabel}`}
             >
               {cell.day}
-              {busyCounts[cell.date] ? (
+              {busyCount > 0 ? (
                 <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-clay" aria-hidden="true" />
               ) : null}
             </button>

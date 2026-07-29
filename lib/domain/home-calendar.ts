@@ -110,6 +110,34 @@ function groupItemsByDate(items: HomeCalendarItem[]) {
   return grouped;
 }
 
+/** カレンダーセルの色つきドットが伝えている内容を、スクリーンリーダー向けに文章化する。 */
+export function buildDayAriaLabel({
+  date,
+  isHoliday = false,
+  hasCollecting = false,
+  hasConfirmed = false,
+  hasGoogle = false,
+  hasOverlap = false
+}: {
+  date: Date;
+  isHoliday?: boolean;
+  hasCollecting?: boolean;
+  hasConfirmed?: boolean;
+  hasGoogle?: boolean;
+  hasOverlap?: boolean;
+}): string {
+  const dateLabel = `${date.getMonth() + 1}月${date.getDate()}日`;
+  const holidaySuffix = isHoliday ? "(祝日)" : "";
+  const parts: string[] = [];
+  if (hasCollecting) parts.push("調整中の予定あり");
+  if (hasConfirmed) parts.push("確定した予定あり");
+  if (hasGoogle) parts.push("Google Calendarの予定あり");
+  if (hasOverlap) parts.push("時間の重複あり");
+  const summary = parts.length > 0 ? parts.join("、") : "予定なし";
+
+  return `${dateLabel}${holidaySuffix}、${summary}`;
+}
+
 export function findNextConfirmedItem(items: HomeCalendarItem[], now: Date): HomeCalendarItem | null {
   const todayStart = startOfDay(now);
   const upcomingConfirmed = items.filter(

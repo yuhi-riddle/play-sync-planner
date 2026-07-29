@@ -13,7 +13,7 @@ import {
   type AdjustmentCandidate,
   type CalendarDay
 } from "@/lib/domain/adjustment-calendar";
-import { buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 import { formatDateTimeRange } from "@/lib/format";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
@@ -93,6 +93,19 @@ function dayCellClass(day: CalendarDay) {
   }
 
   return "border-line bg-surface text-ink hover:border-moss/45";
+}
+
+function dayAriaLabel(day: CalendarDay, googleCount: number) {
+  const summary = buildDayAriaLabel({
+    date: day.date,
+    isHoliday: isJapaneseHoliday(day.dateKey),
+    hasCollecting: day.hasCollecting,
+    hasConfirmed: day.hasConfirmed,
+    hasGoogle: googleCount > 0,
+    hasOverlap: day.hasOverlap
+  });
+
+  return `${summary}。この日の候補を見る`;
 }
 
 function googleItemsFromResponse(response: GoogleCalendarResponse): HomeCalendarItem[] {
@@ -262,15 +275,15 @@ export function AdjustmentCalendarView({
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-muted">
           <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
-            <span className="h-2 w-2 rounded-full bg-honey" />
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-honey" />
             調整中
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
-            <span className="h-2 w-2 rounded-full bg-moss" />
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-moss" />
             確定済み
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
-            <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" />
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" />
             Google Calendar
           </span>
         </div>
@@ -297,7 +310,7 @@ export function AdjustmentCalendarView({
                       "min-h-16 rounded-control border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
                       dayCellClass(day)
                     )}
-                    aria-label={`${day.dateKey}の候補とGoogle Calendar予定を表示`}
+                    aria-label={dayAriaLabel(day, googleCount)}
                     aria-current={day.isSelected ? "date" : undefined}
                   >
                     <span className="text-sm font-bold">{day.day}</span>

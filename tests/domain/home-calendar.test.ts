@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildHomeCalendar, findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { buildDayAriaLabel, buildHomeCalendar, findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 
 const items: HomeCalendarItem[] = [
   {
@@ -116,5 +116,32 @@ describe("findNextConfirmedItem", () => {
     ];
 
     expect(findNextConfirmedItem(sameDayItems, now)?.id).toBe("confirmed-noon");
+  });
+});
+
+describe("buildDayAriaLabel", () => {
+  it("says there is nothing scheduled for an empty day", () => {
+    expect(buildDayAriaLabel({ date: new Date(2026, 6, 15) })).toBe("7月15日、予定なし");
+  });
+
+  it("lists every kind of item present that day", () => {
+    expect(
+      buildDayAriaLabel({
+        date: new Date(2026, 6, 15),
+        hasCollecting: true,
+        hasConfirmed: true,
+        hasGoogle: true
+      })
+    ).toBe("7月15日、調整中の予定あり、確定した予定あり、Google Calendarの予定あり");
+  });
+
+  it("marks a holiday distinctly from a revoked share link message", () => {
+    expect(buildDayAriaLabel({ date: new Date(2026, 6, 20), isHoliday: true })).toBe("7月20日(祝日)、予定なし");
+  });
+
+  it("mentions overlapping candidate times", () => {
+    expect(buildDayAriaLabel({ date: new Date(2026, 6, 15), hasCollecting: true, hasOverlap: true })).toBe(
+      "7月15日、調整中の予定あり、時間の重複あり"
+    );
   });
 });

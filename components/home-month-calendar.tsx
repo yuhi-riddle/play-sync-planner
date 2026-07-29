@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 
-import { buildHomeCalendar, type HomeCalendarDay, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarDay, type HomeCalendarItem } from "@/lib/domain/home-calendar";
 import { formatDateTimeRange } from "@/lib/format";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
@@ -73,6 +73,18 @@ function dayCellClass(day: HomeCalendarDay) {
   }
 
   return "border-line bg-surface text-ink hover:border-moss/45";
+}
+
+function dayAriaLabel(day: HomeCalendarDay) {
+  const summary = buildDayAriaLabel({
+    date: day.date,
+    isHoliday: isJapaneseHoliday(day.dateKey),
+    hasCollecting: day.collectingCount > 0,
+    hasConfirmed: day.confirmedCount > 0,
+    hasGoogle: day.googleCount > 0
+  });
+
+  return `${summary}。この日の予定を見る`;
 }
 
 function weekdayClass(index: number) {
@@ -250,15 +262,15 @@ export function HomeMonthCalendar({
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-muted">
         <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
-          <span className="h-2 w-2 rounded-full bg-honey" />
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-honey" />
           調整中
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
-          <span className="h-2 w-2 rounded-full bg-moss" />
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-moss" />
           確定済み
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
-          <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" />
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" />
           Google Calendar
         </span>
       </div>
@@ -281,7 +293,7 @@ export function HomeMonthCalendar({
               "min-h-16 rounded-control border p-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20",
               dayCellClass(day)
             )}
-            aria-label={`${day.dateKey}の予定を見る`}
+            aria-label={dayAriaLabel(day)}
             aria-current={day.isSelected ? "date" : undefined}
           >
             <span className="text-sm font-bold">{day.day}</span>
