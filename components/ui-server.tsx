@@ -94,6 +94,11 @@ export function SecondaryLink({ href, children }: { href: string; children: Reac
   );
 }
 
+/** ページ読み込み中のプレースホルダー1本分。幅・高さは className で渡す。 */
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden="true" className={clsx("animate-pulse rounded-control bg-sunken", className)} />;
+}
+
 /**
  * 空状態。破線で囲うと「作りかけ」に見えるので、一段沈んだ面で表現する。
  */
