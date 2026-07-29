@@ -6,6 +6,7 @@ import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { Badge, Card, EmptyState, MadoiForm, Stat, SubmitButton } from "@/components/ui";
 import { getPaymentInstructionView, summarizeSettlementNextActions, summarizeSettlementOverview, summarizeSettlementPaymentProgress } from "@/lib/domain/settlement";
+import { formatYenText } from "@/lib/format";
 
 export type PublicSettlementExpense = {
   id: string;
@@ -196,8 +197,4 @@ export function PublicSettlementSummary({
       </Card>
     </div>
   );
-}
-
-function formatYenText(amount: number) {
-  return `${amount.toLocaleString("ja-JP")}円`;
 }

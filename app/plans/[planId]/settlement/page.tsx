@@ -32,7 +32,7 @@ import {
 } from "@/lib/domain/settlement";
 import { buildPublicSettlementUrl } from "@/lib/domain/plans";
 import { summarizeSettlementReminderLogs, type SettlementReminderLogView } from "@/lib/domain/reminder-log";
-import { formatDateTime, formatYen } from "@/lib/format";
+import { formatDateTime, formatYenText } from "@/lib/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -292,7 +292,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         <div className="flex flex-wrap items-start justify-between gap-4">
           <Stat
             label="清算残額"
-            value={formatYen(settlementOverview.remainingAmount)}
+            value={formatYenText(settlementOverview.remainingAmount)}
             sub={unpaidSettlements.length > 0 ? `${unpaidSettlements.length}件の支払い待ち` : "清算済みです"}
             emphasis="primary"
             tone={settlementOverview.remainingAmount > 0 ? "warn" : undefined}
@@ -302,13 +302,13 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <Stat
             label="立替合計"
-            value={formatYen(expenses.reduce((total, expense) => total + expense.amount, 0))}
+            value={formatYenText(expenses.reduce((total, expense) => total + expense.amount, 0))}
             sub={`${expenses.length}件の支払い履歴`}
           />
           <Stat
             label="支払い済み"
-            value={formatYen(settlementOverview.paidAmount)}
-            sub={`確認済み ${formatYen(settlementOverview.confirmedAmount)}`}
+            value={formatYenText(settlementOverview.paidAmount)}
+            sub={`確認済み ${formatYenText(settlementOverview.confirmedAmount)}`}
           />
           <Stat
             label="参加者"
@@ -345,13 +345,13 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
             title="支払い待ち"
             emptyText="支払い待ちはありません。"
             items={settlementNextActions.paymentWaiting}
-            description={(item) => `${item.participantName}さん → ${item.counterpartyName}さんへ ${formatYen(item.amount)}`}
+            description={(item) => `${item.participantName}さん → ${item.counterpartyName}さんへ ${formatYenText(item.amount)}`}
           />
           <NextActionList
             title="受け取り確認待ち"
             emptyText="確認待ちはありません。"
             items={settlementNextActions.confirmationWaiting}
-            description={(item) => `${item.participantName}さんが ${item.counterpartyName}さんの支払い ${formatYen(item.amount)} を確認`}
+            description={(item) => `${item.participantName}さんが ${item.counterpartyName}さんの支払い ${formatYenText(item.amount)} を確認`}
           />
         </div>
       </Card>
@@ -408,11 +408,11 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                       <p className="text-sm font-bold text-ink">
                         {participantName(settlement.from_participant)} → {participantName(settlement.to_participant)}
                       </p>
-                      <p className="mt-2 text-2xl font-bold text-ink">{formatYen(settlement.amount)}</p>
+                      <p className="mt-2 text-2xl font-bold text-ink">{formatYenText(settlement.amount)}</p>
                       <p className="mt-1 text-sm text-muted">
-                        {settlementStatusLabels[progress.status]} / 支払い済み {formatYen(progress.paidAmount)} / 残り {formatYen(progress.remainingAmount)}
+                        {settlementStatusLabels[progress.status]} / 支払い済み {formatYenText(progress.paidAmount)} / 残り {formatYenText(progress.remainingAmount)}
                       </p>
-                      {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-muted">受け取り確認済み {formatYen(progress.confirmedAmount)}</p> : null}
+                      {progress.confirmedAmount > 0 ? <p className="mt-1 text-sm text-muted">受け取り確認済み {formatYenText(progress.confirmedAmount)}</p> : null}
                       {settlement.amount > 0 ? (
                         <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
                           <div
@@ -469,12 +469,12 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
                         <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
-                          {participantName(split.participants)} {formatYen(split.amount)}
+                          {participantName(split.participants)} {formatYenText(split.amount)}
                         </span>
                       ))}
                     </div>
                   </div>
-                  <p className="text-xl font-bold text-ink">{formatYen(expense.amount)}</p>
+                  <p className="text-xl font-bold text-ink">{formatYenText(expense.amount)}</p>
                 </div>
                 {isOwner && settlementPaymentCount === 0 ? (
                   <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
@@ -790,7 +790,7 @@ function SettlementActions({
               return (
               <div key={payment.id} className="grid gap-2 rounded-control border border-line bg-surface p-3 text-sm text-muted">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-ink">{formatYen(payment.amount)}</span>
+                  <span className="font-bold text-ink">{formatYenText(payment.amount)}</span>
                   <span className="text-xs">{payment.confirmed_at ? `確認済み ${formatDateTime(payment.confirmed_at)}` : `記録 ${formatDateTime(payment.paid_at)}`}</span>
                 </div>
                 {[payment.payment_method, payment.memo].filter(Boolean).length > 0 ? (

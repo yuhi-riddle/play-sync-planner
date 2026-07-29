@@ -102,7 +102,7 @@ describe("SettlementPage", () => {
     expect(screen.getByText("参加者")).toBeInTheDocument();
 
     const remainingAmountRow = screen.getByText("清算残額").closest("div")?.parentElement as HTMLElement;
-    expect(within(remainingAmountRow).getByText("￥2,000").className).toMatch(/text-\[2\.5rem\]/);
+    expect(within(remainingAmountRow).getByText("2,000円").className).toMatch(/text-\[2\.5rem\]/);
     expect(within(remainingAmountRow).queryByText("清算完了")).not.toBeInTheDocument();
   });
 
