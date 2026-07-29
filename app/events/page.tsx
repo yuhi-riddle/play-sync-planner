@@ -20,7 +20,7 @@ import {
   type EventListItem
 } from "@/lib/event-filter";
 import { formatDate, formatDateTimeRange } from "@/lib/format";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -76,11 +76,9 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
-  if (!user) {
+  if (!userId) {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Events" title="イベント一覧" />
@@ -92,7 +90,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   const { data: eventDraft } = await supabase
     .from("event_drafts")
     .select("id, payload, updated_at")
-    .eq("owner_user_id", user.id)
+    .eq("owner_user_id", userId)
     .maybeSingle();
   const draftCount = eventDraft ? 1 : 0;
   const draftPayload = (eventDraft?.payload ?? {}) as EventDraftPayload;

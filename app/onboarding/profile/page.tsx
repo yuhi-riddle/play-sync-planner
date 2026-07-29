@@ -9,7 +9,7 @@ import {
   getProfileAvatarUrl,
   isProfileSchemaUnavailable
 } from "@/lib/domain/profile";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +31,7 @@ export default async function ProfileOnboardingPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return (

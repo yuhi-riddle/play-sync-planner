@@ -2,8 +2,9 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, redirect } = vi.hoisted(() => ({
+const { createSupabaseServerClient, getCurrentUserId, redirect } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
+  getCurrentUserId: vi.fn(),
   redirect: vi.fn()
 }));
 
@@ -13,6 +14,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/actions/events", () => ({ cancelEventAction: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
+  getCurrentUserId,
   hasSupabaseEnv: () => true
 }));
 
@@ -59,6 +61,7 @@ describe("EventsPage", () => {
   beforeEach(() => {
     vi.stubGlobal("React", React);
     vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue("user-1");
     redirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
@@ -73,7 +76,6 @@ describe("EventsPage", () => {
       updated_at: "2026-07-15T00:00:00Z"
     });
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
@@ -96,7 +98,6 @@ describe("EventsPage", () => {
     const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
@@ -122,7 +123,6 @@ describe("EventsPage", () => {
     const rpc = createRpcResult(["event-1", "event-2"], 1001);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
@@ -161,7 +161,6 @@ describe("EventsPage", () => {
       updated_at: "2026-07-15T00:00:00Z"
     });
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
@@ -181,7 +180,6 @@ describe("EventsPage", () => {
     const rpc = createRpcResult([], 15);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });
@@ -196,7 +194,6 @@ describe("EventsPage", () => {
     const rpc = createRpcResult([], 2_147_483_660);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       rpc,
       from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
     });

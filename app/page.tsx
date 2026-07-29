@@ -24,7 +24,7 @@ import {
   resolveNotificationActionFilter,
   type NotificationActionFilter
 } from "@/lib/domain/site-notifications";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -162,9 +162,7 @@ export default async function HomePage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return (

@@ -6,8 +6,7 @@ const mocks = vi.hoisted(() => ({
   authNav: vi.fn(),
   primaryNav: vi.fn(),
   mobileEventFab: vi.fn(),
-  getUser: vi.fn(),
-  createSupabaseServerClient: vi.fn(),
+  getCurrentUser: vi.fn(),
   hasSupabaseEnv: vi.fn()
 }));
 
@@ -33,7 +32,7 @@ vi.mock("@/components/web-vitals-reporter", () => ({
   WebVitalsReporter: () => null
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: mocks.createSupabaseServerClient,
+  getCurrentUser: mocks.getCurrentUser,
   hasSupabaseEnv: mocks.hasSupabaseEnv
 }));
 
@@ -43,10 +42,7 @@ describe("RootLayout responsive header", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hasSupabaseEnv.mockReturnValue(true);
-    mocks.getUser.mockResolvedValue({
-      data: { user: { id: "user-1", email: "user@example.com", user_metadata: {} } }
-    });
-    mocks.createSupabaseServerClient.mockResolvedValue({ auth: { getUser: mocks.getUser } });
+    mocks.getCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com", user_metadata: {} });
   });
 
   it("stacks the brand and account controls on mobile and returns to one row on larger screens", async () => {
@@ -82,7 +78,7 @@ describe("RootLayout responsive header", () => {
     renderToStaticMarkup(layout);
 
     const user = { id: "user-1", email: "user@example.com", user_metadata: {} };
-    expect(mocks.getUser).toHaveBeenCalledTimes(1);
+    expect(mocks.getCurrentUser).toHaveBeenCalledTimes(1);
     expect(mocks.authNav).toHaveBeenCalledWith({ user });
     expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: true });
     expect(mocks.mobileEventFab).toHaveBeenCalledWith({ isSignedIn: true });

@@ -4,7 +4,7 @@ import { PlanForm } from "@/components/plan-form";
 import { BackLink } from "@/components/back-link";
 import { Card, PageHeader } from "@/components/ui";
 import { updatePlanAction } from "@/lib/actions/plans";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +18,14 @@ export default async function EditPlanPage({ params }: { params: Promise<{ planI
     )
     .eq("id", planId)
     .single();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
   if (!plan) {
     notFound();
   }
 
-  const { data: calendarIntegration } = user
-    ? await supabase.from("calendar_integrations").select("id").eq("user_id", user.id).eq("provider", "google").maybeSingle()
+  const { data: calendarIntegration } = userId
+    ? await supabase.from("calendar_integrations").select("id").eq("user_id", userId).eq("provider", "google").maybeSingle()
     : { data: null };
   const action = updatePlanAction.bind(null, planId);
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;

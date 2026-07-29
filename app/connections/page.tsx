@@ -11,7 +11,7 @@ import {
   type BlockedUser,
   type ConnectionCandidate
 } from "@/lib/domain/connections";
-import { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -32,19 +32,16 @@ export default async function ConnectionsPage() {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
-  if (!user) {
+  if (!userId) {
     redirect("/login?next=%2Fconnections");
   }
 
   const [candidates, invitations, blockedUsers] = await Promise.all([
-    loadConnectionCandidates(user.id),
-    loadReceivedEventInvitations(user.id),
-    loadBlockedUsers(user.id)
+    loadConnectionCandidates(userId),
+    loadReceivedEventInvitations(userId),
+    loadBlockedUsers(userId)
   ]);
   const favorites = candidates.filter((candidate) => candidate.isFavorite);
   const mutualFollows = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && candidate.isFollowedBy);

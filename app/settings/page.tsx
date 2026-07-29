@@ -6,7 +6,7 @@ import { ProfileSettingsCard } from "@/components/profile-settings-card";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { Card, PageHeader } from "@/components/ui";
 import { getGoogleProfileDefaults, getProfileAvatarUrl, isProfileSchemaUnavailable } from "@/lib/domain/profile";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +27,7 @@ export default async function SettingsPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return (

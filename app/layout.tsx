@@ -7,7 +7,7 @@ import { MobileEventFab } from "@/components/mobile-event-fab";
 import { PrimaryNav } from "@/components/primary-nav";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { brand } from "@/lib/brand";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 import "./globals.css";
 
@@ -29,9 +29,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   let user: User | null = null;
 
   if (hasSupabaseEnv()) {
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
+    user = await getCurrentUser();
   }
   const isSignedIn = Boolean(user);
 

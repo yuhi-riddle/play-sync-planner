@@ -4,7 +4,7 @@ import { PlanForm } from "@/components/plan-form";
 import { BackLink } from "@/components/back-link";
 import { Card, PageHeader } from "@/components/ui";
 import { createPlanAction } from "@/lib/actions/plans";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,17 +12,15 @@ export default async function NewPlanPage({ params }: { params: Promise<{ eventI
   const { eventId } = await params;
   const supabase = await createSupabaseServerClient();
   const { data: event } = await supabase.from("events").select("id, title, category").eq("id", eventId).single();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
   if (!event) {
     notFound();
   }
 
   const [{ data: calendarIntegration }, { count: participantCount }] = await Promise.all([
-    user
-      ? supabase.from("calendar_integrations").select("id").eq("user_id", user.id).eq("provider", "google").maybeSingle()
+    userId
+      ? supabase.from("calendar_integrations").select("id").eq("user_id", userId).eq("provider", "google").maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("event_members").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "joined")
   ]);

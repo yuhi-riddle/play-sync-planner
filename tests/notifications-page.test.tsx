@@ -2,8 +2,9 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient } = vi.hoisted(() => ({
-  createSupabaseServerClient: vi.fn()
+const { createSupabaseServerClient, getCurrentUserId } = vi.hoisted(() => ({
+  createSupabaseServerClient: vi.fn(),
+  getCurrentUserId: vi.fn()
 }));
 
 vi.mock("@/lib/actions/notifications", () => ({
@@ -12,6 +13,7 @@ vi.mock("@/lib/actions/notifications", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
+  getCurrentUserId,
   hasSupabaseEnv: () => true
 }));
 
@@ -30,8 +32,8 @@ function makeNotification(id: string, readAt: string | null) {
 }
 
 function mockSupabaseWithRows(rows: Array<Record<string, unknown>>) {
+  getCurrentUserId.mockResolvedValue("user-1");
   createSupabaseServerClient.mockResolvedValue({
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
     from: vi.fn(() => ({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),

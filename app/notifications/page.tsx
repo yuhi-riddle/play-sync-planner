@@ -9,7 +9,7 @@ import {
   filterNotificationsByReadState,
   type NotificationReadFilter
 } from "@/lib/domain/site-notifications";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -56,11 +56,9 @@ export default async function NotificationsPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
-  if (!user) {
+  if (!userId) {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Notifications" title="通知" description="通知を見るにはログインしてください。" />
@@ -72,7 +70,7 @@ export default async function NotificationsPage({
   const { data } = await supabase
     .from("notifications")
     .select("id, kind, title, body, href, read_at, created_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(80);
 

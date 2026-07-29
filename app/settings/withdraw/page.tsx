@@ -4,7 +4,7 @@ import { LoginPanel, SetupPanel } from "@/components/state-panels";
 import { PageHeader } from "@/components/ui";
 import { WithdrawAccountCard } from "@/components/withdraw-account-card";
 import { getUserDisplayName } from "@/lib/domain/profile";
-import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +23,7 @@ export default async function WithdrawPage() {
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return (

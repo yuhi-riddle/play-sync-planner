@@ -141,7 +141,22 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  const { data: consent, error } = await supabase.from("user_consents").select("user_id").eq("user_id", user.id).maybeSingle();
+  // 同意チェックとオンボーディングチェックは互いに独立なので並列で発行する。
+  // ただしオンボーディングチェックは本来スキップされる条件（対象パス自身/既にuser_metadataで完了済み）
+  // があるため、先にそれを判定してから並列化する。無条件に並列化すると、
+  // 引かなくてよいprofilesまで毎回引いてしまい逆効果になる。
+  const needsProfileCheck =
+    request.nextUrl.pathname !== "/onboarding/profile" &&
+    typeof user.user_metadata?.profile_onboarding_completed_at !== "string";
+
+  const [consentResult, profileResult] = await Promise.all([
+    supabase.from("user_consents").select("user_id").eq("user_id", user.id).maybeSingle(),
+    needsProfileCheck
+      ? supabase.from("profiles").select("onboarding_completed_at").eq("user_id", user.id).maybeSingle()
+      : Promise.resolve(null)
+  ]);
+
+  const { data: consent, error } = consentResult;
   if (!error && !consent) {
     const consentUrl = request.nextUrl.clone();
     consentUrl.pathname = "/consent";
@@ -150,19 +165,12 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(consentUrl), cspHeaderName, csp);
   }
 
-  if (request.nextUrl.pathname === "/onboarding/profile") {
+  if (!needsProfileCheck) {
     return response;
   }
 
-  if (typeof user.user_metadata?.profile_onboarding_completed_at === "string") {
-    return response;
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("onboarding_completed_at")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const profile = profileResult?.data;
+  const profileError = profileResult?.error;
 
   if (!profileError) {
     const onboardingPath = getProfileOnboardingRedirect(

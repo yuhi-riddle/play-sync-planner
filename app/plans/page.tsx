@@ -8,6 +8,7 @@ import { monthRangeInTokyo } from "@/lib/domain/group-availability";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
+  getCurrentUserId,
   hasSupabaseAdminEnv,
   hasSupabaseEnv
 } from "@/lib/supabase/server";
@@ -104,11 +105,9 @@ export default async function PlansPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
-  if (!user) {
+  if (!userId) {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Calendar" title="カレンダー" />
@@ -120,7 +119,7 @@ export default async function PlansPage({
   const { data: memberships } = await supabase
     .from("event_members")
     .select("event_id")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("status", "joined");
   const joinedEventIds = [...new Set((memberships ?? []).map((membership) => membership.event_id))];
   const calendarClient = hasSupabaseAdminEnv() ? createSupabaseAdminClient() : supabase;
