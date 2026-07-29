@@ -20,6 +20,9 @@ type AvailabilityResponse = {
 type AvailabilityErrorResponse = { error?: string; code?: string };
 const accessDeniedMessage = "日程調整中の主催者だけが空き状況を集計できます。";
 
+/** 取得中/取得後でaria-liveブロックの高さを揃えるための最低高。 */
+export const AVAILABILITY_STATUS_MIN_HEIGHT_CLASS = "min-h-5";
+
 function toTimestamp(value: string) {
   return new Date(value.length === 16 ? `${value}:00+09:00` : value).getTime();
 }
@@ -143,7 +146,7 @@ export function GroupAvailabilityCalendar({
         ) : null}
       </div>
 
-      <div className="mt-4" aria-live="polite">
+      <div className={`mt-4 ${AVAILABILITY_STATUS_MIN_HEIGHT_CLASS}`} aria-live="polite">
         {loading ? <p className="text-sm text-muted">空き状況を集計しています。</p> : null}
         {error ? (
           <div className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink">

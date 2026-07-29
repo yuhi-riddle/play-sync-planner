@@ -8,6 +8,9 @@ export type CalendarEventRange = BusyRange & {
   location?: string | null;
 };
 
+/** 取得中/取得後で結果枠の高さを揃えるための最低高。 */
+export const CALENDAR_RESULTS_MIN_HEIGHT_CLASS = "min-h-5";
+
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
     hour: "2-digit",
@@ -53,35 +56,37 @@ export function CalendarAvailabilityPanel({
         <h3 className="text-sm font-bold text-ink">Google Calendarの予定</h3>
         <p className="text-xs text-muted">{selectedDate}</p>
       </div>
-      {loading ? <p className="mt-3 text-sm text-muted">予定を取得しています。</p> : null}
-      {error ? <p className="mt-3 text-sm text-clay-ink">Google Calendarの予定を取得できませんでした。</p> : null}
-      {!loading && !error && busyRanges.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">この日の予定はありません。</p>
-      ) : null}
-      {!loading && !error && busyRanges.length > 0 ? (
-        <ul className="mt-3 grid gap-2">
-          {busyRanges.map((busyRange) => (
-            <li
-              key={`${busyRange.start}-${busyRange.end}-${busyRange.title ?? ""}`}
-              className="rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink"
-            >
-              <p className="font-bold">
-                {formatTime(busyRange.start)} - {formatTime(busyRange.end)}
-              </p>
-              <p className="mt-1 font-bold">{busyRange.title || "予定あり"}</p>
-              {busyRange.location ? <p className="mt-1 text-xs text-muted">場所: {busyRange.location}</p> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {!loading && !error && busyRanges.length > 0 ? (
-        <p className="mt-3 text-xs leading-5 text-muted">予定名と場所だけ表示しています。詳細や参加者は取得しません。</p>
-      ) : null}
-      {conflict ? (
-        <p className="mt-3 rounded-control border border-clay/25 bg-clay/10 p-3 text-sm font-bold text-ink" aria-live="polite">
-          Google Calendarの予定と重なっています。
-        </p>
-      ) : null}
+      <div data-testid="calendar-availability-results" className={CALENDAR_RESULTS_MIN_HEIGHT_CLASS}>
+        {loading ? <p className="mt-3 text-sm text-muted">予定を取得しています。</p> : null}
+        {error ? <p className="mt-3 text-sm text-clay-ink">Google Calendarの予定を取得できませんでした。</p> : null}
+        {!loading && !error && busyRanges.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">この日の予定はありません。</p>
+        ) : null}
+        {!loading && !error && busyRanges.length > 0 ? (
+          <ul className="mt-3 grid gap-2">
+            {busyRanges.map((busyRange) => (
+              <li
+                key={`${busyRange.start}-${busyRange.end}-${busyRange.title ?? ""}`}
+                className="rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink"
+              >
+                <p className="font-bold">
+                  {formatTime(busyRange.start)} - {formatTime(busyRange.end)}
+                </p>
+                <p className="mt-1 font-bold">{busyRange.title || "予定あり"}</p>
+                {busyRange.location ? <p className="mt-1 text-xs text-muted">場所: {busyRange.location}</p> : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {!loading && !error && busyRanges.length > 0 ? (
+          <p className="mt-3 text-xs leading-5 text-muted">予定名と場所だけ表示しています。詳細や参加者は取得しません。</p>
+        ) : null}
+        {conflict ? (
+          <p className="mt-3 rounded-control border border-clay/25 bg-clay/10 p-3 text-sm font-bold text-ink" aria-live="polite">
+            Google Calendarの予定と重なっています。
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

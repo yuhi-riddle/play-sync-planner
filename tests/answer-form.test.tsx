@@ -2,7 +2,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AnswerForm } from "@/components/answer-form";
+import { AnswerForm, CALENDAR_NOTICE_MIN_HEIGHT_CLASS, CANDIDATE_WARNING_MIN_HEIGHT_CLASS } from "@/components/answer-form";
 
 vi.mock("@/lib/actions/answers", () => ({
   submitAvailabilityAnswersAction: vi.fn()
@@ -113,5 +113,48 @@ describe("AnswerForm", () => {
     });
     expect(screen.getByText("歯医者")).toBeInTheDocument();
     expect(screen.getByText("新宿")).toBeInTheDocument();
+  });
+
+  it("keeps the calendar notice container present with the same minimum height in idle, loading, and ready states", async () => {
+    // idle: 候補が空だと月が確定できず calendarState は idle のまま
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { unmount: unmountIdle } = render(<AnswerForm token="token-1" candidateDates={[]} />);
+    const idleNotice = screen.getByTestId("calendar-notice");
+    expect(idleNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
+    expect(idleNotice.textContent).toBe("");
+    unmountIdle();
+
+    // loading: fetch がまだ解決していない
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { unmount: unmountLoading } = render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    const loadingNotice = screen.getByTestId("calendar-notice");
+    expect(loadingNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
+    expect(loadingNotice.textContent).toBe("Google Calendarを確認中です。");
+    unmountLoading();
+
+    // ready: fetch が connected: true で解決する
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ connected: true, busy: [] })
+      })
+    );
+    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    const readyNotice = screen.getByTestId("calendar-notice");
+    expect(readyNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
+    await waitFor(() => {
+      expect(readyNotice.textContent).toBe("");
+    });
+  });
+
+  it("reserves a placeholder slot per candidate while Google Calendar conflicts are still loading", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(<AnswerForm token="token-1" candidateDates={candidates} />);
+
+    const placeholders = Array.from(container.querySelectorAll("div")).filter((element) =>
+      element.classList.contains(CANDIDATE_WARNING_MIN_HEIGHT_CLASS)
+    );
+    expect(placeholders).toHaveLength(candidates.length);
   });
 });

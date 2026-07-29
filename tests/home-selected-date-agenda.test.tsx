@@ -2,7 +2,11 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
+import {
+  AGENDA_ITEM_MIN_HEIGHT_CLASS,
+  GOOGLE_STATUS_MIN_HEIGHT_CLASS,
+  HomeSelectedDateAgenda
+} from "@/components/home-selected-date-agenda";
 
 const navigationMocks = vi.hoisted(() => ({ replace: vi.fn() }));
 
@@ -122,5 +126,42 @@ describe("HomeSelectedDateAgenda", () => {
     for (const button of Array.from(dateGrid?.querySelectorAll("button") ?? [])) {
       expect(button).toHaveClass("min-w-0", "px-0.5");
     }
+  });
+
+  it("keeps the Google Calendar status row at the same minimum height while loading and once ready", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ connected: true, busy: [] })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-12" todayDateKey="2026-07-12" initialItems={[]} />);
+
+    const statusRow = screen.getByText("Google Calendarを確認中", { exact: false }).closest('[aria-live="polite"]');
+    expect(statusRow).toHaveClass(GOOGLE_STATUS_MIN_HEIGHT_CLASS);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    const statusRowAfterReady = document.querySelector('[aria-live="polite"]');
+    await waitFor(() => {
+      expect(statusRowAfterReady?.textContent).toBe("");
+    });
+    expect(statusRowAfterReady).toHaveClass(GOOGLE_STATUS_MIN_HEIGHT_CLASS);
+  });
+
+  it("shows placeholder rows sized like an agenda item while Google Calendar items are still loading", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-12" todayDateKey="2026-07-12" initialItems={[]} />
+    );
+
+    const placeholders = Array.from(container.querySelectorAll("div")).filter((element) =>
+      element.classList.contains(AGENDA_ITEM_MIN_HEIGHT_CLASS)
+    );
+    expect(placeholders.length).toBeGreaterThan(0);
+    expect(screen.queryByText("この日の予定はまだありません。")).not.toBeInTheDocument();
   });
 });

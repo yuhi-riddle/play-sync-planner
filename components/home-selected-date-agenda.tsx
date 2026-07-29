@@ -9,7 +9,13 @@ import { clsx } from "clsx";
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home-agenda";
 import { formatDateTimeRange } from "@/lib/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
-import { Badge, Card, EmptyState, SectionHeading, type BadgeTone } from "@/components/ui";
+import { Badge, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
+
+/** Google Calendarのステータス行(SectionHeadingのaction)が空文字になっても縮まないようにする最低高。 */
+export const GOOGLE_STATUS_MIN_HEIGHT_CLASS = "min-h-5";
+
+/** AgendaItemと読み込み中のSkeleton行で高さを揃えるための最低高。 */
+export const AGENDA_ITEM_MIN_HEIGHT_CLASS = "min-h-[4.5rem]";
 
 function toDateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -126,6 +132,7 @@ function AgendaItem({ item }: { item: HomeAgendaItem }) {
     <div
       className={clsx(
         "rounded-control border border-l-4 border-line bg-sunken p-3 transition-colors hover:border-moss",
+        AGENDA_ITEM_MIN_HEIGHT_CLASS,
         itemAccentClass(item.kind)
       )}
     >
@@ -231,7 +238,7 @@ export function HomeSelectedDateAgenda({
         description="Madoi の確定予定と Google カレンダーをまとめて表示します。"
         icon={<CalendarDays aria-hidden="true" className="h-5 w-5 text-moss" />}
         action={
-          <div className="text-caption text-muted" aria-live="polite">
+          <div className={clsx("text-caption text-muted", GOOGLE_STATUS_MIN_HEIGHT_CLASS)} aria-live="polite">
             {googleState === "loading" ? "Google Calendarを確認中" : null}
             {googleState === "disconnected" ? "Google Calendarは未連携です" : null}
             {googleState === "error" ? <span className="text-clay-ink">Google Calendarを取得できませんでした</span> : null}
@@ -298,6 +305,11 @@ export function HomeSelectedDateAgenda({
         <div className="mt-3 grid gap-2">
           {agenda.items.length > 0 ? (
             agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)
+          ) : googleState === "loading" ? (
+            <>
+              <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
+              <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
+            </>
           ) : (
             <EmptyState icon={<CalendarDays aria-hidden="true" className="h-4 w-4" />}>この日の予定はまだありません。</EmptyState>
           )}

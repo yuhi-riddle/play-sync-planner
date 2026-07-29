@@ -10,7 +10,13 @@ import {
   type AnswerCandidateDate
 } from "@/lib/domain/answer-calendar";
 import { formatDateTimeRange } from "@/lib/format";
-import { MadoiForm, TextField } from "@/components/ui";
+import { MadoiForm, Skeleton, TextField } from "@/components/ui";
+
+/** CalendarNotice が空文字になっても縮まないようにする最低高。 */
+export const CALENDAR_NOTICE_MIN_HEIGHT_CLASS = "min-h-4";
+
+/** CandidateCalendarWarningの読み込み中Skeletonに使う最低高。 */
+export const CANDIDATE_WARNING_MIN_HEIGHT_CLASS = "min-h-9";
 
 type AnswerChoice = "yes" | "maybe" | "no";
 
@@ -43,22 +49,27 @@ function CalendarNotice({
 }: {
   state: "idle" | "loading" | "ready" | "disconnected" | "error";
 }) {
-  if (state === "loading") {
-    return <p className="mt-3 text-xs text-muted">Google Calendarを確認中です。</p>;
-  }
-
-  if (state === "disconnected") {
-    return <p className="mt-3 text-xs text-muted">Google Calendar未連携のため、候補日の重なり確認は表示していません。</p>;
-  }
-
-  if (state === "error") {
-    return <p className="mt-3 text-xs text-clay-ink">Google Calendarを取得できませんでした。回答はこのまま送信できます。</p>;
-  }
-
-  return null;
+  return (
+    <p
+      data-testid="calendar-notice"
+      className={`mt-3 text-xs ${CALENDAR_NOTICE_MIN_HEIGHT_CLASS} ${state === "error" ? "text-clay-ink" : "text-muted"}`}
+    >
+      {state === "loading" ? "Google Calendarを確認中です。" : null}
+      {state === "disconnected" ? "Google Calendar未連携のため、候補日の重なり確認は表示していません。" : null}
+      {state === "error" ? "Google Calendarを取得できませんでした。回答はこのまま送信できます。" : null}
+    </p>
+  );
 }
 
-function CandidateCalendarWarning({ events }: { events: AnswerCalendarEvent[] }) {
+function CandidateCalendarWarning({ events, loading }: { events: AnswerCalendarEvent[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="mt-3">
+        <Skeleton className={`${CANDIDATE_WARNING_MIN_HEIGHT_CLASS} w-full`} />
+      </div>
+    );
+  }
+
   if (events.length === 0) {
     return null;
   }
@@ -225,7 +236,7 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
                   </label>
                 ))}
               </div>
-              <CandidateCalendarWarning events={conflictingEvents} />
+              <CandidateCalendarWarning events={conflictingEvents} loading={calendarState === "loading"} />
               <label className="mt-3 block text-sm font-medium text-ink">
                 <span>コメント</span>
                 <input

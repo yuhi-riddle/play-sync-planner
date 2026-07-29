@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 
 import { AdjustmentMonthPicker } from "@/components/adjustment-month-picker";
-import { Card, EmptyState } from "@/components/ui";
+import { Card, EmptyState, Skeleton } from "@/components/ui";
 import { planStatusLabels } from "@/lib/constants";
 import {
   buildAdjustmentCalendar,
@@ -19,6 +19,12 @@ import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/l
 import { formatDateTimeRange } from "@/lib/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
+
+/** Google Calendarのステータス行が空文字になっても縮まないようにする最低高。 */
+export const GOOGLE_STATUS_MIN_HEIGHT_CLASS = "min-h-4";
+
+/** タイムラインの実項目と読み込み中のSkeleton行で高さを揃えるための最低高。 */
+export const TIMELINE_ITEM_MIN_HEIGHT_CLASS = "min-h-[5.5rem]";
 
 function dateLabel(dateKey: string) {
   return formatDateLabel(dateKey, { includeYear: true });
@@ -62,7 +68,10 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
   return (
     <Link
       href={`/plans/${candidate.planId}`}
-      className="block rounded-control border border-line bg-surface p-4 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay"
+      className={clsx(
+        "block rounded-control border border-line bg-surface p-4 transition-colors hover:border-moss/45 focus:outline-none focus:ring-2 focus:ring-clay",
+        TIMELINE_ITEM_MIN_HEIGHT_CLASS
+      )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -85,7 +94,7 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
 
 function GoogleTimelineItem({ item }: { item: HomeCalendarItem }) {
   return (
-    <article className="rounded-control border border-sky-200/80 bg-skywash/38 p-4">
+    <article className={clsx("rounded-control border border-sky-200/80 bg-skywash/38 p-4", TIMELINE_ITEM_MIN_HEIGHT_CLASS)}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-skywash px-2 py-0.5 text-[11px] font-bold text-sky-900 ring-1 ring-sky-300">
           Google Calendar
@@ -245,9 +254,11 @@ export function AdjustmentCalendarView({
           </div>
           <div className="text-sm text-muted">
             <p>○ 行ける / △ 微妙 / × 行けない</p>
-            {googleState === "loading" ? <p className="text-xs text-muted">Google Calendarを確認中</p> : null}
-            {googleState === "disconnected" ? <p className="text-xs text-muted">Google Calendarは未連携です</p> : null}
-            {googleState === "error" ? <p className="text-xs text-clay-ink">Google Calendarを取得できませんでした</p> : null}
+            <div data-testid="adjustment-google-status" className={GOOGLE_STATUS_MIN_HEIGHT_CLASS}>
+              {googleState === "loading" ? <p className="text-xs text-muted">Google Calendarを確認中</p> : null}
+              {googleState === "disconnected" ? <p className="text-xs text-muted">Google Calendarは未連携です</p> : null}
+              {googleState === "error" ? <p className="text-xs text-clay-ink">Google Calendarを取得できませんでした</p> : null}
+            </div>
           </div>
         </div>
 
@@ -260,6 +271,11 @@ export function AdjustmentCalendarView({
                 <GoogleTimelineItem key={`google-${entry.item.id}`} item={entry.item} />
               )
             )
+          ) : googleState === "loading" ? (
+            <>
+              <Skeleton className={clsx(TIMELINE_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
+              <Skeleton className={clsx(TIMELINE_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
+            </>
           ) : (
             <EmptyState>この日の候補やGoogle Calendar予定はありません。</EmptyState>
           )}

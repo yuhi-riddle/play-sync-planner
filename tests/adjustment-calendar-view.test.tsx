@@ -2,7 +2,11 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
+import {
+  AdjustmentCalendarView,
+  GOOGLE_STATUS_MIN_HEIGHT_CLASS,
+  TIMELINE_ITEM_MIN_HEIGHT_CLASS
+} from "@/components/adjustment-calendar-view";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -79,5 +83,41 @@ describe("AdjustmentCalendarView", () => {
     await waitFor(() => {
       expect(screen.getByText("Google Calendarは未連携です")).toBeInTheDocument();
     });
+  });
+
+  it("keeps the Google Calendar status container at the same minimum height while loading and once ready", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ connected: true, busy: [] })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />);
+
+    const statusContainer = screen.getByTestId("adjustment-google-status");
+    expect(statusContainer).toHaveClass(GOOGLE_STATUS_MIN_HEIGHT_CLASS);
+    expect(screen.getByText("Google Calendarを確認中")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Google Calendarを確認中")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("adjustment-google-status")).toHaveClass(GOOGLE_STATUS_MIN_HEIGHT_CLASS);
+  });
+
+  it("shows placeholder rows sized like a timeline item while Google Calendar items are still loading", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+
+    const { container } = render(
+      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />
+    );
+
+    const placeholders = Array.from(container.querySelectorAll("div")).filter((element) =>
+      element.classList.contains(TIMELINE_ITEM_MIN_HEIGHT_CLASS)
+    );
+    expect(placeholders.length).toBeGreaterThan(0);
+    expect(screen.queryByText("この日の候補やGoogle Calendar予定はありません。")).not.toBeInTheDocument();
   });
 });

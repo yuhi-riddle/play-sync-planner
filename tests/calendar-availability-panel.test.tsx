@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { CalendarAvailabilityPanel } from "@/components/calendar-availability-panel";
+import { CALENDAR_RESULTS_MIN_HEIGHT_CLASS, CalendarAvailabilityPanel } from "@/components/calendar-availability-panel";
 
 const busyRanges = [
   {
@@ -56,5 +56,36 @@ describe("CalendarAvailabilityPanel", () => {
     );
 
     expect(screen.getByText("Google Calendarの予定と重なっています。")).toBeInTheDocument();
+  });
+
+  it("keeps the results frame at the same minimum height while loading and once loaded", () => {
+    const { rerender } = render(
+      <CalendarAvailabilityPanel
+        connected
+        loading
+        selectedDate="2026-07-01"
+        candidateStart="2026-07-01T10:00"
+        candidateEnd="2026-07-01T12:00"
+        busyRanges={[]}
+      />
+    );
+
+    const loadingFrame = screen.getByTestId("calendar-availability-results");
+    expect(loadingFrame).toHaveClass(CALENDAR_RESULTS_MIN_HEIGHT_CLASS);
+
+    rerender(
+      <CalendarAvailabilityPanel
+        connected
+        loading={false}
+        selectedDate="2026-07-01"
+        candidateStart="2026-07-01T10:00"
+        candidateEnd="2026-07-01T12:00"
+        busyRanges={busyRanges}
+      />
+    );
+
+    const readyFrame = screen.getByTestId("calendar-availability-results");
+    expect(readyFrame).toHaveClass(CALENDAR_RESULTS_MIN_HEIGHT_CLASS);
+    expect(screen.getByText("謎解き公演")).toBeInTheDocument();
   });
 });
