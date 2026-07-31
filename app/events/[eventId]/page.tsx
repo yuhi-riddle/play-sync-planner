@@ -23,7 +23,7 @@ import { cancelEventAction, duplicateEventAction } from "@/lib/actions/events";
 import type { EventTask } from "@/lib/domain/event-tasks";
 import { categoryLabels, planStatusLabels } from "@/lib/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
-import { normalizeEventDetailTab } from "@/lib/domain/event-tabs";
+import { normalizeEventDetailTab, resolveEventDetailDataNeeds } from "@/lib/domain/event-tabs";
 import { resolveEventProgress } from "@/lib/domain/event-progress";
 import type { EventMessage } from "@/lib/domain/event-chat";
 import { buildInviteCandidates, resolveInviteProfileNames, type ConnectionCandidate } from "@/lib/domain/connections";
@@ -102,12 +102,16 @@ export default async function EventDetailPage({
   ]);
   const typedInvite = invite as Invite | null;
   const isOwner = currentUserId === event.owner_user_id;
-  // 招待候補・チャット・分担リストは互いに独立しているので並列で取る。
-  const [inviteCandidates, chat, { tasks: eventTasks, members: taskMembers }] = await Promise.all([
-    isOwner && currentUserId ? loadInviteCandidates(eventId, currentUserId) : Promise.resolve([]),
-    currentUserId ? loadEventChat(eventId, currentUserId) : Promise.resolve({ isJoined: false, messages: [] }),
-    loadEventTasks(eventId)
+  const isJoined = currentUserId ? await loadEventMembership(eventId, currentUserId) : false;
+  const { needsInviteCandidates, needsChatMessages, needsTasks } = resolveEventDetailDataNeeds(tab, isOwner);
+
+  // 開いているタブに必要なものだけを、互いに独立しているので並列で取る。
+  const [inviteCandidates, chatMessages, eventTaskData] = await Promise.all([
+    needsInviteCandidates ? (currentUserId ? loadInviteCandidates(eventId, currentUserId) : Promise.resolve([])) : Promise.resolve([]),
+    needsChatMessages ? (currentUserId ? loadEventChatMessages(eventId, currentUserId) : Promise.resolve([])) : Promise.resolve([]),
+    needsTasks ? loadEventTasks(eventId) : Promise.resolve({ tasks: [], members: [] })
   ]);
+  const { tasks: eventTasks, members: taskMembers } = eventTaskData;
   const canStartAdjustment = typedInvite?.status === "closed";
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
 
@@ -173,7 +177,7 @@ export default async function EventDetailPage({
                   <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
                 </>
               ) : null}
-              {chat.isJoined ? (
+              {isJoined ? (
                 <form action={duplicateEventAction.bind(null, event.id)}>
                   <button
                     type="submit"
@@ -224,9 +228,9 @@ export default async function EventDetailPage({
       {tab === "chat" ? (
         <Card>
           <EventChat
-            messages={chat.messages}
+            messages={chatMessages}
             action={createEventMessageAction.bind(null, eventId)}
-            canPost={chat.isJoined && event.status !== "cancelled"}
+            canPost={isJoined && event.status !== "cancelled"}
             unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
           />
         </Card>
@@ -237,7 +241,7 @@ export default async function EventDetailPage({
           <EventTaskList
             tasks={eventTasks}
             members={taskMembers}
-            canEdit={chat.isJoined && event.status !== "cancelled"}
+            canEdit={isJoined && event.status !== "cancelled"}
             createAction={createEventTaskAction.bind(null, eventId)}
             toggleAction={(taskId) => toggleEventTaskDoneAction.bind(null, eventId, taskId)}
             assignAction={(taskId) => updateEventTaskAssigneeAction.bind(null, eventId, taskId)}
@@ -285,9 +289,9 @@ async function loadEventTasks(
   return { tasks, members };
 }
 
-async function loadEventChat(eventId: string, currentUserId: string): Promise<{ isJoined: boolean; messages: EventMessage[] }> {
+async function loadEventMembership(eventId: string, currentUserId: string): Promise<boolean> {
   const admin = createSupabaseAdminClient();
-  const { data: membership, error: membershipError } = await admin
+  const { data: membership, error } = await admin
     .from("event_members")
     .select("user_id")
     .eq("event_id", eventId)
@@ -295,14 +299,15 @@ async function loadEventChat(eventId: string, currentUserId: string): Promise<{ 
     .eq("status", "joined")
     .maybeSingle();
 
-  if (membershipError) {
+  if (error) {
     throw new Error("チャットの参加状態を確認できませんでした");
   }
 
-  if (!membership) {
-    return { isJoined: false, messages: [] };
-  }
+  return Boolean(membership);
+}
 
+async function loadEventChatMessages(eventId: string, currentUserId: string): Promise<EventMessage[]> {
+  const admin = createSupabaseAdminClient();
   const { data: rows, error: messagesError } = await admin
     .from("event_messages")
     .select("id, author_user_id, body, created_at")
@@ -325,16 +330,14 @@ async function loadEventChat(eventId: string, currentUserId: string): Promise<{ 
   }
 
   const names = new Map((members ?? []).map((member) => [member.user_id, member.display_name]));
-  return {
-    isJoined: true,
-    messages: messages.reverse().map((message) => ({
-      id: message.id,
-      authorName: names.get(message.author_user_id) ?? "参加者",
-      body: message.body,
-      createdAt: message.created_at,
-      isOwn: message.author_user_id === currentUserId
-    }))
-  };
+
+  return messages.reverse().map((message) => ({
+    id: message.id,
+    authorName: names.get(message.author_user_id) ?? "参加者",
+    body: message.body,
+    createdAt: message.created_at,
+    isOwn: message.author_user_id === currentUserId
+  }));
 }
 
 async function loadInviteCandidates(eventId: string, currentUserId: string): Promise<ConnectionCandidate[]> {
