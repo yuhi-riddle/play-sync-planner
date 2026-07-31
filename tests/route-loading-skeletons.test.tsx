@@ -26,7 +26,8 @@ describe("ルートごとの読み込み中スケルトン", () => {
   // 実ページ（Card構成）に寄せて、小さすぎるスケルトンによる唐突な体感を防ぐ。
   it.each([
     ["ホーム", HomeLoading, 7, 2],
-    ["イベント詳細", EventLoading, 9, 3],
+    // イベント詳細はタブ化済みで、既定の概要タブに出るのは日程調整とイベント情報の2枠。
+    ["イベント詳細", EventLoading, 9, 2],
     ["日程調整詳細", PlanLoading, 10, 3],
     ["清算", SettlementLoading, 10, 3]
   ])("%sのローディングは実ページの構造に見合うCardとSkeletonの数を描く", (_label, Loading, minSkeletons, minCards) => {
