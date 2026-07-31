@@ -957,6 +957,7 @@ export function PlanForm({
 
         {currentStep < 3 ? (
           <button
+            key="next"
             type="button"
             onClick={() => moveToStep(currentStep + 1)}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
@@ -966,6 +967,7 @@ export function PlanForm({
           </button>
         ) : (
           <button
+            key="submit"
             type="submit"
             disabled={!canReview || isSubmitting}
             className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"

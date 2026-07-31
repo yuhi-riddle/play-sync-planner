@@ -198,4 +198,33 @@ describe("PlanForm", () => {
 
     expect(screen.getByRole("link", { name: "設定で連携する" })).toHaveAttribute("href", "/settings");
   });
+
+  it("STEP3の「次へ」ボタンとSTEP4の送信ボタンはDOMノードとして別物であること", () => {
+    // key無しの三項演算子だと、Reactは同じ<button>DOMノードを使い回して type 属性だけ
+    // "button" → "submit" に書き換える。クリックは同期的にDOMへ反映されるため、
+    // ブラウザがクリックのデフォルトアクション（フォーム送信）を評価する時点で
+    // 既に type="submit" になっており、STEP3の「次へ」でフォームが送信されてしまう。
+    // ノードが使い回されず作り直されていれば、この事故は起きない。
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    fireEvent.click(screen.getByLabelText(/7月14日.*を選択/));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    expect(screen.getByRole("heading", { name: "リマインドを決める" })).toBeInTheDocument();
+
+    const nextButtonNode = screen.getByRole("button", { name: /次へ/ });
+    // STEP3表示時点で送信ボタン(type="submit")が存在しないことも確認する
+    expect(document.querySelector('form button[type="submit"]')).not.toBeInTheDocument();
+
+    fireEvent.click(nextButtonNode);
+
+    expect(screen.getByRole("heading", { name: "内容を確認する" })).toBeInTheDocument();
+    const submitButtonNode = screen.getByRole("button", { name: "共有リンクを作成" });
+
+    expect(nextButtonNode).not.toBe(submitButtonNode);
+  });
 });
