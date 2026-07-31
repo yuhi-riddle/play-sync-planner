@@ -15,6 +15,10 @@ export type EventProgress = {
  * 状態の判定はタブ化前の画面と同じ規則をそのまま使う。
  */
 export function resolveEventProgress(eventStatus: string, plans: EventProgressPlan[]): EventProgress {
+  if (eventStatus === "cancelled") {
+    return { statusLabel: "中止", highlightLabel: null, highlightAt: null };
+  }
+
   const statusLabel = eventStatus === "confirmed" ? "確定" : plans.length > 0 ? "日程調整中" : "参加者募集中";
 
   const confirmedStarts = plans

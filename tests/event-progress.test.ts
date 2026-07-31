@@ -59,4 +59,33 @@ describe("resolveEventProgress", () => {
     expect(progress.highlightLabel).toBeNull();
     expect(progress.highlightAt).toBeNull();
   });
+
+  it("中止されたイベントは「中止」と表示される", () => {
+    const progress = resolveEventProgress("cancelled", [
+      { status: "open", confirmed_start_at: null, answer_deadline_at: "2026-07-20T03:00:00Z" }
+    ]);
+
+    expect(progress.statusLabel).toBe("中止");
+  });
+
+  it("中止のときは、確定した開催日時があっても日時を出さない", () => {
+    const progress = resolveEventProgress("cancelled", [
+      { status: "confirmed", confirmed_start_at: "2026-07-25T09:00:00Z", answer_deadline_at: "2026-07-20T03:00:00Z" }
+    ]);
+
+    expect(progress.statusLabel).toBe("中止");
+    expect(progress.highlightLabel).toBeNull();
+    expect(progress.highlightAt).toBeNull();
+  });
+
+  it("中止のときは、日程調整が複数あっても「中止」になる", () => {
+    const progress = resolveEventProgress("cancelled", [
+      { status: "open", confirmed_start_at: null, answer_deadline_at: "2026-07-18T03:00:00Z" },
+      { status: "confirmed", confirmed_start_at: "2026-07-25T09:00:00Z", answer_deadline_at: "2026-07-20T03:00:00Z" }
+    ]);
+
+    expect(progress.statusLabel).toBe("中止");
+    expect(progress.highlightLabel).toBeNull();
+    expect(progress.highlightAt).toBeNull();
+  });
 });
