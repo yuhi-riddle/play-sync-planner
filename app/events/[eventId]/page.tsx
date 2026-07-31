@@ -6,6 +6,7 @@ import { EventMemberInviteCard } from "@/components/event-member-invite-card";
 import { EventInviteCandidates } from "@/components/event-invite-candidates";
 import { EventCancelAction } from "@/components/event-cancel-action";
 import { EventChat } from "@/components/event-chat";
+import { EventDetailTabs } from "@/components/event-detail-tabs";
 import { GoogleMapsDirectionsLink } from "@/components/google-maps-directions-link";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
@@ -22,6 +23,8 @@ import { cancelEventAction, duplicateEventAction } from "@/lib/actions/events";
 import type { EventTask } from "@/lib/domain/event-tasks";
 import { categoryLabels, planStatusLabels } from "@/lib/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
+import { normalizeEventDetailTab } from "@/lib/domain/event-tabs";
+import { resolveEventProgress } from "@/lib/domain/event-progress";
 import type { EventMessage } from "@/lib/domain/event-chat";
 import { buildInviteCandidates, resolveInviteProfileNames, type ConnectionCandidate } from "@/lib/domain/connections";
 import { getUserDisplayName } from "@/lib/domain/profile";
@@ -65,8 +68,15 @@ type EventTaskRow = {
   sort_order: number;
 };
 
-export default async function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
+export default async function EventDetailPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ eventId: string }>;
+  searchParams?: Promise<{ tab?: string | string[] }>;
+}) {
   const { eventId } = await params;
+  const tab = normalizeEventDetailTab((await searchParams)?.tab);
   const supabase = await createSupabaseServerClient();
   const { data: event } = await supabase
     .from("events")
@@ -101,114 +111,140 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
   const canStartAdjustment = typedInvite?.status === "closed";
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
 
+  const progress = resolveEventProgress(event.status, (event.plans ?? []) as EventPlan[]);
+
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Event"
+      <PageHeader
+        eyebrow="Event"
         title={event.title}
-        description="イベントの基本情報、参加者、日程調整をここで管理します。"
         action={isOwner && canStartAdjustment ? <ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink> : null}
+        summary={
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="rounded-full border border-line px-3 py-1 font-bold text-pine">{progress.statusLabel}</span>
+            <span className="text-muted">参加者 {memberCount ?? 0}人</span>
+            {progress.highlightAt ? (
+              <span className="text-muted">
+                {progress.highlightLabel} {formatDateTime(progress.highlightAt)}
+              </span>
+            ) : null}
+          </div>
+        }
       />
 
-      <Card>
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
-          <Info label="進行状況" value={event.status === "confirmed" ? "確定" : (event.plans ?? []).length ? "日程調整中" : "参加者募集中"} />
-          <Info label="場所メモ" value={event.location_name ?? "未設定"} />
-          <Info label="URL" value={event.url ?? "未設定"} />
-          <Info label="メモ" value={event.memo ?? "未設定"} />
-        </dl>
-        <div>
-          <GoogleMapsDirectionsLink destination={event.location_name} />
-        </div>
-        <div className="mt-5 flex flex-wrap gap-3">
-          {isOwner ? (
-            <>
-              <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
-              <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
-            </>
-          ) : null}
-          {chat.isJoined ? (
-            <form action={duplicateEventAction.bind(null, event.id)}>
-              <button
-                type="submit"
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-              >
-                <CopyPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-                このメンバーでもう一度
-              </button>
-            </form>
-          ) : null}
-        </div>
-      </Card>
+      <EventDetailTabs eventId={event.id} active={tab} />
 
-      {isOwner ? (
-        <Card>
-          <EventMemberInviteCard
-            memberCount={memberCount ?? 0}
-            inviteUrl={inviteUrl}
-            status={typedInvite?.status ?? null}
-            closeInviteAction={closeEventInvitesAction.bind(null, event.id)}
-            reissueInviteAction={revokeAndCreateEventInviteAction.bind(null, event.id)}
-          />
-        </Card>
-      ) : (
-        <Card>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+      {tab === "overview" ? (
+        <>
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold text-ink">日程調整</h2>
+            {(event.plans as EventPlan[] | undefined)?.length ? (
+              <div className="grid gap-3">
+                {((event.plans ?? []) as EventPlan[]).map((plan) => (
+                  <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-control border border-line bg-white p-4 shadow-soft hover:border-moss">
+                    <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
+                    <span className="mt-1 block text-sm text-muted">
+                      {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyState>
+                {canStartAdjustment ? "日程調整を始めると、候補日時を入力できます。" : "参加者を集めたら、参加受付を終了して日程調整へ進みます。"}
+              </EmptyState>
+            )}
+          </section>
+
+          <Card>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <Info label="カテゴリ" value={categoryLabels[event.category as keyof typeof categoryLabels]} />
+              <Info label="場所メモ" value={event.location_name ?? "未設定"} />
+              <Info label="URL" value={event.url ?? "未設定"} />
+              <Info label="メモ" value={event.memo ?? "未設定"} />
+            </dl>
             <div>
-              <h2 className="text-xl font-semibold text-ink">参加者</h2>
-              <p className="mt-2 text-sm text-muted">参加済み {memberCount ?? 0}人</p>
+              <GoogleMapsDirectionsLink destination={event.location_name} />
             </div>
-            {canStartAdjustment ? <span className="text-sm font-bold text-pine">日程調整の準備中</span> : <span className="text-sm font-bold text-muted">参加者を募集中</span>}
-          </div>
-        </Card>
-      )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              {isOwner ? (
+                <>
+                  <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
+                  <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+                </>
+              ) : null}
+              {chat.isJoined ? (
+                <form action={duplicateEventAction.bind(null, event.id)}>
+                  <button
+                    type="submit"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                  >
+                    <CopyPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+                    このメンバーでもう一度
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          </Card>
+        </>
+      ) : null}
 
-      {isOwner ? (
+      {tab === "members" ? (
+        <>
+          {isOwner ? (
+            <Card>
+              <EventMemberInviteCard
+                memberCount={memberCount ?? 0}
+                inviteUrl={inviteUrl}
+                status={typedInvite?.status ?? null}
+                closeInviteAction={closeEventInvitesAction.bind(null, event.id)}
+                reissueInviteAction={revokeAndCreateEventInviteAction.bind(null, event.id)}
+              />
+            </Card>
+          ) : (
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-ink">参加者</h2>
+                  <p className="mt-2 text-sm text-muted">参加済み {memberCount ?? 0}人</p>
+                </div>
+                {canStartAdjustment ? <span className="text-sm font-bold text-pine">日程調整の準備中</span> : <span className="text-sm font-bold text-muted">参加者を募集中</span>}
+              </div>
+            </Card>
+          )}
+
+          {isOwner ? (
+            <Card>
+              <EventInviteCandidates candidates={inviteCandidates} action={createEventUserInvitationsAction.bind(null, eventId)} />
+            </Card>
+          ) : null}
+        </>
+      ) : null}
+
+      {tab === "chat" ? (
         <Card>
-          <EventInviteCandidates candidates={inviteCandidates} action={createEventUserInvitationsAction.bind(null, eventId)} />
+          <EventChat
+            messages={chat.messages}
+            action={createEventMessageAction.bind(null, eventId)}
+            canPost={chat.isJoined && event.status !== "cancelled"}
+            unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
+          />
         </Card>
       ) : null}
 
-      <Card>
-        <EventTaskList
-          tasks={eventTasks}
-          members={taskMembers}
-          canEdit={chat.isJoined && event.status !== "cancelled"}
-          createAction={createEventTaskAction.bind(null, eventId)}
-          toggleAction={(taskId) => toggleEventTaskDoneAction.bind(null, eventId, taskId)}
-          assignAction={(taskId) => updateEventTaskAssigneeAction.bind(null, eventId, taskId)}
-          deleteAction={(taskId) => deleteEventTaskAction.bind(null, eventId, taskId)}
-        />
-      </Card>
-
-      <Card>
-        <EventChat
-          messages={chat.messages}
-          action={createEventMessageAction.bind(null, eventId)}
-          canPost={chat.isJoined && event.status !== "cancelled"}
-          unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
-        />
-      </Card>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-ink">日程調整</h2>
-        {(event.plans as EventPlan[] | undefined)?.length ? (
-          <div className="grid gap-3">
-            {((event.plans ?? []) as EventPlan[]).map((plan) => (
-              <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-control border border-line bg-white p-4 shadow-soft hover:border-moss">
-                <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
-                <span className="mt-1 block text-sm text-muted">
-                  {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}
-                </span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <EmptyState>
-            {canStartAdjustment ? "日程調整を始めると、候補日時を入力できます。" : "参加者を集めたら、参加受付を終了して日程調整へ進みます。"}
-          </EmptyState>
-        )}
-      </section>
+      {tab === "tasks" ? (
+        <Card>
+          <EventTaskList
+            tasks={eventTasks}
+            members={taskMembers}
+            canEdit={chat.isJoined && event.status !== "cancelled"}
+            createAction={createEventTaskAction.bind(null, eventId)}
+            toggleAction={(taskId) => toggleEventTaskDoneAction.bind(null, eventId, taskId)}
+            assignAction={(taskId) => updateEventTaskAssigneeAction.bind(null, eventId, taskId)}
+            deleteAction={(taskId) => deleteEventTaskAction.bind(null, eventId, taskId)}
+          />
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         <SecondaryLink href="/events">イベント一覧へ</SecondaryLink>
