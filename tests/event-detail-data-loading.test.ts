@@ -22,8 +22,8 @@ describe("イベント詳細ページのデータ取得", () => {
   });
 
   it("メッセージ・タスク・招待候補は必要判定を通してから取得する", () => {
-    expect(source).toMatch(/needsChatMessages\s*\?/);
-    expect(source).toMatch(/needsTasks\s*\?/);
-    expect(source).toMatch(/needsInviteCandidates\s*\?/);
+    expect(source).toMatch(/needsChatMessages\s*(&&|\?)/);
+    expect(source).toMatch(/needsTasks\s*(&&|\?)/);
+    expect(source).toMatch(/needsInviteCandidates\s*(&&|\?)/);
   });
 });

@@ -107,8 +107,8 @@ export default async function EventDetailPage({
 
   // 開いているタブに必要なものだけを、互いに独立しているので並列で取る。
   const [inviteCandidates, chatMessages, eventTaskData] = await Promise.all([
-    needsInviteCandidates ? (currentUserId ? loadInviteCandidates(eventId, currentUserId) : Promise.resolve([])) : Promise.resolve([]),
-    needsChatMessages ? (currentUserId ? loadEventChatMessages(eventId, currentUserId) : Promise.resolve([])) : Promise.resolve([]),
+    needsInviteCandidates && currentUserId ? loadInviteCandidates(eventId, currentUserId) : Promise.resolve([]),
+    needsChatMessages && currentUserId ? loadEventChatMessages(eventId, currentUserId) : Promise.resolve([]),
     needsTasks ? loadEventTasks(eventId) : Promise.resolve({ tasks: [], members: [] })
   ]);
   const { tasks: eventTasks, members: taskMembers } = eventTaskData;
