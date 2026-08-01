@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 
-const CONSENT_DRAFT_KEY = "madoi-login-consent";
+import { LegalModal } from "@/components/legal-modal";
+import { PRIVACY_SECTIONS, TERMS_SECTIONS } from "@/lib/legal-documents";
 
 type ConsentDraft = {
   termsOpened: boolean;
@@ -21,38 +20,36 @@ const emptyConsentDraft: ConsentDraft = {
   privacyAccepted: false
 };
 
-/** 規約ページから戻るまで、閲覧済み・チェック済みの状態を同じタブ内に保持する。 */
 function ConsentRow({
   name,
   label,
   linkLabel,
-  href,
+  onOpen,
+  buttonRef,
   accepted,
   onAcceptedChange,
-  opened,
-  onOpened
+  opened
 }: {
   name: string;
   label: string;
   linkLabel: string;
-  href: string;
+  onOpen: () => void;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
   accepted: boolean;
   onAcceptedChange: (accepted: boolean) => void;
   opened: boolean;
-  onOpened: () => void;
 }) {
   return (
     <div className="grid gap-2">
       <span className={clsx(!opened && "text-muted")}>
-        <Link
-          href={href}
-          onClick={onOpened}
-          onAuxClick={onOpened}
-          onContextMenu={onOpened}
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={onOpen}
           className="inline-flex min-h-11 items-center gap-1 font-bold text-pine underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         >
           {linkLabel}
-        </Link>
+        </button>
       </span>
       <label
         className={clsx(
@@ -78,6 +75,8 @@ function ConsentRow({
   );
 }
 
+type OpenDocument = "terms" | "privacy" | null;
+
 export function LoginConsentForm({
   action,
   nextPath,
@@ -88,35 +87,35 @@ export function LoginConsentForm({
   submitLabel?: string;
 }) {
   const [draft, setDraft] = useState(emptyConsentDraft);
+  const [openDocument, setOpenDocument] = useState<OpenDocument>(null);
+  const termsButtonRef = useRef<HTMLButtonElement>(null);
+  const privacyButtonRef = useRef<HTMLButtonElement>(null);
+  const lastOpenedRef = useRef<OpenDocument>(null);
 
+  // モーダルを閉じたら、開くきっかけになったボタンへフォーカスを戻す。
   useEffect(() => {
-    const stored = window.sessionStorage.getItem(CONSENT_DRAFT_KEY);
-    if (!stored) return;
-
-    try {
-      setDraft({ ...emptyConsentDraft, ...(JSON.parse(stored) as Partial<ConsentDraft>) });
-    } catch {
-      window.sessionStorage.removeItem(CONSENT_DRAFT_KEY);
+    if (openDocument) {
+      lastOpenedRef.current = openDocument;
+      return;
     }
-  }, []);
+
+    if (!lastOpenedRef.current) {
+      return;
+    }
+
+    const target = lastOpenedRef.current === "terms" ? termsButtonRef : privacyButtonRef;
+    target.current?.focus();
+    lastOpenedRef.current = null;
+  }, [openDocument]);
 
   const updateDraft = (patch: Partial<ConsentDraft>) => {
-    setDraft((current) => {
-      const next = { ...current, ...patch };
-      window.sessionStorage.setItem(CONSENT_DRAFT_KEY, JSON.stringify(next));
-      return next;
-    });
+    setDraft((current) => ({ ...current, ...patch }));
   };
 
   const canSubmit = draft.termsAccepted && draft.privacyAccepted;
-  const encodedNextPath = encodeURIComponent(nextPath);
 
   return (
-    <form
-      action={action}
-      className="space-y-5"
-      onSubmit={() => window.sessionStorage.removeItem(CONSENT_DRAFT_KEY)}
-    >
+    <form action={action} className="space-y-5">
       <input type="hidden" name="next" value={nextPath} />
       <p className="text-body text-muted">
         利用規約とプライバシーポリシーの両方に同意すると、Googleログインへ進めます。
@@ -126,21 +125,27 @@ export function LoginConsentForm({
           name="termsAccepted"
           label="利用規約に同意する"
           linkLabel="利用規約を読む"
-          href={`/terms?from=login&next=${encodedNextPath}`}
+          buttonRef={termsButtonRef}
+          onOpen={() => {
+            updateDraft({ termsOpened: true });
+            setOpenDocument("terms");
+          }}
           accepted={draft.termsAccepted}
           onAcceptedChange={(accepted) => updateDraft({ termsAccepted: accepted })}
           opened={draft.termsOpened}
-          onOpened={() => updateDraft({ termsOpened: true })}
         />
         <ConsentRow
           name="privacyAccepted"
           label="プライバシーポリシーに同意する"
           linkLabel="プライバシーポリシーを読む"
-          href={`/privacy?from=login&next=${encodedNextPath}`}
+          buttonRef={privacyButtonRef}
+          onOpen={() => {
+            updateDraft({ privacyOpened: true });
+            setOpenDocument("privacy");
+          }}
           accepted={draft.privacyAccepted}
           onAcceptedChange={(accepted) => updateDraft({ privacyAccepted: accepted })}
           opened={draft.privacyOpened}
-          onOpened={() => updateDraft({ privacyOpened: true })}
         />
       </div>
       <button
@@ -150,6 +155,24 @@ export function LoginConsentForm({
       >
         {submitLabel}
       </button>
+
+      {openDocument === "terms" ? (
+        <LegalModal
+          title="利用規約"
+          sections={TERMS_SECTIONS}
+          pageHref="/terms"
+          onClose={() => setOpenDocument(null)}
+        />
+      ) : null}
+
+      {openDocument === "privacy" ? (
+        <LegalModal
+          title="プライバシーポリシー"
+          sections={PRIVACY_SECTIONS}
+          pageHref="/privacy"
+          onClose={() => setOpenDocument(null)}
+        />
+      ) : null}
     </form>
   );
 }
