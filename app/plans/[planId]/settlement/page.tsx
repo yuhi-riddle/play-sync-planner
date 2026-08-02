@@ -727,7 +727,7 @@ function SettlementActions({
       {canManage ? (
       <details className="rounded-control border border-line bg-surface p-3">
         <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-center rounded-full border border-line bg-surface px-3 py-1 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:w-auto [&::-webkit-details-marker]:hidden">
-          受け取り方法を設定
+          送金先を設定
         </summary>
         <form action={updateSettlementPaymentInstructionAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
           <label className="text-sm font-medium text-ink">
@@ -753,7 +753,7 @@ function SettlementActions({
             type="submit"
             className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
           >
-            受け取り方法を保存
+            送金先を保存
           </button>
         </form>
       </details>
