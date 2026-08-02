@@ -494,7 +494,6 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                             amount: expense.amount,
                             payerParticipantId: expense.payer_participant_id,
                             memo: expense.memo,
-                            paymentMethod: expense.payment_method,
                             paymentUrl: expense.payment_url,
                             isImportant: expense.is_important,
                             splitMode: "individual",

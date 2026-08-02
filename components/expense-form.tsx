@@ -3,7 +3,6 @@
 import { ReceiptText } from "lucide-react";
 import React, { useActionState, useState } from "react";
 
-import { PaymentMethodField } from "@/components/payment-method-field";
 import { MadoiForm, MadoiSelect, SubmitButton, TextArea, TextField } from "@/components/ui";
 import type { ActionState } from "@/lib/domain/action-state";
 
@@ -19,7 +18,6 @@ type ExpenseFormInitialValues = {
   amount?: number | null;
   payerParticipantId?: string | null;
   memo?: string | null;
-  paymentMethod?: string | null;
   paymentUrl?: string | null;
   isImportant?: boolean | null;
   splitMode?: "equal" | "individual";
@@ -181,7 +179,6 @@ export function ExpenseForm({
       </fieldset>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <PaymentMethodField defaultValue={initialValues?.paymentMethod} />
         <TextField label="支払い用URL" name="payment_url" defaultValue={initialValues?.paymentUrl} placeholder="https://..." />
       </div>
       <label className="flex items-start gap-3 rounded-control border border-moss/18 bg-mist/30 p-3 text-sm text-ink">

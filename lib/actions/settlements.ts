@@ -309,7 +309,6 @@ export async function createExpenseAction(
         title: values.title,
         amount: values.amount,
         memo: values.memo,
-        payment_method: values.payment_method,
         payment_url: values.payment_url,
         is_important: values.is_important
       })
@@ -392,7 +391,6 @@ export async function updateExpenseAction(
         title: values.title,
         amount: values.amount,
         memo: values.memo,
-        payment_method: values.payment_method,
         payment_url: values.payment_url,
         is_important: values.is_important
       })
