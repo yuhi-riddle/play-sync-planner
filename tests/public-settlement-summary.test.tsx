@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { PublicSettlementSummary } from "@/components/public-settlement-summary";
 
@@ -23,6 +23,8 @@ describe("PublicSettlementSummary", () => {
         settlements={[
           {
             id: "settlement-1",
+            fromParticipantId: "p1",
+            toParticipantId: "p2",
             fromName: "田中",
             toName: "鈴木",
             amount: 3600,
@@ -59,6 +61,8 @@ describe("PublicSettlementSummary", () => {
         settlements={[
           {
             id: "settlement-1",
+            fromParticipantId: "p1",
+            toParticipantId: "p2",
             fromName: "田中",
             toName: "鈴木",
             amount: 3600,
@@ -92,8 +96,30 @@ describe("PublicSettlementSummary", () => {
           { id: "expense-2", title: "送料", amount: 100, payerName: "鈴木", memo: null, isImportant: false }
         ]}
         settlements={[
-          { id: "settlement-1", fromName: "A", toName: "B", amount: 3600, paymentMethod: null, paymentUrl: null, memo: null, payments: [] },
-          { id: "settlement-2", fromName: "C", toName: "D", amount: 1000, paymentMethod: null, paymentUrl: null, memo: null, payments: [] }
+          {
+            id: "settlement-1",
+            fromParticipantId: "p1",
+            toParticipantId: "p2",
+            fromName: "A",
+            toName: "B",
+            amount: 3600,
+            paymentMethod: null,
+            paymentUrl: null,
+            memo: null,
+            payments: []
+          },
+          {
+            id: "settlement-2",
+            fromParticipantId: "p3",
+            toParticipantId: "p4",
+            fromName: "C",
+            toName: "D",
+            amount: 1000,
+            paymentMethod: null,
+            paymentUrl: null,
+            memo: null,
+            payments: []
+          }
         ]}
       />
     );
@@ -112,6 +138,8 @@ describe("PublicSettlementSummary", () => {
         settlements={[
           {
             id: "settlement-1",
+            fromParticipantId: "p1",
+            toParticipantId: "p2",
             fromName: "A",
             toName: "B",
             amount: 1000,
@@ -131,10 +159,68 @@ describe("PublicSettlementSummary", () => {
         planTitle={null}
         expenses={[]}
         settlements={[
-          { id: "settlement-1", fromName: "A", toName: "B", amount: 1000, paymentMethod: null, paymentUrl: null, memo: null, payments: [] }
+          {
+            id: "settlement-1",
+            fromParticipantId: "p1",
+            toParticipantId: "p2",
+            fromName: "A",
+            toName: "B",
+            amount: 1000,
+            paymentMethod: null,
+            paymentUrl: null,
+            memo: null,
+            payments: []
+          }
         ]}
       />
     );
     expect(screen.queryByText("清算完了")).not.toBeInTheDocument();
+  });
+
+  describe("payment method viewer block", () => {
+    const settlements = [
+      {
+        id: "settlement-1",
+        fromParticipantId: "p2",
+        toParticipantId: "p1",
+        fromName: "鈴木",
+        toName: "田中",
+        amount: 2000,
+        paymentMethod: null,
+        paymentUrl: null,
+        memo: null,
+        payments: []
+      }
+    ];
+
+    it("shows the settlement payment method form for the resolved viewer", () => {
+      render(
+        <PublicSettlementSummary
+          eventTitle="夏祭り"
+          planTitle={null}
+          expenses={[]}
+          settlements={settlements}
+          viewer={{ role: "pay", currentValue: null, action: vi.fn() }}
+        />
+      );
+
+      expect(screen.getByText("あなたの支払い方法")).toBeInTheDocument();
+    });
+
+    it("shows a name picker when the viewer is not resolved yet", () => {
+      render(
+        <PublicSettlementSummary
+          eventTitle="夏祭り"
+          planTitle={null}
+          expenses={[]}
+          settlements={settlements}
+          viewer={{ unresolvedParticipants: [{ id: "p1", displayName: "田中" }, { id: "p2", displayName: "鈴木" }] }}
+        />
+      );
+
+      expect(screen.getByText("あなたのお名前")).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "田中" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "鈴木" })).toBeInTheDocument();
+    });
   });
 });

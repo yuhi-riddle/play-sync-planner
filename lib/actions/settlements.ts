@@ -580,13 +580,19 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
     throw new Error("支払い金額が残額を超えています");
   }
 
+  const { data: payer } = await supabase
+    .from("participants")
+    .select("settlement_payment_method")
+    .eq("id", settlement.from_participant_id)
+    .single();
+
   const { data: insertedPayment, error: insertError } = await supabase
     .from("settlement_payments")
     .insert({
       settlement_id: settlement.id,
       paid_by_participant_id: settlement.from_participant_id,
       amount: values.amount,
-      payment_method: values.payment_method,
+      payment_method: payer?.settlement_payment_method ?? null,
       payment_url: values.payment_url,
       memo: values.memo
     })
@@ -622,6 +628,51 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);
   revalidatePath(`/s/${token}/settlement`);
   redirect(`/s/${token}/settlement?paid=1`);
+}
+
+export async function updatePublicParticipantSettlementPaymentMethodAction(
+  token: string,
+  participantId: string,
+  formData: FormData
+) {
+  const values = participantSettlementPaymentMethodSchema.parse(formDataToObject(formData));
+  const supabase = createSupabaseAdminClient();
+  const { data: link, error: linkError } = await supabase
+    .from("share_links")
+    .select("plan_id, status")
+    .eq("token", token)
+    .eq("purpose", "answer")
+    .single();
+
+  if (linkError || !link) {
+    throw new Error("共有リンクが見つかりません");
+  }
+
+  if (link.status === "revoked") {
+    throw new Error("この共有リンクは無効化されています。主催者に新しいリンクを確認してください");
+  }
+
+  const { data: participant, error } = await supabase
+    .from("participants")
+    .select("id, plan_id")
+    .eq("id", participantId)
+    .eq("plan_id", link.plan_id)
+    .single();
+
+  if (error || !participant) {
+    throw new Error("参加者が見つかりません");
+  }
+
+  const { error: updateError } = await supabase
+    .from("participants")
+    .update({ settlement_payment_method: values.settlement_payment_method })
+    .eq("id", participantId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath(`/s/${token}/settlement`);
 }
 
 export async function confirmSettlementPaymentAction(paymentId: string) {

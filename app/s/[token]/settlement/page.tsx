@@ -9,14 +9,22 @@ import { CalendarShareLink } from "@/components/calendar-share-link";
 import { PaymentRecordedNotice } from "@/components/payment-recorded-notice";
 import { SetupPanel } from "@/components/state-panels";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
-import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlements";
+import {
+  recordPublicSettlementPaymentAction,
+  updatePublicParticipantSettlementPaymentMethodAction
+} from "@/lib/actions/settlements";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
+import { resolveParticipantSettlementRole } from "@/lib/domain/settlement";
+import { resolveViewerParticipant } from "@/lib/domain/participant-identity";
 import { formatDateTimeRange } from "@/lib/format";
-import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type ParticipantRelation = { display_name: string } | { display_name: string }[] | null;
+type ParticipantRelation =
+  | { id: string; display_name: string; user_id: string | null; settlement_payment_method: string | null }
+  | { id: string; display_name: string; user_id: string | null; settlement_payment_method: string | null }[]
+  | null;
 
 type PublicExpenseRow = {
   id: string;
@@ -38,6 +46,13 @@ type PublicSettlementRow = {
   settlement_payments?: Array<{ amount: number; confirmed_at: string | null }>;
 };
 
+type PublicParticipantRow = {
+  id: string;
+  display_name: string;
+  user_id: string | null;
+  settlement_payment_method: string | null;
+};
+
 type PublicPlanRow = {
   id: string;
   title: string | null;
@@ -45,6 +60,7 @@ type PublicPlanRow = {
   confirmed_end_at: string | null;
   is_all_day: boolean;
   events: { title: string | null; location_name: string | null } | { title: string | null; location_name: string | null }[] | null;
+  participants?: PublicParticipantRow[];
   expenses?: PublicExpenseRow[];
   settlements?: PublicSettlementRow[];
 };
@@ -62,7 +78,7 @@ export default async function PublicSettlementPage({
   searchParams
 }: {
   params: Promise<{ token: string }>;
-  searchParams?: Promise<{ paid?: string }>;
+  searchParams?: Promise<{ paid?: string; viewer?: string }>;
 }) {
   const { token } = await params;
   const query = (await searchParams) ?? {};
@@ -79,7 +95,7 @@ export default async function PublicSettlementPage({
   const { data: link } = await supabase
     .from("share_links")
     .select(
-      "token, status, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_method, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(display_name), to_participant:participants!settlements_to_participant_id_fkey(display_name), settlement_payments(amount, confirmed_at)))"
+      "token, status, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), participants(id, display_name, user_id, settlement_payment_method), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_method, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id, settlement_payment_method), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id, settlement_payment_method), settlement_payments(amount, confirmed_at)))"
     )
     .eq("token", token)
     .eq("purpose", "answer")
@@ -123,12 +139,32 @@ export default async function PublicSettlementPage({
     memo: expense.memo,
     isImportant: Boolean(expense.is_important)
   }));
+
+  const serverSupabase = await createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await serverSupabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
+
+  const participants = (plan.participants ?? []) as PublicParticipantRow[];
+  const viewerParticipant = resolveViewerParticipant({
+    participants: participants.map((participant) => ({
+      id: participant.id,
+      displayName: participant.display_name,
+      userId: participant.user_id
+    })),
+    userId: currentUserId,
+    selectedParticipantId: query.viewer ?? null
+  });
+
   const settlements = ((plan.settlements ?? []) as PublicSettlementRow[]).map<PublicSettlementItem>((settlement) => ({
     id: settlement.id,
+    fromParticipantId: firstParticipant(settlement.from_participant)?.id ?? "",
+    toParticipantId: firstParticipant(settlement.to_participant)?.id ?? "",
     fromName: participantName(settlement.from_participant),
     toName: participantName(settlement.to_participant),
     amount: settlement.amount,
-    paymentMethod: settlement.payment_method,
+    paymentMethod: firstParticipant(settlement.to_participant)?.settlement_payment_method ?? null,
     paymentUrl: settlement.payment_url,
     memo: settlement.memo,
     payments: (settlement.settlement_payments ?? []).map((payment) => ({
@@ -136,6 +172,33 @@ export default async function PublicSettlementPage({
       confirmedAt: payment.confirmed_at
     }))
   }));
+
+  const viewerRole = viewerParticipant
+    ? resolveParticipantSettlementRole(
+        viewerParticipant.id,
+        settlements.map((settlement) => ({
+          fromParticipantId: settlement.fromParticipantId,
+          toParticipantId: settlement.toParticipantId
+        }))
+      )
+    : null;
+
+  const viewerProp =
+    viewerParticipant && viewerRole
+      ? {
+          role: viewerRole,
+          currentValue:
+            participants.find((participant) => participant.id === viewerParticipant.id)?.settlement_payment_method ?? null,
+          action: updatePublicParticipantSettlementPaymentMethodAction.bind(null, token, viewerParticipant.id)
+        }
+      : !viewerParticipant && participants.length > 0
+        ? {
+            unresolvedParticipants: participants.map((participant) => ({
+              id: participant.id,
+              displayName: participant.display_name
+            }))
+          }
+        : undefined;
 
   return (
     <div className="space-y-6">
@@ -168,6 +231,7 @@ export default async function PublicSettlementPage({
           expenses={expenses}
           settlements={settlements}
           recordPaymentAction={recordPublicSettlementPaymentAction.bind(null, token)}
+          viewer={viewerProp}
         />
       )}
     </div>
