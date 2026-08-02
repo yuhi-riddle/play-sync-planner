@@ -25,17 +25,15 @@ describe("SettlementPaymentMethodForm", () => {
     expect(screen.getByDisplayValue("PayPay")).toBeInTheDocument();
   });
 
-  it("shows the correct label in the input field for receive role", () => {
+  it("switches the payment method field's own label along with the heading and button for receive role", () => {
     render(<SettlementPaymentMethodForm role="receive" currentValue={null} action={vi.fn()} />);
 
-    const labels = screen.getAllByText("受け取り方法", { exact: false });
-    expect(labels.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("支払い方法", { exact: false })).not.toBeInTheDocument();
   });
 
-  it("shows the correct label in the input field for pay role", () => {
+  it("switches the payment method field's own label along with the heading and button for pay role", () => {
     render(<SettlementPaymentMethodForm role="pay" currentValue={null} action={vi.fn()} />);
 
-    const labels = screen.getAllByText("支払い方法", { exact: false });
-    expect(labels.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("受け取り方法", { exact: false })).not.toBeInTheDocument();
   });
 });
