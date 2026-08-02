@@ -4,6 +4,7 @@ import {
   eventDraftSchema,
   eventSchema,
   expenseSchema,
+  participantSettlementPaymentMethodSchema,
   planSchema,
   settlementPaymentInstructionSchema,
   settlementPaymentSchema
@@ -423,7 +424,6 @@ describe("settlementPaymentSchema", () => {
 
     expect(result).toEqual({
       amount: 1000,
-      payment_method: "PayPay",
       payment_url: "https://example.com/pay",
       memo: "先に一部だけ"
     });
@@ -461,7 +461,6 @@ describe("settlementPaymentInstructionSchema", () => {
     });
 
     expect(result).toEqual({
-      payment_method: "PayPay",
       payment_url: "https://example.com/pay/alice",
       memo: "送金後に連絡ください"
     });
@@ -493,5 +492,19 @@ describe("settlementPaymentInstructionSchema", () => {
         memo: ""
       })
     ).toThrow("URLは https://... の形式で入力してください");
+  });
+});
+
+describe("participantSettlementPaymentMethodSchema", () => {
+  it("accepts a payment method string", () => {
+    const result = participantSettlementPaymentMethodSchema.parse({
+      settlement_payment_method: "PayPay"
+    });
+    expect(result).toEqual({ settlement_payment_method: "PayPay" });
+  });
+
+  it("defaults to null when omitted", () => {
+    const result = participantSettlementPaymentMethodSchema.parse({});
+    expect(result).toEqual({ settlement_payment_method: null });
   });
 });

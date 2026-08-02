@@ -165,7 +165,6 @@ export const expenseSchema = z
     individual_participant_ids: optionalStringList().default([]),
     individual_split_amounts: optionalPositiveIntegerList().default([]),
     memo: nullableText.default(null),
-    payment_method: nullableText.default(null),
     payment_url: nullableUrl.default(null),
     is_important: checkboxBoolean()
   })
@@ -210,15 +209,17 @@ export const expenseSchema = z
 
 export const settlementPaymentSchema = z.object({
   amount: positiveInteger("支払い金額を入力してください", "支払い金額は1円以上で入力してください"),
-  payment_method: nullableText.default(null),
   payment_url: nullableUrl.default(null),
   memo: nullableText.default(null)
 });
 
 export const settlementPaymentInstructionSchema = z.object({
-  payment_method: nullableText.default(null),
   payment_url: nullableUrl.default(null),
   memo: nullableText.default(null)
+});
+
+export const participantSettlementPaymentMethodSchema = z.object({
+  settlement_payment_method: nullableText.default(null)
 });
 
 const newlineList = (message: string) =>
