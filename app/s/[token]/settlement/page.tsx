@@ -38,7 +38,6 @@ type PublicExpenseRow = {
 type PublicSettlementRow = {
   id: string;
   amount: number;
-  payment_method: string | null;
   payment_url: string | null;
   memo: string | null;
   from_participant: ParticipantRelation;
@@ -95,7 +94,7 @@ export default async function PublicSettlementPage({
   const { data: link } = await supabase
     .from("share_links")
     .select(
-      "token, status, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), participants(id, display_name, user_id, settlement_payment_method), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_method, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id, settlement_payment_method), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id, settlement_payment_method), settlement_payments(amount, confirmed_at)))"
+      "token, status, plans(id, title, confirmed_start_at, confirmed_end_at, is_all_day, events(title, location_name), participants(id, display_name, user_id, settlement_payment_method), expenses(id, title, amount, memo, is_important, payer:participants!expenses_payer_participant_id_fkey(display_name)), settlements(id, amount, payment_url, memo, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id, settlement_payment_method), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id, settlement_payment_method), settlement_payments(amount, confirmed_at)))"
     )
     .eq("token", token)
     .eq("purpose", "answer")
