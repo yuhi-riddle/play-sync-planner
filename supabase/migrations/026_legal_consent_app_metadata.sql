@@ -7,7 +7,7 @@ set raw_app_meta_data =
   coalesce(u.raw_app_meta_data, '{}'::jsonb)
   || jsonb_build_object(
        'legal_consent_accepted_at',
-       to_char(uc.agreed_at at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+       to_char(date_trunc('milliseconds', uc.agreed_at at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
      )
 from public.user_consents as uc
 where u.id = uc.user_id
