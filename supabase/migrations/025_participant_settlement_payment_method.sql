@@ -29,4 +29,5 @@ update public.participants
 set settlement_payment_method = ranked.payment_method
 from ranked
 where participants.id = ranked.to_participant_id
-  and ranked.rn = 1;
+  and ranked.rn = 1
+  and participants.settlement_payment_method is null;
