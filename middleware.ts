@@ -153,6 +153,8 @@ export async function middleware(request: NextRequest) {
   // 同意印が app_metadata にあれば user_consents は引かない。
   // 印はマイグレーション026でバックフィル済みだが、取りこぼしがあっても
   // ここでテーブルに落ちるので同意ゲート自体は壊れない。
+  // ※ user_metadata ではなく app_metadata で見る必要がある。user_metadata は
+  // 本人が auth.updateUser() で書き換えられるため、そこに置くと印を偽装してゲートを突破できてしまう。
   const needsConsentCheck = !hasLegalConsentMark(user.app_metadata);
 
   const [consentResult, profileResult] = await Promise.all([
