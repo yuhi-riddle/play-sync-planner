@@ -47,11 +47,25 @@
 
 ### 「あなたの支払い方法」ブロック（新設）
 
-管理画面・公開画面それぞれの「清算結果」カードの直前に配置する。ログインユーザー（管理画面は主催者、公開画面は参加者本人）が関わる清算ペアを見て、受け取る側か払う側かを判定し、該当する1件のフォームを出す。
+管理画面・公開画面それぞれの「清算結果」カードの直前に配置する。関わる清算ペアを見て、受け取る側か払う側かを判定し、該当する1件のフォームを出す。
 
 - 関与する清算ペアが無ければ表示しない
 - 受け取る側なら「受け取り方法」、払う側なら「支払い方法」とラベルを出し分ける
 - 保存すると、その participant が関わる全ての清算ペアの表示・以降の記録に反映される
+
+### 管理画面での本人判定
+
+ログイン中の主催者本人（`plan.owner_user_id`）を `participants.user_id` と突き合わせ、該当する participant を特定する。主催者が参加者としてもイベントに加わっているケースを想定した既存の `isOwner`/`canManage` 判定パターンをそのまま使う。
+
+### 公開画面での本人判定
+
+`/s/[token]/settlement` にはログイン不要でアクセスできるため、閲覧者がどの participant かを判定する仕組みがそもそも無い（既存の `recordPublicSettlementPaymentAction` も本人確認をしていない）。日程調整の回答フォーム（`submitAvailabilityAnswersAction` → `resolveAnswerParticipantForSubmission`、`lib/domain/participant-identity.ts`）と同じ考え方を流用する。
+
+- ログイン中なら、ログインユーザーの `user_id` と一致する participant を自動的に「あなた」として扱う
+- 未ログインなら、その plan の participant 一覧から表示名を選ばせる `<select>` を出し、選択された participant を「あなた」として扱う
+- 「あなた」が定まったら、その participant が受け取る側か払う側かで「あなたの支払い方法」ブロックの内容を出し分ける
+
+認可については、既存の `recordPublicSettlementPaymentAction` と同水準（トークンが有効で、対象 participant が同じ plan に属していることだけを見る。参加者間でパスワード等による相互認証はしていない）を踏襲する。これは今回の変更で新たに緩めるものではなく、既存のセキュリティモデルをそのまま維持するという判断。
 
 ### 清算ペアごとの表示の変更
 
@@ -73,7 +87,7 @@
 ## テスト
 
 - `expense-form` 関連テスト: 支払い方法欄が表示されないことを確認する形に更新
-- `settlement-page` / `public-settlement-summary` 関連テスト: 「あなたの支払い方法」ブロックの表示・保存・清算ペアへの反映を検証するテストを追加
+- `settlement-page` / `public-settlement-summary` 関連テスト: 「あなたの支払い方法」ブロックの表示・保存・清算ペアへの反映を検証するテストを追加。公開画面はログイン中の自動判定と未ログイン時の名前選択の両方をカバーする
 - `validators.test.ts`: `expenseSchema` から `payment_method` が外れたことを反映
 - 新規: participant の `settlement_payment_method` 更新アクションのテスト（認可: 本人または主催者のみ更新できることを含む）
 - 既存の `domain/settlement.test.ts` は変更不要（計算ロジックに手を入れないため）
