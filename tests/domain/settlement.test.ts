@@ -7,6 +7,7 @@ import {
   getPaymentInstructionView,
   buildSettlementPaymentRequestMessage,
   calculateSettlementTransfers,
+  resolveParticipantSettlementRole,
   summarizeSettlementNextActions,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
@@ -394,5 +395,24 @@ describe("buildSettlementConfirmationRequestMessage", () => {
 
   it("returns an empty message when no confirmation requests remain", () => {
     expect(buildSettlementConfirmationRequestMessage({ title: "予定", requests: [] })).toBe("");
+  });
+});
+
+describe("resolveParticipantSettlementRole", () => {
+  const settlements = [
+    { fromParticipantId: "bob", toParticipantId: "alice" },
+    { fromParticipantId: "chika", toParticipantId: "alice" }
+  ];
+
+  it("returns receive when the participant is a creditor in any pair", () => {
+    expect(resolveParticipantSettlementRole("alice", settlements)).toBe("receive");
+  });
+
+  it("returns pay when the participant is a debtor", () => {
+    expect(resolveParticipantSettlementRole("bob", settlements)).toBe("pay");
+  });
+
+  it("returns null when the participant has no settlement pairs", () => {
+    expect(resolveParticipantSettlementRole("dana", settlements)).toBeNull();
   });
 });

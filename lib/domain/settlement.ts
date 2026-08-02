@@ -257,6 +257,19 @@ export function calculateSettlementTransfers({ participants, expenses }: Settlem
   return transfers;
 }
 
+export function resolveParticipantSettlementRole(
+  participantId: string,
+  settlements: Array<{ fromParticipantId: string; toParticipantId: string }>
+): "receive" | "pay" | null {
+  const isReceiver = settlements.some((settlement) => settlement.toParticipantId === participantId);
+  if (isReceiver) {
+    return "receive";
+  }
+
+  const isPayer = settlements.some((settlement) => settlement.fromParticipantId === participantId);
+  return isPayer ? "pay" : null;
+}
+
 export function summarizeSettlementPaymentProgress(
   settlementAmount: number,
   payments: SettlementPaymentForProgress[]
