@@ -23,7 +23,15 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUserId
 }));
 
-import { createExpenseAction, deleteExpenseAction, recordPublicSettlementPaymentAction, updateExpenseAction } from "@/lib/actions/settlements";
+import {
+  createExpenseAction,
+  deleteExpenseAction,
+  recordPublicSettlementPaymentAction,
+  recordSettlementPaymentAction,
+  updateExpenseAction,
+  updateParticipantSettlementPaymentMethodAction,
+  updatePublicParticipantSettlementPaymentMethodAction
+} from "@/lib/actions/settlements";
 
 type MockResult = { data?: unknown; error?: unknown };
 type RecordedCall = { method: string; args: unknown[] };
@@ -250,7 +258,7 @@ describe("recordPublicSettlementPaymentAction", () => {
     vi.clearAllMocks();
   });
 
-  it("トークンの計画に属さないsettlementIdを拒否する(唯一の未認証書き込み経路)", async () => {
+  it("トークンの計画に属さないsettlementIdを拒否する(トークンのみで書き込める経路の一つ)", async () => {
     const admin = tableSequenceClient({
       share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
       settlements: [{ result: { data: null, error: { message: "not found" } } }]
@@ -263,5 +271,104 @@ describe("recordPublicSettlementPaymentAction", () => {
     await expect(
       recordPublicSettlementPaymentAction("token-1", "settlement-not-in-this-plan", formData)
     ).rejects.toThrow("清算内容が見つかりません");
+  });
+});
+
+describe("updateParticipantSettlementPaymentMethodAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
+  });
+
+  it("呼び出し者本人ではない参加者への設定を拒否する", async () => {
+    const admin = tableSequenceClient({
+      participants: [
+        { result: { data: { id: otherParticipantId, plan_id: planId, user_id: "another-user" }, error: null } }
+      ]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    const formData = new FormData();
+    formData.set("settlement_payment_method", "PayPay");
+
+    await expect(
+      updateParticipantSettlementPaymentMethodAction(otherParticipantId, formData)
+    ).rejects.toThrow("本人だけが支払い方法を設定できます");
+  });
+});
+
+describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("無効化された共有リンクからの設定を拒否する", async () => {
+    const admin = tableSequenceClient({
+      share_links: [{ result: { data: { plan_id: planId, status: "revoked" }, error: null } }]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    const formData = new FormData();
+    formData.set("settlement_payment_method", "PayPay");
+
+    await expect(
+      updatePublicParticipantSettlementPaymentMethodAction("token-1", otherParticipantId, formData)
+    ).rejects.toThrow("この共有リンクは無効化されています。主催者に新しいリンクを確認してください");
+  });
+
+  it("別の計画に属するparticipantIdを拒否する", async () => {
+    const admin = tableSequenceClient({
+      share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
+      participants: [{ result: { data: null, error: { message: "not found" } } }]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    const formData = new FormData();
+    formData.set("settlement_payment_method", "PayPay");
+
+    await expect(
+      updatePublicParticipantSettlementPaymentMethodAction("token-1", "participant-in-other-plan", formData)
+    ).rejects.toThrow("参加者が見つかりません");
+  });
+});
+
+describe("recordSettlementPaymentAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
+  });
+
+  it("支払った人(from_participant)のsettlement_payment_methodをsettlement_paymentsに複写する", async () => {
+    const settlementPaymentsInsertCalls: RecordedCall[] = [];
+    const server = tableSequenceClient({
+      settlements: [
+        {
+          result: {
+            data: {
+              id: "settlement-1",
+              plan_id: planId,
+              from_participant_id: otherParticipantId,
+              amount: 1000,
+              settlement_payments: [],
+              plans: { owner_user_id: userId }
+            },
+            error: null
+          }
+        },
+        { result: { data: null, error: null } }
+      ],
+      participants: [{ result: { data: { settlement_payment_method: "PayPay" }, error: null } }],
+      settlement_payments: [{ result: { data: { id: "payment-1" }, error: null }, calls: settlementPaymentsInsertCalls }]
+    });
+    createSupabaseServerClient.mockResolvedValue(server);
+    createSupabaseAdminClient.mockReturnValue(tableSequenceClient({}));
+
+    const formData = new FormData();
+    formData.set("amount", "1000");
+
+    await recordSettlementPaymentAction("settlement-1", formData);
+
+    const insertCall = settlementPaymentsInsertCalls.find((call) => call.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({ payment_method: "PayPay" });
   });
 });
