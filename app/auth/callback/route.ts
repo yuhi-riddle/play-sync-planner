@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { markLegalConsentAccepted } from "@/lib/auth/legal-consent-mark";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { getProfileCallbackRedirect } from "@/lib/domain/profile";
 import { PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
@@ -28,16 +29,20 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (user && pendingConsent === `${TERMS_VERSION}:${PRIVACY_VERSION}`) {
+      const agreedAt = new Date().toISOString();
       const { error: consentError } = await supabase.from("user_consents").upsert({
         user_id: user.id,
         terms_version: TERMS_VERSION,
         privacy_version: PRIVACY_VERSION,
-        agreed_at: new Date().toISOString()
+        agreed_at: agreedAt
       });
 
       if (consentError) {
         return NextResponse.redirect(new URL("/consent", request.url));
       }
+
+      // 正本を保存できたあとに印を書く。
+      await markLegalConsentAccepted(user.id, agreedAt);
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")

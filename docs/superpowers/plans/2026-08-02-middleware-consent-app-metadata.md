@@ -31,7 +31,8 @@
 | `lib/actions/legal.ts`（変更） | 同意フォーム送信時に印も書く |
 | `app/auth/callback/route.ts`（変更） | ログイン時の同意記録でも印を書く |
 | `supabase/migrations/026_legal_consent_app_metadata.sql`（新規） | 既存ユーザーの一括バックフィル |
-| `tests/legal-consent-mark.test.ts`（新規） | 判定関数と書き込み関数のテスト |
+| `tests/domain/legal-consent.test.ts`（新規） | 判定関数のテスト。`lib/domain/<name>.ts` は `tests/domain/<name>.test.ts` に対応させるのが既存31モジュールの慣習 |
+| `tests/auth/legal-consent-mark.test.ts`（新規） | 書き込み関数のテスト。`tests/auth/` は新設（`lib/auth/` 用のテストディレクトリは未整備） |
 | `tests/middleware-consent-onboarding.test.ts`（変更） | 印があるときテーブルを引かないことの検証を追加 |
 | `tests/supabase/legal-consent-backfill.test.ts`（新規） | マイグレーションSQLの内容検証 |
 
@@ -41,7 +42,7 @@
 
 **Files:**
 - Create: `lib/domain/legal-consent.ts`
-- Test: `tests/legal-consent-mark.test.ts`
+- Test: `tests/domain/legal-consent.test.ts`
 
 **Interfaces:**
 - Consumes: なし
@@ -49,7 +50,7 @@
 
 - [ ] **Step 1: 失敗するテストを書く**
 
-`tests/legal-consent-mark.test.ts`:
+`tests/domain/legal-consent.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -83,7 +84,7 @@ describe("hasLegalConsentMark", () => {
 
 - [ ] **Step 2: 失敗を確認する**
 
-Run: `npx vitest run tests/legal-consent-mark.test.ts`
+Run: `npx vitest run tests/domain/legal-consent.test.ts`
 Expected: FAIL（`Failed to resolve import "@/lib/domain/legal-consent"`）
 
 - [ ] **Step 3: 最小の実装を書く**
@@ -110,13 +111,13 @@ export function hasLegalConsentMark(appMetadata: unknown): boolean {
 
 - [ ] **Step 4: テストが通ることを確認する**
 
-Run: `npx vitest run tests/legal-consent-mark.test.ts`
+Run: `npx vitest run tests/domain/legal-consent.test.ts`
 Expected: PASS（5 tests）
 
 - [ ] **Step 5: コミット**
 
 ```bash
-git add lib/domain/legal-consent.ts tests/legal-consent-mark.test.ts
+git add lib/domain/legal-consent.ts tests/domain/legal-consent.test.ts
 git commit -m "feat: add the legal consent mark helper"
 ```
 
@@ -241,7 +242,7 @@ git commit -m "perf: skip the consent table lookup when app_metadata has the mar
 **Files:**
 - Create: `lib/auth/legal-consent-mark.ts`
 - Modify: `lib/actions/legal.ts:20-30`
-- Test: `tests/legal-consent-mark.test.ts`（Task 1 のファイルに追記）
+- Test: `tests/auth/legal-consent-mark.test.ts`（新規。`tests/auth/` ディレクトリごと作る）
 
 **Interfaces:**
 - Consumes: `LEGAL_CONSENT_METADATA_KEY` from Task 1
@@ -249,7 +250,9 @@ git commit -m "perf: skip the consent table lookup when app_metadata has the mar
 
 - [ ] **Step 1: 失敗するテストを書く**
 
-`tests/legal-consent-mark.test.ts` の先頭の import を次に差し替える:
+Task 1 のテストとは別ファイルにする。`lib/domain/legal-consent.ts` は純粋関数、`lib/auth/legal-consent-mark.ts` は service role を叩く副作用ありの関数で、テストの前提（モックの有無）が違うため。
+
+`tests/auth/legal-consent-mark.test.ts`（新規）:
 
 ```ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -258,13 +261,9 @@ const { createSupabaseAdminClient } = vi.hoisted(() => ({ createSupabaseAdminCli
 
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient }));
 
-import { hasLegalConsentMark, LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/legal-consent";
 import { markLegalConsentAccepted } from "@/lib/auth/legal-consent-mark";
-```
+import { LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/legal-consent";
 
-ファイル末尾に次の `describe` を追加する:
-
-```ts
 describe("markLegalConsentAccepted", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -292,7 +291,7 @@ describe("markLegalConsentAccepted", () => {
 
 - [ ] **Step 2: 失敗を確認する**
 
-Run: `npx vitest run tests/legal-consent-mark.test.ts`
+Run: `npx vitest run tests/auth/legal-consent-mark.test.ts`
 Expected: FAIL（`Failed to resolve import "@/lib/auth/legal-consent-mark"`）
 
 - [ ] **Step 3: 書き込み関数を実装する**
@@ -322,8 +321,8 @@ export async function markLegalConsentAccepted(userId: string, acceptedAt: strin
 
 - [ ] **Step 4: テストが通ることを確認する**
 
-Run: `npx vitest run tests/legal-consent-mark.test.ts`
-Expected: PASS（7 tests）
+Run: `npx vitest run tests/auth/legal-consent-mark.test.ts`
+Expected: PASS（2 tests）
 
 - [ ] **Step 5: 同意アクションから呼ぶ**
 
