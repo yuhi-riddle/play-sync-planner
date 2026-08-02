@@ -57,6 +57,8 @@
 
 ログイン中の主催者本人（`plan.owner_user_id`）を `participants.user_id` と突き合わせ、該当する participant を特定する。主催者が参加者としてもイベントに加わっているケースを想定した既存の `isOwner`/`canManage` 判定パターンをそのまま使う。
 
+「あなたの支払い方法」は主催者本人の分のみを扱う。既存の「受け取り方法を設定」フォームは主催者が全参加者分を代理編集できたが、今回はその代理編集を維持しない（各参加者が自分の分を自分で設定する）。主催者以外が受け取る側・払う側になった清算ペアは、その参加者本人が公開画面から設定する。
+
 ### 公開画面での本人判定
 
 `/s/[token]/settlement` にはログイン不要でアクセスできるため、閲覧者がどの participant かを判定する仕組みがそもそも無い（既存の `recordPublicSettlementPaymentAction` も本人確認をしていない）。日程調整の回答フォーム（`submitAvailabilityAnswersAction` → `resolveAnswerParticipantForSubmission`、`lib/domain/participant-identity.ts`）と同じ考え方を流用する。
