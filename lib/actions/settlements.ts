@@ -16,6 +16,7 @@ import { formDataToObject } from "@/lib/form-data";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import {
   expenseSchema,
+  participantSettlementPaymentMethodSchema,
   settlementPaymentInstructionSchema,
   settlementPaymentSchema,
   type ExpenseFormValues
@@ -490,13 +491,19 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
     throw new Error("支払い金額が残額を超えています");
   }
 
+  const { data: payer } = await supabase
+    .from("participants")
+    .select("settlement_payment_method")
+    .eq("id", settlement.from_participant_id)
+    .single();
+
   const { data: insertedPayment, error: insertError } = await supabase
     .from("settlement_payments")
     .insert({
       settlement_id: settlementId,
       paid_by_participant_id: settlement.from_participant_id,
       amount: values.amount,
-      payment_method: values.payment_method,
+      payment_method: payer?.settlement_payment_method ?? null,
       payment_url: values.payment_url,
       memo: values.memo
     })
@@ -715,7 +722,6 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
   const { error: updateError } = await supabase
     .from("settlements")
     .update({
-      payment_method: values.payment_method,
       payment_url: values.payment_url,
       memo: values.memo
     })
@@ -727,6 +733,38 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);
+}
+
+export async function updateParticipantSettlementPaymentMethodAction(participantId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const values = participantSettlementPaymentMethodSchema.parse(formDataToObject(formData));
+
+  const supabase = createSupabaseAdminClient();
+  const { data: participant, error } = await supabase
+    .from("participants")
+    .select("id, plan_id, user_id")
+    .eq("id", participantId)
+    .single();
+
+  if (error || !participant || participant.user_id !== userId) {
+    throw new Error("本人だけが支払い方法を設定できます");
+  }
+
+  const { error: updateError } = await supabase
+    .from("participants")
+    .update({ settlement_payment_method: values.settlement_payment_method })
+    .eq("id", participantId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath(`/plans/${participant.plan_id}`);
+  revalidatePath(`/plans/${participant.plan_id}/settlement`);
 }
 
 export async function markSettlementReminderSentAction(planId: string, formData: FormData) {

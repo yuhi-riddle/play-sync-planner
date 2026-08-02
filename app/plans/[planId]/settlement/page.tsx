@@ -3,11 +3,11 @@ import { notFound, redirect } from "next/navigation";
 
 import { ExpenseForm } from "@/components/expense-form";
 import { isPayPayMethod, PayPayActionPanel } from "@/components/paypay-action-panel";
-import { PaymentMethodField } from "@/components/payment-method-field";
 import { PaymentDestinationLink } from "@/components/payment-destination-link";
 import { ShareLinkCard } from "@/components/share-link-card";
 import { SettlementCompletionNotice } from "@/components/settlement-completion-notice";
 import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
+import { SettlementPaymentMethodForm } from "@/components/settlement-payment-method-form";
 import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
 import { SettlementReminderCard } from "@/components/settlement-reminder-card";
 import { Badge, Card, EmptyState, MadoiForm, PageHeader, SecondaryLink, Stat, SubmitButton } from "@/components/ui";
@@ -17,6 +17,7 @@ import {
   deleteExpenseAction,
   markSettlementReminderSentAction,
   recordSettlementPaymentAction,
+  updateParticipantSettlementPaymentMethodAction,
   updateSettlementPaymentInstructionAction,
   updateExpenseAction
 } from "@/lib/actions/settlements";
@@ -24,6 +25,7 @@ import {
   buildSettlementConfirmationRequestMessage,
   buildSettlementPaymentRequestMessage,
   getPaymentInstructionView,
+  resolveParticipantSettlementRole,
   summarizeSettlementNextActions,
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
@@ -38,8 +40,8 @@ import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/serv
 export const dynamic = "force-dynamic";
 
 type ParticipantRelation =
-  | { id: string; display_name: string; user_id?: string | null }
-  | { id: string; display_name: string; user_id?: string | null }[]
+  | { id: string; display_name: string; user_id?: string | null; settlement_payment_method?: string | null }
+  | { id: string; display_name: string; user_id?: string | null; settlement_payment_method?: string | null }[]
   | null;
 
 type ParticipantRow = {
@@ -47,6 +49,7 @@ type ParticipantRow = {
   display_name: string;
   status: string;
   user_id: string | null;
+  settlement_payment_method: string | null;
 };
 
 type ExpenseRow = {
@@ -142,7 +145,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const { data: plan } = await supabase
     .from("plans")
     .select(
-      "id, title, owner_user_id, events(id, title), share_links(token, purpose, status), participants(id, display_name, status, user_id), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name, user_id), expense_splits(id, participant_id, amount, participants(id, display_name, user_id))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name, user_id))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
+      "id, title, owner_user_id, events(id, title), share_links(token, purpose, status), participants(id, display_name, status, user_id, settlement_payment_method), expenses(id, title, amount, paid_at, memo, payment_method, payment_url, is_important, payer_participant_id, payer:participants!expenses_payer_participant_id_fkey(id, display_name, user_id), expense_splits(id, participant_id, amount, participants(id, display_name, user_id))), settlements(id, amount, status, payment_method, payment_url, memo, paid_at, confirmed_at, from_participant:participants!settlements_from_participant_id_fkey(id, display_name, user_id), to_participant:participants!settlements_to_participant_id_fkey(id, display_name, user_id, settlement_payment_method), settlement_payments(id, amount, payment_method, payment_url, memo, paid_at, confirmed_at, paid_by:participants!settlement_payments_paid_by_participant_id_fkey(id, display_name, user_id))), settlement_reminder_logs(sent_at, recipient_names, reminder_message, reminder_type)"
     )
     .eq("id", planId)
     .single();
@@ -161,6 +164,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
     a.display_name.localeCompare(b.display_name, "ja")
   );
+  const myParticipant = participants.find((participant) => participant.user_id === userId) ?? null;
   const expenses = ((plan.expenses ?? []) as ExpenseRow[]).sort((a, b) => b.paid_at.localeCompare(a.paid_at));
   const settlements = ((plan.settlements ?? []) as SettlementRow[]).sort((a, b) => {
     const statusOrder = { unpaid: 0, partially_paid: 1, paid: 2, confirmed: 3 };
@@ -169,6 +173,15 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
       participantName(a.from_participant).localeCompare(participantName(b.from_participant), "ja")
     );
   });
+  const myRole = myParticipant
+    ? resolveParticipantSettlementRole(
+        myParticipant.id,
+        settlements.map((settlement) => ({
+          fromParticipantId: firstParticipant(settlement.from_participant)?.id ?? "",
+          toParticipantId: firstParticipant(settlement.to_participant)?.id ?? ""
+        }))
+      )
+    : null;
   const reminderLogs = ((plan.settlement_reminder_logs ?? []) as ReminderLogRow[]).sort((a, b) => b.sent_at.localeCompare(a.sent_at));
   const reminderLogSummary = summarizeSettlementReminderLogs(reminderLogs);
   const requestHeaders = await headers();
@@ -393,6 +406,14 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         </Card>
 
       </section>
+      ) : null}
+
+      {myParticipant && myRole ? (
+        <SettlementPaymentMethodForm
+          role={myRole}
+          currentValue={myParticipant.settlement_payment_method}
+          action={updateParticipantSettlementPaymentMethodAction.bind(null, myParticipant.id)}
+        />
       ) : null}
 
       <Card>
@@ -682,7 +703,10 @@ function SettlementActions({
   canManage: boolean;
   canConfirm: boolean;
 }) {
-  const instructionView = getPaymentInstructionView(settlement.payment_method, settlement.payment_url);
+  const instructionView = getPaymentInstructionView(
+    firstParticipant(settlement.to_participant)?.settlement_payment_method ?? null,
+    settlement.payment_url
+  );
 
   return (
     <div className="grid w-full min-w-0 gap-3 md:min-w-72">
@@ -692,7 +716,7 @@ function SettlementActions({
         <p className="text-eyebrow uppercase text-pine">支払い先</p>
         <p className="mt-2 text-sm font-bold text-ink">{instructionView.methodLabel}</p>
         <PaymentDestinationLink href={settlement.payment_url} label={instructionView.linkLabel} detail={instructionView.detail} className="mt-2" />
-        {progress.remainingAmount > 0 && isPayPayMethod(settlement.payment_method) ? (
+        {progress.remainingAmount > 0 && isPayPayMethod(firstParticipant(settlement.to_participant)?.settlement_payment_method) ? (
           <PayPayActionPanel amount={progress.remainingAmount} className="mt-3" />
         ) : null}
         {settlement.memo ? <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">メモ: {settlement.memo}</p> : null}
@@ -704,7 +728,6 @@ function SettlementActions({
           受け取り方法を設定
         </summary>
         <form action={updateSettlementPaymentInstructionAction.bind(null, settlement.id)} className="mt-3 grid gap-3">
-          <PaymentMethodField defaultValue={settlement.payment_method} compact />
           <label className="text-sm font-medium text-ink">
             <span className="text-muted">送金先URL</span>
             <input
@@ -755,7 +778,6 @@ function SettlementActions({
                 className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
               />
             </label>
-            <PaymentMethodField placeholder="例: PayPay" compact />
             <label className="text-sm font-medium text-ink">
               <span className="text-muted">支払い記録URL</span>
               <input

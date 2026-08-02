@@ -22,13 +22,14 @@ vi.mock("@/lib/actions/settlements", () => ({
   recordSettlementPaymentAction: vi.fn(),
   confirmSettlementPaymentAction: vi.fn(),
   updateSettlementPaymentInstructionAction: vi.fn(),
+  updateParticipantSettlementPaymentMethodAction: vi.fn(),
   markSettlementReminderSentAction: vi.fn()
 }));
 
 import SettlementPage from "@/app/plans/[planId]/settlement/page";
 
-function participant(id: string, name: string, userId: string) {
-  return { id, display_name: name, user_id: userId };
+function participant(id: string, name: string, userId: string, settlementPaymentMethod: string | null = null) {
+  return { id, display_name: name, user_id: userId, settlement_payment_method: settlementPaymentMethod };
 }
 
 function basePlan(settlements: Array<Record<string, unknown>>) {
@@ -38,7 +39,7 @@ function basePlan(settlements: Array<Record<string, unknown>>) {
     owner_user_id: "user-1",
     events: [{ id: "event-1", title: "夏祭り" }],
     share_links: [{ token: "tok-1", purpose: "answer" }],
-    participants: [participant("p1", "田中", "user-1"), participant("p2", "鈴木", "user-2")],
+    participants: [participant("p1", "田中", "user-1", "PayPay"), participant("p2", "鈴木", "user-2")],
     expenses: [
       {
         id: "expense-1",
@@ -139,5 +140,39 @@ describe("SettlementPage", () => {
 
     const remainingAmountRow = screen.getByText("清算残額").closest("div")?.parentElement as HTMLElement;
     expect(within(remainingAmountRow).getByText("清算完了")).toBeInTheDocument();
+  });
+
+  it("shows the logged-in participant's own settlement payment method form when they are a creditor", async () => {
+    const plan = basePlan([
+      {
+        id: "settlement-1",
+        amount: 2000,
+        status: "unpaid",
+        payment_method: null,
+        payment_url: null,
+        memo: null,
+        paid_at: null,
+        confirmed_at: null,
+        from_participant: participant("p2", "鈴木", "user-2"),
+        to_participant: participant("p1", "田中", "user-1", "PayPay"),
+        settlement_payments: []
+      }
+    ]);
+    mockPlan(plan);
+
+    render(await SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) }));
+
+    expect(screen.getByText("あなたの受け取り方法")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("PayPay")).toBeInTheDocument();
+  });
+
+  it("does not show the settlement payment method form when the viewer has no settlement pairs", async () => {
+    const plan = basePlan([]);
+    mockPlan(plan);
+
+    render(await SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) }));
+
+    expect(screen.queryByText("あなたの受け取り方法")).not.toBeInTheDocument();
+    expect(screen.queryByText("あなたの支払い方法")).not.toBeInTheDocument();
   });
 });
