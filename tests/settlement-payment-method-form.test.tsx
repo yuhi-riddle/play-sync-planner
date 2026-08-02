@@ -24,4 +24,18 @@ describe("SettlementPaymentMethodForm", () => {
 
     expect(screen.getByDisplayValue("PayPay")).toBeInTheDocument();
   });
+
+  it("shows the correct label in the input field for receive role", () => {
+    render(<SettlementPaymentMethodForm role="receive" currentValue={null} action={vi.fn()} />);
+
+    const labels = screen.getAllByText("受け取り方法", { exact: false });
+    expect(labels.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows the correct label in the input field for pay role", () => {
+    render(<SettlementPaymentMethodForm role="pay" currentValue={null} action={vi.fn()} />);
+
+    const labels = screen.getAllByText("支払い方法", { exact: false });
+    expect(labels.length).toBeGreaterThanOrEqual(2);
+  });
 });
