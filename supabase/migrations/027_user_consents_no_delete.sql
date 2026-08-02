@@ -10,6 +10,10 @@
 -- middleware.ts, lib/actions/account.ts）を確認した限り、本人による
 -- upsert（insert/update）とselectしか使っておらず、退会処理でも
 -- user_consentsは意図的に残しているためdeleteは不要。よってDELETEを外す。
+-- DROPとCREATEの間はポリシーが1本も無い状態になる。RLSは有効なので、その隙に来た
+-- リクエストは全部拒否される。1文ずつ実行されても隙間ができないよう明示的に囲む。
+begin;
+
 drop policy if exists "Users can manage their own consent" on public.user_consents;
 
 create policy "Users can view their own consent"
@@ -30,3 +34,5 @@ for update
 to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid());
+
+commit;
