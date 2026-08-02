@@ -2,14 +2,14 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, getCurrentUserId } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
-  createSupabaseServerClient: vi.fn()
+  getCurrentUserId: vi.fn()
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
-  createSupabaseServerClient,
+  getCurrentUserId,
   hasSupabaseAdminEnv: vi.fn(() => true)
 }));
 vi.mock("@/lib/actions/settlements", () => ({
@@ -56,11 +56,7 @@ function mockLink(plan: Record<string, unknown> | null) {
 }
 
 function mockCurrentUser(userId: string | null) {
-  createSupabaseServerClient.mockResolvedValue({
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: userId ? { id: userId } : null } })
-    }
-  });
+  getCurrentUserId.mockResolvedValue(userId);
 }
 
 describe("PublicSettlementPage", () => {

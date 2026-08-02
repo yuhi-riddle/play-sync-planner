@@ -17,7 +17,8 @@ const targetFiles = [
   "app/settings/withdraw/page.tsx",
   "app/onboarding/profile/page.tsx",
   "app/events/[eventId]/plans/new/page.tsx",
-  "app/plans/[planId]/edit/page.tsx"
+  "app/plans/[planId]/edit/page.tsx",
+  "app/s/[token]/settlement/page.tsx"
 ];
 
 describe("生のsupabase.auth.getUser()を使わない", () => {

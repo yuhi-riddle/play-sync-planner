@@ -17,7 +17,7 @@ import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
 import { resolveParticipantSettlementRole } from "@/lib/domain/settlement";
 import { resolveViewerParticipant } from "@/lib/domain/participant-identity";
 import { formatDateTimeRange } from "@/lib/format";
-import { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -140,11 +140,7 @@ export default async function PublicSettlementPage({
     isImportant: Boolean(expense.is_important)
   }));
 
-  const serverSupabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await serverSupabase.auth.getUser();
-  const currentUserId = user?.id ?? null;
+  const currentUserId = await getCurrentUserId();
 
   const participants = (plan.participants ?? []) as PublicParticipantRow[];
   const viewerParticipant = resolveViewerParticipant({
