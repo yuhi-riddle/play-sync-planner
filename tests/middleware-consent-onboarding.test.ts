@@ -100,4 +100,32 @@ describe("middleware: 同意ゲートとオンボーディング導線の並列�
     expect(response.headers.get("location")).toBeNull();
     expect(from).not.toHaveBeenCalledWith("profiles");
   });
+
+  it("app_metadataに同意印があればuser_consentsを引かずに通過する", async () => {
+    const { client, from } = supabaseClientForUser({
+      id: userId,
+      user_metadata: { profile_onboarding_completed_at: "2026-07-01T00:00:00.000Z" },
+      app_metadata: { legal_consent_accepted_at: "2026-07-10T00:00:00.000Z" }
+    });
+    createServerClient.mockReturnValue(client);
+
+    const response = await middleware(new NextRequest("https://example.com/events"));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(from).not.toHaveBeenCalledWith("user_consents");
+  });
+
+  it("app_metadataに印が無ければ従来通りuser_consentsを引いてゲートする", async () => {
+    const { client, from } = supabaseClientForUser(
+      { id: userId, user_metadata: {}, app_metadata: {} },
+      { consent: { data: null, error: null } }
+    );
+    createServerClient.mockReturnValue(client);
+
+    const response = await middleware(new NextRequest("https://example.com/events"));
+
+    expect(from).toHaveBeenCalledWith("user_consents");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/consent?next=");
+  });
 });

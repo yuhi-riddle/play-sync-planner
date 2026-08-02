@@ -2,6 +2,7 @@ import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isWithdrawnUserMetadata } from "@/lib/domain/account";
+import { hasLegalConsentMark } from "@/lib/domain/legal-consent";
 import { getProfileOnboardingRedirect } from "@/lib/domain/profile";
 
 const publicPaths = new Set(["/login", "/terms", "/privacy", "/consent"]);
@@ -149,20 +150,30 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname !== "/onboarding/profile" &&
     typeof user.user_metadata?.profile_onboarding_completed_at !== "string";
 
+  // 同意印が app_metadata にあれば user_consents は引かない。
+  // 印はマイグレーション026でバックフィル済みだが、取りこぼしがあっても
+  // ここでテーブルに落ちるので同意ゲート自体は壊れない。
+  const needsConsentCheck = !hasLegalConsentMark(user.app_metadata);
+
   const [consentResult, profileResult] = await Promise.all([
-    supabase.from("user_consents").select("user_id").eq("user_id", user.id).maybeSingle(),
+    needsConsentCheck
+      ? supabase.from("user_consents").select("user_id").eq("user_id", user.id).maybeSingle()
+      : Promise.resolve(null),
     needsProfileCheck
       ? supabase.from("profiles").select("onboarding_completed_at").eq("user_id", user.id).maybeSingle()
       : Promise.resolve(null)
   ]);
 
-  const { data: consent, error } = consentResult;
-  if (!error && !consent) {
-    const consentUrl = request.nextUrl.clone();
-    consentUrl.pathname = "/consent";
-    consentUrl.search = "";
-    consentUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
-    return applySecurityHeaders(NextResponse.redirect(consentUrl), cspHeaderName, csp);
+  if (needsConsentCheck) {
+    const consent = consentResult?.data;
+    const consentError = consentResult?.error;
+    if (!consentError && !consent) {
+      const consentUrl = request.nextUrl.clone();
+      consentUrl.pathname = "/consent";
+      consentUrl.search = "";
+      consentUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+      return applySecurityHeaders(NextResponse.redirect(consentUrl), cspHeaderName, csp);
+    }
   }
 
   if (!needsProfileCheck) {
