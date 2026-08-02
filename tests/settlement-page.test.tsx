@@ -175,4 +175,30 @@ describe("SettlementPage", () => {
     expect(screen.queryByText("あなたの受け取り方法")).not.toBeInTheDocument();
     expect(screen.queryByText("あなたの支払い方法")).not.toBeInTheDocument();
   });
+
+  it("uses the receiving participant's settlement_payment_method (not the settlement row's own field) for the missing-instructions banner and the payment request message", async () => {
+    const plan = basePlan([
+      {
+        id: "settlement-1",
+        amount: 2000,
+        status: "unpaid",
+        payment_method: null,
+        payment_url: null,
+        memo: null,
+        paid_at: null,
+        confirmed_at: null,
+        from_participant: participant("p2", "鈴木", "user-2"),
+        to_participant: participant("p1", "田中", "user-1", "PayPay"),
+        settlement_payments: []
+      }
+    ]);
+    mockPlan(plan);
+
+    render(await SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) }));
+
+    expect(screen.queryByText("受け取り方法が未設定の清算があります", { exact: false })).not.toBeInTheDocument();
+
+    const message = screen.getByLabelText("支払い依頼文面") as HTMLTextAreaElement;
+    expect(message.value).toContain("支払い方法: PayPay");
+  });
 });

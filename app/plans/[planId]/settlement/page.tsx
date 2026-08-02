@@ -196,7 +196,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const createExpense = createExpenseAction.bind(null, plan.id);
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);
   const unpaidSettlements = settlements.filter((settlement) => settlementProgress(settlement).remainingAmount > 0);
-  const hasMissingPaymentInstructions = unpaidSettlements.some((settlement) => !settlement.payment_method && !settlement.payment_url);
+  const hasMissingPaymentInstructions = unpaidSettlements.some(
+    (settlement) => !firstParticipant(settlement.to_participant)?.settlement_payment_method && !settlement.payment_url
+  );
   const settlementPaymentCount = settlements.reduce((total, settlement) => total + (settlement.settlement_payments ?? []).length, 0);
   const settlementOverview = summarizeSettlementOverview(
     settlements.map((settlement) => ({
@@ -227,7 +229,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         fromName: participantName(settlement.from_participant),
         toName: participantName(settlement.to_participant),
         remainingAmount: progress.remainingAmount,
-        paymentMethod: settlement.payment_method,
+        paymentMethod: firstParticipant(settlement.to_participant)?.settlement_payment_method ?? null,
         paymentUrl: settlement.payment_url,
         memo: settlement.memo
       };

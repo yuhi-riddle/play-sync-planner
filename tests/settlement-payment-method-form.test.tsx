@@ -25,6 +25,13 @@ describe("SettlementPaymentMethodForm", () => {
     expect(screen.getByDisplayValue("PayPay")).toBeInTheDocument();
   });
 
+  it("submits the field under the settlement_payment_method form key", () => {
+    render(<SettlementPaymentMethodForm role="receive" currentValue={null} action={vi.fn()} />);
+
+    const input = screen.getByDisplayValue("") as HTMLInputElement;
+    expect(input.name).toBe("settlement_payment_method");
+  });
+
   it("switches the payment method field's own label along with the heading and button for receive role", () => {
     render(<SettlementPaymentMethodForm role="receive" currentValue={null} action={vi.fn()} />);
 
