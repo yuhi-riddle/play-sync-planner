@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   canConfirmSettlementPayment,
-  resolveAnswerParticipantForSubmission
+  resolveAnswerParticipantForSubmission,
+  resolveViewerParticipant
 } from "@/lib/domain/participant-identity";
 
 describe("resolveAnswerParticipantForSubmission", () => {
@@ -96,5 +97,52 @@ describe("canConfirmSettlementPayment", () => {
         receiverUserId: null
       })
     ).toBe(false);
+  });
+});
+
+describe("resolveViewerParticipant", () => {
+  const participants = [
+    { id: "participant-1", displayName: "Alice", userId: "user-alice" },
+    { id: "participant-2", displayName: "Bob", userId: null }
+  ];
+
+  it("matches by logged-in user id first", () => {
+    expect(
+      resolveViewerParticipant({
+        participants,
+        userId: "user-alice",
+        selectedParticipantId: "participant-2"
+      })
+    ).toEqual(participants[0]);
+  });
+
+  it("falls back to the selected participant id when not logged in", () => {
+    expect(
+      resolveViewerParticipant({
+        participants,
+        userId: null,
+        selectedParticipantId: "participant-2"
+      })
+    ).toEqual(participants[1]);
+  });
+
+  it("returns null when neither user id nor selection resolves a participant", () => {
+    expect(
+      resolveViewerParticipant({
+        participants,
+        userId: null,
+        selectedParticipantId: null
+      })
+    ).toBeNull();
+  });
+
+  it("returns null when the selected participant id does not exist", () => {
+    expect(
+      resolveViewerParticipant({
+        participants,
+        userId: null,
+        selectedParticipantId: "unknown"
+      })
+    ).toBeNull();
   });
 });
