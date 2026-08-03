@@ -45,7 +45,7 @@ describe("RootLayout responsive header", () => {
     mocks.getCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com", user_metadata: {} });
   });
 
-  it("stacks the brand and account controls on mobile and returns to one row on larger screens", async () => {
+  it("keeps the brand and account controls on one row at every width", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });
     const markup = renderToStaticMarkup(layout);
@@ -55,10 +55,9 @@ describe("RootLayout responsive header", () => {
     const headerInner = document.querySelector("header > div");
     const classNames = headerInner?.getAttribute("class")?.split(/\s+/) ?? [];
     expect(classNames).toEqual(
-      expect.arrayContaining(["flex-col", "gap-3", "sm:flex-row", "sm:items-center", "sm:justify-between"])
+      expect.arrayContaining(["flex", "flex-row", "items-center", "justify-between"])
     );
-    expect(document.querySelector("main")?.parentElement).toHaveClass("pb-28", "sm:pb-10");
-    expect(document.querySelector("footer")).toHaveClass("pb-28", "sm:pb-8");
+    expect(classNames).not.toContain("flex-col");
   });
 
   it("gives <main> a minimum height so the footer stays off-screen while the route Suspense boundary resolves", async () => {

@@ -44,9 +44,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         </a>
         <div className="app-shell min-h-screen">
           <header className="sticky top-0 z-50 border-b border-line bg-surface/85 backdrop-blur-md">
-            <div className="mx-auto flex max-w-[1440px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4 lg:px-8 xl:px-10">
+            <div className="mx-auto flex max-w-[1440px] flex-row items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-4 lg:px-8 xl:px-10">
               <Link href="/" className="group flex items-center gap-3 self-start text-lg font-bold tracking-normal text-ink">
-                <span className="relative inline-flex h-10 w-12 items-end justify-center rounded-control border border-line bg-skywash/70 shadow-raise">
+                <span className="relative inline-flex h-8 w-10 items-end justify-center rounded-control border border-line bg-skywash/70 shadow-raise sm:h-10 sm:w-12">
                   <span className="absolute right-2 top-2 h-3 w-3 rounded-full bg-honey" />
                   <span className="absolute bottom-2 left-2 h-4 w-5 bg-pine [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
                   <span className="absolute bottom-2 right-2 h-6 w-6 bg-moss [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
