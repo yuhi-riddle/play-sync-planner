@@ -51,4 +51,11 @@ describe("EventChat", () => {
 
     await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });
+
+  it("入力欄を低くし、文字数の注記は入力が長くなるまで出さない", () => {
+    render(<EventChat messages={[]} action={vi.fn()} canPost />);
+
+    expect(screen.getByLabelText("メッセージ")).toHaveAttribute("rows", "2");
+    expect(screen.queryByText("2,000文字まで")).not.toBeInTheDocument();
+  });
 });

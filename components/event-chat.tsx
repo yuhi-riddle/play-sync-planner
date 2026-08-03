@@ -17,6 +17,7 @@ export function EventChat({
   unavailableReason?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [bodyLength, setBodyLength] = useState(0);
   const [isPending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -29,6 +30,7 @@ export function EventChat({
       try {
         await action(formData);
         form.reset();
+        setBodyLength(0);
       } catch (cause) {
         unstable_rethrow(cause);
         setError(cause instanceof Error ? cause.message : "メッセージを投稿できませんでした");
@@ -71,13 +73,14 @@ export function EventChat({
           <textarea
             id="event-chat-message"
             name="body"
-            rows={4}
+            rows={2}
             maxLength={2000}
             placeholder="参加者にメッセージを送る"
+            onChange={(event) => setBodyLength(event.target.value.length)}
             className="w-full rounded-control border border-moss/18 bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted">2,000文字まで</p>
+            <p className="text-xs text-muted">{bodyLength > 1800 ? `残り ${2000 - bodyLength}文字` : ""}</p>
             <button
               type="submit"
               disabled={isPending}
