@@ -345,6 +345,14 @@ describe("resolveCurrentTimetableItemIds", () => {
     expect([...current]).toEqual(["a"]);
   });
 
+  it("終了と開始がちょうど重なる時刻は、終わった行ではなく次の行を返す", () => {
+    // a の終了(14:00)と b の開始(14:00)がちょうど重なる境界。end > nowTime なので
+    // a はここで終わったとみなす。境界を >= にすり替えても検出できるよう固定する。
+    const current = resolveCurrentTimetableItemIds(schedule, new Date("2026-08-15T14:00:00+09:00"));
+
+    expect([...current]).toEqual(["b"]);
+  });
+
   it("すべて終わったら空集合を返す", () => {
     const current = resolveCurrentTimetableItemIds(schedule, new Date("2026-08-15T16:00:00+09:00"));
 
@@ -390,5 +398,15 @@ describe("resolveCurrentTimetableItemIds", () => {
     );
 
     expect([...current]).toEqual(["last"]);
+  });
+
+  it("翌日の行は「次に始まる行」に使わない", () => {
+    const items = [
+      item({ id: "close", startAt: "2026-08-15T17:00:00+09:00" }),
+      item({ id: "meet", startAt: "2026-08-16T10:00:00+09:00" })
+    ];
+
+    expect(resolveTimetableDurations(items).close).toBeUndefined();
+    expect([...resolveCurrentTimetableItemIds(items, new Date("2026-08-16T09:00:00+09:00"))]).toEqual([]);
   });
 });

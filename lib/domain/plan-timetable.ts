@@ -168,9 +168,21 @@ export function buildTimetableBlocks(items: TimetableItem[]): TimetableBlock[] {
   return blocks;
 }
 
-/** 自分より後に「別の時刻で」始まる最初の行の開始時刻。同時刻の行は飛ばす。 */
+/**
+ * 自分より後に「別の時刻で」始まる最初の行の開始時刻。
+ * 同時刻の行（二手に分かれた行同士）は、互いの終了時刻と誤認しないよう飛ばす
+ * （例: 海チームとカフェ組が同時刻に始まっても、片方をもう片方の終わりにしてはいけない）。
+ * 日をまたいだ行は対象にしない。翌日まで対象にすると、前日最後の行の所要時間や
+ * 「いまここ」判定が翌朝まで続いてしまう（例: 17:00「解散」の次が翌朝10:00「集合」）。
+ */
 function nextStartAfter(sorted: TimetableItem[], index: number, start: number): number | null {
+  const dateKey = toJstDateKey(sorted[index].startAt);
+
   for (let cursor = index + 1; cursor < sorted.length; cursor += 1) {
+    if (toJstDateKey(sorted[cursor].startAt) !== dateKey) {
+      return null;
+    }
+
     const candidate = timeOf(sorted[cursor].startAt);
 
     if (candidate > start) {
@@ -179,6 +191,18 @@ function nextStartAfter(sorted: TimetableItem[], index: number, start: number): 
   }
 
   return null;
+}
+
+/**
+ * 行の終了時刻。end_at があればそれを使い、無ければ次に始まる行（同日内）との差で推定する。
+ * どちらも無ければ null（呼び出し側が「出さない」「進行中扱い」を判断する）。
+ * resolveTimetableDurations と resolveCurrentTimetableItemIds で同じ式を使うため、
+ * ここに1本化する（跨日修正など、判定ルールの変更点を1箇所に保つため）。
+ */
+function endTimeOf(sorted: TimetableItem[], index: number, start: number): number | null {
+  const item = sorted[index];
+
+  return item.endAt ? timeOf(item.endAt) : nextStartAfter(sorted, index, start);
 }
 
 /**
@@ -192,7 +216,7 @@ export function resolveTimetableDurations(items: TimetableItem[]): Record<string
   for (let index = 0; index < sorted.length; index += 1) {
     const item = sorted[index];
     const start = timeOf(item.startAt);
-    const end = item.endAt ? timeOf(item.endAt) : nextStartAfter(sorted, index, start);
+    const end = endTimeOf(sorted, index, start);
 
     if (end === null) {
       continue;
@@ -206,11 +230,14 @@ export function resolveTimetableDurations(items: TimetableItem[]): Record<string
 
 /**
  * 「いまここ」の id 集合。二手に分かれている間は複数が同時に進行するため集合で返す。
- * 終了時刻を決められない最後の行は、始まったあとも進行中のままにする。
+ * 終了時刻を決められない行は、始まったあとも「その日のうち」は進行中のままにする。
+ * 日をまたいで進行中扱いを続けると、前日の最後の行が翌朝まで進行中として残ってしまうため、
+ * 終了時刻が分からない行の「進行中」は開始日の JST の日付が変わるまでに区切る。
  */
 export function resolveCurrentTimetableItemIds(items: TimetableItem[], now: Date): Set<string> {
   const sorted = sortTimetableItems(items);
   const nowTime = now.getTime();
+  const nowDateKey = jstDateFormatter.format(now);
   const current = new Set<string>();
 
   for (let index = 0; index < sorted.length; index += 1) {
@@ -221,9 +248,16 @@ export function resolveCurrentTimetableItemIds(items: TimetableItem[], now: Date
       continue;
     }
 
-    const end = item.endAt ? timeOf(item.endAt) : nextStartAfter(sorted, index, start);
+    const end = endTimeOf(sorted, index, start);
 
-    if (end === null || end > nowTime) {
+    if (end === null) {
+      if (toJstDateKey(item.startAt) === nowDateKey) {
+        current.add(item.id);
+      }
+      continue;
+    }
+
+    if (end > nowTime) {
       current.add(item.id);
     }
   }
