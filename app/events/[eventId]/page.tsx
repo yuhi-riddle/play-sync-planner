@@ -25,7 +25,7 @@ import { categoryLabels, planStatusLabels } from "@/lib/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event-members";
 import { normalizeEventDetailTab, resolveEventDetailDataNeeds } from "@/lib/domain/event-tabs";
 import { resolveEventProgress } from "@/lib/domain/event-progress";
-import { canStartDateAdjustment } from "@/lib/domain/event-adjustment";
+import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event-adjustment";
 import type { EventMessage } from "@/lib/domain/event-chat";
 import { buildInviteCandidates, resolveInviteProfileNames, type ConnectionCandidate } from "@/lib/domain/connections";
 import { getUserDisplayName } from "@/lib/domain/profile";
@@ -114,6 +114,7 @@ export default async function EventDetailPage({
   ]);
   const { tasks: eventTasks, members: taskMembers } = eventTaskData;
   const canStartAdjustment = canStartDateAdjustment(event.status, typedInvite?.status);
+  const isEventTerminal = isTerminalEventStatus(event.status);
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
 
   const progress = resolveEventProgress(event.status, (event.plans ?? []) as EventPlan[]);
@@ -154,7 +155,7 @@ export default async function EventDetailPage({
                   </Link>
                 ))}
               </div>
-            ) : (
+            ) : isEventTerminal ? null : (
               <EmptyState>
                 {canStartAdjustment ? "日程調整を始めると、候補日時を入力できます。" : "参加者を集めたら、参加受付を終了して日程調整へ進みます。"}
               </EmptyState>
@@ -213,7 +214,11 @@ export default async function EventDetailPage({
                   <h2 className="text-xl font-semibold text-ink">参加者</h2>
                   <p className="mt-2 text-sm text-muted">参加済み {memberCount ?? 0}人</p>
                 </div>
-                {canStartAdjustment ? <span className="text-sm font-bold text-pine">日程調整の準備中</span> : <span className="text-sm font-bold text-muted">参加者を募集中</span>}
+                {isEventTerminal ? null : canStartAdjustment ? (
+                  <span className="text-sm font-bold text-pine">日程調整の準備中</span>
+                ) : (
+                  <span className="text-sm font-bold text-muted">参加者を募集中</span>
+                )}
               </div>
             </Card>
           )}

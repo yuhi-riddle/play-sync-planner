@@ -1,0 +1,128 @@
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { createSupabaseServerClient, createSupabaseAdminClient, getCurrentUserId } = vi.hoisted(() => ({
+  createSupabaseServerClient: vi.fn(),
+  createSupabaseAdminClient: vi.fn(),
+  getCurrentUserId: vi.fn()
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient,
+  createSupabaseAdminClient,
+  getCurrentUserId
+}));
+vi.mock("@/lib/actions/event-members", () => ({
+  closeEventInvitesAction: vi.fn(),
+  revokeAndCreateEventInviteAction: vi.fn()
+}));
+vi.mock("@/lib/actions/event-messages", () => ({ createEventMessageAction: vi.fn() }));
+vi.mock("@/lib/actions/connections", () => ({ createEventUserInvitationsAction: vi.fn() }));
+vi.mock("@/lib/actions/event-tasks", () => ({
+  createEventTaskAction: vi.fn(),
+  deleteEventTaskAction: vi.fn(),
+  toggleEventTaskDoneAction: vi.fn(),
+  updateEventTaskAssigneeAction: vi.fn()
+}));
+vi.mock("@/lib/actions/events", () => ({
+  cancelEventAction: vi.fn(),
+  duplicateEventAction: vi.fn()
+}));
+
+import EventDetailPage from "@/app/events/[eventId]/page";
+
+// supabase-jsのクエリビルダーはメソッドチェーンの途中でも最後でもawaitできる
+// （thenableな）ため、モックも同じ形にしておく。
+function chain(result: unknown) {
+  const handler: Record<string, unknown> = {};
+  for (const method of ["select", "eq", "order", "limit", "in", "or"]) {
+    handler[method] = vi.fn(() => handler);
+  }
+  handler.single = vi.fn().mockResolvedValue(result);
+  handler.maybeSingle = vi.fn().mockResolvedValue(result);
+  handler.then = (onFulfilled: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
+    Promise.resolve(result).then(onFulfilled, onRejected);
+  return handler;
+}
+
+function cancelledEvent() {
+  return {
+    id: "event-1",
+    title: "夏の花火大会",
+    status: "cancelled",
+    owner_user_id: "owner-1",
+    category: "other",
+    location_name: null,
+    url: null,
+    memo: null,
+    plans: []
+  };
+}
+
+function mockServerClient(event: Record<string, unknown>) {
+  createSupabaseServerClient.mockResolvedValue({
+    from: vi.fn((table: string) => {
+      if (table === "events") return chain({ data: event, error: null });
+      if (table === "event_invite_links") return chain({ data: null, error: null });
+      throw new Error(`unexpected table: ${table}`);
+    })
+  });
+}
+
+function mockAdminClient({ memberCount = 0, membershipRow = null }: { memberCount?: number; membershipRow?: unknown }) {
+  createSupabaseAdminClient.mockReturnValue({
+    from: vi.fn((table: string) => {
+      if (table === "event_members") {
+        return {
+          select: vi.fn((columns: string) =>
+            columns === "id" ? chain({ count: memberCount }) : chain({ data: membershipRow, error: null })
+          )
+        };
+      }
+      throw new Error(`unexpected admin table: ${table}`);
+    })
+  });
+}
+
+describe("EventDetailPage - 終了状態のイベント", () => {
+  beforeEach(() => {
+    vi.stubGlobal("React", React);
+    vi.clearAllMocks();
+  });
+
+  it("中止したイベントでは、日程調整を始めるボタンと募集中の案内文を出さない", async () => {
+    const event = cancelledEvent();
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 3, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    expect(screen.queryByRole("link", { name: "日程調整を始める" })).not.toBeInTheDocument();
+    expect(screen.queryByText("日程調整を始めると、候補日時を入力できます。")).not.toBeInTheDocument();
+    expect(screen.queryByText("参加者を集めたら、参加受付を終了して日程調整へ進みます。")).not.toBeInTheDocument();
+  });
+
+  it("中止したイベントでは、参加者タブの「準備中」「募集中」ラベルも出さない", async () => {
+    const event = cancelledEvent();
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 3, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("member-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({ tab: "members" })
+      })
+    );
+
+    expect(screen.queryByText("日程調整の準備中")).not.toBeInTheDocument();
+    expect(screen.queryByText("参加者を募集中")).not.toBeInTheDocument();
+  });
+});
