@@ -60,11 +60,11 @@ function cancelledEvent() {
   };
 }
 
-function mockServerClient(event: Record<string, unknown>) {
+function mockServerClient(event: Record<string, unknown>, invite: Record<string, unknown> | null = null) {
   createSupabaseServerClient.mockResolvedValue({
     from: vi.fn((table: string) => {
       if (table === "events") return chain({ data: event, error: null });
-      if (table === "event_invite_links") return chain({ data: null, error: null });
+      if (table === "event_invite_links") return chain({ data: invite, error: null });
       throw new Error(`unexpected table: ${table}`);
     })
   });
@@ -93,7 +93,9 @@ describe("EventDetailPage - 終了状態のイベント", () => {
 
   it("中止したイベントでは、日程調整を始めるボタンと募集中の案内文を出さない", async () => {
     const event = cancelledEvent();
-    mockServerClient(event);
+    // 招待を締め切り済みにしておく。招待がない（＝canStartAdjustmentが元々false）せいで
+    // リンクが出ていないだけ、という偽陰性を避け、終了状態チェックそのものを検証する。
+    mockServerClient(event, { token: "invite-1", status: "closed" });
     mockAdminClient({ memberCount: 3, membershipRow: null });
     getCurrentUserId.mockResolvedValue("owner-1");
 
@@ -107,6 +109,7 @@ describe("EventDetailPage - 終了状態のイベント", () => {
     expect(screen.queryByRole("link", { name: "日程調整を始める" })).not.toBeInTheDocument();
     expect(screen.queryByText("日程調整を始めると、候補日時を入力できます。")).not.toBeInTheDocument();
     expect(screen.queryByText("参加者を集めたら、参加受付を終了して日程調整へ進みます。")).not.toBeInTheDocument();
+    expect(screen.getByText("夏の花火大会")).toBeInTheDocument();
   });
 
   it("中止したイベントでは、参加者タブの「準備中」「募集中」ラベルも出さない", async () => {
