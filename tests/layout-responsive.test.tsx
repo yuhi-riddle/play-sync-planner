@@ -60,6 +60,20 @@ describe("RootLayout responsive header", () => {
     expect(classNames).not.toContain("flex-col");
   });
 
+  // self-startは縦積みレイアウト時代の名残。items-centerな1行構成の中では
+  // align-selfがalign-itemsに勝ってロゴだけ行の上端に張り付いてしまう。
+  it("does not pin the brand logo to the top of the row with a leftover self-start", async () => {
+    vi.stubGlobal("React", React);
+    const layout = await RootLayout({ children: "本文" });
+    const markup = renderToStaticMarkup(layout);
+    const parsedDocument = new DOMParser().parseFromString(markup, "text/html");
+    document.body.innerHTML = parsedDocument.body.innerHTML;
+
+    const brandLink = document.querySelector('header a[href="/"]');
+    const classNames = brandLink?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(classNames).not.toContain("self-start");
+  });
+
   it("gives <main> a minimum height so the footer stays off-screen while the route Suspense boundary resolves", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });
