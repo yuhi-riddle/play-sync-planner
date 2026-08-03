@@ -399,7 +399,9 @@ describe("resolveCurrentTimetableItemIds", () => {
 
     expect([...current]).toEqual(["last"]);
   });
+});
 
+describe("跨日の扱い", () => {
   it("翌日の行は「次に始まる行」に使わない", () => {
     const items = [
       item({ id: "close", startAt: "2026-08-15T17:00:00+09:00" }),
@@ -407,6 +409,8 @@ describe("resolveCurrentTimetableItemIds", () => {
     ];
 
     expect(resolveTimetableDurations(items).close).toBeUndefined();
+    // 翌日の行があっても、その日のうちは終了未定の行が光り続ける（当日ページで何も光らないのを避ける）。
+    expect([...resolveCurrentTimetableItemIds(items, new Date("2026-08-15T18:00:00+09:00"))]).toEqual(["close"]);
     expect([...resolveCurrentTimetableItemIds(items, new Date("2026-08-16T09:00:00+09:00"))]).toEqual([]);
   });
 });
