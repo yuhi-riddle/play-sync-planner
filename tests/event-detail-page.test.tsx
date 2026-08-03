@@ -125,4 +125,39 @@ describe("EventDetailPage - 終了状態のイベント", () => {
     expect(screen.queryByText("日程調整の準備中")).not.toBeInTheDocument();
     expect(screen.queryByText("参加者を募集中")).not.toBeInTheDocument();
   });
+
+  it("中止したイベントでプランがなければ、「日程調整」の見出しも出さない", async () => {
+    const event = cancelledEvent();
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 3, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    expect(screen.queryByRole("heading", { name: "日程調整" })).not.toBeInTheDocument();
+  });
+
+  it("中止したイベントでもプランがあれば、「日程調整」の見出しは出す", async () => {
+    const event = {
+      ...cancelledEvent(),
+      plans: [{ id: "plan-1", title: "候補A", status: "date_confirmed", confirmed_start_at: null, answer_deadline_at: null }]
+    };
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 3, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    expect(screen.getByRole("heading", { name: "日程調整" })).toBeInTheDocument();
+  });
 });
