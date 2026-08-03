@@ -55,4 +55,16 @@ describe("SettlementPage のクエリ失敗", () => {
     await expect(SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) })).rejects.toThrow("NEXT_NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
   });
+
+  it("single()がPGRST116(0件)を報告した場合も従来どおり404にする", async () => {
+    vi.stubGlobal("React", React);
+    getCurrentUserId.mockResolvedValue("user-1");
+    mockPlanResult({
+      data: null,
+      error: { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" }
+    });
+
+    await expect(SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) })).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFound).toHaveBeenCalled();
+  });
 });
