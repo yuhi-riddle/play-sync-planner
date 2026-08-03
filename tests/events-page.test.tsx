@@ -115,6 +115,29 @@ describe("EventsPage", () => {
     expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
   });
 
+  it("omits the schedule and location rows when they are unset", async () => {
+    const eventQuery = createEventQuery([{
+      ...makeEvent("event-2", "まだ何も決まっていない会"),
+      category: "other",
+      status: "interested",
+      location_name: null,
+      event_members: [{ status: "joined" }],
+      plans: []
+    }]);
+    const rpc = createRpcResult(["event-2"], 1);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.queryByText("日程未設定")).not.toBeInTheDocument();
+    expect(screen.queryByText("場所未設定")).not.toBeInTheDocument();
+    expect(screen.getByText("参加 1人")).toBeInTheDocument();
+  });
+
   it("asks the database for one page and fetches only the returned event ids", async () => {
     const eventQuery = createEventQuery([
       makeEvent("event-2", "2番目"),
