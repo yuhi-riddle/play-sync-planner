@@ -45,7 +45,11 @@ export async function AuthNav({ user }: { user: User | null }) {
     <div className="flex w-full items-center justify-end gap-1 text-sm sm:w-auto sm:gap-2">
       <Link
         href={profileHref}
-        className="flex h-11 w-11 min-w-0 items-center justify-center gap-2 rounded-full border border-line bg-surface text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-1.5"
+        className={
+          profileCompleted
+            ? "flex h-11 w-11 min-w-0 items-center justify-center gap-2 rounded-full border border-line bg-surface text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-1.5"
+            : "flex h-11 min-w-0 items-center justify-start gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-muted shadow-soft transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        }
         aria-label={profileCompleted ? `プロフィールを開く（${nickname}）` : "プロフィールを設定"}
         title={profileCompleted ? "プロフィールを開く" : "プロフィールを設定"}
       >
@@ -60,7 +64,14 @@ export async function AuthNav({ user }: { user: User | null }) {
         ) : (
           <UserRound aria-hidden="true" className="h-5 w-5 text-pine" />
         )}
-        <span className="hidden min-w-0 truncate font-bold sm:inline sm:max-w-32" title={profileLabel ?? undefined}>
+        <span
+          className={
+            profileCompleted
+              ? "hidden min-w-0 truncate font-bold sm:inline sm:max-w-32"
+              : "min-w-0 truncate font-bold sm:max-w-32"
+          }
+          title={profileLabel ?? undefined}
+        >
           {profileLabel}
         </span>
       </Link>

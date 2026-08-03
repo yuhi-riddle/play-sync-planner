@@ -50,7 +50,7 @@ describe("AuthNav profile", () => {
     expect(profileLink).toHaveAttribute("title", "プロフィールを開く");
     expect(screen.queryByRole("link", { name: "設定" })).not.toBeInTheDocument();
     expect(screen.getByText("ゆうやん")).toBeInTheDocument();
-    expect(screen.getByText("ゆうやん")).not.toHaveClass("hidden");
+    expect(screen.getByText("ゆうやん")).toHaveClass("hidden", "sm:inline");
     expect(screen.getByRole("img", { name: "ゆうやんのプロフィール画像" })).toHaveAttribute(
       "src",
       "https://project.supabase.co/storage/v1/object/public/profile-avatars/user-1/avatar.webp"
@@ -83,11 +83,13 @@ describe("AuthNav profile", () => {
     expect(profileLink).toHaveAttribute("href", "/onboarding/profile");
     expect(screen.getByText("プロフィール設定")).not.toHaveClass("hidden");
     expect(profileLink.parentElement).toHaveClass(
-      "grid",
+      "flex",
       "w-full",
-      "grid-cols-[minmax(0,1fr)_repeat(2,2.75rem)]",
-      "sm:flex",
-      "sm:w-auto"
+      "items-center",
+      "justify-end",
+      "gap-1",
+      "sm:w-auto",
+      "sm:gap-2"
     );
   });
 });
