@@ -118,12 +118,13 @@ describe("buildTimetableBlocks", () => {
 
   it("終了時刻が無い同時刻の2行を分岐と判定しない", () => {
     const blocks = buildTimetableBlocks([
+      // 長い枠の中に置くことで、null 行が分岐に参加しないことを本当に検証する。
+      item({ id: "trip", startAt: "2026-08-15T12:00:00+09:00", endAt: "2026-08-15T18:00:00+09:00" }),
       item({ id: "gather", startAt: "2026-08-15T13:00:00+09:00" }),
       item({ id: "reception", startAt: "2026-08-15T13:00:00+09:00" })
     ]);
 
-    expect(blocks).toHaveLength(2);
-    expect(blocks.map((block) => block.kind)).toEqual(["single", "single"]);
+    expect(blocks.map((block) => block.kind)).toEqual(["single", "single", "single"]);
   });
 
   it("終了時刻を持つ行同士が重なると分岐ブロックになる", () => {
@@ -250,5 +251,15 @@ describe("buildTimetableBlocks", () => {
     ]);
 
     expect(blocks.map((block) => block.kind)).toEqual(["single", "single"]);
+  });
+
+  it("短い行を内包しても、後続の重なりを取りこぼさない", () => {
+    const blocks = buildTimetableBlocks([
+      item({ id: "long", startAt: "2026-08-15T13:00:00+09:00", endAt: "2026-08-15T16:00:00+09:00" }),
+      item({ id: "short", startAt: "2026-08-15T13:30:00+09:00", endAt: "2026-08-15T14:00:00+09:00" }),
+      item({ id: "late", startAt: "2026-08-15T15:00:00+09:00", endAt: "2026-08-15T15:30:00+09:00" })
+    ]);
+
+    expect(blocks).toHaveLength(1);
   });
 });

@@ -116,7 +116,9 @@ export function buildTimetableBlocks(items: TimetableItem[]): TimetableBlock[] {
   const timed = sorted.filter((item): item is TimetableItem & { endAt: string } => item.endAt !== null);
 
   const clusterIdByItemId = new Map<string, number>();
-  const membersByClusterId = new Map<number, TimetableItem[]>();
+  // endAt を string に固定した型にすることで、上の endAt !== null フィルタを外すとコンパイルエラーになる。
+  // 「end_at の無い行は分岐に参加しない」という不変条件を型でも縛るため。
+  const membersByClusterId = new Map<number, Array<TimetableItem & { endAt: string }>>();
   let clusterId = 0;
   let clusterEnd = Number.NEGATIVE_INFINITY;
 
@@ -158,7 +160,7 @@ export function buildTimetableBlocks(items: TimetableItem[]): TimetableBlock[] {
     blocks.push({
       kind: "branch",
       startAt: members[0].startAt,
-      endAt: new Date(Math.max(...members.map((member) => timeOf(member.endAt as string)))).toISOString(),
+      endAt: new Date(Math.max(...members.map((member) => timeOf(member.endAt)))).toISOString(),
       lanes: buildLanes(members)
     });
   }
