@@ -94,56 +94,60 @@ export function EventTaskList({
             <div
               key={task.id}
               data-testid={`event-task-${task.id}`}
-              className={`flex flex-wrap items-center gap-3 rounded-control border border-line p-3 ${
+              className={`flex flex-col gap-2 rounded-control border border-line p-3 sm:flex-row sm:items-center sm:gap-3 ${
                 task.doneAt ? "bg-sunken" : "bg-surface"
               }`}
             >
-              {canEdit ? (
-                <form action={toggleAction(task.id)}>
-                  <button
-                    type="submit"
-                    className={iconButtonClass}
-                    aria-label={task.doneAt ? `${task.title}を未完了に戻す` : `${task.title}を完了にする`}
-                  >
-                    <Check aria-hidden="true" className={task.doneAt ? "h-4 w-4 text-pine" : "h-4 w-4"} />
-                  </button>
-                </form>
-              ) : null}
+              <div className="flex items-center gap-3 sm:flex-1 sm:min-w-0">
+                {canEdit ? (
+                  <form action={toggleAction(task.id)}>
+                    <button
+                      type="submit"
+                      className={iconButtonClass}
+                      aria-label={task.doneAt ? `${task.title}を未完了に戻す` : `${task.title}を完了にする`}
+                    >
+                      <Check aria-hidden="true" className={task.doneAt ? "h-4 w-4 text-pine" : "h-4 w-4"} />
+                    </button>
+                  </form>
+                ) : null}
 
-              <span
-                data-testid="event-task-title"
-                className={`min-w-0 flex-1 break-words text-body font-medium ${
-                  task.doneAt ? "text-muted line-through" : "text-ink"
-                }`}
-              >
-                {task.title}
-              </span>
+                <span
+                  data-testid="event-task-title"
+                  className={`min-w-0 flex-1 break-words text-body font-medium ${
+                    task.doneAt ? "text-muted line-through" : "text-ink"
+                  }`}
+                >
+                  {task.title}
+                </span>
+              </div>
 
-              {canEdit ? (
-                <AssigneeSelect
-                  taskId={task.id}
-                  members={members}
-                  assigneeUserId={task.assigneeUserId}
-                  action={assignAction}
-                />
-              ) : (
-                <span className="text-caption text-muted">{task.assigneeName ?? "担当なし"}</span>
-              )}
+              <div className={`flex items-center gap-3 ${canEdit ? "pl-14 sm:pl-0" : ""}`}>
+                {canEdit ? (
+                  <AssigneeSelect
+                    taskId={task.id}
+                    members={members}
+                    assigneeUserId={task.assigneeUserId}
+                    action={assignAction}
+                  />
+                ) : (
+                  <span className="text-caption text-muted">{task.assigneeName ?? "担当なし"}</span>
+                )}
 
-              {canEdit ? (
-                <form action={deleteAction(task.id)}>
-                  <button type="submit" className={iconButtonClass} aria-label={`${task.title}を削除`}>
-                    <Trash2 aria-hidden="true" className="h-4 w-4" />
-                  </button>
-                </form>
-              ) : null}
+                {canEdit ? (
+                  <form action={deleteAction(task.id)}>
+                    <button type="submit" className={iconButtonClass} aria-label={`${task.title}を削除`}>
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                  </form>
+                ) : null}
+              </div>
             </div>
           ))
         )}
       </div>
 
       {canEdit ? (
-        <form action={createAction} className="mt-4 flex flex-wrap gap-2">
+        <form action={createAction} className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
           <label className="sr-only" htmlFor="new-event-task-title">
             持ち物や役割
           </label>

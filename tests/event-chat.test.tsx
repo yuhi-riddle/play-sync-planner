@@ -51,4 +51,21 @@ describe("EventChat", () => {
 
     await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });
+
+  it("入力欄を低くし、文字数の注記は入力が長くなるまで出さない", () => {
+    render(<EventChat messages={[]} action={vi.fn()} canPost />);
+
+    expect(screen.getByLabelText("メッセージ")).toHaveAttribute("rows", "2");
+    expect(screen.queryByText("2,000文字まで")).not.toBeInTheDocument();
+  });
+
+  it("1800文字を超えたら残り文字数をaria-liveで知らせる", () => {
+    render(<EventChat messages={[]} action={vi.fn()} canPost />);
+
+    const textarea = screen.getByLabelText("メッセージ");
+    fireEvent.change(textarea, { target: { value: "あ".repeat(1801) } });
+
+    const remainingNote = screen.getByText("残り 199文字");
+    expect(remainingNote).toHaveAttribute("aria-live", "polite");
+  });
 });

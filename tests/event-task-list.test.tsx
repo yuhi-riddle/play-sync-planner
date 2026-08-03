@@ -84,4 +84,23 @@ describe("EventTaskList", () => {
     expect(screen.queryByRole("button", { name: "追加" })).not.toBeInTheDocument();
     expect(screen.getByTestId("event-task-title")).toBeInTheDocument();
   });
+
+  it("モバイルではタイトルを独立した行に置く", () => {
+    renderList([task({ id: "a", title: "浮き輪を持っていく" })]);
+
+    const row = screen.getByTestId("event-task-a");
+    const rowClasses = row.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(rowClasses).toContain("flex-col");
+    expect(rowClasses).toContain("sm:flex-row");
+    expect(rowClasses).not.toContain("flex-wrap");
+  });
+
+  it("編集できない場合は担当行を字下げしない", () => {
+    renderList([task({ id: "a", title: "浮き輪を持っていく" })], false);
+
+    const row = screen.getByTestId("event-task-a");
+    const assigneeRow = within(row).getByText("担当なし").parentElement;
+    const assigneeRowClasses = assigneeRow?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(assigneeRowClasses).not.toContain("pl-14");
+  });
 });

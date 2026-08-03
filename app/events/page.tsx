@@ -193,6 +193,8 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
 
 function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean }) {
   const summary = getEventCardSummary(event);
+  const scheduleText = formatSchedule(summary.schedule);
+  const locationText = event.location_name?.trim() || null;
 
   return (
     <Card className="transition-colors hover:border-moss/45">
@@ -201,9 +203,9 @@ function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean
           {eventDisplayStateLabels[summary.displayState]}
         </span>
         <h2 className="mt-3 text-xl font-bold text-ink">{event.title}</h2>
-        <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-3">
-          <Meta icon={CalendarDays} text={formatSchedule(summary.schedule)} strong={summary.schedule.isConfirmed} />
-          <Meta icon={MapPin} text={event.location_name?.trim() || "場所未設定"} />
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+          {scheduleText ? <Meta icon={CalendarDays} text={scheduleText} strong={summary.schedule.isConfirmed} /> : null}
+          {locationText ? <Meta icon={MapPin} text={locationText} /> : null}
           <Meta icon={UsersRound} text={`参加 ${summary.joinedCount}人`} />
         </div>
       </Link>
@@ -226,7 +228,7 @@ function Meta({ icon: Icon, text, strong = false }: { icon: typeof CalendarDays;
 }
 
 function formatSchedule(schedule: ReturnType<typeof getEventCardSummary>["schedule"]) {
-  if (!schedule.startAt) return "日程未設定";
+  if (!schedule.startAt) return null;
   if (schedule.isConfirmed) {
     return `確定 ${formatDateTimeRange(schedule.startAt, schedule.endAt, schedule.isAllDay)}`;
   }

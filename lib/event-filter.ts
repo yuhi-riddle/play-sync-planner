@@ -72,7 +72,7 @@ export type EventListPagination = {
 
 export type EventCategoryFilter = "all" | (typeof EVENT_CATEGORIES)[number];
 
-const terminalStatuses = new Set(["done", "cancelled", "skipped"]);
+export const terminalStatuses = new Set(["done", "cancelled", "skipped"]);
 const ignoredPlanStatuses = new Set(["cancelled", "skipped"]);
 const finishedSettlementStatuses = new Set(["not_needed", "settled"]);
 

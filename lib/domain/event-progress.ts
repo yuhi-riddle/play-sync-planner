@@ -1,3 +1,6 @@
+import { eventStatusLabels } from "@/lib/constants";
+import { terminalStatuses } from "@/lib/event-filter";
+
 export type EventProgressPlan = {
   status: string;
   confirmed_start_at: string | null;
@@ -12,11 +15,13 @@ export type EventProgress = {
 
 /**
  * イベント名の下に出す進行状況の要約を決める。
- * 状態の判定はタブ化前の画面と同じ規則をそのまま使う。
+ * 終了状態(done/cancelled/skipped)はラベルだけ返し、開催日時や回答期限は出さない。
+ * 終了イベントでは本文側の案内文を抑止しているので、このピルが唯一の状態表示になる。
  */
 export function resolveEventProgress(eventStatus: string, plans: EventProgressPlan[]): EventProgress {
-  if (eventStatus === "cancelled") {
-    return { statusLabel: "中止", highlightLabel: null, highlightAt: null };
+  if (terminalStatuses.has(eventStatus)) {
+    const statusLabel = eventStatusLabels[eventStatus as keyof typeof eventStatusLabels] ?? eventStatus;
+    return { statusLabel, highlightLabel: null, highlightAt: null };
   }
 
   const statusLabel = eventStatus === "confirmed" ? "確定" : plans.length > 0 ? "日程調整中" : "参加者募集中";
