@@ -15,7 +15,8 @@ export type EventProgress = {
 
 /**
  * イベント名の下に出す進行状況の要約を決める。
- * 状態の判定はタブ化前の画面と同じ規則をそのまま使う。
+ * 終了状態(done/cancelled/skipped)はラベルだけ返し、開催日時や回答期限は出さない。
+ * 終了イベントでは本文側の案内文を抑止しているので、このピルが唯一の状態表示になる。
  */
 export function resolveEventProgress(eventStatus: string, plans: EventProgressPlan[]): EventProgress {
   if (terminalStatuses.has(eventStatus)) {
