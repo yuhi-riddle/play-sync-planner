@@ -88,4 +88,40 @@ describe("resolveEventProgress", () => {
     expect(progress.highlightLabel).toBeNull();
     expect(progress.highlightAt).toBeNull();
   });
+
+  it("完了したイベントは「完了」と表示され、確定した開催日時があっても日時は出さない", () => {
+    const progress = resolveEventProgress("done", [
+      { status: "confirmed", confirmed_start_at: "2026-07-25T09:00:00Z", answer_deadline_at: "2026-07-20T03:00:00Z" }
+    ]);
+
+    expect(progress.statusLabel).toBe("完了");
+    expect(progress.highlightLabel).toBeNull();
+    expect(progress.highlightAt).toBeNull();
+  });
+
+  it("完了したイベントは、日程調整がなくても「完了」になる", () => {
+    const progress = resolveEventProgress("done", []);
+
+    expect(progress.statusLabel).toBe("完了");
+    expect(progress.highlightLabel).toBeNull();
+    expect(progress.highlightAt).toBeNull();
+  });
+
+  it("見送りイベントは「見送り」と表示され、回答期限があっても日時は出さない", () => {
+    const progress = resolveEventProgress("skipped", [
+      { status: "open", confirmed_start_at: null, answer_deadline_at: "2026-07-20T03:00:00Z" }
+    ]);
+
+    expect(progress.statusLabel).toBe("見送り");
+    expect(progress.highlightLabel).toBeNull();
+    expect(progress.highlightAt).toBeNull();
+  });
+
+  it("見送りイベントは、日程調整がなくても「見送り」になる", () => {
+    const progress = resolveEventProgress("skipped", []);
+
+    expect(progress.statusLabel).toBe("見送り");
+    expect(progress.highlightLabel).toBeNull();
+    expect(progress.highlightAt).toBeNull();
+  });
 });

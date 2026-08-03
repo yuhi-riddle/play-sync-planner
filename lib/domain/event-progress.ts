@@ -1,3 +1,6 @@
+import { eventStatusLabels } from "@/lib/constants";
+import { terminalStatuses } from "@/lib/event-filter";
+
 export type EventProgressPlan = {
   status: string;
   confirmed_start_at: string | null;
@@ -15,8 +18,9 @@ export type EventProgress = {
  * 状態の判定はタブ化前の画面と同じ規則をそのまま使う。
  */
 export function resolveEventProgress(eventStatus: string, plans: EventProgressPlan[]): EventProgress {
-  if (eventStatus === "cancelled") {
-    return { statusLabel: "中止", highlightLabel: null, highlightAt: null };
+  if (terminalStatuses.has(eventStatus)) {
+    const statusLabel = eventStatusLabels[eventStatus as keyof typeof eventStatusLabels] ?? eventStatus;
+    return { statusLabel, highlightLabel: null, highlightAt: null };
   }
 
   const statusLabel = eventStatus === "confirmed" ? "確定" : plans.length > 0 ? "日程調整中" : "参加者募集中";
