@@ -384,6 +384,9 @@ Phase 1 は完了済みです。
 - [x] `022_share_link_revocation.sql` を適用済み。
 - [x] `023_account_deletion.sql` を適用済み。
 - [x] `024_event_tasks.sql` を適用済み。
+- [ ] `025_participant_settlement_payment_method.sql` を適用済み。（未適用。清算ページが 42703 で 404 になる原因）
+- [x] `026_legal_consent_app_metadata.sql` を適用済み。
+- [x] `027_user_consents_no_delete.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。
