@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildTimetableBlocks,
   groupTimetableItemsByDate,
+  resolveCurrentTimetableItemIds,
+  resolveTimetableDurations,
   sortTimetableItems,
   toJstDateKey,
   type TimetableItem
@@ -261,5 +263,132 @@ describe("buildTimetableBlocks", () => {
     ]);
 
     expect(blocks).toHaveLength(1);
+  });
+});
+
+describe("resolveTimetableDurations", () => {
+  it("終了時刻があればその差を分で返す", () => {
+    const durations = resolveTimetableDurations([
+      item({ id: "a", startAt: "2026-08-15T13:00:00+09:00", endAt: "2026-08-15T14:30:00+09:00" })
+    ]);
+
+    expect(durations.a).toBe(90);
+  });
+
+  it("終了時刻が無ければ次に始まる行との差にする", () => {
+    const durations = resolveTimetableDurations([
+      item({ id: "a", startAt: "2026-08-15T13:00:00+09:00" }),
+      item({ id: "b", startAt: "2026-08-15T13:45:00+09:00" })
+    ]);
+
+    expect(durations.a).toBe(45);
+  });
+
+  it("同時刻の行は飛ばして次に始まる行を探す", () => {
+    const durations = resolveTimetableDurations([
+      item({ id: "gather", startAt: "2026-08-15T13:00:00+09:00", createdAt: "2026-08-01T00:00:00+09:00" }),
+      item({ id: "reception", startAt: "2026-08-15T13:00:00+09:00", createdAt: "2026-08-01T00:01:00+09:00" }),
+      item({ id: "start", startAt: "2026-08-15T13:30:00+09:00" })
+    ]);
+
+    expect(durations.gather).toBe(30);
+    expect(durations.reception).toBe(30);
+  });
+
+  it("最後の行に終了時刻が無ければ所要時間を出さない", () => {
+    const durations = resolveTimetableDurations([
+      item({ id: "a", startAt: "2026-08-15T13:00:00+09:00" }),
+      item({ id: "last", startAt: "2026-08-15T17:00:00+09:00" })
+    ]);
+
+    expect(durations.last).toBeUndefined();
+  });
+
+  it("不均等に二手へ分かれても、次の行との差で上書きしない", () => {
+    // 海チーム 13:00-15:00 / カフェ組 13:00-16:00。
+    // 「次に始まる行との差」で計算すると海チームが 0 分になってしまう。
+    const durations = resolveTimetableDurations([
+      item({
+        id: "sea",
+        startAt: "2026-08-15T13:00:00+09:00",
+        endAt: "2026-08-15T15:00:00+09:00",
+        createdAt: "2026-08-01T00:00:00+09:00"
+      }),
+      item({
+        id: "cafe",
+        startAt: "2026-08-15T13:00:00+09:00",
+        endAt: "2026-08-15T16:00:00+09:00",
+        createdAt: "2026-08-01T00:01:00+09:00"
+      })
+    ]);
+
+    expect(durations.sea).toBe(120);
+    expect(durations.cafe).toBe(180);
+  });
+});
+
+describe("resolveCurrentTimetableItemIds", () => {
+  const schedule = [
+    item({ id: "a", startAt: "2026-08-15T13:00:00+09:00", endAt: "2026-08-15T14:00:00+09:00" }),
+    item({ id: "b", startAt: "2026-08-15T14:00:00+09:00", endAt: "2026-08-15T15:00:00+09:00" })
+  ];
+
+  it("開始前は空集合を返す", () => {
+    const current = resolveCurrentTimetableItemIds(schedule, new Date("2026-08-15T12:00:00+09:00"));
+
+    expect(current.size).toBe(0);
+  });
+
+  it("進行中の行を返す", () => {
+    const current = resolveCurrentTimetableItemIds(schedule, new Date("2026-08-15T13:30:00+09:00"));
+
+    expect([...current]).toEqual(["a"]);
+  });
+
+  it("すべて終わったら空集合を返す", () => {
+    const current = resolveCurrentTimetableItemIds(schedule, new Date("2026-08-15T16:00:00+09:00"));
+
+    expect(current.size).toBe(0);
+  });
+
+  it("分岐中は複数の行が同時に返る", () => {
+    const current = resolveCurrentTimetableItemIds(
+      [
+        item({
+          id: "sea",
+          startAt: "2026-08-15T13:00:00+09:00",
+          endAt: "2026-08-15T15:00:00+09:00",
+          createdAt: "2026-08-01T00:00:00+09:00"
+        }),
+        item({
+          id: "cafe",
+          startAt: "2026-08-15T13:00:00+09:00",
+          endAt: "2026-08-15T16:00:00+09:00",
+          createdAt: "2026-08-01T00:01:00+09:00"
+        })
+      ],
+      new Date("2026-08-15T14:00:00+09:00")
+    );
+
+    expect([...current].sort()).toEqual(["cafe", "sea"]);
+  });
+
+  it("終了時刻が無い行は次に始まる行までを進行中とみなす", () => {
+    const items = [
+      item({ id: "a", startAt: "2026-08-15T13:00:00+09:00" }),
+      item({ id: "b", startAt: "2026-08-15T14:00:00+09:00" })
+    ];
+
+    expect([...resolveCurrentTimetableItemIds(items, new Date("2026-08-15T13:30:00+09:00"))]).toEqual(["a"]);
+    expect([...resolveCurrentTimetableItemIds(items, new Date("2026-08-15T14:30:00+09:00"))]).toEqual(["b"]);
+  });
+
+  it("終了時刻の無い最後の行は始まったあとも進行中のままにする", () => {
+    const current = resolveCurrentTimetableItemIds(
+      [item({ id: "last", startAt: "2026-08-15T17:00:00+09:00" })],
+      new Date("2026-08-15T23:00:00+09:00")
+    );
+
+    expect([...current]).toEqual(["last"]);
   });
 });

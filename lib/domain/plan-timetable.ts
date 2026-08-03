@@ -167,3 +167,66 @@ export function buildTimetableBlocks(items: TimetableItem[]): TimetableBlock[] {
 
   return blocks;
 }
+
+/** 自分より後に「別の時刻で」始まる最初の行の開始時刻。同時刻の行は飛ばす。 */
+function nextStartAfter(sorted: TimetableItem[], index: number, start: number): number | null {
+  for (let cursor = index + 1; cursor < sorted.length; cursor += 1) {
+    const candidate = timeOf(sorted[cursor].startAt);
+
+    if (candidate > start) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 所要時間（分）。end_at があればそれを使う。
+ * 無ければ次に始まる行との差で推定し、次が無ければ出さない。
+ */
+export function resolveTimetableDurations(items: TimetableItem[]): Record<string, number> {
+  const sorted = sortTimetableItems(items);
+  const durations: Record<string, number> = {};
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const item = sorted[index];
+    const start = timeOf(item.startAt);
+    const end = item.endAt ? timeOf(item.endAt) : nextStartAfter(sorted, index, start);
+
+    if (end === null) {
+      continue;
+    }
+
+    durations[item.id] = Math.round((end - start) / 60000);
+  }
+
+  return durations;
+}
+
+/**
+ * 「いまここ」の id 集合。二手に分かれている間は複数が同時に進行するため集合で返す。
+ * 終了時刻を決められない最後の行は、始まったあとも進行中のままにする。
+ */
+export function resolveCurrentTimetableItemIds(items: TimetableItem[], now: Date): Set<string> {
+  const sorted = sortTimetableItems(items);
+  const nowTime = now.getTime();
+  const current = new Set<string>();
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const item = sorted[index];
+    const start = timeOf(item.startAt);
+
+    if (start > nowTime) {
+      continue;
+    }
+
+    const end = item.endAt ? timeOf(item.endAt) : nextStartAfter(sorted, index, start);
+
+    if (end === null || end > nowTime) {
+      current.add(item.id);
+    }
+  }
+
+  return current;
+}
