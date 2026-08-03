@@ -654,23 +654,13 @@ Expected: FAIL。1件目でクエリエラーでも `notFound()` が呼ばれ、
   const { data: plan, error: planError } = await supabase
 ```
 
-152〜154行目を差し替える。
+152〜154行目を差し替える。**このコードをそのまま使う。**
 
 ```tsx
   // クエリ自体が失敗した場合は404にしない。列の欠落やスキーマ不整合が
   // 「ページが見つかりません」として出ると原因を追えなくなる。
-  if (planError) {
-    throw new Error(`清算ページのデータ取得に失敗しました: ${planError.message}`);
-  }
-
-  if (!plan) {
-    notFound();
-  }
-```
-
-**注意:** `.single()` は行が0件のときも `error`（コード `PGRST116`）を返す。行が無いだけのケースを404のままにするため、`PGRST116` は除外する。上のコードを次に修正する。
-
-```tsx
+  // ただし PGRST116 は .single() が「行が0件」を報告するだけなので、
+  // 従来どおり notFound() に落とす。
   if (planError && planError.code !== "PGRST116") {
     throw new Error(`清算ページのデータ取得に失敗しました: ${planError.message}`);
   }
