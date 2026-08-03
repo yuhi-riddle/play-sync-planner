@@ -80,7 +80,7 @@ export function EventChat({
             className="w-full rounded-control border border-moss/18 bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted">{bodyLength > 1800 ? `残り ${2000 - bodyLength}文字` : ""}</p>
+            <p aria-live="polite" className="text-xs text-muted">{bodyLength > 1800 ? `残り ${2000 - bodyLength}文字` : ""}</p>
             <button
               type="submit"
               disabled={isPending}
