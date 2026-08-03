@@ -19,4 +19,16 @@ describe("canStartDateAdjustment", () => {
   it("中止したイベントでは、招待を締め切っていても進めない", () => {
     expect(canStartDateAdjustment("cancelled", "closed")).toBe(false);
   });
+
+  it("完了したイベントでは、招待を締め切っていても進めない", () => {
+    expect(canStartDateAdjustment("done", "closed")).toBe(false);
+  });
+
+  it("見送ったイベントでは、招待を締め切っていても進めない", () => {
+    expect(canStartDateAdjustment("skipped", "closed")).toBe(false);
+  });
+
+  it("終了状態ではないイベント（confirmed）なら、招待を締め切っていれば進める", () => {
+    expect(canStartDateAdjustment("confirmed", "closed")).toBe(true);
+  });
 });
