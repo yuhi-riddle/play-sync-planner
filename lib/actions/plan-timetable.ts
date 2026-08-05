@@ -128,9 +128,29 @@ function readAssigneeIds(formData: FormData): string[] {
   ];
 }
 
-async function replaceAssignees(supabase: SupabaseClient, itemId: string, participantIds: string[]) {
+async function replaceAssignees(
+  supabase: SupabaseClient,
+  planId: string,
+  itemId: string,
+  participantIds: string[]
+) {
   if (participantIds.length === 0) {
     return;
+  }
+
+  // participants は plan ごとの行だが、担当テーブルのRLSは「その item のイベントのメンバーか」しか見ない。
+  // 1つのイベントに複数の plan がぶら下がるので、別 plan の参加者を担当に付けられてしまう。入口で塞ぐ。
+  const { data: known, error: lookupError } = await supabase
+    .from("participants")
+    .select("id")
+    .eq("plan_id", planId)
+    .in("id", participantIds);
+
+  if (lookupError) {
+    throw new Error(`参加者の確認に失敗しました: ${lookupError.message}`);
+  }
+  if ((known ?? []).length !== participantIds.length) {
+    throw new Error("この日程調整の参加者ではない人は担当にできません。");
   }
 
   const { error } = await supabase
@@ -182,7 +202,7 @@ export async function createPlanTimetableItemAction(planId: string, formData: Fo
     throw new Error(error.message);
   }
 
-  await replaceAssignees(supabase, created.id, readAssigneeIds(formData));
+  await replaceAssignees(supabase, planId, created.id, readAssigneeIds(formData));
   revalidateTimetable(planId);
 }
 
@@ -197,19 +217,27 @@ export async function updatePlanTimetableItemAction(planId: string, itemId: stri
   const note = readNote(formData);
   const { startAt, endAt } = readSchedule(formData, toJstDateKey(plan.confirmed_start_at));
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("plan_timetable_items")
     .update({ start_at: startAt, end_at: endAt, title, note })
     .eq("id", itemId)
-    .eq("plan_id", planId);
+    .eq("plan_id", planId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
   }
+  // PostgREST は0件更新でも成功を返す。ここで止めないと、この下の clearAssignees が
+  // item_id しか見ないので、別 plan の item を指されたときにその担当を全部消してしまう。
+  if (!updated) {
+    throw new Error("この進行はこの日程調整のものではありません。");
+  }
 
   // 担当は差分を取らず、いったん消してから入れ直す。組み合わせが変わるだけなので単純さを優先する。
+  // 消した後の挿入が失敗すると担当が空のまま残るが、エラーは画面に出るので入れ直せる。
   await clearAssignees(supabase, itemId);
-  await replaceAssignees(supabase, itemId, readAssigneeIds(formData));
+  await replaceAssignees(supabase, planId, itemId, readAssigneeIds(formData));
   revalidateTimetable(planId);
 }
 
