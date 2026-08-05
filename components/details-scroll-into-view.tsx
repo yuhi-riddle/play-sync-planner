@@ -23,7 +23,11 @@ export function DetailsScrollIntoView() {
         return;
       }
 
-      details.scrollIntoView({ block: "center", behavior: "smooth" });
+      // jsdom には scrollIntoView が無いのでオプショナル呼び出しにする（テストで落とさない）。
+      // reduced-motion のときは smooth を使わない。components/plan-form.tsx の書き方に合わせている。
+      const reducedMotion =
+        typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      details.scrollIntoView?.({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
     };
 
     details.addEventListener("toggle", handleToggle);
