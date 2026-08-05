@@ -1,6 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ParticipantToggleChips } from "@/components/participant-toggle-chips";
@@ -17,7 +16,9 @@ describe("ParticipantToggleChips", () => {
     render(<ParticipantToggleChips participants={participants} />);
 
     expect(screen.getByRole("button", { name: "あかり" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "そら" })).not.toBeInTheDocument();
+    // 名前を完全一致で探すと、候補に出たときの accessible name が「そら 辞退」になって
+    // 素通りしてしまう。部分一致で探して、出ていないことを本当に確かめる。
+    expect(screen.queryByRole("button", { name: /そら/ })).not.toBeInTheDocument();
   });
 
   it("すでに担当になっている辞退者は候補に残し、辞退と分かるようにする", () => {
@@ -28,22 +29,20 @@ describe("ParticipantToggleChips", () => {
     expect(chip).toHaveTextContent("辞退");
   });
 
-  it("押すと hidden input が増え、もう一度押すと消える", async () => {
-    const user = userEvent.setup();
+  it("押すと hidden input が増え、もう一度押すと消える", () => {
     const { container } = render(<ParticipantToggleChips participants={participants} />);
 
-    await user.click(screen.getByRole("button", { name: "あかり" }));
+    fireEvent.click(screen.getByRole("button", { name: "あかり" }));
     expect(container.querySelectorAll('input[name="participant_ids"]')).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "あかり" }));
+    fireEvent.click(screen.getByRole("button", { name: "あかり" }));
     expect(container.querySelectorAll('input[name="participant_ids"]')).toHaveLength(0);
   });
 
-  it("全員チップで参加中の全員を選ぶ", async () => {
-    const user = userEvent.setup();
+  it("全員チップで参加中の全員を選ぶ", () => {
     const { container } = render(<ParticipantToggleChips participants={participants} />);
 
-    await user.click(screen.getByRole("button", { name: "全員" }));
+    fireEvent.click(screen.getByRole("button", { name: "全員" }));
 
     const values = [...container.querySelectorAll('input[name="participant_ids"]')].map(
       (input) => (input as HTMLInputElement).value
@@ -51,14 +50,13 @@ describe("ParticipantToggleChips", () => {
     expect(values.sort()).toEqual(["p1", "p2"]);
   });
 
-  it("選択中のチップは aria-pressed で分かる", async () => {
-    const user = userEvent.setup();
+  it("選択中のチップは aria-pressed で分かる", () => {
     render(<ParticipantToggleChips participants={participants} />);
 
     const chip = screen.getByRole("button", { name: "あかり" });
     expect(chip).toHaveAttribute("aria-pressed", "false");
 
-    await user.click(chip);
+    fireEvent.click(chip);
     expect(chip).toHaveAttribute("aria-pressed", "true");
   });
 });
