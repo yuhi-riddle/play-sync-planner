@@ -418,6 +418,20 @@ describe("updatePlanTimetableItemAction", () => {
     expect(recorded.inserts).toEqual([]);
   });
 
+  it("担当が不正なら、更新も担当の削除もしない", async () => {
+    // 検証が後ろにあると、行を更新して既存の担当を全消ししてから throw する。
+    // create 側より壊れ方がひどいので、更新側でも順序を固定する。
+    const { client, recorded } = createSupabaseMock({ planParticipantIds: ["p1"] });
+    createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
+
+    await expect(
+      updatePlanTimetableItemAction(planId, itemId, timetableFormData({ title: "集合", start_time: "13:00" }, ["other"]))
+    ).rejects.toThrow("この日程調整の参加者ではない人は担当にできません");
+    expect(recorded.updates).toEqual([]);
+    expect(recorded.deletes).toEqual([]);
+  });
+
   it("更新は id と plan_id の両方で絞る", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
