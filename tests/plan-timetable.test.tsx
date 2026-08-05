@@ -228,6 +228,8 @@ describe("PlanTimetable", () => {
     );
 
     expect(screen.queryByTestId("timetable-date-heading")).not.toBeInTheDocument();
+    // now は開始前なので、いまここは1つも出ない。光る側だけでなく光らない側も固定しておく。
+    expect(screen.queryByText("▶ いまここ")).not.toBeInTheDocument();
   });
 
   it("複数日なら日付見出しを出す", () => {

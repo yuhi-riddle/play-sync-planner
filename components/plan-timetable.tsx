@@ -15,7 +15,15 @@ import { formatDate, formatJstTime } from "@/lib/format";
 
 type DeleteAction = (itemId: string) => (formData: FormData) => void | Promise<void>;
 
-const inactiveStatuses = new Set(["declined", "cancelled"]);
+/**
+ * 担当から外れた状態と、そのバッジ文言。
+ *
+ * 状態の一覧と文言を1箇所にまとめるのは、片方だけ足したときに
+ * 新しい状態が黙って別の文言で表示される事故を防ぐため。
+ * declined（辞退）と cancelled（参加取消）は取り消し線では同じ扱いだが、
+ * 文言まで同じにすると「取り消した人」に「辞退」と出て誤解を招く。
+ */
+const inactiveLabels: Record<string, string> = { declined: "辞退", cancelled: "取消" };
 
 const iconButtonClass =
   "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2";
@@ -42,10 +50,8 @@ function AssigneeChips({ assignees }: { assignees: TimetableAssignee[] }) {
   return (
     <span className="flex flex-wrap gap-1">
       {assignees.map((assignee) => {
-        const isInactive = inactiveStatuses.has(assignee.status);
-        // declined（辞退）と cancelled（参加取消）は取り消し線では同じ扱いだが、
-        // バッジの文言までは同じにすると「取り消した人」に「辞退」と出て誤解を招く。
-        const inactiveLabel = assignee.status === "declined" ? "辞退" : "取消";
+        const inactiveLabel = inactiveLabels[assignee.status];
+        const isInactive = inactiveLabel !== undefined;
 
         return (
           <span
