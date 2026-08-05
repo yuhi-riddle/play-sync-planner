@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUser, redirect, revalidatePath } = vi.hoisted(() => ({
-  createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
-  redirect: vi.fn(),
-  revalidatePath: vi.fn()
-}));
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, redirect, revalidatePath } =
+  vi.hoisted(() => ({
+    createSupabaseAdminClient: vi.fn(),
+    createSupabaseServerClient: vi.fn(),
+    getCurrentUser: vi.fn(),
+    redirect: vi.fn(),
+    revalidatePath: vi.fn()
+  }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser }));
 
 import {
   createPlanTimetableItemAction,
@@ -124,6 +126,7 @@ describe("createPlanTimetableItemAction", () => {
   it("参加していないイベントの進行表には追加できない", async () => {
     const { client, recorded } = createSupabaseMock({ membership: null });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -136,6 +139,7 @@ describe("createPlanTimetableItemAction", () => {
       plan: { id: planId, event_id: eventId, status: "adjusting", confirmed_start_at: null }
     });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -150,6 +154,7 @@ describe("createPlanTimetableItemAction", () => {
       plan: { id: planId, event_id: eventId, status: "cancelled", confirmed_start_at: "2026-08-15T04:00:00+00:00" }
     });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -162,9 +167,11 @@ describe("createPlanTimetableItemAction", () => {
   it("参加状況は「このイベント × このユーザー × 参加済み」で絞る", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }));
 
+    expect(recorded.filters).toContainEqual({ table: "plans", column: "id", value: planId });
     expect(recorded.filters).toContainEqual({ table: "event_members", column: "event_id", value: eventId });
     expect(recorded.filters).toContainEqual({ table: "event_members", column: "user_id", value: userId });
     expect(recorded.filters).toContainEqual({ table: "event_members", column: "status", value: "joined" });
@@ -173,6 +180,7 @@ describe("createPlanTimetableItemAction", () => {
   it("日程調整の取得に失敗したら握り潰さずに伝える", async () => {
     const { client, recorded } = createSupabaseMock({ planError: { message: "column does not exist" } });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -183,6 +191,7 @@ describe("createPlanTimetableItemAction", () => {
   it("参加状況の確認に失敗したら握り潰さずに伝える", async () => {
     const { client, recorded } = createSupabaseMock({ membershipError: { message: "timeout" } });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -193,6 +202,7 @@ describe("createPlanTimetableItemAction", () => {
   it("書き込みに失敗したら握り潰さずに伝える", async () => {
     const { client } = createSupabaseMock({ writeError: { message: "insert failed" } });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -204,16 +214,50 @@ describe("createPlanTimetableItemAction", () => {
     // 同じイベント内の別 plan の参加者を指定しても通ってしまわないこと。
     const { client, recorded } = createSupabaseMock({ planParticipantIds: ["p1"] });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "海で泳ぐ", start_time: "13:00" }, ["p1", "other"]))
     ).rejects.toThrow("この日程調整の参加者ではない人は担当にできません");
-    expect(recorded.inserts.some((entry) => entry.table === "plan_timetable_item_assignees")).toBe(false);
+    // 担当が不正なら、進行の行そのものを作る前に止める。あとで検証すると担当なしの行が残る。
+    expect(recorded.inserts).toEqual([]);
+  });
+
+  it("担当の確認は plan_id と id の両方で絞る", async () => {
+    // plan_id で絞らないと「DBのどこかに存在する participant」を通してしまい、
+    // 別 plan・別イベントの参加者が素通りする。
+    const { client, recorded } = createSupabaseMock();
+    createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
+
+    await createPlanTimetableItemAction(
+      planId,
+      timetableFormData({ title: "海で泳ぐ", start_time: "13:00" }, ["p1", "p2"])
+    );
+
+    expect(recorded.filters).toContainEqual({ table: "participants", column: "plan_id", value: planId });
+    expect(recorded.filters).toContainEqual({ table: "participants", column: "id", value: ["p1", "p2"] });
+  });
+
+  it("担当の確認には admin クライアントを使う", async () => {
+    // participants の select ポリシー(001)は plan の owner 限定なので、
+    // ユーザーのクライアントで引くと owner 以外は担当を1人も付けられなくなる。
+    const { client } = createSupabaseMock();
+    createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
+
+    await createPlanTimetableItemAction(
+      planId,
+      timetableFormData({ title: "海で泳ぐ", start_time: "13:00" }, ["p1"])
+    );
+
+    expect(createSupabaseAdminClient).toHaveBeenCalled();
   });
 
   it("日付が無ければ開催日のJST日付を使う", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }));
 
@@ -230,6 +274,7 @@ describe("createPlanTimetableItemAction", () => {
   it("終了時刻が開始より前なら翌日として保存する", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(
       planId,
@@ -246,6 +291,7 @@ describe("createPlanTimetableItemAction", () => {
   it("終了時刻が開始より後ならその日のまま保存する", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(
       planId,
@@ -262,6 +308,7 @@ describe("createPlanTimetableItemAction", () => {
   it("担当を複数付けられる", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(
       planId,
@@ -278,6 +325,7 @@ describe("createPlanTimetableItemAction", () => {
   it("同じ担当を二重に送っても1回だけ入れる", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(
       planId,
@@ -291,6 +339,7 @@ describe("createPlanTimetableItemAction", () => {
   it("担当が無ければ担当テーブルに書き込まない", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "13:00" }));
 
@@ -300,6 +349,7 @@ describe("createPlanTimetableItemAction", () => {
   it("空のタイトルは受け付けない", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "   ", start_time: "13:00" }))
@@ -310,6 +360,7 @@ describe("createPlanTimetableItemAction", () => {
   it("開始時刻が無ければ受け付けない", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       createPlanTimetableItemAction(planId, timetableFormData({ title: "集合", start_time: "" }))
@@ -327,6 +378,7 @@ describe("updatePlanTimetableItemAction", () => {
   it("担当を入れ替える（いったん全部消してから入れ直す）", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await updatePlanTimetableItemAction(
       planId,
@@ -344,6 +396,7 @@ describe("updatePlanTimetableItemAction", () => {
   it("参加していないイベントの進行表は更新できない", async () => {
     const { client, recorded } = createSupabaseMock({ membership: null });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       updatePlanTimetableItemAction(planId, itemId, timetableFormData({ title: "集合", start_time: "13:00" }))
@@ -356,6 +409,7 @@ describe("updatePlanTimetableItemAction", () => {
     // 引くので、同じイベント内の別 plan の担当を全部消してしまう。
     const { client, recorded } = createSupabaseMock({ updatedRow: null });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(
       updatePlanTimetableItemAction(planId, itemId, timetableFormData({ title: "集合", start_time: "13:00" }, ["p1"]))
@@ -367,6 +421,7 @@ describe("updatePlanTimetableItemAction", () => {
   it("更新は id と plan_id の両方で絞る", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await updatePlanTimetableItemAction(planId, itemId, timetableFormData({ title: "集合", start_time: "13:00" }));
 
@@ -384,6 +439,7 @@ describe("deletePlanTimetableItemAction", () => {
   it("メンバーなら削除できる", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await deletePlanTimetableItemAction(planId, itemId);
 
@@ -393,6 +449,7 @@ describe("deletePlanTimetableItemAction", () => {
   it("削除は id と plan_id の両方で絞る", async () => {
     const { client, recorded } = createSupabaseMock();
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await deletePlanTimetableItemAction(planId, itemId);
 
@@ -403,6 +460,7 @@ describe("deletePlanTimetableItemAction", () => {
   it("参加していないイベントの進行表は削除できない", async () => {
     const { client, recorded } = createSupabaseMock({ membership: null });
     createSupabaseServerClient.mockResolvedValue(client);
+    createSupabaseAdminClient.mockReturnValue(client);
 
     await expect(deletePlanTimetableItemAction(planId, itemId)).rejects.toThrow(
       "この進行表を編集する権限がありません"

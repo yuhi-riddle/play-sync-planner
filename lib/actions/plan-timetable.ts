@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { toJstDateKey } from "@/lib/domain/plan-timetable";
-import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_NOTE_LENGTH = 500;
@@ -128,29 +128,40 @@ function readAssigneeIds(formData: FormData): string[] {
   ];
 }
 
-async function replaceAssignees(
-  supabase: SupabaseClient,
-  planId: string,
-  itemId: string,
-  participantIds: string[]
-) {
+/**
+ * 担当に指定された participant が、この plan のものか確かめる。
+ *
+ * participants は plan ごとの行だが、担当テーブルのRLSは「その item のイベントのメンバーか」しか見ない。
+ * 1つのイベントに複数の plan がぶら下がるので、別 plan の参加者を担当に付けられてしまう。入口で塞ぐ。
+ *
+ * 参照に admin クライアントを使うのは、participants の select ポリシー(001)が「plan の owner だけ」で、
+ * ユーザーのクライアントだと owner 以外のメンバーでは常に0件になり担当を1人も付けられなくなるため。
+ * 誰が編集できるかは requireTimetableEditor で済んでいるので、ここは存在確認だけ。
+ * lib/actions/plans.ts が participants をまたいで読むときと同じ考え方。
+ */
+async function assertAssigneesBelongToPlan(planId: string, participantIds: string[]) {
   if (participantIds.length === 0) {
     return;
   }
 
-  // participants は plan ごとの行だが、担当テーブルのRLSは「その item のイベントのメンバーか」しか見ない。
-  // 1つのイベントに複数の plan がぶら下がるので、別 plan の参加者を担当に付けられてしまう。入口で塞ぐ。
-  const { data: known, error: lookupError } = await supabase
+  const admin = createSupabaseAdminClient();
+  const { data: known, error } = await admin
     .from("participants")
     .select("id")
     .eq("plan_id", planId)
     .in("id", participantIds);
 
-  if (lookupError) {
-    throw new Error(`参加者の確認に失敗しました: ${lookupError.message}`);
+  if (error) {
+    throw new Error(`参加者の確認に失敗しました: ${error.message}`);
   }
   if ((known ?? []).length !== participantIds.length) {
     throw new Error("この日程調整の参加者ではない人は担当にできません。");
+  }
+}
+
+async function replaceAssignees(supabase: SupabaseClient, itemId: string, participantIds: string[]) {
+  if (participantIds.length === 0) {
+    return;
   }
 
   const { error } = await supabase
@@ -184,6 +195,10 @@ export async function createPlanTimetableItemAction(planId: string, formData: Fo
   const title = readTitle(formData);
   const note = readNote(formData);
   const { startAt, endAt } = readSchedule(formData, toJstDateKey(plan.confirmed_start_at));
+  // 入力の検証はすべて書き込みの前に済ませる。担当だけ後回しにすると、
+  // 不正な participant_id を投げられたときに担当の付いていない行が残る。
+  const assigneeIds = readAssigneeIds(formData);
+  await assertAssigneesBelongToPlan(planId, assigneeIds);
 
   const { data: created, error } = await supabase
     .from("plan_timetable_items")
@@ -202,7 +217,7 @@ export async function createPlanTimetableItemAction(planId: string, formData: Fo
     throw new Error(error.message);
   }
 
-  await replaceAssignees(supabase, planId, created.id, readAssigneeIds(formData));
+  await replaceAssignees(supabase, created.id, assigneeIds);
   revalidateTimetable(planId);
 }
 
@@ -216,6 +231,8 @@ export async function updatePlanTimetableItemAction(planId: string, itemId: stri
   const title = readTitle(formData);
   const note = readNote(formData);
   const { startAt, endAt } = readSchedule(formData, toJstDateKey(plan.confirmed_start_at));
+  const assigneeIds = readAssigneeIds(formData);
+  await assertAssigneesBelongToPlan(planId, assigneeIds);
 
   const { data: updated, error } = await supabase
     .from("plan_timetable_items")
@@ -237,7 +254,7 @@ export async function updatePlanTimetableItemAction(planId: string, itemId: stri
   // 担当は差分を取らず、いったん消してから入れ直す。組み合わせが変わるだけなので単純さを優先する。
   // 消した後の挿入が失敗すると担当が空のまま残るが、エラーは画面に出るので入れ直せる。
   await clearAssignees(supabase, itemId);
-  await replaceAssignees(supabase, planId, itemId, readAssigneeIds(formData));
+  await replaceAssignees(supabase, itemId, assigneeIds);
   revalidateTimetable(planId);
 }
 
