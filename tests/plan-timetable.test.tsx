@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ParticipantToggleChips } from "@/components/participant-toggle-chips";
+import { PlanTimetable } from "@/components/plan-timetable";
 import { PlanTimetableForm } from "@/components/plan-timetable-form";
+import type { TimetableItem } from "@/lib/domain/plan-timetable";
 
 const participants = [
   { participantId: "p1", displayName: "あかり", status: "confirmed" },
@@ -191,5 +193,213 @@ describe("PlanTimetableForm", () => {
     } finally {
       delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     }
+  });
+});
+
+function timetableItem(
+  overrides: Partial<TimetableItem> & Pick<TimetableItem, "id" | "startAt" | "title">
+): TimetableItem {
+  return {
+    endAt: null,
+    note: null,
+    createdAt: "2026-08-01T00:00:00+09:00",
+    assignees: [],
+    ...overrides
+  };
+}
+
+describe("PlanTimetable", () => {
+  const noopDelete = () => () => {};
+
+  it("何も無いときは空の案内を出す", () => {
+    render(<PlanTimetable items={[]} now={new Date("2026-08-15T12:00:00+09:00")} canEdit deleteAction={noopDelete} />);
+
+    expect(screen.getByText(/まだ進行表はありません/)).toBeInTheDocument();
+  });
+
+  it("単日なら日付見出しを出さない", () => {
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.queryByTestId("timetable-date-heading")).not.toBeInTheDocument();
+  });
+
+  it("複数日なら日付見出しを出す", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" }),
+          timetableItem({ id: "b", startAt: "2026-08-16T09:00:00+09:00", title: "朝食" })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getAllByTestId("timetable-date-heading")).toHaveLength(2);
+  });
+
+  it("進行中の行にいまここを出す", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T15:00:00+09:00",
+            title: "海で泳ぐ"
+          })
+        ]}
+        now={new Date("2026-08-15T14:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText("▶ いまここ")).toBeInTheDocument();
+  });
+
+  it("分岐は分かれ目と合流の見出しで挟む", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "sea",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T15:00:00+09:00",
+            title: "海で泳ぐ",
+            createdAt: "2026-08-01T00:00:00+09:00"
+          }),
+          timetableItem({
+            id: "cafe",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T16:00:00+09:00",
+            title: "カフェで休む",
+            createdAt: "2026-08-01T00:01:00+09:00"
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText(/二手に分かれる/)).toBeInTheDocument();
+    expect(screen.getByText(/合流/)).toBeInTheDocument();
+  });
+
+  it("レーンが3つ以上なら横並びをやめて縦に積む", () => {
+    const lanes = ["a", "b", "c"].map((id, index) =>
+      timetableItem({
+        id,
+        startAt: "2026-08-15T13:00:00+09:00",
+        endAt: "2026-08-15T15:00:00+09:00",
+        title: `班${id}`,
+        createdAt: `2026-08-01T00:0${index}:00+09:00`,
+        assignees: [{ participantId: `p${index}`, displayName: `担当${index}`, status: "confirmed" }]
+      })
+    );
+
+    const { container } = render(
+      <PlanTimetable items={lanes} now={new Date("2026-08-15T12:00:00+09:00")} canEdit={false} deleteAction={noopDelete} />
+    );
+
+    // jsdom は computed style を持たないのでクラス名で確認する（プロジェクトの作法）。
+    const laneContainer = container.querySelector('[data-testid="timetable-lanes"]');
+    expect(laneContainer?.className).toContain("grid-cols-1");
+    expect(laneContainer?.className).not.toContain("sm:grid-cols-2");
+  });
+
+  it("2レーンなら横に並べる", () => {
+    const lanes = ["a", "b"].map((id, index) =>
+      timetableItem({
+        id,
+        startAt: "2026-08-15T13:00:00+09:00",
+        endAt: "2026-08-15T15:00:00+09:00",
+        title: `班${id}`,
+        createdAt: `2026-08-01T00:0${index}:00+09:00`,
+        assignees: [{ participantId: `p${index}`, displayName: `担当${index}`, status: "confirmed" }]
+      })
+    );
+
+    const { container } = render(
+      <PlanTimetable items={lanes} now={new Date("2026-08-15T12:00:00+09:00")} canEdit={false} deleteAction={noopDelete} />
+    );
+
+    expect(container.querySelector('[data-testid="timetable-lanes"]')?.className).toContain("sm:grid-cols-2");
+  });
+
+  it("所要時間を出す", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T14:30:00+09:00",
+            title: "海で泳ぐ"
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText("1時間30分")).toBeInTheDocument();
+  });
+
+  it("辞退した担当は取り消し線と辞退バッジで残す", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            title: "受付",
+            assignees: [{ participantId: "p3", displayName: "そら", status: "declined" }]
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText("そら").className).toContain("line-through");
+    expect(screen.getByText("辞退")).toBeInTheDocument();
+  });
+
+  it("編集できないときは削除ボタンを出さない", () => {
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "集合を削除" })).not.toBeInTheDocument();
+  });
+
+  it("編集できるときは削除ボタンを出す", () => {
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "集合を削除" })).toBeInTheDocument();
   });
 });
