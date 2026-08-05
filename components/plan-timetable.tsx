@@ -43,6 +43,9 @@ function AssigneeChips({ assignees }: { assignees: TimetableAssignee[] }) {
     <span className="flex flex-wrap gap-1">
       {assignees.map((assignee) => {
         const isInactive = inactiveStatuses.has(assignee.status);
+        // declined（辞退）と cancelled（参加取消）は取り消し線では同じ扱いだが、
+        // バッジの文言までは同じにすると「取り消した人」に「辞退」と出て誤解を招く。
+        const inactiveLabel = assignee.status === "declined" ? "辞退" : "取消";
 
         return (
           <span
@@ -50,7 +53,7 @@ function AssigneeChips({ assignees }: { assignees: TimetableAssignee[] }) {
             className="rounded-full border border-line bg-sunken px-2 py-0.5 text-xs text-muted"
           >
             <span className={isInactive ? "line-through" : undefined}>{assignee.displayName}</span>
-            {isInactive ? <span className="ml-1 text-subtle">辞退</span> : null}
+            {isInactive ? <span className="ml-1 text-subtle">{inactiveLabel}</span> : null}
           </span>
         );
       })}

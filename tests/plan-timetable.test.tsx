@@ -356,6 +356,77 @@ describe("PlanTimetable", () => {
     expect(screen.getByText("1時間30分")).toBeInTheDocument();
   });
 
+  it("1時間未満は分だけで出す", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T13:45:00+09:00",
+            title: "移動"
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText("45分")).toBeInTheDocument();
+  });
+
+  it("ちょうどの時間は分を付けない", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T15:00:00+09:00",
+            title: "海で泳ぐ"
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText("2時間")).toBeInTheDocument();
+  });
+
+  it("分岐中は複数の行が同時に光る", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "sea",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T15:00:00+09:00",
+            title: "海で泳ぐ",
+            createdAt: "2026-08-01T00:00:00+09:00",
+            assignees: [{ participantId: "p0", displayName: "担当0", status: "confirmed" }]
+          }),
+          timetableItem({
+            id: "cafe",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T16:00:00+09:00",
+            title: "カフェで休む",
+            createdAt: "2026-08-01T00:01:00+09:00",
+            assignees: [{ participantId: "p1", displayName: "担当1", status: "confirmed" }]
+          })
+        ]}
+        now={new Date("2026-08-15T14:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    // 分岐中は「どちらの班も進行中」なので、1行に絞る実装だとここで落ちる。
+    expect(screen.getAllByText("▶ いまここ")).toHaveLength(2);
+  });
+
   it("辞退した担当は取り消し線と辞退バッジで残す", () => {
     render(
       <PlanTimetable
@@ -375,6 +446,29 @@ describe("PlanTimetable", () => {
 
     expect(screen.getByText("そら").className).toContain("line-through");
     expect(screen.getByText("辞退")).toBeInTheDocument();
+  });
+
+  it("参加を取り消した担当は取り消し線と取消バッジで残す（辞退とは文言を分ける）", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            title: "受付",
+            assignees: [{ participantId: "p4", displayName: "みずき", status: "cancelled" }]
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+      />
+    );
+
+    expect(screen.getByText("みずき").className).toContain("line-through");
+    expect(screen.getByText("取消")).toBeInTheDocument();
+    // 「辞退」は declined 専用の文言。cancelled にまで出ると取り消した人を辞退扱いしてしまう。
+    expect(screen.queryByText("辞退")).not.toBeInTheDocument();
   });
 
   it("編集できないときは削除ボタンを出さない", () => {
