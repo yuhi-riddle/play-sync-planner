@@ -1,0 +1,148 @@
+import { notFound, redirect } from "next/navigation";
+import React from "react";
+
+import { PlanTimetable } from "@/components/plan-timetable";
+import { PlanTimetableForm } from "@/components/plan-timetable-form";
+import { Alert, Card, PageHeader, SecondaryLink } from "@/components/ui";
+import { createPlanTimetableItemAction, deletePlanTimetableItemAction } from "@/lib/actions/plan-timetable";
+import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan-timetable";
+import { formatDateTimeRange, formatJstTime } from "@/lib/format";
+import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
+type ParticipantRow = {
+  id: string;
+  display_name: string;
+  status: string;
+  user_id: string | null;
+};
+
+type AssigneeRow = {
+  participant_id: string;
+};
+
+type TimetableItemRow = {
+  id: string;
+  start_at: string;
+  end_at: string | null;
+  title: string;
+  note: string | null;
+  created_at: string;
+  plan_timetable_item_assignees: AssigneeRow[] | null;
+};
+
+export default async function PlanTimetablePage({ params }: { params: Promise<{ planId: string }> }) {
+  const { planId } = await params;
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: plan, error: planError } = await supabase
+    .from("plans")
+    .select(
+      "id, title, status, owner_user_id, confirmed_start_at, confirmed_end_at, events(id, title), participants(id, display_name, status, user_id)"
+    )
+    .eq("id", planId)
+    .single();
+
+  // クエリ自体の失敗を404にしない。列の欠落やスキーマ不整合が
+  // 「ページが見つかりません」として出ると原因を追えなくなる。
+  if (planError && planError.code !== "PGRST116") {
+    throw new Error(`進行表のデータ取得に失敗しました: ${planError.message}`);
+  }
+  if (!plan) {
+    notFound();
+  }
+
+  const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
+    a.display_name.localeCompare(b.display_name, "ja")
+  );
+  const isOwner = plan.owner_user_id === userId;
+  const canView = isOwner || participants.some((participant) => participant.user_id === userId);
+  if (!canView) {
+    notFound();
+  }
+
+  const { data: itemRows, error: itemsError } = await supabase
+    .from("plan_timetable_items")
+    .select("id, start_at, end_at, title, note, created_at, plan_timetable_item_assignees(participant_id)")
+    .eq("plan_id", planId);
+
+  if (itemsError) {
+    throw new Error(`進行表の取得に失敗しました: ${itemsError.message}`);
+  }
+
+  const participantById = new Map(participants.map((participant) => [participant.id, participant]));
+  const items = sortTimetableItems(
+    ((itemRows ?? []) as TimetableItemRow[]).map((row) => ({
+      id: row.id,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      title: row.title,
+      note: row.note,
+      createdAt: row.created_at,
+      // 担当は participants から名前を引く。退会や削除で引けない行は落とす。
+      assignees: (row.plan_timetable_item_assignees ?? [])
+        .map((assignee) => participantById.get(assignee.participant_id))
+        .filter((participant): participant is ParticipantRow => Boolean(participant))
+        .map((participant) => ({
+          participantId: participant.id,
+          displayName: participant.display_name,
+          status: participant.status
+        }))
+    }))
+  );
+
+  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const isConfirmed = plan.status === "date_confirmed";
+  const eventDates = listEventDates(plan.confirmed_start_at, plan.confirmed_end_at);
+  const nextStartAt = nextTimetableStartAt(items, plan.confirmed_start_at);
+  const createItem = createPlanTimetableItemAction.bind(null, plan.id);
+  const deleteItem = (itemId: string) => deletePlanTimetableItemAction.bind(null, plan.id, itemId);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Timetable"
+        title="当日の進行表"
+        description={
+          [event?.title?.trim(), plan.title?.trim()].filter(Boolean).join(" / ") || "当日の流れを時刻で共有します。"
+        }
+        action={<SecondaryLink href={`/plans/${plan.id}`}>日程調整へ戻る</SecondaryLink>}
+      />
+
+      {plan.confirmed_start_at ? (
+        <Card className="p-4">
+          <p className="text-caption text-muted">開催日時</p>
+          <p className="mt-1 text-body font-bold text-ink">
+            {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)}
+          </p>
+        </Card>
+      ) : null}
+
+      {isConfirmed ? null : <Alert tone="warn">日程がまだ確定していないため、進行表は閲覧のみです。</Alert>}
+
+      <Card className="space-y-4">
+        {/* 「いまここ」はサーバー描画時の時刻で決める。全ページ force-dynamic なので再読込で追いつく。 */}
+        <PlanTimetable items={items} now={new Date()} canEdit={isConfirmed} deleteAction={deleteItem} />
+
+        {isConfirmed ? (
+          <PlanTimetableForm
+            action={createItem}
+            participants={participants.map((participant) => ({
+              participantId: participant.id,
+              displayName: participant.display_name,
+              status: participant.status
+            }))}
+            eventDates={eventDates}
+            defaultDate={eventDates[0] ?? toJstDateKey(new Date().toISOString())}
+            defaultStartTime={nextStartAt ? formatJstTime(nextStartAt) : "10:00"}
+          />
+        ) : null}
+      </Card>
+    </div>
+  );
+}

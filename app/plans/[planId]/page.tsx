@@ -219,6 +219,7 @@ export default async function PlanDetailPage({
         action={
           <div className="flex flex-wrap gap-3">
             {!isConfirmed && candidateSummaries.length > 0 ? <ButtonLink href={`/plans/${plan.id}/confirm`}>日程を確定</ButtonLink> : null}
+            {isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/timetable`}>当日の進行表へ</SecondaryLink> : null}
             {isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/settlement`}>支払い・清算へ</SecondaryLink> : null}
             {calendarShareUrl ? <CalendarShareLink href={calendarShareUrl} /> : null}
           </div>

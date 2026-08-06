@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildTimetableBlocks,
   groupTimetableItemsByDate,
+  listEventDates,
+  nextTimetableStartAt,
   resolveCurrentTimetableItemIds,
   resolveTimetableDurations,
   sortTimetableItems,
@@ -398,6 +400,69 @@ describe("resolveCurrentTimetableItemIds", () => {
     );
 
     expect([...current]).toEqual(["last"]);
+  });
+});
+
+describe("listEventDates", () => {
+  it("単日なら1日だけ返す", () => {
+    expect(listEventDates("2026-08-15T04:00:00+00:00", "2026-08-15T08:00:00+00:00")).toEqual(["2026-08-15"]);
+  });
+
+  it("終了時刻が無ければ開始日だけ返す", () => {
+    expect(listEventDates("2026-08-15T04:00:00+00:00", null)).toEqual(["2026-08-15"]);
+  });
+
+  it("日をまたぐ開催は間の日もすべて返す", () => {
+    expect(listEventDates("2026-08-15T04:00:00+00:00", "2026-08-17T04:00:00+00:00")).toEqual([
+      "2026-08-15",
+      "2026-08-16",
+      "2026-08-17"
+    ]);
+  });
+
+  it("JSTで日付を区切る", () => {
+    // 2026-08-15T16:00Z は JST では翌 8/16 の 01:00。UTC で切ると 8/15 になってしまう。
+    expect(listEventDates("2026-08-15T16:00:00+00:00", "2026-08-15T18:00:00+00:00")).toEqual(["2026-08-16"]);
+  });
+
+  it("開始が無ければ空配列", () => {
+    expect(listEventDates(null, null)).toEqual([]);
+  });
+});
+
+describe("nextTimetableStartAt", () => {
+  it("最後の行の1時間後を返す", () => {
+    const next = nextTimetableStartAt(
+      [
+        item({ id: "a", startAt: "2026-08-15T13:00:00+09:00" }),
+        item({ id: "b", startAt: "2026-08-15T15:30:00+09:00" })
+      ],
+      "2026-08-15T04:00:00+00:00"
+    );
+
+    expect(new Date(next as string).toISOString()).toBe(new Date("2026-08-15T16:30:00+09:00").toISOString());
+  });
+
+  it("行が無ければ開催時刻を返す", () => {
+    const next = nextTimetableStartAt([], "2026-08-15T04:00:00+00:00");
+
+    expect(new Date(next as string).toISOString()).toBe(new Date("2026-08-15T04:00:00+00:00").toISOString());
+  });
+
+  it("行も開催時刻も無ければ null", () => {
+    expect(nextTimetableStartAt([], null)).toBeNull();
+  });
+
+  it("並び順が崩れた入力でも、いちばん遅い行を基準にする", () => {
+    const next = nextTimetableStartAt(
+      [
+        item({ id: "late", startAt: "2026-08-15T15:00:00+09:00" }),
+        item({ id: "early", startAt: "2026-08-15T09:00:00+09:00" })
+      ],
+      null
+    );
+
+    expect(new Date(next as string).toISOString()).toBe(new Date("2026-08-15T16:00:00+09:00").toISOString());
   });
 });
 

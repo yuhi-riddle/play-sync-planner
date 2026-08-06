@@ -6,6 +6,7 @@ import HomeLoading from "@/app/loading";
 import EventLoading from "@/app/events/[eventId]/loading";
 import PlanLoading from "@/app/plans/[planId]/loading";
 import SettlementLoading from "@/app/plans/[planId]/settlement/loading";
+import TimetableLoading from "@/app/plans/[planId]/timetable/loading";
 
 describe("ルートごとの読み込み中スケルトン", () => {
   beforeEach(() => {
@@ -16,7 +17,8 @@ describe("ルートごとの読み込み中スケルトン", () => {
     ["ホーム", HomeLoading],
     ["イベント詳細", EventLoading],
     ["日程調整詳細", PlanLoading],
-    ["清算", SettlementLoading]
+    ["清算", SettlementLoading],
+    ["進行表", TimetableLoading]
   ])("%sのローディングは読み込み中であることを伝える", (_label, Loading) => {
     render(<Loading />);
 
@@ -29,7 +31,9 @@ describe("ルートごとの読み込み中スケルトン", () => {
     // イベント詳細はタブ化済みで、既定の概要タブに出るのは日程調整とイベント情報の2枠。
     ["イベント詳細", EventLoading, 9, 2],
     ["日程調整詳細", PlanLoading, 10, 3],
-    ["清算", SettlementLoading, 10, 3]
+    ["清算", SettlementLoading, 10, 3],
+    // 進行表は見出し1枠と行のリスト。清算ほど枠は多くない。
+    ["進行表", TimetableLoading, 6, 2]
   ])("%sのローディングは実ページの構造に見合うCardとSkeletonの数を描く", (_label, Loading, minSkeletons, minCards) => {
     const { container } = render(<Loading />);
 

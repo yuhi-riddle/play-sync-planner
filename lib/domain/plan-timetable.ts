@@ -264,3 +264,44 @@ export function resolveCurrentTimetableItemIds(items: TimetableItem[], now: Date
 
   return current;
 }
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 開催期間にまたがる日付を JST で列挙する。
+ * 追加フォームで日付欄を出すかどうか（＝複数日か）の判断と、選択肢に使う。
+ */
+export function listEventDates(startAt: string | null, endAt: string | null): string[] {
+  if (!startAt) {
+    return [];
+  }
+
+  const startKey = toJstDateKey(startAt);
+  const endKey = endAt ? toJstDateKey(endAt) : startKey;
+  const dates: string[] = [];
+  // JST の 0 時を起点に1日ずつ進める。UTC で刻むと日付の切れ目がずれる。
+  const cursor = new Date(`${startKey}T00:00:00+09:00`);
+  const last = new Date(`${endKey}T00:00:00+09:00`);
+
+  while (cursor.getTime() <= last.getTime()) {
+    dates.push(toJstDateKey(cursor.toISOString()));
+    cursor.setTime(cursor.getTime() + DAY_IN_MS);
+  }
+
+  return dates;
+}
+
+/**
+ * 追加フォームに入れる開始時刻の候補。いちばん遅い行の1時間後、行が無ければ開催時刻。
+ * どちらも決められなければ null を返し、呼び出し側で既定値を決める。
+ */
+export function nextTimetableStartAt(items: TimetableItem[], confirmedStartAt: string | null): string | null {
+  const sorted = sortTimetableItems(items);
+  const last = sorted[sorted.length - 1];
+
+  if (last) {
+    return new Date(timeOf(last.startAt) + 60 * 60 * 1000).toISOString();
+  }
+
+  return confirmedStartAt;
+}
