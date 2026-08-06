@@ -498,4 +498,84 @@ describe("PlanTimetable", () => {
 
     expect(screen.getByRole("button", { name: "集合を削除" })).toBeInTheDocument();
   });
+
+  const editProps = {
+    editAction: () => () => {},
+    participants,
+    eventDates: ["2026-08-15"]
+  };
+
+  it("編集できるときは行ごとに編集の折りたたみを出す", () => {
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    expect(screen.getByText("編集")).toBeInTheDocument();
+  });
+
+  it("編集できないときは編集の折りたたみを出さない", () => {
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit={false}
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    expect(screen.queryByText("編集")).not.toBeInTheDocument();
+  });
+
+  it("編集フォームには元の値が入っている", () => {
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "a",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T14:30:00+09:00",
+            title: "海で泳ぐ",
+            note: "日焼け止め",
+            assignees: [{ participantId: "p1", displayName: "あかり", status: "confirmed" }]
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    expect(screen.getByLabelText("開始")).toHaveValue("13:00");
+    expect(screen.getByLabelText("終了（任意）")).toHaveValue("14:30");
+    expect(screen.getByLabelText("進行の名前")).toHaveValue("海で泳ぐ");
+    expect(screen.getByLabelText("メモ（任意）")).toHaveValue("日焼け止め");
+    // 担当は選択済みとしてチップが押された状態になっている。
+    expect(screen.getByRole("button", { name: "あかり" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("行が2つあっても入力の id が衝突しない", () => {
+    const { container } = render(
+      <PlanTimetable
+        items={[
+          timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" }),
+          timetableItem({ id: "b", startAt: "2026-08-15T14:00:00+09:00", title: "移動" })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    const ids = [...container.querySelectorAll('input[name="start_time"]')].map((input) => input.id);
+    expect(new Set(ids).size).toBe(2);
+  });
 });

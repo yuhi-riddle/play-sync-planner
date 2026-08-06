@@ -2,11 +2,14 @@ import { Trash2 } from "lucide-react";
 import React from "react";
 
 import { EmptyState } from "@/components/ui";
+import type { TimetableParticipantOption } from "@/components/participant-toggle-chips";
+import { PlanTimetableForm } from "@/components/plan-timetable-form";
 import {
   buildTimetableBlocks,
   groupTimetableItemsByDate,
   resolveCurrentTimetableItemIds,
   resolveTimetableDurations,
+  toJstDateKey,
   type TimetableAssignee,
   type TimetableBlock,
   type TimetableItem
@@ -14,6 +17,13 @@ import {
 import { formatDate, formatJstTime } from "@/lib/format";
 
 type DeleteAction = (itemId: string) => (formData: FormData) => void | Promise<void>;
+type EditAction = (itemId: string) => (formData: FormData) => void | Promise<void>;
+
+type EditSupport = {
+  editAction?: EditAction;
+  participants?: TimetableParticipantOption[];
+  eventDates?: string[];
+};
 
 /**
  * 担当から外れた状態と、そのバッジ文言。
@@ -72,48 +82,74 @@ function TimetableRow({
   durationMinutes,
   isCurrent,
   canEdit,
-  deleteAction
+  deleteAction,
+  editAction,
+  participants,
+  eventDates
 }: {
   item: TimetableItem;
   durationMinutes: number | undefined;
   isCurrent: boolean;
   canEdit: boolean;
   deleteAction: DeleteAction;
-}) {
+} & EditSupport) {
   return (
-    <div
-      data-testid={`timetable-item-${item.id}`}
-      className={`flex flex-col gap-2 rounded-control border p-3 sm:flex-row sm:items-start sm:gap-3 ${
-        isCurrent ? "border-moss bg-mist/45" : "border-line bg-surface"
-      }`}
-    >
-      <div className="shrink-0 text-body font-bold text-ink sm:w-24">
-        {formatJstTime(item.startAt)}
-        {item.endAt ? <span className="text-caption font-normal text-muted"> - {formatJstTime(item.endAt)}</span> : null}
-      </div>
-
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="break-words text-body font-medium text-ink">{item.title}</span>
-          {isCurrent ? <span className="text-caption font-bold text-pine">▶ いまここ</span> : null}
+    <div className="space-y-2">
+      <div
+        data-testid={`timetable-item-${item.id}`}
+        className={`flex flex-col gap-2 rounded-control border p-3 sm:flex-row sm:items-start sm:gap-3 ${
+          isCurrent ? "border-moss bg-mist/45" : "border-line bg-surface"
+        }`}
+      >
+        <div className="shrink-0 text-body font-bold text-ink sm:w-24">
+          {formatJstTime(item.startAt)}
+          {item.endAt ? (
+            <span className="text-caption font-normal text-muted"> - {formatJstTime(item.endAt)}</span>
+          ) : null}
         </div>
 
-        {item.note ? <p className="break-words text-caption text-muted">{item.note}</p> : null}
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="break-words text-body font-medium text-ink">{item.title}</span>
+            {isCurrent ? <span className="text-caption font-bold text-pine">▶ いまここ</span> : null}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {durationMinutes === undefined ? null : (
-            <span className="text-caption text-subtle">{formatDuration(durationMinutes)}</span>
-          )}
-          <AssigneeChips assignees={item.assignees} />
+          {item.note ? <p className="break-words text-caption text-muted">{item.note}</p> : null}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {durationMinutes === undefined ? null : (
+              <span className="text-caption text-subtle">{formatDuration(durationMinutes)}</span>
+            )}
+            <AssigneeChips assignees={item.assignees} />
+          </div>
         </div>
+
+        {canEdit ? (
+          <form action={deleteAction(item.id)}>
+            <button type="submit" className={iconButtonClass} aria-label={`${item.title}を削除`}>
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </form>
+        ) : null}
       </div>
 
-      {canEdit ? (
-        <form action={deleteAction(item.id)}>
-          <button type="submit" className={iconButtonClass} aria-label={`${item.title}を削除`}>
-            <Trash2 aria-hidden="true" className="h-4 w-4" />
-          </button>
-        </form>
+      {canEdit && editAction && participants ? (
+        <PlanTimetableForm
+          action={editAction(item.id)}
+          participants={participants}
+          eventDates={eventDates ?? []}
+          defaultDate={toJstDateKey(item.startAt)}
+          defaultStartTime={formatJstTime(item.startAt)}
+          summaryLabel="編集"
+          submitLabel="保存"
+          idPrefix={`timetable-edit-${item.id}`}
+          defaultValues={{
+            title: item.title,
+            note: item.note,
+            endTime: item.endAt ? formatJstTime(item.endAt) : "",
+            assigneeIds: item.assignees.map((assignee) => assignee.participantId)
+          }}
+        />
       ) : null}
     </div>
   );
@@ -124,14 +160,17 @@ function TimetableBlockView({
   durations,
   current,
   canEdit,
-  deleteAction
+  deleteAction,
+  editAction,
+  participants,
+  eventDates
 }: {
   block: TimetableBlock;
   durations: Record<string, number>;
   current: Set<string>;
   canEdit: boolean;
   deleteAction: DeleteAction;
-}) {
+} & EditSupport) {
   if (block.kind === "single") {
     return (
       <TimetableRow
@@ -140,6 +179,9 @@ function TimetableBlockView({
         isCurrent={current.has(block.item.id)}
         canEdit={canEdit}
         deleteAction={deleteAction}
+        editAction={editAction}
+        participants={participants}
+        eventDates={eventDates}
       />
     );
   }
@@ -163,6 +205,9 @@ function TimetableBlockView({
                 isCurrent={current.has(item.id)}
                 canEdit={canEdit}
                 deleteAction={deleteAction}
+                editAction={editAction}
+                participants={participants}
+                eventDates={eventDates}
               />
             ))}
           </div>
@@ -178,13 +223,16 @@ export function PlanTimetable({
   items,
   now,
   canEdit,
-  deleteAction
+  deleteAction,
+  editAction,
+  participants,
+  eventDates
 }: {
   items: TimetableItem[];
   now: Date;
   canEdit: boolean;
   deleteAction: DeleteAction;
-}) {
+} & EditSupport) {
   if (items.length === 0) {
     return <EmptyState>まだ進行表はありません。集合・移動・解散の時刻を書いておくと、当日に迷いません。</EmptyState>;
   }
@@ -211,6 +259,9 @@ export function PlanTimetable({
               current={current}
               canEdit={canEdit}
               deleteAction={deleteAction}
+              editAction={editAction}
+              participants={participants}
+              eventDates={eventDates}
             />
           ))}
         </div>

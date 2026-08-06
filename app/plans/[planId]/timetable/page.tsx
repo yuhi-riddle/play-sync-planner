@@ -4,7 +4,11 @@ import React from "react";
 import { PlanTimetable } from "@/components/plan-timetable";
 import { PlanTimetableForm } from "@/components/plan-timetable-form";
 import { Alert, Card, PageHeader, SecondaryLink } from "@/components/ui";
-import { createPlanTimetableItemAction, deletePlanTimetableItemAction } from "@/lib/actions/plan-timetable";
+import {
+  createPlanTimetableItemAction,
+  deletePlanTimetableItemAction,
+  updatePlanTimetableItemAction
+} from "@/lib/actions/plan-timetable";
 import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan-timetable";
 import { formatDateTimeRange, formatJstTime } from "@/lib/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
@@ -115,6 +119,13 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
       : (eventDates[eventDates.length - 1] ?? toJstDateKey(new Date().toISOString()));
   const createItem = createPlanTimetableItemAction.bind(null, plan.id);
   const deleteItem = (itemId: string) => deletePlanTimetableItemAction.bind(null, plan.id, itemId);
+  const editItem = (itemId: string) => updatePlanTimetableItemAction.bind(null, plan.id, itemId);
+  // 追加・一覧内の編集・両方が同じ参加者リストを使うので、ここで1回だけ整形して使い回す。
+  const participantOptions = participants.map((participant) => ({
+    participantId: participant.id,
+    displayName: participant.display_name,
+    status: participant.status
+  }));
 
   return (
     <div className="space-y-6">
@@ -147,16 +158,20 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
 
       <Card className="space-y-4">
         {/* 「いまここ」はサーバー描画時の時刻で決める。全ページ force-dynamic なので再読込で追いつく。 */}
-        <PlanTimetable items={items} now={new Date()} canEdit={isConfirmed} deleteAction={deleteItem} />
+        <PlanTimetable
+          items={items}
+          now={new Date()}
+          canEdit={isConfirmed}
+          deleteAction={deleteItem}
+          editAction={editItem}
+          participants={participantOptions}
+          eventDates={eventDates}
+        />
 
         {isConfirmed ? (
           <PlanTimetableForm
             action={createItem}
-            participants={participants.map((participant) => ({
-              participantId: participant.id,
-              displayName: participant.display_name,
-              status: participant.status
-            }))}
+            participants={participantOptions}
             eventDates={eventDates}
             defaultDate={defaultDate}
             defaultStartTime={nextStartAt ? formatJstTime(nextStartAt) : "10:00"}
