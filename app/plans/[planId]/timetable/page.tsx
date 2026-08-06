@@ -163,9 +163,7 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
           now={new Date()}
           canEdit={isConfirmed}
           deleteAction={deleteItem}
-          editAction={editItem}
-          participants={participantOptions}
-          eventDates={eventDates}
+          edit={{ action: editItem, participants: participantOptions, eventDates }}
         />
 
         {isConfirmed ? (

@@ -21,6 +21,7 @@ export function PlanTimetableForm({
   defaultDate,
   defaultStartTime,
   summaryLabel = "＋ 進行を追加",
+  summaryAriaLabel,
   submitLabel = "追加",
   defaultValues,
   idPrefix = "timetable-new"
@@ -32,6 +33,13 @@ export function PlanTimetableForm({
   defaultDate: string;
   defaultStartTime: string;
   summaryLabel?: string;
+  /**
+   * 折りたたみの見出しの accessible name。行ごとに並ぶ編集フォームのように
+   * 見た目のラベルが全行「編集」で同じになる場面で、削除ボタンと同じ流儀
+   * （見た目は短く、aria-label で何の操作か説明する）で行を区別するために使う。
+   * 省略時は summaryLabel の文字自体が accessible name になる（追加フォームはこちら）。
+   */
+  summaryAriaLabel?: string;
   submitLabel?: string;
   defaultValues?: {
     title?: string;
@@ -46,7 +54,10 @@ export function PlanTimetableForm({
 
   return (
     <details className="rounded-control border border-line bg-surface">
-      <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body font-bold text-pine [&::-webkit-details-marker]:hidden">
+      <summary
+        aria-label={summaryAriaLabel}
+        className="min-h-11 cursor-pointer list-none px-4 py-3 text-body font-bold text-pine [&::-webkit-details-marker]:hidden"
+      >
         {summaryLabel}
       </summary>
 

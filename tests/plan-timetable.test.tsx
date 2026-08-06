@@ -500,9 +500,13 @@ describe("PlanTimetable", () => {
   });
 
   const editProps = {
-    editAction: () => () => {},
-    participants,
-    eventDates: ["2026-08-15"]
+    edit: {
+      action: () => () => {},
+      participants,
+      // 単日だと <select name="date"> がそもそも描画されず、defaultDate の配線が
+      // どのテストにも触れられなくなる（レビュー指摘）。複数日にしておく。
+      eventDates: ["2026-08-15", "2026-08-16"]
+    }
   };
 
   it("編集できるときは行ごとに編集の折りたたみを出す", () => {
@@ -577,5 +581,89 @@ describe("PlanTimetable", () => {
 
     const ids = [...container.querySelectorAll('input[name="start_time"]')].map((input) => input.id);
     expect(new Set(ids).size).toBe(2);
+  });
+
+  it("編集フォームの日付にはその行の日付が入っている", () => {
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "b", startAt: "2026-08-16T09:00:00+09:00", title: "朝食" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    expect(screen.getByLabelText("日付")).toHaveValue("2026-08-16");
+  });
+
+  it("行の日付が開催期間に無いときは末尾の日付にフォールバックする", () => {
+    // 行を作った後に開催期間を短く確定し直した場合を想定。行の日付(17日)が
+    // eventDates(15日・16日)のどの <option> にも無いと、素で defaultDate に渡すと
+    // ブラウザが先頭(15日)を選び、保存時にその行が黙って15日へ移動してしまう。
+    render(
+      <PlanTimetable
+        items={[timetableItem({ id: "c", startAt: "2026-08-17T09:00:00+09:00", title: "朝食" })]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    expect(screen.getByLabelText("日付")).toHaveValue("2026-08-16");
+  });
+
+  it("編集の入口には行のタイトルを含む aria-label が付き、行ごとに区別できる", () => {
+    // 見た目のラベルは全行「編集」で同じなので、スクリーンリーダーが行を区別できるよう
+    // 削除ボタンと同じ流儀（aria-label に行のタイトルを入れる）になっているか確かめる。
+    const { container } = render(
+      <PlanTimetable
+        items={[
+          timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" }),
+          timetableItem({ id: "b", startAt: "2026-08-15T14:00:00+09:00", title: "移動" })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    const ariaLabels = [...container.querySelectorAll("summary")].map((summary) =>
+      summary.getAttribute("aria-label")
+    );
+    expect(ariaLabels).toEqual(["集合を編集", "移動を編集"]);
+  });
+
+  it("分岐中の行にも編集の折りたたみを出す", () => {
+    // レーン内の TimetableRow にも edit が渡っているかの確認。canEdit={false} でしか
+    // 分岐を描画しない既存テストだけだと、レーン側の受け渡しを消しても検知できない（レビュー指摘）。
+    render(
+      <PlanTimetable
+        items={[
+          timetableItem({
+            id: "sea",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T15:00:00+09:00",
+            title: "海で泳ぐ",
+            createdAt: "2026-08-01T00:00:00+09:00"
+          }),
+          timetableItem({
+            id: "cafe",
+            startAt: "2026-08-15T13:00:00+09:00",
+            endAt: "2026-08-15T16:00:00+09:00",
+            title: "カフェで休む",
+            createdAt: "2026-08-01T00:01:00+09:00"
+          })
+        ]}
+        now={new Date("2026-08-15T12:00:00+09:00")}
+        canEdit
+        deleteAction={noopDelete}
+        {...editProps}
+      />
+    );
+
+    expect(screen.getAllByText("編集")).toHaveLength(2);
   });
 });

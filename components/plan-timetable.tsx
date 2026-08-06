@@ -20,10 +20,28 @@ type DeleteAction = (itemId: string) => (formData: FormData) => void | Promise<v
 type EditAction = (itemId: string) => (formData: FormData) => void | Promise<void>;
 
 type EditSupport = {
-  editAction?: EditAction;
-  participants?: TimetableParticipantOption[];
-  eventDates?: string[];
+  /**
+   * action / participants / eventDates は常にセットで使う（どれか1つだけあっても編集フォームは作れない）。
+   * 3つを別々の optional にすると、どれか1つだけ渡し忘れても型上は素通りしてしまう。
+   * 1つの optional にまとめることで、その抜けの種類自体を型で消す。
+   */
+  edit?: {
+    action: EditAction;
+    participants: TimetableParticipantOption[];
+    eventDates: string[];
+  };
 };
+
+/**
+ * 編集フォームの日付欄の初期値。行の日付が eventDates に無ければ
+ * （開催期間を短く確定し直した後など）<select> のどの <option> にも一致せず、
+ * ブラウザが先頭の日付を選んでしまう。追加フォーム側（page.tsx の defaultDate）と
+ * 同じ防御で、一致しないときは末尾の日付にフォールバックする。
+ */
+function resolveEditDefaultDate(itemStartAt: string, eventDates: string[]): string {
+  const itemDateKey = toJstDateKey(itemStartAt);
+  return eventDates.includes(itemDateKey) ? itemDateKey : (eventDates[eventDates.length - 1] ?? itemDateKey);
+}
 
 /**
  * 担当から外れた状態と、そのバッジ文言。
@@ -83,9 +101,7 @@ function TimetableRow({
   isCurrent,
   canEdit,
   deleteAction,
-  editAction,
-  participants,
-  eventDates
+  edit
 }: {
   item: TimetableItem;
   durationMinutes: number | undefined;
@@ -133,14 +149,15 @@ function TimetableRow({
         ) : null}
       </div>
 
-      {canEdit && editAction && participants ? (
+      {canEdit && edit ? (
         <PlanTimetableForm
-          action={editAction(item.id)}
-          participants={participants}
-          eventDates={eventDates ?? []}
-          defaultDate={toJstDateKey(item.startAt)}
+          action={edit.action(item.id)}
+          participants={edit.participants}
+          eventDates={edit.eventDates}
+          defaultDate={resolveEditDefaultDate(item.startAt, edit.eventDates)}
           defaultStartTime={formatJstTime(item.startAt)}
           summaryLabel="編集"
+          summaryAriaLabel={`${item.title}を編集`}
           submitLabel="保存"
           idPrefix={`timetable-edit-${item.id}`}
           defaultValues={{
@@ -161,9 +178,7 @@ function TimetableBlockView({
   current,
   canEdit,
   deleteAction,
-  editAction,
-  participants,
-  eventDates
+  edit
 }: {
   block: TimetableBlock;
   durations: Record<string, number>;
@@ -179,9 +194,7 @@ function TimetableBlockView({
         isCurrent={current.has(block.item.id)}
         canEdit={canEdit}
         deleteAction={deleteAction}
-        editAction={editAction}
-        participants={participants}
-        eventDates={eventDates}
+        edit={edit}
       />
     );
   }
@@ -205,9 +218,7 @@ function TimetableBlockView({
                 isCurrent={current.has(item.id)}
                 canEdit={canEdit}
                 deleteAction={deleteAction}
-                editAction={editAction}
-                participants={participants}
-                eventDates={eventDates}
+                edit={edit}
               />
             ))}
           </div>
@@ -224,9 +235,7 @@ export function PlanTimetable({
   now,
   canEdit,
   deleteAction,
-  editAction,
-  participants,
-  eventDates
+  edit
 }: {
   items: TimetableItem[];
   now: Date;
@@ -259,9 +268,7 @@ export function PlanTimetable({
               current={current}
               canEdit={canEdit}
               deleteAction={deleteAction}
-              editAction={editAction}
-              participants={participants}
-              eventDates={eventDates}
+              edit={edit}
             />
           ))}
         </div>
