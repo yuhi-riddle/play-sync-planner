@@ -41,7 +41,7 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
 
   // plans と participants の select ポリシー(001)は「plan の owner だけ」で、
   // イベントメンバー向けのポリシーが無い。ユーザーのクライアントで引くと、
-  // 進行表を編集できる立場の人（joined なイベントメンバー）が画面を開けず404になる。
+  // plan の participants に入っている人でも画面を開けず404になる。
   // 誰が見てよいかは下の canView で判定するので、読み取りは admin で行う（清算ページと同じ流儀）。
   const supabase = createSupabaseAdminClient();
   const { data: plan, error: planError } = await supabase
@@ -107,10 +107,12 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
   // 日付と時刻は同じ「次の開始時刻」から導く。時刻だけ使って日付を初日に固定すると、
   // 2日目の行の次を足すときに「1日目の16:00」というちぐはぐな初期値になる。
   const nextDateKey = nextStartAt ? toJstDateKey(nextStartAt) : null;
+  // 開催期間の外に出るのは最後の行が深夜まで伸びたときだけなので、初日ではなく最終日に寄せる。
+  // nextTimetableStartAt は既存行か開催開始より後しか返さないため、前にはみ出すことはない。
   const defaultDate =
     nextDateKey && eventDates.includes(nextDateKey)
       ? nextDateKey
-      : (eventDates[0] ?? toJstDateKey(new Date().toISOString()));
+      : (eventDates[eventDates.length - 1] ?? toJstDateKey(new Date().toISOString()));
   const createItem = createPlanTimetableItemAction.bind(null, plan.id);
   const deleteItem = (itemId: string) => deletePlanTimetableItemAction.bind(null, plan.id, itemId);
 

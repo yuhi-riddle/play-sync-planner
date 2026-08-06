@@ -280,7 +280,8 @@ export function listEventDates(startAt: string | null, endAt: string | null): st
   const endKey = endAt ? toJstDateKey(endAt) : startKey;
   const dates: string[] = [];
   // 日付キーどうしの間を1日ずつ埋める。境界の判断はすでに toJstDateKey が済ませているので、
-  // ここでの起点の時刻は結果に影響しない（JST に夏時間が無いため24時間刻みで足りる）。
+  // cursor と last を同じ起点で作るかぎり、起点の時刻は結果に影響しない
+  // （JST に夏時間が無いため24時間刻みで足りる）。片方だけずらすと単日入力が空になる。
   // 読んだときに JST の話だと分かるよう、起点は JST の 0 時に揃えておく。
   const cursor = new Date(`${startKey}T00:00:00+09:00`);
   const last = new Date(`${endKey}T00:00:00+09:00`);
