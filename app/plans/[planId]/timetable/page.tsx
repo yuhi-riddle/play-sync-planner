@@ -7,7 +7,7 @@ import { Alert, Card, PageHeader, SecondaryLink } from "@/components/ui";
 import { createPlanTimetableItemAction, deletePlanTimetableItemAction } from "@/lib/actions/plan-timetable";
 import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan-timetable";
 import { formatDateTimeRange, formatJstTime } from "@/lib/format";
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,11 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
     redirect("/login");
   }
 
-  const supabase = await createSupabaseServerClient();
+  // plans と participants の select ポリシー(001)は「plan の owner だけ」で、
+  // イベントメンバー向けのポリシーが無い。ユーザーのクライアントで引くと、
+  // 進行表を編集できる立場の人（joined なイベントメンバー）が画面を開けず404になる。
+  // 誰が見てよいかは下の canView で判定するので、読み取りは admin で行う（清算ページと同じ流儀）。
+  const supabase = createSupabaseAdminClient();
   const { data: plan, error: planError } = await supabase
     .from("plans")
     .select(
@@ -100,6 +104,13 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
   const isConfirmed = plan.status === "date_confirmed";
   const eventDates = listEventDates(plan.confirmed_start_at, plan.confirmed_end_at);
   const nextStartAt = nextTimetableStartAt(items, plan.confirmed_start_at);
+  // 日付と時刻は同じ「次の開始時刻」から導く。時刻だけ使って日付を初日に固定すると、
+  // 2日目の行の次を足すときに「1日目の16:00」というちぐはぐな初期値になる。
+  const nextDateKey = nextStartAt ? toJstDateKey(nextStartAt) : null;
+  const defaultDate =
+    nextDateKey && eventDates.includes(nextDateKey)
+      ? nextDateKey
+      : (eventDates[0] ?? toJstDateKey(new Date().toISOString()));
   const createItem = createPlanTimetableItemAction.bind(null, plan.id);
   const deleteItem = (itemId: string) => deletePlanTimetableItemAction.bind(null, plan.id, itemId);
 
@@ -123,7 +134,14 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
         </Card>
       ) : null}
 
-      {isConfirmed ? null : <Alert tone="warn">日程がまだ確定していないため、進行表は閲覧のみです。</Alert>}
+      {isConfirmed ? null : (
+        <Alert tone="warn">
+          {/* 中止された plan も編集不可だが、「未確定」と出すと事実と違う。 */}
+          {plan.status === "cancelled"
+            ? "この日程調整は中止されています。進行表は閲覧のみです。"
+            : "日程がまだ確定していないため、進行表は閲覧のみです。"}
+        </Alert>
+      )}
 
       <Card className="space-y-4">
         {/* 「いまここ」はサーバー描画時の時刻で決める。全ページ force-dynamic なので再読込で追いつく。 */}
@@ -138,7 +156,7 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
               status: participant.status
             }))}
             eventDates={eventDates}
-            defaultDate={eventDates[0] ?? toJstDateKey(new Date().toISOString())}
+            defaultDate={defaultDate}
             defaultStartTime={nextStartAt ? formatJstTime(nextStartAt) : "10:00"}
           />
         ) : null}

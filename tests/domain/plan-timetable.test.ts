@@ -428,6 +428,14 @@ describe("listEventDates", () => {
   it("開始が無ければ空配列", () => {
     expect(listEventDates(null, null)).toEqual([]);
   });
+
+  it("開催時刻がJSTの深夜でも、日付は開始日から数える", () => {
+    // 23:30 開始・翌 01:00 終了。JST の日付で見れば 8/15 と 8/16 の2日。
+    expect(listEventDates("2026-08-15T23:30:00+09:00", "2026-08-16T01:00:00+09:00")).toEqual([
+      "2026-08-15",
+      "2026-08-16"
+    ]);
+  });
 });
 
 describe("nextTimetableStartAt", () => {

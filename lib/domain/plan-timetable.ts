@@ -279,7 +279,9 @@ export function listEventDates(startAt: string | null, endAt: string | null): st
   const startKey = toJstDateKey(startAt);
   const endKey = endAt ? toJstDateKey(endAt) : startKey;
   const dates: string[] = [];
-  // JST の 0 時を起点に1日ずつ進める。UTC で刻むと日付の切れ目がずれる。
+  // 日付キーどうしの間を1日ずつ埋める。境界の判断はすでに toJstDateKey が済ませているので、
+  // ここでの起点の時刻は結果に影響しない（JST に夏時間が無いため24時間刻みで足りる）。
+  // 読んだときに JST の話だと分かるよう、起点は JST の 0 時に揃えておく。
   const cursor = new Date(`${startKey}T00:00:00+09:00`);
   const last = new Date(`${endKey}T00:00:00+09:00`);
 
