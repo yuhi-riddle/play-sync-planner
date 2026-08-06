@@ -584,9 +584,11 @@ describe("PlanTimetable", () => {
   });
 
   it("編集フォームの日付にはその行の日付が入っている", () => {
+    // 期待値を eventDates の末尾と一致させないこと。一致させると
+    // 「常に末尾を返す」実装（includes ガード無し）と区別がつかなくなる。
     render(
       <PlanTimetable
-        items={[timetableItem({ id: "b", startAt: "2026-08-16T09:00:00+09:00", title: "朝食" })]}
+        items={[timetableItem({ id: "b", startAt: "2026-08-15T09:00:00+09:00", title: "朝食" })]}
         now={new Date("2026-08-15T12:00:00+09:00")}
         canEdit
         deleteAction={noopDelete}
@@ -594,7 +596,7 @@ describe("PlanTimetable", () => {
       />
     );
 
-    expect(screen.getByLabelText("日付")).toHaveValue("2026-08-16");
+    expect(screen.getByLabelText("日付")).toHaveValue("2026-08-15");
   });
 
   it("行の日付が開催期間に無いときは末尾の日付にフォールバックする", () => {
@@ -664,6 +666,9 @@ describe("PlanTimetable", () => {
       />
     );
 
+    // このフィクスチャが本当に分岐ブロックになっていること自体も固定する。
+    // single 2件に変わっても件数2は通ってしまい、レーン経路のカバレッジが黙って消える。
+    expect(screen.getByText(/二手に分かれる/)).toBeInTheDocument();
     expect(screen.getAllByText("編集")).toHaveLength(2);
   });
 });

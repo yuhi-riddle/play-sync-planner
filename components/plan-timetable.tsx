@@ -35,8 +35,13 @@ type EditSupport = {
 /**
  * 編集フォームの日付欄の初期値。行の日付が eventDates に無ければ
  * （開催期間を短く確定し直した後など）<select> のどの <option> にも一致せず、
- * ブラウザが先頭の日付を選んでしまう。追加フォーム側（page.tsx の defaultDate）と
- * 同じ防御で、一致しないときは末尾の日付にフォールバックする。
+ * ブラウザが先頭の日付を選んでしまう。一致しないときは末尾の日付に寄せる。
+ *
+ * 追加フォーム側（page.tsx の defaultDate）も末尾に寄せるが、根拠は同じではない。
+ * あちらは「はみ出すのは最後の行が深夜まで伸びたときだけ＝常に後ろ側」だが、
+ * こちらは開催期間を後ろにずらして確定し直せば行が期間より前になることもある。
+ * どちらに寄せても「日付欄に触っていないのに保存すると行が動く」点は残るので、
+ * 期間外の行にその行自身の日付を <option> として足すのが本来の解。今回はそこまでやらない。
  */
 function resolveEditDefaultDate(itemStartAt: string, eventDates: string[]): string {
   const itemDateKey = toJstDateKey(itemStartAt);
