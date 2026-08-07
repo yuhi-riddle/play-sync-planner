@@ -32,7 +32,14 @@ function participant(id: string, name: string, userId: string, settlementPayment
   return { id, display_name: name, user_id: userId, settlement_payment_method: settlementPaymentMethod };
 }
 
-function basePlan(settlements: Array<Record<string, unknown>>) {
+type ExpenseSplitRow = {
+  id: string;
+  participant_id: string;
+  amount: number;
+  participants: ReturnType<typeof participant>;
+};
+
+function basePlan(settlements: Array<Record<string, unknown>>, expenseSplits: ExpenseSplitRow[] = []) {
   return {
     id: "plan-1",
     title: "夏祭りの計画",
@@ -52,7 +59,7 @@ function basePlan(settlements: Array<Record<string, unknown>>) {
         is_important: false,
         payer_participant_id: "p1",
         payer: participant("p1", "田中", "user-1"),
-        expense_splits: []
+        expense_splits: expenseSplits
       }
     ],
     settlements,
@@ -200,5 +207,48 @@ describe("SettlementPage", () => {
 
     const message = screen.getByLabelText("支払い依頼文面") as HTMLTextAreaElement;
     expect(message.value).toContain("支払い方法: PayPay");
+  });
+  describe("立替の編集フォームが開くときの割り方", () => {
+    function planWithSplits(splits: Array<{ participantId: string; amount: number }>) {
+      return basePlan(
+        [],
+        splits.map((split, index) => ({
+          id: `split-${index}`,
+          participant_id: split.participantId,
+          amount: split.amount,
+          participants: participant(split.participantId, split.participantId === "p1" ? "田中" : "鈴木", "user-1")
+        }))
+      );
+    }
+
+    function editForm() {
+      return screen.getByText("内容を編集").closest("details") as HTMLElement;
+    }
+
+    it("均等割りで作った経費は均等割りのまま開く", async () => {
+      // 立替 7,200円 を2人で均等 -> 3,600円ずつ
+      mockPlan(planWithSplits([
+        { participantId: "p1", amount: 3600 },
+        { participantId: "p2", amount: 3600 }
+      ]));
+
+      render(await SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) }));
+
+      expect(within(editForm()).getByRole("button", { name: "割り方を変える" })).toBeInTheDocument();
+      expect(within(editForm()).getByLabelText("均等割り")).toBeChecked();
+    });
+
+    it("バラバラの負担額で作った経費は個別金額で開く", async () => {
+      mockPlan(planWithSplits([
+        { participantId: "p1", amount: 5000 },
+        { participantId: "p2", amount: 2200 }
+      ]));
+
+      render(await SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) }));
+
+      expect(within(editForm()).queryByRole("button", { name: "割り方を変える" })).not.toBeInTheDocument();
+      expect(within(editForm()).getByLabelText("個別金額")).toBeChecked();
+      expect(within(editForm()).getByLabelText("田中 の負担額")).toHaveValue(5000);
+    });
   });
 });
