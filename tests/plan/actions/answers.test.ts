@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient
 }));
 
-import { submitAvailabilityAnswersAction } from "@/lib/actions/answers";
+import { submitAvailabilityAnswersAction } from "@/lib/actions/plan/answers";
 
 /** thenable + どのメソッドチェーンでも同じ最終結果を返す最小のクエリビルダーモック。 */
 function chainable(result: { data?: unknown; error?: unknown }, onEq: (args: unknown[]) => void) {

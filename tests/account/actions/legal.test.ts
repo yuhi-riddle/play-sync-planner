@@ -16,7 +16,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser
 }));
 
-import { acceptLegalDocumentsAction } from "@/lib/actions/legal";
+import { acceptLegalDocumentsAction } from "@/lib/actions/account/legal";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 

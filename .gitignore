@@ -12,5 +12,4 @@ dev-server-*.log
 .superpowers/
 .worktrees/
 tsconfig.tsbuildinfo
-UIdesign/screenshots/
-qa-*.jpeg
+design/screenshots/

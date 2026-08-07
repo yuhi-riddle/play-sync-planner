@@ -6,7 +6,7 @@ const { respondToEventUserInvitationAction } = vi.hoisted(() => ({
   respondToEventUserInvitationAction: vi.fn()
 }));
 
-vi.mock("@/lib/actions/connections", () => ({
+vi.mock("@/lib/actions/account/connections", () => ({
   respondToEventUserInvitationAction
 }));
 

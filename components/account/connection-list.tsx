@@ -11,7 +11,7 @@ import {
   toggleFavoriteAction,
   unfollowUserAction,
   unblockUserAction
-} from "@/lib/actions/connections";
+} from "@/lib/actions/account/connections";
 import type { ActionState } from "@/lib/domain/shared/action-state";
 import { isMutualFollow, type BlockedUser, type ConnectionCandidate } from "@/lib/domain/account/connections";
 

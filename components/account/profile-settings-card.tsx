@@ -4,7 +4,7 @@ import { ImagePlus, Trash2, UserRound } from "lucide-react";
 import React, { useActionState, useState } from "react";
 
 import { Card } from "@/components/ui";
-import { updateProfileAction } from "@/lib/actions/profile";
+import { updateProfileAction } from "@/lib/actions/account/profile";
 import {
   PROFILE_ACTION_INITIAL_STATE,
   type ProfileActionState

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { loadPreviousAnswersAction, submitAvailabilityAnswersAction } from "@/lib/actions/answers";
+import { loadPreviousAnswersAction, submitAvailabilityAnswersAction } from "@/lib/actions/plan/answers";
 import {
   buildCandidateCalendarHints,
   monthsForCandidates,

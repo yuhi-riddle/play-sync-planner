@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { Bell, LogOut, UserRound } from "lucide-react";
 import React from "react";
 
-import { signOutAction } from "@/lib/actions/auth";
+import { signOutAction } from "@/lib/actions/account/auth";
 import { getAuthNavState } from "@/lib/domain/account/auth-nav";
 import { getGoogleProfileDefaults, getProfileAvatarUrl } from "@/lib/domain/account/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";

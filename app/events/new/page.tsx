@@ -1,7 +1,7 @@
 import { EventForm } from "@/components/event/event-form";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, PageHeader } from "@/components/ui";
-import { createEventAction, saveEventDraftAction } from "@/lib/actions/events";
+import { createEventAction, saveEventDraftAction } from "@/lib/actions/event/events";
 import { shouldResumeEventDraft } from "@/lib/domain/event/event-flow";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 

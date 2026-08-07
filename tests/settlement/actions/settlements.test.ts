@@ -31,7 +31,7 @@ import {
   updateExpenseAction,
   updateParticipantSettlementPaymentMethodAction,
   updatePublicParticipantSettlementPaymentMethodAction
-} from "@/lib/actions/settlements";
+} from "@/lib/actions/settlement/settlements";
 
 type MockResult = { data?: unknown; error?: unknown };
 type RecordedCall = { method: string; args: unknown[] };

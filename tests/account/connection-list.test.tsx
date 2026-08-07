@@ -7,7 +7,7 @@ const { unblockUserAction, unfollowUserAction } = vi.hoisted(() => ({
   unfollowUserAction: vi.fn()
 }));
 
-vi.mock("@/lib/actions/connections", () => ({
+vi.mock("@/lib/actions/account/connections", () => ({
   blockUserAction: vi.fn(),
   followUserAction: vi.fn(),
   toggleFavoriteAction: vi.fn(),

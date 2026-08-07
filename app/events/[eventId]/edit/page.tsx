@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EventForm } from "@/components/event/event-form";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, PageHeader } from "@/components/ui";
-import { updateEventAction } from "@/lib/actions/events";
+import { updateEventAction } from "@/lib/actions/event/events";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

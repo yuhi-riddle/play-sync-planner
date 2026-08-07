@@ -11,7 +11,7 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUser }));
 
-import { duplicateEventAction } from "@/lib/actions/events";
+import { duplicateEventAction } from "@/lib/actions/event/events";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const sourceEventId = "22222222-2222-4222-8222-222222222222";

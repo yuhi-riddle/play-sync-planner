@@ -9,17 +9,17 @@ import { EventChat } from "@/components/event/event-chat";
 import { EventDetailTabs } from "@/components/event/event-detail-tabs";
 import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
-import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
-import { createEventMessageAction } from "@/lib/actions/event-messages";
-import { createEventUserInvitationsAction } from "@/lib/actions/connections";
+import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event/event-members";
+import { createEventMessageAction } from "@/lib/actions/event/event-messages";
+import { createEventUserInvitationsAction } from "@/lib/actions/account/connections";
 import { EventTaskList, type EventTaskMember } from "@/components/event/event-task-list";
 import {
   createEventTaskAction,
   deleteEventTaskAction,
   toggleEventTaskDoneAction,
   updateEventTaskAssigneeAction
-} from "@/lib/actions/event-tasks";
-import { cancelEventAction, duplicateEventAction } from "@/lib/actions/events";
+} from "@/lib/actions/event/event-tasks";
+import { cancelEventAction, duplicateEventAction } from "@/lib/actions/event/events";
 import type { EventTask } from "@/lib/domain/event/event-tasks";
 import { categoryLabels, planStatusLabels } from "@/lib/shared/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event/event-members";

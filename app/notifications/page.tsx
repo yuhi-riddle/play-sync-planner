@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import clsx from "clsx";
 import { Bell, CheckCheck } from "lucide-react";
 
-import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/notifications";
+import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions/shared/notifications";
 import { Badge, Card, EmptyState, PageHeader, SubmitButton, type BadgeTone } from "@/components/ui";
 import {
   filterNotificationsByReadState,

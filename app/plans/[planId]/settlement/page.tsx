@@ -20,7 +20,7 @@ import {
   updateParticipantSettlementPaymentMethodAction,
   updateSettlementPaymentInstructionAction,
   updateExpenseAction
-} from "@/lib/actions/settlements";
+} from "@/lib/actions/settlement/settlements";
 import { isEqualSplit } from "@/lib/domain/settlement/expense-split";
 import {
   buildSettlementConfirmationRequestMessage,

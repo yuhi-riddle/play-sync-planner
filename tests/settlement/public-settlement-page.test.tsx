@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUserId,
   hasSupabaseAdminEnv: vi.fn(() => true)
 }));
-vi.mock("@/lib/actions/settlements", () => ({
+vi.mock("@/lib/actions/settlement/settlements", () => ({
   recordPublicSettlementPaymentAction: vi.fn(),
   updatePublicParticipantSettlementPaymentMethodAction: vi.fn()
 }));

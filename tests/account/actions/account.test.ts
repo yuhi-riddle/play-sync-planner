@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase/server", () => ({
   hasSupabaseAdminEnv
 }));
 
-import { withdrawAccountAction } from "@/lib/actions/account";
+import { withdrawAccountAction } from "@/lib/actions/account/account";
 import { WITHDRAWN_DISPLAY_NAME } from "@/lib/domain/account/account";
 
 const userId = "11111111-1111-4111-8111-111111111111";

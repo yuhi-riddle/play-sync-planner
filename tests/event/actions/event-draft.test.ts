@@ -20,7 +20,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser
 }));
 
-import { saveEventDraftAction } from "@/lib/actions/events";
+import { saveEventDraftAction } from "@/lib/actions/event/events";
 
 function formDataOf(fields: Record<string, string>) {
   const formData = new FormData();

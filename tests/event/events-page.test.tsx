@@ -11,7 +11,7 @@ const { createSupabaseServerClient, getCurrentUserId, redirect } = vi.hoisted(()
 vi.mock("next/navigation", () => ({
   redirect
 }));
-vi.mock("@/lib/actions/events", () => ({ cancelEventAction: vi.fn() }));
+vi.mock("@/lib/actions/event/events", () => ({ cancelEventAction: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   getCurrentUserId,

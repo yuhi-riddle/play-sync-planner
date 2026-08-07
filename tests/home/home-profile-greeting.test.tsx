@@ -8,7 +8,7 @@ const { createSupabaseServerClient, getCurrentUser } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/home/home-selected-date-agenda", () => ({ HomeSelectedDateAgenda: () => null }));
-vi.mock("@/lib/actions/events", () => ({ discardEventDraftAction: vi.fn() }));
+vi.mock("@/lib/actions/event/events", () => ({ discardEventDraftAction: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   getCurrentUser,

@@ -20,11 +20,11 @@ import {
   Stat,
   type BadgeTone
 } from "@/components/ui";
-import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
-import { deletePlanParticipantAction } from "@/lib/actions/participants";
-import { extendPlanAnswerDeadlineAction, restartPlanAdjustmentAction } from "@/lib/actions/plans";
-import { markReminderSentAction } from "@/lib/actions/reminders";
-import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/share-links";
+import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar/calendar";
+import { deletePlanParticipantAction } from "@/lib/actions/plan/participants";
+import { extendPlanAnswerDeadlineAction, restartPlanAdjustmentAction } from "@/lib/actions/plan/plans";
+import { markReminderSentAction } from "@/lib/actions/settlement/reminders";
+import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/plan/share-links";
 import { planStatusLabels } from "@/lib/shared/constants";
 import {
   summarizeCandidateAnswers,

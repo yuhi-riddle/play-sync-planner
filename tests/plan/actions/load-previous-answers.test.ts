@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient
 }));
 
-import { loadPreviousAnswersAction } from "@/lib/actions/answers";
+import { loadPreviousAnswersAction } from "@/lib/actions/plan/answers";
 
 type QueryResult = { data?: unknown; error?: unknown };
 

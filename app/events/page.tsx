@@ -6,7 +6,7 @@ import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventListControls } from "@/components/event/event-list-controls";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
-import { cancelEventAction } from "@/lib/actions/events";
+import { cancelEventAction } from "@/lib/actions/event/events";
 import { categoryLabels } from "@/lib/shared/constants";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import {

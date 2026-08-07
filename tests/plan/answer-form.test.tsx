@@ -6,7 +6,7 @@ import { AnswerForm, CALENDAR_NOTICE_MIN_HEIGHT_CLASS, CANDIDATE_WARNING_MIN_HEI
 
 const { loadPreviousAnswersAction } = vi.hoisted(() => ({ loadPreviousAnswersAction: vi.fn() }));
 
-vi.mock("@/lib/actions/answers", () => ({
+vi.mock("@/lib/actions/plan/answers", () => ({
   submitAvailabilityAnswersAction: vi.fn(),
   loadPreviousAnswersAction
 }));

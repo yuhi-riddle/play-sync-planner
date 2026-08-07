@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { confirmPlanAction } from "@/lib/actions/confirm";
+import { confirmPlanAction } from "@/lib/actions/plan/confirm";
 import type { CandidateAnswerSummary } from "@/lib/domain/plan/confirmation";
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { MadoiForm, SubmitButton } from "@/components/ui";

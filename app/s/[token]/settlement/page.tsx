@@ -12,7 +12,7 @@ import { Card, EmptyState, PageHeader } from "@/components/ui";
 import {
   recordPublicSettlementPaymentAction,
   updatePublicParticipantSettlementPaymentMethodAction
-} from "@/lib/actions/settlements";
+} from "@/lib/actions/settlement/settlements";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync";
 import { resolveParticipantSettlementRole } from "@/lib/domain/settlement/settlement";
 import { resolveViewerParticipant } from "@/lib/domain/plan/participant-identity";

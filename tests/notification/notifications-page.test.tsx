@@ -7,7 +7,7 @@ const { createSupabaseServerClient, getCurrentUserId } = vi.hoisted(() => ({
   getCurrentUserId: vi.fn()
 }));
 
-vi.mock("@/lib/actions/notifications", () => ({
+vi.mock("@/lib/actions/shared/notifications", () => ({
   markNotificationReadAction: vi.fn(),
   markAllNotificationsReadAction: vi.fn()
 }));

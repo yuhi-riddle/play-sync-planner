@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmForm } from "@/components/plan/confirm-form";
 
-vi.mock("@/lib/actions/confirm", () => ({
+vi.mock("@/lib/actions/plan/confirm", () => ({
   confirmPlanAction: vi.fn()
 }));
 

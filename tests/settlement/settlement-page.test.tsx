@@ -15,7 +15,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Map([["host", "localhost:3000"]]))
 }));
-vi.mock("@/lib/actions/settlements", () => ({
+vi.mock("@/lib/actions/settlement/settlements", () => ({
   createExpenseAction: vi.fn(),
   updateExpenseAction: vi.fn(),
   deleteExpenseAction: vi.fn(),

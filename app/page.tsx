@@ -15,7 +15,7 @@ import {
   type BadgeTone
 } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
-import { discardEventDraftAction } from "@/lib/actions/events";
+import { discardEventDraftAction } from "@/lib/actions/event/events";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import { findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 import {

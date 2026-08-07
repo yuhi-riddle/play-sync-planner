@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser
 }));
 
-import { blockUserAction, unblockUserAction } from "@/lib/actions/connections";
+import { blockUserAction, unblockUserAction } from "@/lib/actions/account/connections";
 
 const currentUserId = "11111111-1111-4111-8111-111111111111";
 const blockedUserId = "22222222-2222-4222-8222-222222222222";

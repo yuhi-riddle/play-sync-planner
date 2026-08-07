@@ -15,8 +15,8 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null)
 }));
 
-import { submitAvailabilityAnswersAction } from "@/lib/actions/answers";
-import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlements";
+import { submitAvailabilityAnswersAction } from "@/lib/actions/plan/answers";
+import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlement/settlements";
 
 const revokedToken = "revoked-token";
 

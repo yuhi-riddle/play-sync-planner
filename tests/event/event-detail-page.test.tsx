@@ -13,19 +13,19 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   getCurrentUserId
 }));
-vi.mock("@/lib/actions/event-members", () => ({
+vi.mock("@/lib/actions/event/event-members", () => ({
   closeEventInvitesAction: vi.fn(),
   revokeAndCreateEventInviteAction: vi.fn()
 }));
-vi.mock("@/lib/actions/event-messages", () => ({ createEventMessageAction: vi.fn() }));
-vi.mock("@/lib/actions/connections", () => ({ createEventUserInvitationsAction: vi.fn() }));
-vi.mock("@/lib/actions/event-tasks", () => ({
+vi.mock("@/lib/actions/event/event-messages", () => ({ createEventMessageAction: vi.fn() }));
+vi.mock("@/lib/actions/account/connections", () => ({ createEventUserInvitationsAction: vi.fn() }));
+vi.mock("@/lib/actions/event/event-tasks", () => ({
   createEventTaskAction: vi.fn(),
   deleteEventTaskAction: vi.fn(),
   toggleEventTaskDoneAction: vi.fn(),
   updateEventTaskAssigneeAction: vi.fn()
 }));
-vi.mock("@/lib/actions/events", () => ({
+vi.mock("@/lib/actions/event/events", () => ({
   cancelEventAction: vi.fn(),
   duplicateEventAction: vi.fn()
 }));

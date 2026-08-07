@@ -3,7 +3,7 @@
 import { unstable_rethrow } from "next/navigation";
 import React, { useState, useTransition } from "react";
 
-import { respondToEventUserInvitationAction } from "@/lib/actions/connections";
+import { respondToEventUserInvitationAction } from "@/lib/actions/account/connections";
 
 export type ReceivedEventInvitation = {
   id: string;

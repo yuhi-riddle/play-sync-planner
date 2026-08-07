@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import NewEventPage from "@/app/events/new/page";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
-vi.mock("@/lib/actions/events", () => ({
+vi.mock("@/lib/actions/event/events", () => ({
   createEventAction: vi.fn(),
   saveEventDraftAction: vi.fn()
 }));

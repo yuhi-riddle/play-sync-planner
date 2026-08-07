@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PlanForm } from "@/components/plan/plan-form";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, PageHeader } from "@/components/ui";
-import { updatePlanAction } from "@/lib/actions/plans";
+import { updatePlanAction } from "@/lib/actions/plan/plans";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

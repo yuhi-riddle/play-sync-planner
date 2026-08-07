@@ -7,7 +7,7 @@ const { createSupabaseServerClient } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn()
 }));
 
-vi.mock("@/lib/actions/auth", () => ({ signOutAction: vi.fn() }));
+vi.mock("@/lib/actions/account/auth", () => ({ signOutAction: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   hasSupabaseEnv: () => true

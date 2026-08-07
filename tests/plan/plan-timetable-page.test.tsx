@@ -19,7 +19,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   notFound,
   redirect
 }));
-vi.mock("@/lib/actions/plan-timetable", () => ({
+vi.mock("@/lib/actions/plan/plan-timetable", () => ({
   createPlanTimetableItemAction: vi.fn(),
   deletePlanTimetableItemAction: vi.fn(),
   updatePlanTimetableItemAction: vi.fn()

@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react";
 import React, { useActionState } from "react";
 
 import { Alert, Card } from "@/components/ui";
-import { withdrawAccountAction } from "@/lib/actions/account";
+import { withdrawAccountAction } from "@/lib/actions/account/account";
 import { ACCOUNT_ACTION_INITIAL_STATE, type AccountActionState } from "@/lib/domain/account/account";
 
 type WithdrawAction = (state: AccountActionState, formData: FormData) => Promise<AccountActionState>;

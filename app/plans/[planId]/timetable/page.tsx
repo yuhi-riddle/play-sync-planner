@@ -8,7 +8,7 @@ import {
   createPlanTimetableItemAction,
   deletePlanTimetableItemAction,
   updatePlanTimetableItemAction
-} from "@/lib/actions/plan-timetable";
+} from "@/lib/actions/plan/plan-timetable";
 import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan/plan-timetable";
 import { formatDateTimeRange, formatJstTime } from "@/lib/shared/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";

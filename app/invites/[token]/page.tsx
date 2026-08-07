@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { Card, PageHeader, SecondaryLink, SubmitButton } from "@/components/ui";
-import { joinEventFromInviteAction } from "@/lib/actions/event-members";
+import { joinEventFromInviteAction } from "@/lib/actions/event/event-members";
 import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

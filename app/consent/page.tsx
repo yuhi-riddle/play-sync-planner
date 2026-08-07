@@ -1,6 +1,6 @@
 import { LoginConsentForm } from "@/components/account/login-consent-form";
 import { Card, PageHeader } from "@/components/ui";
-import { acceptLegalDocumentsAction } from "@/lib/actions/legal";
+import { acceptLegalDocumentsAction } from "@/lib/actions/account/legal";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 export default async function ConsentPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {

@@ -10,7 +10,7 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUser }));
 
-import { updateProfileAction } from "@/lib/actions/profile";
+import { updateProfileAction } from "@/lib/actions/account/profile";
 import { PROFILE_ACTION_INITIAL_STATE } from "@/lib/domain/account/profile";
 
 describe("updateProfileAction", () => {
