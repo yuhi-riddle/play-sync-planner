@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jstTimeFromDateTimeLocal } from "@/lib/jst";
 
 import { EVENT_CATEGORIES, EVENT_STATUSES } from "@/lib/constants";
 
@@ -271,12 +272,17 @@ export const planSchema = z
   })
   .superRefine((values, context) => {
     const now = Date.now();
-    const candidateTimes = values.candidateDates.map((candidateDate) => new Date(candidateDate).getTime());
+    // 値は datetime-local の生文字列（オフセット無し）なので、new Date() に直接渡すと
+    // 実行環境の TZ で解釈される。候補どうしの比較は同じずれ方をするので気づけないが、
+    // now との比較だけは絶対時刻との突き合わせなので、Vercel(UTC) では判定が9時間甘くなり
+    // 「JST ではもう過ぎている候補」が通ってしまう。JST に直してから比べる。
+    const toJstTime = jstTimeFromDateTimeLocal;
+    const candidateTimes = values.candidateDates.map(toJstTime);
     const firstCandidateTime = Math.min(...candidateTimes);
-    const deadlineTime = new Date(values.answer_deadline_at).getTime();
+    const deadlineTime = toJstTime(values.answer_deadline_at);
 
     values.candidateDates.forEach((candidateDate, index) => {
-      const startTime = new Date(candidateDate).getTime();
+      const startTime = toJstTime(candidateDate);
       const endDate = values.candidateEndDates[index];
 
       if (startTime < now) {
@@ -287,7 +293,7 @@ export const planSchema = z
         });
       }
 
-      if (endDate && new Date(endDate).getTime() <= startTime) {
+      if (endDate && toJstTime(endDate) <= startTime) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["candidateEndDates", index],

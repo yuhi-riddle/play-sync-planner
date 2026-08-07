@@ -2,6 +2,8 @@ import React from "react";
 import Link from "next/link";
 
 import { hasBusyConflict, type BusyRange } from "@/lib/domain/calendar-availability";
+import { formatJstTime } from "@/lib/format";
+import { jstIsoFromDateTimeLocal } from "@/lib/jst";
 
 export type CalendarEventRange = BusyRange & {
   title?: string | null;
@@ -10,13 +12,6 @@ export type CalendarEventRange = BusyRange & {
 
 /** 取得中/取得後で結果枠の高さを揃えるための最低高。 */
 export const CALENDAR_RESULTS_MIN_HEIGHT_CLASS = "min-h-5";
-
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
 
 export function CalendarAvailabilityPanel({
   connected,
@@ -48,7 +43,14 @@ export function CalendarAvailabilityPanel({
     );
   }
 
-  const conflict = hasBusyConflict({ start: candidateStart, end: candidateEnd }, busyRanges);
+  // candidateStart/End は <input type="datetime-local"> の生の値（オフセット無し）で、
+  // ユーザーが画面で見ている JST の壁時計の時刻。busyRanges は Google Calendar 由来の
+  // 絶対時刻なので、そのまま突き合わせるとサーバー描画(UTC)や JST 以外の端末で
+  // 9 時間ずれ、重なっているのに警告が出なくなる。JST として絶対時刻に直してから比べる。
+  const conflict = hasBusyConflict(
+    { start: jstIsoFromDateTimeLocal(candidateStart), end: jstIsoFromDateTimeLocal(candidateEnd) },
+    busyRanges
+  );
 
   return (
     <div className="rounded-control border border-moss/16 bg-surface p-4">
@@ -70,7 +72,7 @@ export function CalendarAvailabilityPanel({
                 className="rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink"
               >
                 <p className="font-bold">
-                  {formatTime(busyRange.start)} - {formatTime(busyRange.end)}
+                  {formatJstTime(busyRange.start)} - {formatJstTime(busyRange.end)}
                 </p>
                 <p className="mt-1 font-bold">{busyRange.title || "予定あり"}</p>
                 {busyRange.location ? <p className="mt-1 text-xs text-muted">場所: {busyRange.location}</p> : null}

@@ -3,7 +3,7 @@ import { CalendarPlus } from "lucide-react";
 import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
 import { ButtonLink, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { toDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
+import { defaultSelectedDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
 import { monthRangeInTokyo } from "@/lib/domain/group-availability";
 import {
   createSupabaseAdminClient,
@@ -54,12 +54,7 @@ function monthParam(year: number, month: number) {
 }
 
 function defaultSelectedDate(year: number, month: number) {
-  const today = new Date();
-  if (today.getFullYear() === year && today.getMonth() + 1 === month) {
-    return toDateKey(today);
-  }
-
-  return `${year}-${String(month).padStart(2, "0")}-01`;
+  return defaultSelectedDateKey(year, month, new Date());
 }
 
 function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCandidate {

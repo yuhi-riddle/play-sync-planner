@@ -1,3 +1,5 @@
+import { toJstDateKey } from "@/lib/jst";
+
 export type AdjustmentCandidate = {
   id: string;
   planId: string;
@@ -32,13 +34,41 @@ export type AdjustmentCalendar = {
   selectedCandidates: AdjustmentCandidate[];
 };
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
 function pad2(value: number) {
   return String(value).padStart(2, "0");
 }
 
+/**
+ * カレンダーの升目そのものの日付キー。
+ *
+ * ここに渡す Date は new Date(year, monthIndex, day) で組み立てたローカルの 0 時（升目の座標）で、
+ * 絶対時刻ではない。組み立てと読み出しが同じローカル TZ なので往復しても値は変わらず、
+ * 実行環境の TZ に左右されない。
+ *
+ * 候補日時のような「絶対時刻がどの日に属するか」には使わないこと。そちらは JST で
+ * 判断する必要があるので toJstDateKey を使う（candidateDateKeys を参照）。
+ */
 export function toDateKey(value: Date | string) {
   const date = typeof value === "string" ? new Date(value) : value;
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+/**
+ * 表示中の月に「今日」が含まれていればその日、含まれていなければ月初を選ぶ。
+ *
+ * 「今日」は JST で決める。app/plans/page.tsx はサーバーコンポーネントなので、
+ * ローカルゲッターで出すと Vercel(UTC) では JST 00:00〜09:00 のあいだ前日になり、
+ * カレンダーが「昨日」を選択した状態で開いてしまう。
+ *
+ * page.tsx は任意の名前付き export を持てず単体テストから触れないので、ここに置く。
+ */
+export function defaultSelectedDateKey(year: number, month: number, now: Date): string {
+  const monthKey = `${year}-${pad2(month)}`;
+  const todayKey = toJstDateKey(now);
+
+  return todayKey.startsWith(`${monthKey}-`) ? todayKey : `${monthKey}-01`;
 }
 
 function addDays(value: Date, days: number) {
@@ -47,26 +77,36 @@ function addDays(value: Date, days: number) {
   return date;
 }
 
-function startOfDay(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-}
-
 function getCandidateEnd(candidate: AdjustmentCandidate) {
   const end = candidate.endAt ? new Date(candidate.endAt) : new Date(candidate.startAt);
   if (!candidate.isAllDay) {
     return end;
   }
 
-  return addDays(end, -1);
+  // 終日候補の end は排他的なので1日戻す。ローカルの setDate ではなく
+  // タイムスタンプで引くことで、実行環境の TZ（と夏時間）に結果を左右させない。
+  return new Date(end.getTime() - DAY_IN_MS);
 }
 
+/**
+ * 候補が載る日付キー。開始・終了は絶対時刻なので、どの日に属するかは JST で決める。
+ *
+ * ローカルゲッター（getDate 等）で日付を出すと、Vercel(UTC) では
+ * 「JST 7/13 01:30 終了」が 7/12 扱いになり、日をまたぐ候補が翌日のマスに出ない。
+ * 開発機は JST なのでローカルでは再現しない。
+ */
 function candidateDateKeys(candidate: AdjustmentCandidate) {
   const keys: string[] = [];
-  const start = startOfDay(new Date(candidate.startAt));
-  const end = startOfDay(getCandidateEnd(candidate));
+  const startKey = toJstDateKey(candidate.startAt);
+  const endKey = toJstDateKey(getCandidateEnd(candidate));
+  // 日付キーどうしの間を1日ずつ埋める。境界の判断は toJstDateKey が済ませているので、
+  // 起点を JST の 0 時に揃えておけば 24 時間刻みで足りる（JST に夏時間が無いため）。
+  const cursor = new Date(`${startKey}T00:00:00+09:00`);
+  const last = new Date(`${endKey}T00:00:00+09:00`);
 
-  for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
-    keys.push(toDateKey(cursor));
+  while (cursor.getTime() <= last.getTime()) {
+    keys.push(toJstDateKey(cursor));
+    cursor.setTime(cursor.getTime() + DAY_IN_MS);
   }
 
   return keys;

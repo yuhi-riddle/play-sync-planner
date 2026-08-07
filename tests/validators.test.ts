@@ -278,6 +278,29 @@ describe("planSchema", () => {
     ).toThrow("過去の日時は候補にできません");
   });
 
+  it("サーバーが UTC でも、JST で見て過去の候補は弾く", () => {
+    // 固定時刻は JST 2026-07-01 09:00（= UTC 00:00）。
+    // JST 2026-07-01 05:00 はすでに過去だが、生文字列を UTC として解釈すると
+    // 05:00Z = JST 14:00 になり「まだ未来」として通ってしまう。
+    // TZ を差し替えないと JST の開発機ではずれようが無く、このテストは何も守らない。
+    const original = process.env.TZ;
+    process.env.TZ = "UTC";
+    try {
+      expect(() =>
+        planSchema.parse({
+          title: "",
+          participantNames: "",
+          candidateDates: "2026-07-01T05:00",
+          candidateEndDates: "2026-07-01T07:00",
+          answer_deadline_at: "2026-06-30T22:00",
+          memo: ""
+        })
+      ).toThrow("過去の日時は候補にできません");
+    } finally {
+      process.env.TZ = original;
+    }
+  });
+
   it("rejects candidate end times before the start time", () => {
     expect(() =>
       planSchema.parse({

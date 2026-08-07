@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { formDataToObject } from "@/lib/form-data";
+import { jstIsoFromDateTimeLocal } from "@/lib/jst";
 import { errorState, failWith, type ActionState } from "@/lib/domain/action-state";
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
@@ -11,8 +12,13 @@ import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/validators";
 
+/**
+ * フォームから届くのは datetime-local の生文字列（"2026-07-15T10:00"、オフセット無し）。
+ * new Date() に直接渡すとサーバーの TZ で解釈され、Vercel(UTC) では
+ * ユーザーが選んだ時刻より 9 時間あとの値が保存されてしまう。必ず JST として解釈する。
+ */
 function toIsoDateTime(value: string): string {
-  return new Date(value).toISOString();
+  return jstIsoFromDateTimeLocal(value);
 }
 
 function normalizeReminderOffsets(values: { reminder_offset_minutes: number | null; reminder_offsets_minutes: number[] }) {
