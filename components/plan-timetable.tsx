@@ -7,6 +7,7 @@ import { PlanTimetableForm } from "@/components/plan-timetable-form";
 import {
   buildTimetableBlocks,
   groupTimetableItemsByDate,
+  inactiveLabels,
   resolveCurrentTimetableItemIds,
   resolveTimetableDurations,
   toJstDateKey,
@@ -48,18 +49,22 @@ function resolveEditDefaultDate(itemStartAt: string, eventDates: string[]): stri
   return eventDates.includes(itemDateKey) ? itemDateKey : (eventDates[eventDates.length - 1] ?? itemDateKey);
 }
 
-/**
- * 担当から外れた状態と、そのバッジ文言。
- *
- * 状態の一覧と文言を1箇所にまとめるのは、片方だけ足したときに
- * 新しい状態が黙って別の文言で表示される事故を防ぐため。
- * declined（辞退）と cancelled（参加取消）は取り消し線では同じ扱いだが、
- * 文言まで同じにすると「取り消した人」に「辞退」と出て誤解を招く。
- */
-const inactiveLabels: Record<string, string> = { declined: "辞退", cancelled: "取消" };
-
 const iconButtonClass =
   "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2";
+
+/**
+ * 分岐の見出し文言。block.lanes.length は3以上もあり得る
+ * （3列より下の laneColumnClass 判定が既にそれを前提にしている）ので、
+ * 「二手に分かれる」を固定で出すと3班以上のときに事実と違う文言になる。
+ * 2は「二手」という言い方が自然なのでそのまま残し、3以上は「N個に分かれる」で表す。
+ */
+function branchHeading(laneCount: number): string {
+  if (laneCount === 2) {
+    return "二手に分かれる";
+  }
+
+  return `${laneCount}個に分かれる`;
+}
 
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
@@ -209,7 +214,9 @@ function TimetableBlockView({
 
   return (
     <div className="rounded-control border border-line-strong bg-sunken p-3">
-      <p className="text-caption font-bold text-pine">⑂ {formatJstTime(block.startAt)} から 二手に分かれる</p>
+      <p className="text-caption font-bold text-pine">
+        ⑂ {formatJstTime(block.startAt)} から {branchHeading(block.lanes.length)}
+      </p>
 
       <div data-testid="timetable-lanes" className={`mt-3 grid gap-3 ${laneColumnClass}`}>
         {block.lanes.map((lane) => (

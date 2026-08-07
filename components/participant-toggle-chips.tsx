@@ -3,14 +3,13 @@
 import React, { useState } from "react";
 import { clsx } from "clsx";
 
+import { inactiveLabels, inactiveStatuses } from "@/lib/domain/plan-timetable";
+
 export type TimetableParticipantOption = {
   participantId: string;
   displayName: string;
   status: string;
 };
-
-/** 辞退・キャンセルの人は新しい担当の候補から外す。 */
-const inactiveStatuses = new Set(["declined", "cancelled"]);
 
 export function ParticipantToggleChips({
   participants,
@@ -71,7 +70,9 @@ export function ParticipantToggleChips({
               )}
             >
               <span className={isInactive ? "line-through" : undefined}>{participant.displayName}</span>
-              {isInactive ? <span className="ml-1 font-normal text-subtle">辞退</span> : null}
+              {isInactive ? (
+                <span className="ml-1 font-normal text-subtle">{inactiveLabels[participant.status]}</span>
+              ) : null}
             </button>
           );
         })}

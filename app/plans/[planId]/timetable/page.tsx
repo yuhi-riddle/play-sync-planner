@@ -105,7 +105,30 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
   );
 
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+
+  // 編集できる集合（event_members, status=joined）は canView の集合（オーナー or この plan の
+  // participant）と別物。共有リンクから回答しただけのログイン済みユーザーは participant 行を
+  // 持つのでここまでは通るが、イベントメンバーとは限らない。その人にも編集UIを出すと、
+  // Server Action 側（lib/actions/plan-timetable.ts）の event_members チェックで弾かれて
+  // 「編集する権限がありません」と落ちるので、ここで先に閲覧のみに倒す。
+  let isMember = false;
+  if (event) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("event_members")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("user_id", userId)
+      .eq("status", "joined")
+      .maybeSingle();
+
+    if (membershipError) {
+      throw new Error(`参加状況の取得に失敗しました: ${membershipError.message}`);
+    }
+    isMember = Boolean(membership);
+  }
+
   const isConfirmed = plan.status === "date_confirmed";
+  const canEdit = isConfirmed && isMember;
   const eventDates = listEventDates(plan.confirmed_start_at, plan.confirmed_end_at);
   const nextStartAt = nextTimetableStartAt(items, plan.confirmed_start_at);
   // 日付と時刻は同じ「次の開始時刻」から導く。時刻だけ使って日付を初日に固定すると、
@@ -113,10 +136,16 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
   const nextDateKey = nextStartAt ? toJstDateKey(nextStartAt) : null;
   // 開催期間の外に出るのは最後の行が深夜まで伸びたときだけなので、初日ではなく最終日に寄せる。
   // nextTimetableStartAt は既存行か開催開始より後しか返さないため、前にはみ出すことはない。
+  const isPastEventPeriod = nextDateKey !== null && !eventDates.includes(nextDateKey);
   const defaultDate =
     nextDateKey && eventDates.includes(nextDateKey)
       ? nextDateKey
       : (eventDates[eventDates.length - 1] ?? toJstDateKey(new Date().toISOString()));
+  // 日付だけ最終日に寄せて時刻はそのまま（例: 23:30 の行の次で 00:30）使うと、
+  // 丸めた日付の「先頭」に来てしまい、追加した行が一覧の最上部に入る
+  // （単日イベントは初日＝最終日なので必ず起きる）。日付をまたいで丸めたときは
+  // 時刻もその日の終わりに寄せて、追加した行が最後尾に来るようにする。
+  const defaultStartTime = isPastEventPeriod ? "23:59" : nextStartAt ? formatJstTime(nextStartAt) : "10:00";
   const createItem = createPlanTimetableItemAction.bind(null, plan.id);
   const deleteItem = (itemId: string) => deletePlanTimetableItemAction.bind(null, plan.id, itemId);
   const editItem = (itemId: string) => updatePlanTimetableItemAction.bind(null, plan.id, itemId);
@@ -161,18 +190,18 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
         <PlanTimetable
           items={items}
           now={new Date()}
-          canEdit={isConfirmed}
+          canEdit={canEdit}
           deleteAction={deleteItem}
           edit={{ action: editItem, participants: participantOptions, eventDates }}
         />
 
-        {isConfirmed ? (
+        {canEdit ? (
           <PlanTimetableForm
             action={createItem}
             participants={participantOptions}
             eventDates={eventDates}
             defaultDate={defaultDate}
-            defaultStartTime={nextStartAt ? formatJstTime(nextStartAt) : "10:00"}
+            defaultStartTime={defaultStartTime}
           />
         ) : null}
       </Card>

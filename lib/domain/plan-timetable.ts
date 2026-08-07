@@ -5,6 +5,25 @@ export type TimetableAssignee = {
   status: string;
 };
 
+/**
+ * 担当から外れた状態と、そのバッジ文言。
+ *
+ * 状態の一覧と文言を1箇所にまとめるのは、片方だけ足したときに
+ * 新しい状態が黙って別の文言で表示される事故を防ぐため。
+ * declined（辞退）と cancelled（参加取消）は取り消し線では同じ扱いだが、
+ * 文言まで同じにすると「取り消した人」に「辞退」と出て誤解を招く。
+ *
+ * components/plan-timetable.tsx（一覧のバッジ）と
+ * components/participant-toggle-chips.tsx（編集フォームの担当チップ）の
+ * 両方から参照する。どちらか一方だけが更新されると、cancelled の担当者に
+ * 「取消」と「辞退」が同じ画面の別の場所に同時に出る事故になるため、
+ * ここを唯一の定義元にする。
+ */
+export const inactiveLabels: Record<string, string> = { declined: "辞退", cancelled: "取消" };
+
+/** 新しい担当の候補から外す状態。inactiveLabels のキー集合と同じ。 */
+export const inactiveStatuses = new Set(Object.keys(inactiveLabels));
+
 export type TimetableItem = {
   id: string;
   startAt: string;

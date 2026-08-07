@@ -23,7 +23,13 @@ async function requireTimetableEditor(planId: string) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: plan, error: planError } = await supabase
+  // plans の select ポリシー(001)は「plan の owner だけ」で、イベントメンバー向けの
+  // ポリシーが無い。ユーザーのクライアントで引くと、owner 以外のメンバーは常に0件になり
+  // 「日程調整が見つかりません」で落ちて、直後の event_members チェックに届かない。
+  // 誰が編集できるかはこの下の event_members チェック（ユーザーのクライアント）が担うので、
+  // ここを admin にしても認可の穴にはならない。assertAssigneesBelongToPlan と同じ考え方。
+  const admin = createSupabaseAdminClient();
+  const { data: plan, error: planError } = await admin
     .from("plans")
     .select("id, event_id, status, confirmed_start_at")
     .eq("id", planId)

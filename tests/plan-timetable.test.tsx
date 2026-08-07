@@ -41,6 +41,22 @@ describe("ParticipantToggleChips", () => {
     expect(screen.queryByRole("button", { name: /みずき/ })).not.toBeInTheDocument();
   });
 
+  it("すでに担当になっている参加取消者は「取消」と出し、「辞退」とは出さない", () => {
+    // components/plan-timetable.tsx の一覧バッジは declined/cancelled で文言を分けている
+    // （lib/domain/plan-timetable.ts の inactiveLabels）。この編集フォーム側のチップが
+    // 文言を "辞退" 決め打ちで持っていると、同じ画面の一覧に「みずき 取消」、
+    // 編集フォームのチップに「みずき 辞退」が同時に出てしまう。
+    const withCancelled = [
+      ...participants,
+      { participantId: "p4", displayName: "みずき", status: "cancelled" }
+    ];
+    render(<ParticipantToggleChips participants={withCancelled} defaultSelectedIds={["p4"]} />);
+
+    const chip = screen.getByRole("button", { name: /みずき/ });
+    expect(chip).toHaveTextContent("取消");
+    expect(chip).not.toHaveTextContent("辞退");
+  });
+
   it("「全員」を押しても、すでに担当になっている辞退者は外れない", () => {
     // 全員チップは選択の置き換えではなく合流。置き換えだと辞退済みだが担当の人が
     // ここで選択から外れ、options フィルタの都合でチップ自体が消えて同じ画面では戻せなくなる。
@@ -317,6 +333,12 @@ describe("PlanTimetable", () => {
     const laneContainer = container.querySelector('[data-testid="timetable-lanes"]');
     expect(laneContainer?.className).toContain("grid-cols-1");
     expect(laneContainer?.className).not.toContain("sm:grid-cols-2");
+
+    // クラス名（縦積みかどうか）だけを見ていると、見出し文言が実際のレーン数と
+    // ずれていても検知できない。「二手に分かれる」固定だと3レーンでも同じ文言が出て
+    // 事実と違う（見出しレビュー指摘）。文言自体もレーン数に応じて変わることを固定する。
+    expect(screen.queryByText(/二手に分かれる/)).not.toBeInTheDocument();
+    expect(screen.getByText(/3個に分かれる/)).toBeInTheDocument();
   });
 
   it("2レーンなら横に並べる", () => {
