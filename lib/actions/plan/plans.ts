@@ -160,8 +160,6 @@ export async function updatePlanAction(
     return failWith("日程調整を更新できませんでした。", planError);
   }
 
-  const shouldReplaceParticipants = formData.has("participantNames");
-
   await supabase.from("availability_answers").delete().in(
     "candidate_date_id",
     await supabase
@@ -170,18 +168,8 @@ export async function updatePlanAction(
       .eq("plan_id", planId)
       .then(({ data }) => (data ?? []).map((row) => row.id))
   );
-  if (shouldReplaceParticipants) {
-    await supabase.from("participants").delete().eq("plan_id", planId);
-  }
+  // 参加者は触らない。イベントメンバーから作られていて、編集画面にも入力欄が無い。
   await supabase.from("candidate_dates").delete().eq("plan_id", planId);
-
-  const participants = values.participantNames.map((displayName) => ({
-    plan_id: planId,
-    display_name: displayName,
-    participant_type: "guest",
-    status: "invited",
-    is_organizer: false
-  }));
 
   const candidateDates = values.candidateDates.map((candidateDate, index) => ({
     plan_id: planId,
@@ -197,16 +185,13 @@ export async function updatePlanAction(
     reminder_offsets_minutes: reminderOffsets
   };
 
-  const [{ error: participantsError }, { error: datesError }, { error: reminderError }] = await Promise.all([
-    shouldReplaceParticipants && participants.length > 0
-      ? supabase.from("participants").insert(participants)
-      : Promise.resolve({ error: null }),
+  const [{ error: datesError }, { error: reminderError }] = await Promise.all([
     supabase.from("candidate_dates").insert(candidateDates),
     supabase.from("plan_reminder_settings").upsert(reminderSetting, { onConflict: "plan_id" })
   ]);
 
-  if (participantsError || datesError || reminderError) {
-    return failWith("日程調整を更新できませんでした。", participantsError ?? datesError ?? reminderError);
+  if (datesError || reminderError) {
+    return failWith("日程調整を更新できませんでした。", datesError ?? reminderError);
   }
 
   revalidatePath("/");

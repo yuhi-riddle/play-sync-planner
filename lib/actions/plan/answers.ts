@@ -4,8 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/plan/availability";
-import { resolveAnswerParticipantForSubmission } from "@/lib/domain/plan/participant-identity";
-import { buildPreviousAnswerMap, type PreviousAnswer, type PreviousAnswerRow } from "@/lib/domain/plan/previous-answers";
+import { findAnswerParticipant } from "@/lib/domain/plan/participant-identity";
 import { buildAnswerReceivedNotificationInput, buildNotificationCandidate } from "@/lib/domain/shared/site-notifications";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -29,6 +28,11 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     data: { user }
   } = await serverSupabase.auth.getUser();
   const currentUserId = user?.id ?? null;
+  // トークンは対象の日程調整を探すためだけのもの。誰かはログインで決める。
+  if (!currentUserId) {
+    redirect(`/login?next=/s/${token}/answer`);
+  }
+
   const { data: link, error: linkError } = await supabase
     .from("share_links")
     .select("plan_id, expires_at, status, plans(id, title, owner_user_id, answer_deadline_at, events(title))")
@@ -64,7 +68,6 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
   }
 
   const normalized = normalizeAvailabilityInput({
-    displayName: String(formData.get("displayName") ?? ""),
     answers: ((candidates ?? []) as CandidateRow[]).map((candidate) => ({
       candidateDateId: candidate.id,
       answer: String(formData.get(`answer:${candidate.id}`) ?? "unanswered") as AvailabilityAnswer,
@@ -81,37 +84,21 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     throw new Error(participantsError.message);
   }
 
-  const participantResolution = resolveAnswerParticipantForSubmission({
-    participants: (existingParticipants ?? []).map((participant) => ({
-      id: participant.id,
-      displayName: participant.display_name,
-      userId: participant.user_id
+  const participant = findAnswerParticipant({
+    participants: (existingParticipants ?? []).map((row) => ({
+      id: row.id,
+      displayName: row.display_name,
+      userId: row.user_id
     })),
-    displayName: normalized.displayName,
     userId: currentUserId
   });
 
-  const participantId =
-    participantResolution.kind === "existing"
-      ? participantResolution.participantId
-      : (
-          await supabase
-            .from("participants")
-            .insert({
-              plan_id: link.plan_id,
-              user_id: participantResolution.userId,
-              display_name: participantResolution.displayName,
-              participant_type: participantResolution.participantType,
-              status: "answered",
-              is_organizer: false
-            })
-            .select("id")
-            .single()
-        ).data?.id;
-
-  if (!participantId) {
-    throw new Error("参加者を保存できませんでした");
+  // リンクを持っていても、この日程調整の参加者でなければ書き込ませない。
+  if (!participant) {
+    throw new Error("この日程調整の参加者ではありません。主催者に招待を確認してください");
   }
+
+  const participantId = participant.id;
 
   const answers = normalized.answers.map((answer) => ({
     candidate_date_id: answer.candidateDateId,
@@ -128,12 +115,10 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     throw new Error(answersError.message);
   }
 
-  const participantUpdate =
-    participantResolution.kind === "existing" && participantResolution.userIdToLink
-      ? { status: "answered", user_id: participantResolution.userIdToLink, participant_type: "registered" }
-      : { status: "answered" };
-
-  const { error: participantError } = await supabase.from("participants").update(participantUpdate).eq("id", participantId);
+  const { error: participantError } = await supabase
+    .from("participants")
+    .update({ status: "answered" })
+    .eq("id", participantId);
 
   if (participantError) {
     throw new Error(participantError.message);
@@ -146,7 +131,7 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
         planId: plan.id,
         title: answerNotificationTitle(plan),
         participantId,
-        participantName: normalized.displayName
+        participantName: participant.displayName
       })
     );
 
@@ -170,95 +155,6 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
   revalidatePath("/");
   revalidatePath(`/plans/${link.plan_id}`);
   redirect(`/s/${token}/answer/complete`);
-}
-
-export type PreviousAnswersResult =
-  | { found: false }
-  | { found: true; participantName: string; answers: Record<string, PreviousAnswer> };
-
-const NOT_FOUND: PreviousAnswersResult = { found: false };
-
-/**
- * 名前を入れた時点で、その人の前回の回答を引く。
- *
- * 誰を引くかは submitAvailabilityAnswersAction と同じ
- * resolveAnswerParticipantForSubmission で決める。ここがずれると、
- * 画面にはAさんの回答が出ているのに送信でBさんを上書きする、という事故になる。
- *
- * 見つからない理由（リンク切れ・期限切れ・初回）は返さない。
- * 名前を入れただけの人に出す情報ではないし、回答ページ側で別途出している。
- */
-export async function loadPreviousAnswersAction(token: string, displayName: string): Promise<PreviousAnswersResult> {
-  const trimmedName = displayName.trim();
-  if (!trimmedName) {
-    return NOT_FOUND;
-  }
-
-  const supabase = createSupabaseAdminClient();
-  const serverSupabase = await createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await serverSupabase.auth.getUser();
-
-  const { data: link, error: linkError } = await supabase
-    .from("share_links")
-    .select("plan_id, expires_at, status, plans(answer_deadline_at)")
-    .eq("token", token)
-    .eq("purpose", "answer")
-    .single();
-
-  if (linkError || !link || link.status === "revoked") {
-    return NOT_FOUND;
-  }
-
-  const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as { answer_deadline_at: string | null } | null;
-  const now = new Date();
-  // 回答できない状態なら、前回の回答も出さない。出しても送信で弾かれる。
-  if (!canAnswerPlan(plan?.answer_deadline_at ?? null, now) || !canAnswerPlan(link.expires_at, now)) {
-    return NOT_FOUND;
-  }
-
-  const { data: participants, error: participantsError } = await supabase
-    .from("participants")
-    .select("id, display_name, user_id")
-    .eq("plan_id", link.plan_id);
-
-  if (participantsError) {
-    return NOT_FOUND;
-  }
-
-  const resolution = resolveAnswerParticipantForSubmission({
-    participants: (participants ?? []).map((participant) => ({
-      id: participant.id,
-      displayName: participant.display_name,
-      userId: participant.user_id
-    })),
-    displayName: trimmedName,
-    userId: user?.id ?? null
-  });
-
-  if (resolution.kind !== "existing") {
-    return NOT_FOUND;
-  }
-
-  const { data: rows, error: rowsError } = await supabase
-    .from("availability_answers")
-    .select("candidate_date_id, answer, comment")
-    .eq("participant_id", resolution.participantId);
-
-  if (rowsError) {
-    return NOT_FOUND;
-  }
-
-  const answers = buildPreviousAnswerMap((rows ?? []) as PreviousAnswerRow[]);
-  if (Object.keys(answers).length === 0) {
-    return NOT_FOUND;
-  }
-
-  const participantName =
-    (participants ?? []).find((participant) => participant.id === resolution.participantId)?.display_name ?? trimmedName;
-
-  return { found: true, participantName, answers };
 }
 
 function answerNotificationTitle(plan: AnswerPlanRow) {

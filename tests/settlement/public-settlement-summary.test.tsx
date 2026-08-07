@@ -206,21 +206,5 @@ describe("PublicSettlementSummary", () => {
 
       expect(screen.getByText("あなたの支払い方法")).toBeInTheDocument();
     });
-
-    it("shows a name picker when the viewer is not resolved yet", () => {
-      render(
-        <PublicSettlementSummary
-          eventTitle="夏祭り"
-          planTitle={null}
-          expenses={[]}
-          settlements={settlements}
-          viewer={{ unresolvedParticipants: [{ id: "p1", displayName: "田中" }, { id: "p2", displayName: "鈴木" }] }}
-        />
-      );
-
-      expect(screen.getByText("あなたのお名前")).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "田中" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "鈴木" })).toBeInTheDocument();
-    });
   });
 });

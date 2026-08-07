@@ -66,12 +66,19 @@ function getOrigin(url: string | undefined): string | undefined {
   }
 }
 
+/*
+ * /s/ は公開しない。共有リンクは対象を探すための入口で、本人確認の材料ではない。
+ * 未ログインで開けると、トークンを知っているだけの人が候補日時や清算額を読め、
+ * 名前を打ち込むだけで他人になりすまして回答できてしまう。
+ *
+ * /invites/ は公開のまま。まだアカウントを持っていない人がログインへ進む入口で、
+ * ページ自身がログイン・カレンダー連携へ案内する。
+ */
 function isPublicRequest(pathname: string): boolean {
   return (
     publicPaths.has(pathname) ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/api/") ||
-    pathname.startsWith("/s/") ||
     pathname.startsWith("/invites/")
   );
 }

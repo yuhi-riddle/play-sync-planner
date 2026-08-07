@@ -4,53 +4,25 @@ export type ParticipantIdentity = {
   userId: string | null;
 };
 
-export type AnswerParticipantResolution =
-  | {
-      kind: "existing";
-      participantId: string;
-      userIdToLink: string | null;
-    }
-  | {
-      kind: "create";
-      displayName: string;
-      participantType: "registered" | "guest";
-      userId: string | null;
-    };
-
-export function resolveAnswerParticipantForSubmission({
+/**
+ * 回答する本人を決める。判断材料は user_id だけ。
+ *
+ * 以前は打ち込まれた名前とも照合していたが、それだと共有リンクを知っている人が
+ * 名前を当てるだけで、その人になりすまして回答を上書きできた。
+ * 参加者はイベントメンバーから作られるので、名前で引き当てる必要はもう無い。
+ */
+export function findAnswerParticipant({
   participants,
-  displayName,
   userId
 }: {
   participants: ParticipantIdentity[];
-  displayName: string;
   userId: string | null;
-}): AnswerParticipantResolution {
-  const trimmedName = displayName.trim();
-  const existingByUser = userId ? participants.find((participant) => participant.userId === userId) : undefined;
-  if (existingByUser) {
-    return {
-      kind: "existing",
-      participantId: existingByUser.id,
-      userIdToLink: null
-    };
+}): ParticipantIdentity | null {
+  if (!userId) {
+    return null;
   }
 
-  const existingByName = participants.find((participant) => participant.displayName.trim() === trimmedName);
-  if (existingByName) {
-    return {
-      kind: "existing",
-      participantId: existingByName.id,
-      userIdToLink: userId && !existingByName.userId ? userId : null
-    };
-  }
-
-  return {
-    kind: "create",
-    displayName: trimmedName,
-    participantType: userId ? "registered" : "guest",
-    userId
-  };
+  return participants.find((participant) => participant.userId === userId) ?? null;
 }
 
 export function canConfirmSettlementPayment({
@@ -63,25 +35,3 @@ export function canConfirmSettlementPayment({
   return Boolean(receiverUserId && currentUserId === receiverUserId);
 }
 
-export function resolveViewerParticipant({
-  participants,
-  userId,
-  selectedParticipantId
-}: {
-  participants: ParticipantIdentity[];
-  userId: string | null;
-  selectedParticipantId: string | null;
-}): ParticipantIdentity | null {
-  if (userId) {
-    const byUser = participants.find((participant) => participant.userId === userId);
-    if (byUser) {
-      return byUser;
-    }
-  }
-
-  if (selectedParticipantId) {
-    return participants.find((participant) => participant.id === selectedParticipantId) ?? null;
-  }
-
-  return null;
-}

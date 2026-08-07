@@ -107,36 +107,34 @@ describe("eventDraftSchema", () => {
 });
 
 describe("planSchema", () => {
-  it("keeps participant names and candidate dates in order", () => {
+  it("keeps candidate dates in order", () => {
     const result = planSchema.parse({
       title: "土曜夜の回",
-      participantNames: "Haru\nMio",
       candidateDates: "2026-07-15T10:00\n2026-07-16T10:00",
       answer_deadline_at: "2026-07-14T22:00",
       memo: ""
     });
 
-    expect(result.participantNames).toEqual(["Haru", "Mio"]);
     expect(result.candidateDates).toHaveLength(2);
   });
 
-  it("allows empty participant names because guests can join from a shared link", () => {
+  // 参加者はイベントメンバーから作る。名前を手で入れる経路は残さない。
+  it("participantNames は受け取っても捨てる", () => {
     const result = planSchema.parse({
       title: "",
-      participantNames: "",
+      participantNames: "Haru\nMio",
       candidateDates: "2026-07-15T10:00",
       answer_deadline_at: "2026-07-14T22:00",
       memo: ""
     });
 
-    expect(result.participantNames).toEqual([]);
+    expect(result).not.toHaveProperty("participantNames");
   });
 
   it("requires at least one candidate date", () => {
     expect(() =>
       planSchema.parse({
         title: "",
-        participantNames: "Haru",
         candidateDates: "",
         answer_deadline_at: "2026-07-14T22:00",
         memo: ""
@@ -148,7 +146,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "土曜夜の回",
-        participantNames: "Haru",
         candidateDates: "not-a-date",
         answer_deadline_at: "2026-07-14T22:00",
         memo: ""
@@ -160,7 +157,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "土曜夜の回",
-        participantNames: "Haru",
         candidateDates: "2026-07-15T10:00",
         answer_deadline_at: "",
         memo: ""
@@ -172,7 +168,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "土曜夜の回",
-        participantNames: "Haru",
         candidateDates: "2026-07-15T10:00",
         answer_deadline_at: "tomorrow",
         memo: ""
@@ -183,7 +178,6 @@ describe("planSchema", () => {
   it("accepts minute-level times", () => {
     const result = planSchema.parse({
       title: "",
-      participantNames: "",
       candidateDates: "2026-07-15T10:07",
       candidateEndDates: "2026-07-15T12:07",
       answer_deadline_at: "2026-07-14T22:08",
@@ -198,7 +192,6 @@ describe("planSchema", () => {
   it("keeps all-day flags aligned with candidate dates", () => {
     const result = planSchema.parse({
       title: "",
-      participantNames: "",
       candidateDates: ["2026-07-15T00:00", "2026-07-16T10:00"],
       candidateEndDates: ["2026-07-16T00:00", "2026-07-16T12:00"],
       candidateAllDays: ["true", "false"],
@@ -212,7 +205,6 @@ describe("planSchema", () => {
   it("parses an optional reminder offset in minutes", () => {
     const result = planSchema.parse({
       title: "",
-      participantNames: "",
       candidateDates: "2026-07-15T10:00",
       candidateEndDates: "2026-07-15T12:00",
       answer_deadline_at: "2026-07-14T22:00",
@@ -226,7 +218,6 @@ describe("planSchema", () => {
   it("parses multiple reminder offsets in minutes", () => {
     const result = planSchema.parse({
       title: "",
-      participantNames: "",
       candidateDates: "2026-07-15T10:00",
       candidateEndDates: "2026-07-15T12:00",
       answer_deadline_at: "2026-07-14T22:00",
@@ -241,7 +232,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "",
-        participantNames: "",
         candidateDates: "2026-07-15T10:00",
         candidateEndDates: "2026-07-15T12:00",
         answer_deadline_at: "2026-07-14T22:00",
@@ -255,7 +245,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "",
-        participantNames: "",
         candidateDates: "2026-07-15T10:00",
         candidateEndDates: "2026-07-15T12:00",
         answer_deadline_at: "2026-07-14T22:00",
@@ -269,7 +258,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "",
-        participantNames: "",
         candidateDates: "2000-01-01T10:00",
         candidateEndDates: "2000-01-01T12:00",
         answer_deadline_at: "1999-12-31T22:00",
@@ -289,7 +277,6 @@ describe("planSchema", () => {
       expect(() =>
         planSchema.parse({
           title: "",
-          participantNames: "",
           candidateDates: "2026-07-01T05:00",
           candidateEndDates: "2026-07-01T07:00",
           answer_deadline_at: "2026-06-30T22:00",
@@ -305,7 +292,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "",
-        participantNames: "",
         candidateDates: "2026-07-15T10:00",
         candidateEndDates: "2026-07-15T09:59",
         answer_deadline_at: "2026-07-14T22:00",
@@ -318,7 +304,6 @@ describe("planSchema", () => {
     expect(() =>
       planSchema.parse({
         title: "",
-        participantNames: "",
         candidateDates: "2026-07-15T10:00",
         answer_deadline_at: "2026-07-15T10:01",
         memo: ""

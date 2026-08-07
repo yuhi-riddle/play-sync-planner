@@ -43,9 +43,8 @@ export function PublicSettlementSummary({
   expenses: PublicSettlementExpense[];
   settlements: PublicSettlementItem[];
   recordPaymentAction?: (settlementId: string, formData: FormData) => void | Promise<void>;
-  viewer?:
-    | { role: "receive" | "pay"; currentValue: string | null; action: (formData: FormData) => void | Promise<void> }
-    | { unresolvedParticipants: Array<{ id: string; displayName: string }> };
+  /** 本人はログインで決まる。名前を選ばせる形にすると、誰にでもなりすませてしまう。 */
+  viewer?: { role: "receive" | "pay"; currentValue: string | null; action: (formData: FormData) => void | Promise<void> };
 }) {
   const overview = summarizeSettlementOverview(
     settlements.map((settlement) => ({
@@ -84,40 +83,8 @@ export function PublicSettlementSummary({
         </div>
       </Card>
 
-      {viewer && "role" in viewer ? (
+      {viewer ? (
         <SettlementPaymentMethodForm role={viewer.role} currentValue={viewer.currentValue} action={viewer.action} />
-      ) : null}
-
-      {viewer && "unresolvedParticipants" in viewer ? (
-        <Card>
-          <h2 className="text-lg font-semibold text-ink">あなたのお名前</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">選ぶと、あなたの支払い方法をまとめて設定できます。</p>
-          <form method="get" className="mt-4 grid gap-3">
-            <label className="text-sm font-medium text-ink">
-              <span className="text-muted">参加者を選択</span>
-              <select
-                name="viewer"
-                defaultValue=""
-                className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20"
-              >
-                <option value="" disabled>
-                  選択してください
-                </option>
-                {viewer.unresolvedParticipants.map((participant) => (
-                  <option key={participant.id} value={participant.id}>
-                    {participant.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="submit"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
-            >
-              選択する
-            </button>
-          </form>
-        </Card>
       ) : null}
 
       <Card>

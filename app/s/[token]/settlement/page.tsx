@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import {
   PublicSettlementSummary,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/actions/settlement/settlements";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync";
 import { resolveParticipantSettlementRole } from "@/lib/domain/settlement/settlement";
-import { resolveViewerParticipant } from "@/lib/domain/plan/participant-identity";
+import { findAnswerParticipant } from "@/lib/domain/plan/participant-identity";
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
@@ -77,7 +77,7 @@ export default async function PublicSettlementPage({
   searchParams
 }: {
   params: Promise<{ token: string }>;
-  searchParams?: Promise<{ paid?: string; viewer?: string }>;
+  searchParams?: Promise<{ paid?: string }>;
 }) {
   const { token } = await params;
   const query = (await searchParams) ?? {};
@@ -88,6 +88,12 @@ export default async function PublicSettlementPage({
         <SetupPanel />
       </div>
     );
+  }
+
+  // middlewareでも止めているが、ここが最後の砦。共有リンクは入口でしかない。
+  const currentUserId = await getCurrentUserId();
+  if (!currentUserId) {
+    redirect(`/login?next=/s/${token}/settlement`);
   }
 
   const supabase = createSupabaseAdminClient();
@@ -120,6 +126,31 @@ export default async function PublicSettlementPage({
     notFound();
   }
 
+  const participants = (plan.participants ?? []) as PublicParticipantRow[];
+  const viewerParticipant = findAnswerParticipant({
+    participants: participants.map((participant) => ({
+      id: participant.id,
+      displayName: participant.display_name,
+      userId: participant.user_id
+    })),
+    userId: currentUserId
+  });
+
+  /*
+   * 参加者でなければ金額も名前も見せない。以前は ?viewer= で誰にでもなりすませたので、
+   * トークンさえ知っていれば他人の支払い先を書き換えられた。
+   */
+  if (!viewerParticipant) {
+    return (
+      <div className="space-y-6">
+        <PageHeader eyebrow="Settlement" title="支払い・清算" />
+        <Card>
+          <EmptyState>この清算の参加者ではありません。主催者に招待を確認してください。</EmptyState>
+        </Card>
+      </div>
+    );
+  }
+
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
   const calendarShareUrl =
     plan.confirmed_start_at && plan.confirmed_end_at
@@ -139,19 +170,6 @@ export default async function PublicSettlementPage({
     isImportant: Boolean(expense.is_important)
   }));
 
-  const currentUserId = await getCurrentUserId();
-
-  const participants = (plan.participants ?? []) as PublicParticipantRow[];
-  const viewerParticipant = resolveViewerParticipant({
-    participants: participants.map((participant) => ({
-      id: participant.id,
-      displayName: participant.display_name,
-      userId: participant.user_id
-    })),
-    userId: currentUserId,
-    selectedParticipantId: query.viewer ?? null
-  });
-
   const settlements = ((plan.settlements ?? []) as PublicSettlementRow[]).map<PublicSettlementItem>((settlement) => ({
     id: settlement.id,
     fromParticipantId: firstParticipant(settlement.from_participant)?.id ?? "",
@@ -168,32 +186,22 @@ export default async function PublicSettlementPage({
     }))
   }));
 
-  const viewerRole = viewerParticipant
-    ? resolveParticipantSettlementRole(
-        viewerParticipant.id,
-        settlements.map((settlement) => ({
-          fromParticipantId: settlement.fromParticipantId,
-          toParticipantId: settlement.toParticipantId
-        }))
-      )
-    : null;
+  const viewerRole = resolveParticipantSettlementRole(
+    viewerParticipant.id,
+    settlements.map((settlement) => ({
+      fromParticipantId: settlement.fromParticipantId,
+      toParticipantId: settlement.toParticipantId
+    }))
+  );
 
-  const viewerProp =
-    viewerParticipant && viewerRole
-      ? {
-          role: viewerRole,
-          currentValue:
-            participants.find((participant) => participant.id === viewerParticipant.id)?.settlement_payment_method ?? null,
-          action: updatePublicParticipantSettlementPaymentMethodAction.bind(null, token, viewerParticipant.id)
-        }
-      : !viewerParticipant && participants.length > 0
-        ? {
-            unresolvedParticipants: participants.map((participant) => ({
-              id: participant.id,
-              displayName: participant.display_name
-            }))
-          }
-        : undefined;
+  const viewerProp = viewerRole
+    ? {
+        role: viewerRole,
+        currentValue:
+          participants.find((participant) => participant.id === viewerParticipant.id)?.settlement_payment_method ?? null,
+        action: updatePublicParticipantSettlementPaymentMethodAction.bind(null, token, viewerParticipant.id)
+      }
+    : undefined;
 
   return (
     <div className="space-y-6">

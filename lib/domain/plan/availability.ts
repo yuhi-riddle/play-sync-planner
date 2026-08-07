@@ -3,7 +3,6 @@ import { AVAILABILITY_ANSWERS } from "@/lib/shared/constants";
 export type AvailabilityAnswer = (typeof AVAILABILITY_ANSWERS)[number];
 
 export type AvailabilityInput = {
-  displayName: string;
   answers: Array<{
     candidateDateId: string;
     answer: AvailabilityAnswer;
@@ -20,14 +19,7 @@ export function canAnswerPlan(deadlineIso: string | null, now: Date): boolean {
 }
 
 export function normalizeAvailabilityInput(input: AvailabilityInput): AvailabilityInput {
-  const displayName = input.displayName.trim();
-
-  if (!displayName) {
-    throw new Error("名前を入力してください");
-  }
-
   return {
-    displayName,
     answers: input.answers.map((answer) => ({
       candidateDateId: answer.candidateDateId,
       answer: normalizeAvailabilityAnswer(answer.answer),

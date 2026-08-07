@@ -76,23 +76,28 @@ describe("middleware security headers", () => {
     }
   );
 
-  it.each(["/s/share-token/answer", "/invites/invite-token"])(
-    "skips auth and still applies security headers on the public share path %s",
-    async (pathname) => {
-      const response = await middleware(new NextRequest(`http://localhost${pathname}`));
+  // 招待リンクは、まだアカウントを持っていない人がログインへ進む入口なので公開のまま。
+  it("skips auth and still applies security headers on the invite path", async () => {
+    const response = await middleware(new NextRequest("http://localhost/invites/invite-token"));
 
-      expect(createServerClient).not.toHaveBeenCalled();
-      expect(authGetUser).not.toHaveBeenCalled();
-      expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(createServerClient).not.toHaveBeenCalled();
+    expect(authGetUser).not.toHaveBeenCalled();
+    expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+  });
+
+  /*
+   * 共有リンクは対象を探すための入口で、本人確認の材料ではない。
+   * 公開のままだと、トークンを知っているだけの人が候補日時や清算額を読める。
+   */
+  it.each(["/events", "/s/share-token/answer", "/s/share-token/settlement"])(
+    "still runs the auth lookup on a protected path %s",
+    async (pathname) => {
+      await middleware(new NextRequest(`http://localhost${pathname}`));
+
+      expect(createServerClient).toHaveBeenCalledTimes(1);
+      expect(authGetUser).toHaveBeenCalledTimes(1);
     }
   );
-
-  it("still runs the auth lookup on a protected path", async () => {
-    await middleware(new NextRequest("http://localhost/events"));
-
-    expect(createServerClient).toHaveBeenCalledTimes(1);
-    expect(authGetUser).toHaveBeenCalledTimes(1);
-  });
 
   it("uses only the report-only header when CSP_REPORT_ONLY is set", async () => {
     process.env.CSP_REPORT_ONLY = "true";

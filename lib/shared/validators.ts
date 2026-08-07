@@ -255,7 +255,6 @@ const dateTimeList = (requiredMessage: string, dateTimeMessage: string) =>
 export const planSchema = z
   .object({
     title: nullableText.default(null),
-    participantNames: optionalNewlineList().default([]),
     candidateDates: dateTimeList(
       "候補日時を1つ以上選択してください",
       "候補日時は YYYY-MM-DDTHH:mm 形式で入力してください"

@@ -4,11 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AnswerForm, CALENDAR_NOTICE_MIN_HEIGHT_CLASS, CANDIDATE_WARNING_MIN_HEIGHT_CLASS } from "@/components/plan/answer-form";
 
-const { loadPreviousAnswersAction } = vi.hoisted(() => ({ loadPreviousAnswersAction: vi.fn() }));
-
 vi.mock("@/lib/actions/plan/answers", () => ({
-  submitAvailabilityAnswersAction: vi.fn(),
-  loadPreviousAnswersAction
+  submitAvailabilityAnswersAction: vi.fn()
 }));
 
 const candidates = [
@@ -30,7 +27,6 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  loadPreviousAnswersAction.mockResolvedValue({ found: false });
 });
 
 describe("AnswerForm", () => {
@@ -42,7 +38,7 @@ describe("AnswerForm", () => {
         json: async () => ({ connected: false, busy: [] })
       })
     );
-    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
 
     expect(screen.getByText("回答済み 0/2")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "回答する" })).toBeDisabled();
@@ -62,7 +58,7 @@ describe("AnswerForm", () => {
 
   it("shows a help message about remaining answers and hides it once all are answered", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
-    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
 
     expect(screen.getByText("残り2件の候補に回答すると送信できます。")).toBeInTheDocument();
 
@@ -81,7 +77,7 @@ describe("AnswerForm", () => {
         json: async () => ({ connected: false, busy: [] })
       })
     );
-    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
 
     fireEvent.click(screen.getByRole("button", { name: "全部△" }));
 
@@ -114,7 +110,7 @@ describe("AnswerForm", () => {
       })
     );
 
-    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
 
     await waitFor(() => {
       expect(screen.getByText("Google予定と重なっています")).toBeInTheDocument();
@@ -126,7 +122,7 @@ describe("AnswerForm", () => {
   it("keeps the calendar notice container present with the same minimum height in idle, loading, and ready states", async () => {
     // idle: 候補が空だと月が確定できず calendarState は idle のまま
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
-    const { unmount: unmountIdle } = render(<AnswerForm token="token-1" candidateDates={[]} />);
+    const { unmount: unmountIdle } = render(<AnswerForm token="token-1" candidateDates={[]} participantName="たろう" />);
     const idleNotice = screen.getByTestId("calendar-notice");
     expect(idleNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
     expect(idleNotice.textContent).toBe("");
@@ -134,7 +130,7 @@ describe("AnswerForm", () => {
 
     // loading: fetch がまだ解決していない
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
-    const { unmount: unmountLoading } = render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    const { unmount: unmountLoading } = render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
     const loadingNotice = screen.getByTestId("calendar-notice");
     expect(loadingNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
     expect(loadingNotice.textContent).toBe("Google Calendarを確認中です。");
@@ -148,7 +144,7 @@ describe("AnswerForm", () => {
         json: async () => ({ connected: true, busy: [] })
       })
     );
-    render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
     const readyNotice = screen.getByTestId("calendar-notice");
     expect(readyNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
     await waitFor(() => {
@@ -156,122 +152,55 @@ describe("AnswerForm", () => {
     });
   });
 
-  describe("前回の回答", () => {
-    const previous = {
-      found: true,
-      participantName: "たろう",
-      answers: {
-        "date-1": { answer: "yes", comment: "昼からなら" },
-        "date-2": { answer: "no", comment: "" }
-      }
+  describe("本人と前回の回答", () => {
+    const initialAnswers = {
+      "date-1": { answer: "yes" as const, comment: "昼からなら" },
+      "date-2": { answer: "no" as const, comment: "" }
     };
 
-    function renderForm() {
+    function renderForm(props: Partial<React.ComponentProps<typeof AnswerForm>> = {}) {
       vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
-      render(<AnswerForm token="token-1" candidateDates={candidates} />);
+      render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" {...props} />);
     }
 
-    function typeName(name: string) {
-      const field = screen.getByLabelText("名前");
-      fireEvent.input(field, { target: { value: name } });
-      fireEvent.blur(field);
-    }
-
-    it("名前を入れると前回の回答を引いて、そのまま当てる", async () => {
-      loadPreviousAnswersAction.mockResolvedValue(previous);
+    // 名前を打たせると、打った名前でなりすませてしまう。誰かはログインで決まる。
+    it("名前を入力させない", () => {
       renderForm();
 
-      typeName("たろう");
+      expect(screen.queryByLabelText("名前")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: "名前" })).not.toBeInTheDocument();
+      expect(screen.getByText(/さんとして回答します/)).toBeInTheDocument();
+    });
 
-      expect(await screen.findByText("たろうさんの前回の回答を読み込みました。変えたいところだけ直してください。")).toBeInTheDocument();
+    it("前回の回答を最初から入れておく", () => {
+      renderForm({ initialAnswers });
+
       expect(screen.getByLabelText("候補1に行けると回答")).toBeChecked();
       expect(screen.getByLabelText("候補2に行けないと回答")).toBeChecked();
       expect(screen.getByText("回答済み 2/2")).toBeInTheDocument();
-      expect(loadPreviousAnswersAction).toHaveBeenCalledWith("token-1", "たろう");
+      expect(screen.getByText("前回の回答を読み込みました。変えたいところだけ直してください。")).toBeInTheDocument();
     });
 
-    it("前回のコメントも戻す", async () => {
+    it("前回のコメントも戻す", () => {
       // 回答だけ戻すと、コメントが空のまま送られて前回の内容が消える
-      loadPreviousAnswersAction.mockResolvedValue(previous);
-      renderForm();
+      renderForm({ initialAnswers });
 
-      typeName("たろう");
-
-      await screen.findByText(/前回の回答を読み込みました/);
       const comments = screen.getAllByRole("textbox").filter((field) => field.getAttribute("name")?.startsWith("comment:"));
       expect(comments[0]).toHaveValue("昼からなら");
       expect(comments[1]).toHaveValue("");
     });
 
-    it("入力中の回答は黙って上書きしない", async () => {
-      loadPreviousAnswersAction.mockResolvedValue(previous);
+    it("初めての人には前回の案内を出さない", () => {
       renderForm();
 
-      fireEvent.click(screen.getByLabelText("候補1に調整できるかもと回答"));
-      typeName("たろう");
-
-      expect(await screen.findByText("たろうさんの前回の回答があります。")).toBeInTheDocument();
-      expect(screen.getByLabelText("候補1に調整できるかもと回答")).toBeChecked();
-      expect(screen.getByLabelText("候補1に行けると回答")).not.toBeChecked();
-    });
-
-    it("押せば入力中の回答に上書きする", async () => {
-      loadPreviousAnswersAction.mockResolvedValue(previous);
-      renderForm();
-
-      fireEvent.click(screen.getByLabelText("候補1に調整できるかもと回答"));
-      typeName("たろう");
-
-      fireEvent.click(await screen.findByRole("button", { name: "前回の回答を読み込む" }));
-
-      expect(screen.getByLabelText("候補1に行けると回答")).toBeChecked();
-      expect(screen.queryByText("たろうさんの前回の回答があります。")).not.toBeInTheDocument();
-    });
-
-    it("初めての人には何も出さない", async () => {
-      loadPreviousAnswersAction.mockResolvedValue({ found: false });
-      renderForm();
-
-      typeName("はなこ");
-
-      await waitFor(() => {
-        expect(loadPreviousAnswersAction).toHaveBeenCalledWith("token-1", "はなこ");
-      });
-      /*
-       * 「呼ばれた」だけで見ると、まだ transition の途中で
-       * 「前回の回答を確認しています。」が出ている。消えるまで待つ。
-       */
-      await waitFor(() => {
-        expect(screen.queryByText(/前回の回答/)).not.toBeInTheDocument();
-      });
+      expect(screen.queryByText(/前回の回答/)).not.toBeInTheDocument();
       expect(screen.getByText("回答済み 0/2")).toBeInTheDocument();
-    });
-
-    it("名前が変わっていなければ引き直さない", async () => {
-      loadPreviousAnswersAction.mockResolvedValue(previous);
-      renderForm();
-
-      typeName("たろう");
-      await screen.findByText(/前回の回答を読み込みました/);
-
-      // 候補を選ぶたびに名前欄を出入りするので、blur ごとに叩くと無駄打ちになる
-      fireEvent.blur(screen.getByLabelText("名前"));
-
-      expect(loadPreviousAnswersAction).toHaveBeenCalledTimes(1);
-    });
-
-    it("名前が空なら引かない", () => {
-      renderForm();
-
-      typeName("   ");
-
-      expect(loadPreviousAnswersAction).not.toHaveBeenCalled();
     });
   });
 
   it("reserves a placeholder slot per candidate while Google Calendar conflicts are still loading", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
-    const { container } = render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    const { container } = render(<AnswerForm token="token-1" candidateDates={candidates} participantName="たろう" />);
 
     const placeholders = Array.from(container.querySelectorAll("div")).filter((element) =>
       element.classList.contains(CANDIDATE_WARNING_MIN_HEIGHT_CLASS)
