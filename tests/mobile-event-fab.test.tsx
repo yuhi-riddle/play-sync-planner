@@ -15,7 +15,7 @@ describe("MobileEventFab", () => {
 
     render(<MobileEventFab isSignedIn />);
 
-    const createEventLink = screen.getByRole("link", { name: "イベントを作る" });
+    const createEventLink = screen.getByRole("link", { name: "イベント作成" });
     expect(createEventLink).toHaveAttribute("href", "/events/new");
     expect(createEventLink).toHaveClass("bottom-[calc(5.5rem+env(safe-area-inset-bottom))]");
   });
@@ -25,7 +25,7 @@ describe("MobileEventFab", () => {
 
     render(<MobileEventFab isSignedIn />);
 
-    expect(screen.getByRole("link", { name: "イベントを作る" })).toHaveClass(
+    expect(screen.getByRole("link", { name: "イベント作成" })).toHaveClass(
       "transition-colors",
       "hover:bg-pine",
       "focus:outline-none",
@@ -40,7 +40,7 @@ describe("MobileEventFab", () => {
 
     render(<MobileEventFab isSignedIn />);
 
-    expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "イベント作成" })).not.toBeInTheDocument();
   });
 
   it("hides on pages outside the event workflow", () => {
@@ -48,7 +48,7 @@ describe("MobileEventFab", () => {
 
     render(<MobileEventFab isSignedIn />);
 
-    expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "イベント作成" })).not.toBeInTheDocument();
   });
 
   it("hides when the visitor is signed out", () => {
@@ -56,6 +56,6 @@ describe("MobileEventFab", () => {
 
     render(<MobileEventFab isSignedIn={false} />);
 
-    expect(screen.queryByRole("link", { name: "イベントを作る" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "イベント作成" })).not.toBeInTheDocument();
   });
 });

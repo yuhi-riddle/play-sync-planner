@@ -150,7 +150,20 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Events" title="イベント一覧" description="予定と残っている対応をまとめて確認します。" action={<ButtonLink href="/events/new">イベント作成</ButtonLink>} />
+      {/*
+        説明文は外した。一覧を見れば分かることに、375px で1行使う価値がない。
+        作成ボタンは、モバイルでは右下の FAB が同じ役割を持つので出さない
+        （FAB は sm:hidden なので、ここを消すだけだと PC に作成導線が無くなる）。
+      */}
+      <PageHeader
+        eyebrow="Events"
+        title="イベント一覧"
+        action={
+          <div className="hidden sm:block">
+            <ButtonLink href="/events/new">イベント作成</ButtonLink>
+          </div>
+        }
+      />
       <EventListControls query={displayQuery} draftCount={draftCount} pagination={pagination} />
       {visibleDraft ? (
         <Card className="transition-colors hover:border-moss/45">

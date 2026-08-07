@@ -143,10 +143,13 @@ export default async function PlansPage({
         title="カレンダー"
         description="自分のGoogleカレンダーと、Madoiで調整中の候補日時を月ごとに見比べます。"
         action={
-          <ButtonLink href="/events/new">
-            <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-            イベントを作る
-          </ButtonLink>
+          // モバイルでは右下の FAB が同じ導線なので出さない（FAB は sm:hidden）。
+          <div className="hidden sm:block">
+            <ButtonLink href="/events/new">
+              <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+              イベント作成
+            </ButtonLink>
+          </div>
         }
       />
 

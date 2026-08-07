@@ -232,10 +232,13 @@ export default async function HomePage({
             : greetingTitle(profile?.nickname, user.email) + " 対応が必要なことはありません。今日の予定を確認しましょう。"
         }
         action={
-          <ButtonLink href="/events/new">
-            <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-            イベント作成
-          </ButtonLink>
+          // モバイルでは右下の FAB が同じ導線なので出さない（FAB は sm:hidden）。
+          <div className="hidden sm:block">
+            <ButtonLink href="/events/new">
+              <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+              イベント作成
+            </ButtonLink>
+          </div>
         }
       />
 

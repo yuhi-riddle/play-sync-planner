@@ -82,7 +82,8 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(screen.getByText("下書き 1件")).toBeInTheDocument();
+    // 下書きの件数は独立したバッジをやめ、状態チップに寄せた
+    expect(screen.getByRole("link", { name: "下書き 1" })).toHaveAttribute("href", "/events?status=draft");
     expect(screen.getByRole("heading", { name: "夏ライブ" })).toBeInTheDocument();
   });
 
