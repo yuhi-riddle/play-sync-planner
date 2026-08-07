@@ -59,13 +59,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Google Calendar 連携を確認できませんでした。" }, { status: 500 });
   }
 
-  if ((integrations ?? []).length !== memberUserIds.length) {
-    return NextResponse.json({ error: "参加者全員の Google Calendar 連携が必要です。" }, { status: 409 });
+  /*
+   * 全員の連携は求めない。Googleカレンダーを使っていない人もイベントには入れる。
+   * ただし集計の母数は「連携している人数」に固定する。ここを参加者総数のままにすると、
+   * 連携していない人が busy に現れないぶん、そのまま「空いている」として数えてしまう。
+   */
+  const connectedIntegrations = integrations ?? [];
+  const connectedCount = connectedIntegrations.length;
+  const memberCount = memberUserIds.length;
+
+  if (connectedCount === 0) {
+    return NextResponse.json({
+      month,
+      updatedAt: new Date().toISOString(),
+      connectedCount,
+      memberCount,
+      slots: []
+    });
   }
 
   try {
     const busyByParticipant = await Promise.all(
-      (integrations ?? []).map(async (integration) => {
+      connectedIntegrations.map(async (integration) => {
         const accessToken = await resolveGoogleCalendarAccessToken({
           supabase: admin,
           userId: integration.user_id,
@@ -80,7 +95,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       })
     );
     const slots = buildAvailabilitySlots({
-      participantCount: memberUserIds.length,
+      participantCount: connectedCount,
       busyByParticipant,
       range
     });
@@ -88,7 +103,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({
       month,
       updatedAt: new Date().toISOString(),
-      participantCount: memberUserIds.length,
+      connectedCount,
+      memberCount,
       slots
     });
   } catch (error) {

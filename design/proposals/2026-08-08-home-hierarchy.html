@@ -1,0 +1,458 @@
+<title>ホームの大小メリハリ｜比較案</title>
+<style>
+  :root {
+    --page-bg: #f7f4ee;
+    --page-fg: #262320;
+    --page-muted: #6f665c;
+    --page-line: #ddd4c2;
+    --page-panel: #fffdf7;
+    --page-accent: #5f7d65;
+    --page-accent-ink: #344f43;
+    --page-warn: #a8492f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #1b1917;
+      --page-fg: #ece5d9;
+      --page-muted: #a2988a;
+      --page-line: #3a352e;
+      --page-panel: #24211d;
+      --page-accent: #8fae94;
+      --page-accent-ink: #a9c4ad;
+      --page-warn: #e0917a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1b1917;
+    --page-fg: #ece5d9;
+    --page-muted: #a2988a;
+    --page-line: #3a352e;
+    --page-panel: #24211d;
+    --page-accent: #8fae94;
+    --page-accent-ink: #a9c4ad;
+    --page-warn: #e0917a;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f7f4ee;
+    --page-fg: #262320;
+    --page-muted: #6f665c;
+    --page-line: #ddd4c2;
+    --page-panel: #fffdf7;
+    --page-accent: #5f7d65;
+    --page-accent-ink: #344f43;
+    --page-warn: #a8492f;
+  }
+
+  /* 端末の中身は製品そのものの配色。ここはテーマで変えない。 */
+  .phone {
+    --canvas: #efe7d8;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --ink: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --skywash: #d9e8e7;
+    --mist: #eff3ee;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", Meiryo, sans-serif;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--page-accent); margin: 0 0 6px;
+  }
+  h1 { font-size: 30px; line-height: 1.3; letter-spacing: -0.01em; margin: 0 0 10px; text-wrap: balance; }
+  h2 { font-size: 20px; line-height: 1.4; margin: 0 0 4px; text-wrap: balance; }
+  .lede { color: var(--page-muted); font-size: 15px; margin: 0; max-width: 62ch; }
+
+  section { display: flex; flex-direction: column; gap: 18px; }
+
+  .verdict { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .verdict-scroll { overflow-x: auto; border: 1px solid var(--page-line); border-radius: 14px; background: var(--page-panel); }
+  .verdict th, .verdict td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--page-line); vertical-align: top; }
+  .verdict tr:last-child td { border-bottom: none; }
+  .verdict th { font-size: 12px; letter-spacing: 0.04em; color: var(--page-muted); font-weight: 700; white-space: nowrap; }
+  .verdict td:first-child { font-weight: 700; white-space: nowrap; }
+  .take { color: var(--page-accent-ink); font-weight: 700; white-space: nowrap; }
+  .drop { color: var(--page-warn); font-weight: 700; white-space: nowrap; }
+
+  .rail { display: flex; gap: 26px; overflow-x: auto; padding-bottom: 12px; align-items: flex-start; }
+  .col { flex: 0 0 auto; width: 375px; display: flex; flex-direction: column; gap: 12px; }
+  .col-head h3 { margin: 0 0 2px; font-size: 16px; }
+  .col-head p { margin: 0; font-size: 13px; color: var(--page-muted); line-height: 1.6; }
+
+  .phone {
+    width: 375px; height: 720px; overflow: hidden;
+    background: var(--canvas); color: var(--ink);
+    border: 1px solid var(--page-line); border-radius: 22px;
+    box-shadow: 0 20px 48px rgba(62, 51, 39, 0.15);
+    font-size: 14px; line-height: 1.75;
+  }
+  .screen { padding: 18px 16px 0; display: flex; flex-direction: column; gap: 20px; height: 100%; }
+  .screen.tight { gap: 14px; }
+
+  .status { display: flex; justify-content: space-between; font-size: 11px; color: var(--subtle); font-weight: 700; padding: 0 2px 2px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+    box-shadow: 0 1px 2px rgba(62,51,39,.04), 0 3px 10px rgba(62,51,39,.05);
+  }
+  .row { background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+
+  .eyebrow-s { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: var(--moss); }
+  .h-display { font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; margin: 2px 0 0; }
+  .h-title { font-size: 17px; font-weight: 700; line-height: 1.5; margin: 0; }
+  .t-body { font-size: 14px; }
+  .t-cap { font-size: 12px; line-height: 1.6; color: var(--muted); }
+  .t-muted { color: var(--muted); }
+  .stat { font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 999px; padding: 3px 10px;
+    font-size: 12px; font-weight: 700; border: 1px solid transparent;
+  }
+  .badge.warn { background: #fbe6df; border-color: var(--clay); color: var(--clay-ink); }
+  .badge.prog { background: #f7ecd4; border-color: var(--honey); color: var(--honey-ink); }
+  .badge.done { background: var(--mist); border-color: var(--moss); color: var(--pine); }
+
+  .cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--ink); color: #fffdf7; border-radius: 999px;
+    padding: 12px 20px; font-size: 14px; font-weight: 700; width: 100%;
+  }
+  .cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line-strong); }
+
+  .dots { display: flex; gap: 3px; }
+  .dot { width: 6px; height: 6px; border-radius: 999px; }
+
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal div {
+    aspect-ratio: 1; border-radius: 8px; background: var(--sunken);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11px; gap: 3px; color: var(--muted);
+  }
+
+  .note {
+    border-left: 3px solid var(--page-accent); padding: 2px 0 2px 14px;
+    color: var(--page-muted); font-size: 14px; max-width: 68ch;
+  }
+  .note strong { color: var(--page-fg); }
+
+  @media (max-width: 700px) {
+    body { padding: 28px 16px 60px; }
+    h1 { font-size: 25px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Madoi ／ 比較案</p>
+    <h1>ホームに「大小」を作る</h1>
+    <p class="lede">
+      指摘の狙いは正しい。ただし処方をそのまま入れると、ベージュ地から浮く色が混ざり、
+      <a href="../rules.md" style="color:inherit">design/rules.md</a> の「色は状態を表す」という約束が崩れる。
+      同じ内容・同じ幅（375px）で、現状と2案を並べた。
+    </p>
+  </header>
+
+  <section>
+    <h2>指摘のどれを採るか</h2>
+    <div class="verdict-scroll">
+      <table class="verdict">
+        <tr><th>指摘</th><th>判定</th><th>理由</th></tr>
+        <tr>
+          <td>大小のメリハリ</td><td class="take">採る</td>
+          <td>ここが本丸。今は全部が同じ重さの Card で、目のとまる場所がない。</td>
+        </tr>
+        <tr>
+          <td>イベントを情報ブロック化</td><td class="take">採る</td>
+          <td>開催中／日付／人数は実際に必要な情報。装飾ではなく中身が増える。</td>
+        </tr>
+        <tr>
+          <td>カレンダーの密度・色</td><td class="take">採る</td>
+          <td>点の数と色は「その日どれくらい詰まっているか」を表せる。情報設計として正しい。</td>
+        </tr>
+        <tr>
+          <td>人物カードのアバターを大きく</td><td class="take">採る</td>
+          <td>人は顔とイニシャルで見分ける。つながり画面に限れば有効。</td>
+        </tr>
+        <tr>
+          <td>淡いアクセント色を混ぜる</td><td class="take">条件付き</td>
+          <td>賛成。ただし提案された寒色（#EEF8F2 など）はベージュ地から浮く。既存の <code>mist</code> / <code>skywash</code> / <code>honey</code> を、意味に結んで使う。</td>
+        </tr>
+        <tr>
+          <td>見出しを40pxに</td><td class="drop">採らない</td>
+          <td>375px幅の日本語で40pxは見出しだけで1行を食う。比と太さで差を作るほうが効く。</td>
+        </tr>
+        <tr>
+          <td>背景に大きな円・山を大胆に</td><td class="drop">採らない</td>
+          <td>参考画像はランディング。ホームは毎日開く道具で、1回目に楽しい装飾は50回目に邪魔になる。ログイン・空状態に限定する。</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>ホーム（375px）</h2>
+    <div class="rail">
+
+      <div class="col">
+        <div class="col-head">
+          <h3>現状</h3>
+          <p>Card が3つ、同じ重さで縦に積む。どこから読めばいいか手がかりがない。</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>9:41</span><span>●●● ▲ ■</span></div>
+
+            <div>
+              <span class="eyebrow-s">HOME</span>
+              <p class="h-display">ホーム</p>
+              <p class="t-body t-muted" style="margin:6px 0 0">こんにちは、ゆうひ さん いま手が必要なのは3件です。</p>
+            </div>
+
+            <div class="card">
+              <p class="h-title">対応が必要なこと</p>
+              <div class="row" style="margin-top:12px">
+                <span class="badge warn">未回答</span>
+                <p class="t-body" style="margin:6px 0 0"><strong>夏BBQ の日程</strong></p>
+                <p class="t-cap" style="margin:2px 0 0">8/22 までに回答してください</p>
+              </div>
+              <div class="row" style="margin-top:8px">
+                <span class="badge prog">調整中</span>
+                <p class="t-body" style="margin:6px 0 0"><strong>紅葉ドライブ</strong></p>
+                <p class="t-cap" style="margin:2px 0 0">3人が回答しました</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="h-title">次に確定している予定</p>
+              <p class="t-body" style="margin:8px 0 0">夏BBQ</p>
+              <p class="t-cap" style="margin:2px 0 0">8月22日（土）19:00 ／ 河川敷</p>
+            </div>
+
+            <div class="card">
+              <p class="h-title">カレンダー</p>
+              <div class="cal" style="margin-top:12px">
+                <div>18</div><div>19</div><div>20</div><div>21</div><div>22</div><div>23</div><div>24</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="col-head">
+          <h3>案A｜大小だけを直す</h3>
+          <p>「次の予定」を1つだけヒーローに上げ、残りは行に圧縮。色は増やさない。</p>
+        </div>
+        <div class="phone">
+          <div class="screen tight">
+            <div class="status"><span>9:41</span><span>●●● ▲ ■</span></div>
+
+            <p class="t-cap" style="margin:0">こんにちは、ゆうひ さん</p>
+
+            <div class="card" style="padding:20px 18px">
+              <span class="badge done">次の予定</span>
+              <p class="stat" style="margin:10px 0 0">8月22日（土）</p>
+              <p class="h-title" style="margin:6px 0 0">夏BBQ ／ 19:00</p>
+              <p class="t-cap" style="margin:4px 0 14px">河川敷 ／ 参加 12人</p>
+              <div class="cta">予定をひらく</div>
+            </div>
+
+            <div>
+              <p class="h-title" style="margin-bottom:8px">手が必要なこと <span class="t-muted" style="font-weight:400">3</span></p>
+              <div class="row" style="display:flex;align-items:center;gap:10px">
+                <span class="badge warn">未回答</span>
+                <span class="t-body" style="flex:1">夏BBQ の日程</span>
+                <span class="t-cap">›</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:10px;margin-top:6px">
+                <span class="badge prog">調整中</span>
+                <span class="t-body" style="flex:1">紅葉ドライブ</span>
+                <span class="t-cap">›</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:10px;margin-top:6px">
+                <span class="badge warn">清算</span>
+                <span class="t-body" style="flex:1">花火大会 2,000円</span>
+                <span class="t-cap">›</span>
+              </div>
+            </div>
+
+            <div>
+              <p class="h-title" style="margin-bottom:8px">今週</p>
+              <div class="cal">
+                <div>18</div>
+                <div>19</div>
+                <div>20<div class="dots"><span class="dot" style="background:var(--moss)"></span></div></div>
+                <div>21</div>
+                <div style="background:var(--mist);color:var(--pine);font-weight:700">22<div class="dots"><span class="dot" style="background:var(--pine)"></span><span class="dot" style="background:var(--honey)"></span></div></div>
+                <div>23</div>
+                <div>24</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="col-head">
+          <h3>案B｜大小＋色を意味に結ぶ</h3>
+          <p>案Aに加え、面の色を状態に固定。緑＝確定、黄＝調整中、朱＝要対応。彩りのための色は足さない。</p>
+        </div>
+        <div class="phone">
+          <div class="screen tight">
+            <div class="status"><span>9:41</span><span>●●● ▲ ■</span></div>
+
+            <p class="t-cap" style="margin:0">こんにちは、ゆうひ さん</p>
+
+            <div class="card" style="padding:20px 18px;background:var(--mist);border-color:var(--moss)">
+              <span class="badge done">次の予定</span>
+              <p class="stat" style="margin:10px 0 0;color:var(--pine)">8月22日（土）</p>
+              <p class="h-title" style="margin:6px 0 0">夏BBQ ／ 19:00</p>
+              <p class="t-cap" style="margin:4px 0 14px">河川敷 ／ 参加 12人</p>
+              <div class="cta">予定をひらく</div>
+            </div>
+
+            <div>
+              <p class="h-title" style="margin-bottom:8px">手が必要なこと <span class="t-muted" style="font-weight:400">3</span></p>
+              <div class="row" style="display:flex;align-items:center;gap:10px;background:#fbe6df;border-color:var(--clay)">
+                <span class="badge warn">未回答</span>
+                <span class="t-body" style="flex:1">夏BBQ の日程</span>
+                <span class="t-cap">›</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:10px;margin-top:6px;background:#f7ecd4;border-color:var(--honey)">
+                <span class="badge prog">調整中</span>
+                <span class="t-body" style="flex:1">紅葉ドライブ</span>
+                <span class="t-cap">›</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:10px;margin-top:6px;background:#fbe6df;border-color:var(--clay)">
+                <span class="badge warn">清算</span>
+                <span class="t-body" style="flex:1">花火大会 2,000円</span>
+                <span class="t-cap">›</span>
+              </div>
+            </div>
+
+            <div>
+              <p class="h-title" style="margin-bottom:8px">今週</p>
+              <div class="cal">
+                <div>18</div>
+                <div>19</div>
+                <div>20<div class="dots"><span class="dot" style="background:var(--moss)"></span></div></div>
+                <div>21</div>
+                <div style="background:var(--mist);color:var(--pine);font-weight:700">22<div class="dots"><span class="dot" style="background:var(--pine)"></span><span class="dot" style="background:var(--honey)"></span></div></div>
+                <div>23<div class="dots"><span class="dot" style="background:var(--clay)"></span></div></div>
+                <div>24</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="note">
+      <strong>案Aと案Bの違いは色だけ。</strong>案Bは面まで色を付けたぶん状態が一目で分かるが、
+      3件が全部色付きだと画面が騒がしくなり、結局どれも目立たなくなる。
+      件数が増えるほど案Aが有利になる。
+    </p>
+  </section>
+
+  <section>
+    <h2>ウェルカム画面</h2>
+    <div class="rail">
+
+      <div class="col">
+        <div class="col-head">
+          <h3>もらった案そのまま</h3>
+          <p>ボタンが2つ。ただし認証は Google だけなので、どちらを押しても同じ画面に行く。</p>
+        </div>
+        <div class="phone">
+          <div class="screen" style="justify-content:center;gap:0;position:relative">
+            <div style="position:absolute;top:60px;right:-40px;width:190px;height:190px;border-radius:999px;background:#f5ecd7"></div>
+            <div style="position:absolute;bottom:120px;left:-50px;width:200px;height:200px;border-radius:999px;background:var(--skywash);opacity:.6"></div>
+            <div style="position:relative;text-align:center;margin-top:-60px">
+              <div style="width:88px;height:88px;margin:0 auto;border-radius:20px;background:var(--moss);opacity:.9"></div>
+              <p class="h-display" style="margin-top:18px">Madoi</p>
+              <p class="t-body" style="font-weight:700;margin:10px 0 0">つなげる、ひろがる、わたしたちの毎日。</p>
+              <p class="t-cap" style="margin:8px 0 0">予定の共有も、やりとりも、<br>Madoiひとつで、もっとかんたんに。</p>
+            </div>
+            <div style="position:absolute;left:16px;right:16px;bottom:36px;display:flex;flex-direction:column;gap:10px">
+              <div class="cta">はじめる</div>
+              <div class="cta ghost">ログイン</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="col-head">
+          <h3>直した案</h3>
+          <p>ボタンは1つ。初回も再訪も Google の同じ導線なので、選ばせる意味がない。規約は下に置く。</p>
+        </div>
+        <div class="phone">
+          <div class="screen" style="justify-content:center;gap:0;position:relative">
+            <div style="position:absolute;top:70px;right:-46px;width:190px;height:190px;border-radius:999px;background:#f5ecd7"></div>
+            <div style="position:absolute;bottom:150px;left:-56px;width:200px;height:200px;border-radius:999px;background:var(--skywash);opacity:.55"></div>
+            <div style="position:relative;text-align:center;margin-top:-70px">
+              <div style="width:88px;height:88px;margin:0 auto;border-radius:20px;background:var(--moss);opacity:.9"></div>
+              <p class="h-display" style="margin-top:18px">Madoi</p>
+              <p class="t-body" style="font-weight:700;margin:10px 0 0">予定を合わせるところから、<br>集まりは始まる。</p>
+              <p class="t-cap" style="margin:10px 0 0">空いている日を出し合って、決まったら<br>カレンダーに入るまで。</p>
+            </div>
+            <div style="position:absolute;left:16px;right:16px;bottom:30px;display:flex;flex-direction:column;gap:12px">
+              <div class="cta">Googleではじめる</div>
+              <p class="t-cap" style="text-align:center;margin:0;line-height:1.7">
+                続けると<span style="text-decoration:underline">利用規約</span>と<span style="text-decoration:underline">プライバシーポリシー</span><br>に同意したことになります
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="note">
+      背景の円はこの画面には合う。<strong>1回しか見ない画面だから。</strong>
+      同じ装飾をホームに持ち込むと、毎日邪魔になる。
+    </p>
+  </section>
+
+  <section>
+    <h2>おすすめ</h2>
+    <p class="lede">
+      <strong>案A → 使ってみて物足りなければ案B</strong>の順。
+      色を足すのはいつでもできるが、一度足した色を引くのは難しい。
+      ウェルカム画面は「直した案」。ボタンを2つに割ると、押し分けを迷わせるうえに実装も分かれる。
+    </p>
+    <p class="note">
+      なお「規約に同意したことになります」の形にすると、チェックボックス必須の今より同意の証跡が弱くなる。
+      記録を残す仕組み（<code>user_consents</code>）は既にあるので、<strong>チェックボックスは残したまま
+      この画面に置く</strong>のが無難。実装前に決めたい点。
+    </p>
+  </section>
+
+</div>

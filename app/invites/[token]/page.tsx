@@ -61,31 +61,39 @@ export default async function EventInvitePage({ params }: { params: Promise<{ to
     );
   }
 
-  if (!integration) {
-    return (
-      <div className="space-y-6">
-        <PageHeader eyebrow="Invite" title={`${eventTitle} に参加する`} description="参加には Google Calendar 連携が必要です。予定の名前や場所は主催者には共有されません。" />
-        <Card className="max-w-xl space-y-4">
-          <p className="text-sm leading-6 text-muted">連携後、この招待ページへ戻って参加を完了します。</p>
-          <a
-            href={`/api/google-calendar/connect?next=${encodeURIComponent(invitePath)}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-          >
-            Google Calendar を連携する
-          </a>
-        </Card>
-      </div>
-    );
-  }
-
+  /*
+   * 連携は参加の条件ではない。Googleカレンダーを使っていない人も参加できる。
+   * 連携済みかどうかで、参加ボタンの下に出す案内だけを変える。
+   */
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Invite" title={`${eventTitle} に参加する`} description="参加すると、主催者の空き時間集計にあなたの予定の空き状況だけが反映されます。" />
+      <PageHeader
+        eyebrow="Invite"
+        title={`${eventTitle} に参加する`}
+        description={
+          integration
+            ? "参加すると、主催者の空き時間集計にあなたの予定の空き状況だけが反映されます。"
+            : "そのまま参加できます。Google Calendar を連携すると、空いている日時が自動で埋まります。"
+        }
+      />
       <Card className="max-w-xl space-y-4">
         <p className="text-sm leading-6 text-muted">予定の名前、場所、個別の空き時間は主催者や他の参加者には表示されません。</p>
         <form action={joinEventFromInviteAction.bind(null, token)}>
           <SubmitButton>参加する</SubmitButton>
         </form>
+        {integration ? null : (
+          <div className="rounded-control border border-line bg-sunken p-4">
+            <p className="text-sm leading-6 text-ink">
+              連携しなくても参加できます。連携すると、候補日時に自分で○×を付ける手間が減ります。
+            </p>
+            <a
+              href={`/api/google-calendar/connect?next=${encodeURIComponent(invitePath)}`}
+              className="mt-3 inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+            >
+              Google Calendar を連携する
+            </a>
+          </div>
+        )}
       </Card>
     </div>
   );
