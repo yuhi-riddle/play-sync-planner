@@ -154,7 +154,8 @@ export function TextField({
   helpText,
   step,
   min,
-  requiredMessage
+  requiredMessage,
+  onValueChange
 }: {
   label: string;
   name: string;
@@ -166,6 +167,12 @@ export function TextField({
   step?: number;
   min?: number;
   requiredMessage?: string;
+  /**
+   * 入力中の値を親に知らせる。渡さなければ従来どおり非制御のまま。
+   * 値は input が持ち続けるので、親が state を返す必要はない
+   * （経費フォームが「1人あたりいくら」を出すために金額の変化だけを見ている）。
+   */
+  onValueChange?: (value: string) => void;
 }) {
   function handleInvalid(event: InvalidEvent<HTMLInputElement>) {
     if (requiredMessage && event.currentTarget.validity.valueMissing) {
@@ -175,6 +182,7 @@ export function TextField({
 
   function handleInput(event: FormEvent<HTMLInputElement>) {
     event.currentTarget.setCustomValidity("");
+    onValueChange?.(event.currentTarget.value);
   }
 
   return (

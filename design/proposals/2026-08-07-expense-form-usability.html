@@ -1,0 +1,661 @@
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>経費入力フォームの比較（案A / 案B / 案C）</title>
+
+<style>
+  :root {
+    /* アプリの実トークン（tailwind.config.ts より） */
+    --canvas: #efe7d8;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --ink: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --skywash: #d9e8e7;
+    --mist: #eff3ee;
+    --r-card: 14px;
+    --r-control: 10px;
+    --raise: 0 1px 2px rgba(62, 51, 39, 0.04), 0 3px 10px rgba(62, 51, 39, 0.05);
+
+    /* ページ側（モックの外枠）だけ明暗に追従させる */
+    --page-bg: #ece6dc;
+    --page-fg: #2a2622;
+    --page-dim: #6b6258;
+    --page-panel: #fbf8f2;
+    --page-line: #d9d0c2;
+    --page-accent: #7a4a2f;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #1a1816;
+      --page-fg: #ece7df;
+      --page-dim: #a29a8f;
+      --page-panel: #24211e;
+      --page-line: #3a352f;
+      --page-accent: #d8a17f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1a1816;
+    --page-fg: #ece7df;
+    --page-dim: #a29a8f;
+    --page-panel: #24211e;
+    --page-line: #3a352f;
+    --page-accent: #d8a17f;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #ece6dc;
+    --page-fg: #2a2622;
+    --page-dim: #6b6258;
+    --page-panel: #fbf8f2;
+    --page-line: #d9d0c2;
+    --page-accent: #7a4a2f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 20px 72px;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+      "BIZ UDPGothic", Meiryo, sans-serif;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  .wrap { max-width: 1320px; margin: 0 auto; }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--page-accent);
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 28px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    margin: 8px 0 0;
+    text-wrap: balance;
+  }
+
+  .lede { margin: 10px 0 0; max-width: 62ch; color: var(--page-dim); }
+
+  /* ---- 実測した欠陥 ---- */
+  .defects {
+    margin: 28px 0 0;
+    padding: 18px 20px;
+    background: var(--page-panel);
+    border: 1px solid var(--page-line);
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+  }
+  .defects h2 { font-size: 15px; margin: 0; }
+  .defects ol { margin: 0; padding-left: 1.3em; display: grid; gap: 9px; }
+  .defects li { color: var(--page-dim); }
+  .defects b { color: var(--page-fg); font-weight: 700; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: color-mix(in srgb, var(--page-accent) 12%, transparent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* ---- 3案の並び ---- */
+  .cols {
+    margin: 34px 0 0;
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: 14px;
+  }
+  .col { flex: 0 0 375px; }
+
+  .col-head { margin-bottom: 12px; min-height: 92px; }
+  .col-head .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--page-line);
+    background: var(--page-panel);
+  }
+  .col-head .tag.rec { border-color: var(--page-accent); color: var(--page-accent); }
+  .col-head h3 { font-size: 17px; margin: 9px 0 0; }
+  .col-head p { margin: 4px 0 0; font-size: 13px; color: var(--page-dim); }
+
+  .measure {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--page-dim);
+    margin: 0 0 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .measure b { font-size: 15px; color: var(--page-fg); }
+
+  /* ---- 375px の端末枠。中身はアプリの実配色（ライト固定） ---- */
+  .device {
+    width: 375px;
+    background: var(--canvas);
+    border: 1px solid var(--line-strong);
+    border-radius: 18px;
+    padding: 14px 12px;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.75;
+    color-scheme: light;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: var(--raise);
+    padding: 16px;
+  }
+  .card h4 { font-size: 17px; font-weight: 700; margin: 0; }
+  .card .sub { font-size: 13px; color: var(--muted); margin: 4px 0 0; line-height: 1.6; }
+
+  .stack { display: grid; gap: 16px; margin-top: 16px; }
+
+  label.f { display: block; }
+  label.f > .lab { font-size: 13px; color: var(--muted); font-weight: 500; display: block; }
+  .inp {
+    margin-top: 6px;
+    min-height: 40px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface);
+    padding: 8px 12px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+  }
+  .inp.ph { color: var(--subtle); }
+  .inp.sel::after { content: "▾"; margin-left: auto; color: var(--muted); }
+  .ta { min-height: 66px; align-items: flex-start; padding-top: 9px; }
+
+  fieldset.split {
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface);
+    padding: 12px;
+    margin: 0;
+    display: grid;
+    gap: 11px;
+  }
+  fieldset.split legend { font-size: 13px; font-weight: 700; padding: 0 4px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .chip.on { border-color: var(--moss); background: var(--mist); color: var(--pine); }
+
+  .radio, .box {
+    width: 15px; height: 15px; flex: none;
+    border: 1.5px solid var(--line-strong);
+    background: var(--surface);
+    display: inline-block;
+  }
+  .radio { border-radius: 50%; }
+  .box { border-radius: 4px; }
+  .radio.on { border-color: var(--moss); background: radial-gradient(circle, var(--moss) 0 42%, var(--surface) 46%); }
+  .box.on { border-color: var(--moss); background: var(--moss); position: relative; }
+  .box.on::after {
+    content: "";
+    position: absolute; left: 4px; top: 1px;
+    width: 4px; height: 8px;
+    border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  /* 案A の参加者行（1fr / 11rem の2カラム） */
+  .prow {
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface);
+    padding: 10px 11px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .prow .name { display: flex; align-items: center; gap: 10px; }
+  .prow .rt { font-weight: 400; color: var(--muted); font-size: 12px; text-align: right; }
+  .prow .amt {
+    min-height: 34px; width: 92px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    padding: 4px 9px;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: flex-end;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+  }
+
+  .note-important {
+    border: 1px solid rgba(95, 125, 101, 0.18);
+    background: rgba(239, 243, 238, 0.6);
+    border-radius: var(--r-control);
+    padding: 11px;
+    display: flex;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .note-important b { display: block; }
+  .note-important span.d { color: var(--muted); display: block; margin-top: 3px; }
+
+  .submit {
+    min-height: 44px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* 折りたたみ行（案C） */
+  .disclose {
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface);
+    padding: 11px 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .disclose .caret { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .disclose .k { font-weight: 700; }
+  .disclose .v { color: var(--muted); }
+
+  .summary-line {
+    border-radius: var(--r-control);
+    background: var(--mist);
+    border: 1px solid rgba(95, 125, 101, 0.28);
+    padding: 10px 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--pine);
+    font-weight: 700;
+  }
+  .summary-line .chg {
+    margin-left: auto;
+    font-size: 12px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 3px 11px;
+  }
+
+  /* 差額バー */
+  .tally {
+    border-radius: var(--r-control);
+    padding: 10px 12px;
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally.ok { background: var(--mist); border: 1px solid rgba(95, 125, 101, 0.3); color: var(--pine); }
+  .tally.bad { background: rgba(223, 125, 105, 0.12); border: 1px solid rgba(223, 125, 105, 0.4); color: var(--clay-ink); }
+  .tally .row { display: flex; justify-content: space-between; }
+  .tally .row b { font-weight: 700; }
+  .tally .bar { height: 5px; border-radius: 999px; background: rgba(38, 35, 32, 0.08); overflow: hidden; }
+  .tally .bar i { display: block; height: 100%; border-radius: 999px; }
+  .tally.ok .bar i { background: var(--moss); }
+  .tally.bad .bar i { background: var(--clay); }
+
+  /* サーバーエラー（案A の実際の挙動） */
+  .servererr {
+    border-radius: var(--r-control);
+    border: 1px solid rgba(223, 125, 105, 0.4);
+    background: rgba(223, 125, 105, 0.12);
+    color: var(--clay-ink);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    gap: 8px;
+  }
+
+  /* サブラベル（枠の外に出す注記） */
+  .sub-label {
+    margin: 16px 0 7px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--page-dim);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .sub-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--page-line);
+  }
+
+  .verdict {
+    margin: 40px 0 0;
+    padding: 22px 24px;
+    border-radius: 12px;
+    border: 1px solid var(--page-accent);
+    background: color-mix(in srgb, var(--page-accent) 8%, var(--page-panel));
+    display: grid;
+    gap: 10px;
+  }
+  .verdict h2 { margin: 0; font-size: 17px; }
+  .verdict p { margin: 0; color: var(--page-dim); max-width: 72ch; }
+  .verdict p b { color: var(--page-fg); }
+
+  .footnote { margin: 22px 0 0; font-size: 13px; color: var(--page-dim); max-width: 76ch; }
+
+  @media (max-width: 900px) {
+    .cols { display: grid; grid-template-columns: 1fr; justify-items: start; }
+    .col-head { min-height: 0; }
+  }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Settlement / Expense form</p>
+  <h1>経費入力をどう直すか — 場所を変えるか、中身を変えるか</h1>
+  <p class="lede">
+    当初の計画は「フォームを専用ページへ切り出す」でした。ただしそれは<em>置き場所</em>だけの変更で、
+    フォームを開いたあとの手数は 1 つも減りません。実測した欠陥は 3 つとも中身側にあります。
+  </p>
+
+  <section class="defects">
+    <h2>実測した欠陥（コード確認済み）</h2>
+    <ol>
+      <li>
+        <b>個別金額の合計が合っているか、入力中に分からない。</b>
+        <code>lib/validators.ts:201</code> は合計 ≠ 金額を拒否するのに、
+        <code>components/expense-form.tsx</code> に合計の計算がない。¥1 ずれても<b>送信して初めて</b>弾かれる。
+      </li>
+      <li>
+        <b>編集はいつも個別金額モードで開く。</b>
+        <code>settlement/page.tsx:529</code> が <code>splitMode: "individual"</code> 決め打ち。
+        均等割りで作った経費も N 行の金額欄で開き、金額を ¥3,600→¥3,900 に直すと全行が合わなくなって手直しになる。
+      </li>
+      <li>
+        <b>「均等割り対象 3人」を全行くり返す。</b>
+        <code>components/expense-form.tsx:173</code>。同じ 1 つの事実を人数ぶん表示していて、
+        いちばん知りたい「1人あたりいくら」はどこにも出ない。
+      </li>
+    </ol>
+  </section>
+
+  <div class="cols">
+    <!-- ============ 案A ============ -->
+    <div class="col">
+      <div class="col-head">
+        <span class="tag">案A — 現状</span>
+        <h3>置き場所だけ変える</h3>
+        <p>専用ページへ切り出しても、開いた先はこの画面のまま。手数は変わらない。</p>
+      </div>
+      <p class="measure">縦の長さ <b data-measure="a">—</b> <span>／ 参加者3人・均等割り</span></p>
+
+      <div class="device" data-frame="a">
+        <div class="card">
+          <h4>支払いを追加</h4>
+          <p class="sub">チケット代や立替分を追加すると、清算結果を自動で出します。</p>
+
+          <div class="stack">
+            <label class="f"><span class="lab">支払い内容</span><div class="inp">チケット代</div></label>
+            <label class="f"><span class="lab">金額</span><div class="inp">3600</div></label>
+            <label class="f"><span class="lab">支払った人</span><div class="inp sel">ゆき</div></label>
+
+            <fieldset class="split">
+              <legend>割り方</legend>
+              <div class="chips">
+                <span class="chip"><i class="radio on"></i>均等割り</span>
+                <span class="chip"><i class="radio"></i>個別金額</span>
+              </div>
+              <div class="prow"><span class="name"><i class="box on"></i>ゆき</span><span class="rt">均等割り対象 3人</span></div>
+              <div class="prow"><span class="name"><i class="box on"></i>はると</span><span class="rt">均等割り対象 3人</span></div>
+              <div class="prow"><span class="name"><i class="box on"></i>みお</span><span class="rt">均等割り対象 3人</span></div>
+            </fieldset>
+
+            <label class="f"><span class="lab">支払い用URL</span><div class="inp ph">https://…</div></label>
+
+            <div class="note-important">
+              <i class="box"></i>
+              <span><b>重要メモとして表示</b><span class="d">予約番号、当日見せる情報、高額なチケット代など、あとで見返したい支払いに付けます。</span></span>
+            </div>
+
+            <label class="f"><span class="lab">メモ</span><div class="inp ta ph">例: 予約番号、当日必要な情報、購入ページの補足など</div></label>
+
+            <div class="submit">支払いを追加</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="sub-label">個別金額に切り替えたとき</p>
+      <div class="device">
+        <div class="card" style="padding:14px">
+          <fieldset class="split">
+            <legend>割り方</legend>
+            <div class="chips">
+              <span class="chip"><i class="radio"></i>均等割り</span>
+              <span class="chip on"><i class="radio on"></i>個別金額</span>
+            </div>
+            <div class="prow"><span class="name"><i class="box on"></i>ゆき</span><span class="amt">1200</span></div>
+            <div class="prow"><span class="name"><i class="box on"></i>はると</span><span class="amt">1200</span></div>
+            <div class="prow"><span class="name"><i class="box on"></i>みお</span><span class="amt">1100</span></div>
+          </fieldset>
+          <div style="margin-top:14px"><div class="submit">支払いを追加</div></div>
+          <p class="sub" style="margin-top:12px">↓ 押すと</p>
+          <div style="margin-top:8px" class="servererr"><span>⚠</span><span>個別金額の合計を支払い金額と同じにしてください</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 案B ============ -->
+    <div class="col">
+      <div class="col-head">
+        <span class="tag">案B — 中身を直す</span>
+        <h3>常時展開のまま、欠陥だけ潰す</h3>
+        <p>1人あたりの金額と、個別モードの差額をその場に出す。構成は今のまま。</p>
+      </div>
+      <p class="measure">縦の長さ <b data-measure="b">—</b> <span>／ 同じ内容</span></p>
+
+      <div class="device" data-frame="b">
+        <div class="card">
+          <h4>支払いを追加</h4>
+          <p class="sub">チケット代や立替分を追加すると、清算結果を自動で出します。</p>
+
+          <div class="stack">
+            <label class="f"><span class="lab">支払い内容</span><div class="inp">チケット代</div></label>
+            <label class="f"><span class="lab">金額</span><div class="inp">3600</div></label>
+            <label class="f"><span class="lab">支払った人</span><div class="inp sel">ゆき</div></label>
+
+            <fieldset class="split">
+              <legend>割り方</legend>
+              <div class="chips">
+                <span class="chip on"><i class="radio on"></i>均等割り</span>
+                <span class="chip"><i class="radio"></i>個別金額</span>
+              </div>
+              <div class="chips">
+                <span class="chip on"><i class="box on"></i>ゆき</span>
+                <span class="chip on"><i class="box on"></i>はると</span>
+                <span class="chip on"><i class="box on"></i>みお</span>
+              </div>
+              <div class="tally ok">
+                <div class="row"><span>1人あたり</span><b>¥1,200 × 3人</b></div>
+              </div>
+            </fieldset>
+
+            <label class="f"><span class="lab">支払い用URL</span><div class="inp ph">https://…</div></label>
+
+            <div class="note-important">
+              <i class="box"></i>
+              <span><b>重要メモとして表示</b><span class="d">予約番号、当日見せる情報、高額なチケット代など、あとで見返したい支払いに付けます。</span></span>
+            </div>
+
+            <label class="f"><span class="lab">メモ</span><div class="inp ta ph">例: 予約番号、当日必要な情報、購入ページの補足など</div></label>
+
+            <div class="submit">支払いを追加</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="sub-label">個別金額に切り替えたとき</p>
+      <div class="device">
+        <div class="card" style="padding:14px">
+          <fieldset class="split">
+            <legend>割り方</legend>
+            <div class="chips">
+              <span class="chip"><i class="radio"></i>均等割り</span>
+              <span class="chip on"><i class="radio on"></i>個別金額</span>
+            </div>
+            <div class="prow"><span class="name"><i class="box on"></i>ゆき</span><span class="amt">1200</span></div>
+            <div class="prow"><span class="name"><i class="box on"></i>はると</span><span class="amt">1200</span></div>
+            <div class="prow"><span class="name"><i class="box on"></i>みお</span><span class="amt">1100</span></div>
+            <div class="tally bad">
+              <div class="row"><span>入力の合計</span><b>¥3,500 / ¥3,600</b></div>
+              <div class="bar"><i style="width:97%"></i></div>
+              <div class="row"><span>あと</span><b>¥100 足りません</b></div>
+            </div>
+          </fieldset>
+          <div style="margin-top:14px"><div class="submit">支払いを追加</div></div>
+          <p class="sub" style="margin-top:12px">押す前に分かる</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 案C ============ -->
+    <div class="col">
+      <div class="col-head">
+        <span class="tag rec">案C — 推奨</span>
+        <h3>よくある入力を 4 操作で終える</h3>
+        <p>「全員で均等割り」は既定値として 1 行に畳む。変えたい人だけ開く。</p>
+      </div>
+      <p class="measure">縦の長さ <b data-measure="c">—</b> <span>／ 同じ内容</span></p>
+
+      <div class="device" data-frame="c">
+        <div class="card">
+          <h4>支払いを追加</h4>
+          <p class="sub">チケット代や立替分を追加すると、清算結果を自動で出します。</p>
+
+          <div class="stack">
+            <label class="f"><span class="lab">支払い内容</span><div class="inp">チケット代</div></label>
+            <label class="f"><span class="lab">金額</span><div class="inp">3600</div></label>
+            <label class="f"><span class="lab">支払った人</span><div class="inp sel">ゆき</div></label>
+
+            <div class="summary-line">
+              <span>全員で均等割り · 1人あたり ¥1,200</span>
+              <span class="chg">変える</span>
+            </div>
+
+            <div class="disclose">
+              <span class="k">詳細</span>
+              <span class="v">URL・重要メモ・メモ</span>
+              <span class="caret">▾</span>
+            </div>
+
+            <div class="submit">支払いを追加</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="sub-label">「変える」を押したとき</p>
+      <div class="device">
+        <div class="card" style="padding:14px">
+          <fieldset class="split">
+            <legend>割り方</legend>
+            <div class="chips">
+              <span class="chip"><i class="radio"></i>均等割り</span>
+              <span class="chip on"><i class="radio on"></i>個別金額</span>
+            </div>
+            <div class="prow"><span class="name"><i class="box on"></i>ゆき</span><span class="amt">1200</span></div>
+            <div class="prow"><span class="name"><i class="box on"></i>はると</span><span class="amt">1200</span></div>
+            <div class="prow"><span class="name"><i class="box on"></i>みお</span><span class="amt">1100</span></div>
+            <div class="tally bad">
+              <div class="row"><span>入力の合計</span><b>¥3,500 / ¥3,600</b></div>
+              <div class="bar"><i style="width:97%"></i></div>
+              <div class="row"><span>あと</span><b>¥100 足りません</b></div>
+            </div>
+          </fieldset>
+          <div style="margin-top:14px"><div class="submit">支払いを追加</div></div>
+          <p class="sub" style="margin-top:12px">編集で開くときも、保存されている割り方のまま開く（案A のように個別金額へ強制しない）</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="verdict">
+    <h2>推奨は案C。判断基準は「よくある入力の手数」です。</h2>
+    <p>
+      立替の大半は「全員で均等割り」です。案C ならその場合の操作は
+      <b>内容・金額・支払った人・保存の 4 つ</b>で終わり、参加者が増えてもフォームは伸びません。
+      案A・案B は参加者 1 人につき 1 行ずつ縦に伸び続けます。
+    </p>
+    <p>
+      そして <b>専用ページ化は不要になります</b>。案C だとフォームが今の高さの半分以下になり、
+      清算ページの現在地（「参加者向け清算リンク」と横並びのカード）にそのまま収まるからです。
+      ルートを 2 本増やして権限チェックを書き足す必要がなくなり、直すべき 3 つの欠陥に手数を回せます。
+    </p>
+    <p>
+      案B は中間案です。<b>案C の見た目が気に入らない場合の逃げ道</b>として置いています。
+      欠陥 1・2・3 はどちらの案でも直ります。差は「割り方ブロックを常に見せるか、既定値として畳むか」だけです。
+    </p>
+  </section>
+
+  <p class="footnote">
+    端末枠は実寸 375px。配色・角丸・影・文字サイズは <code>tailwind.config.ts</code> のトークンをそのまま使っています。
+    枠の中はアプリにダークモードがないためライト固定、枠の外は表示テーマに追従します。
+    「縦の長さ」は読み込み時に実測した値です。
+  </p>
+</div>
+
+<script>
+  // 案ごとの縦の長さを実測して出す。目分量の主張にしないため。
+  for (const frame of document.querySelectorAll("[data-frame]")) {
+    const target = document.querySelector(`[data-measure="${frame.dataset.frame}"]`);
+    if (target) target.textContent = `${Math.round(frame.getBoundingClientRect().height)}px`;
+  }
+</script>
