@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
 import { CalendarShareLink } from "@/components/calendar-share-link";
+import { ParticipantDeleteButton } from "@/components/participant-delete-button";
 import { ReminderMessageCard } from "@/components/reminder-message-card";
 import { SettlementStatusBadge } from "@/components/settlement-status-badge";
 import { ShareLinkCard } from "@/components/share-link-card";
@@ -20,6 +21,7 @@ import {
   type BadgeTone
 } from "@/components/ui";
 import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
+import { deletePlanParticipantAction } from "@/lib/actions/participants";
 import { extendPlanAnswerDeadlineAction, restartPlanAdjustmentAction } from "@/lib/actions/plans";
 import { markReminderSentAction } from "@/lib/actions/reminders";
 import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/share-links";
@@ -195,6 +197,8 @@ export default async function PlanDetailPage({
   const isPlanOwner = currentUserId === plan.owner_user_id;
   const restartPlanAdjustment = restartPlanAdjustmentAction.bind(null, plan.id);
   const extendAnswerDeadline = extendPlanAnswerDeadlineAction.bind(null, plan.id);
+  const deleteParticipant = (participantId: string) =>
+    deletePlanParticipantAction.bind(null, plan.id, participantId);
   // 期限切れで未確定のときだけ出す。まだ回答を集めている最中は、期限を触る動機がない。
   const canExtendDeadline = isPlanOwner && !isConfirmed && deadlineState === "closed";
   const deadlineExtensionOptions = canExtendDeadline
@@ -435,12 +439,25 @@ export default async function PlanDetailPage({
                 participants.map((participant) => (
                   <div
                     key={participant.id}
-                    className="flex items-center justify-between gap-3 rounded-control border border-line bg-sunken px-3 py-2"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line bg-sunken px-3 py-2"
                   >
-                    <span className="text-body font-medium text-ink">{participant.display_name}</span>
+                    <span className="min-w-0 flex-1 truncate text-body font-medium text-ink">
+                      {participant.display_name}
+                    </span>
                     <Badge tone={participantStatusTones[participant.status] ?? "neutral"}>
                       {participantStatusLabels[participant.status] ?? participant.status}
                     </Badge>
+                    {/*
+                      共有リンクの回答は表示名の完全一致で同定するので、名前を少し変えて
+                      回答し直すと参加者が増える。増えた人も割り勘の対象になるため、
+                      主催者が消せるようにしておく。
+                    */}
+                    {isPlanOwner ? (
+                      <ParticipantDeleteButton
+                        action={deleteParticipant(participant.id)}
+                        displayName={participant.display_name}
+                      />
+                    ) : null}
                   </div>
                 ))
               ) : (
