@@ -256,7 +256,36 @@ describe("assertExpenseCanChange(deleteExpenseAction経由)", () => {
 describe("recordPublicSettlementPaymentAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
   });
+
+  function paymentFormData() {
+    const formData = new FormData();
+    formData.set("amount", "1000");
+    return formData;
+  }
+
+  /** 共有リンクと清算は正常。呼び出し者の参加者行だけ差し替える。 */
+  function publicPaymentClient(callerParticipant: Record<string, unknown> | null) {
+    return tableSequenceClient({
+      share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
+      settlements: [
+        {
+          result: {
+            data: {
+              id: "settlement-1",
+              plan_id: planId,
+              from_participant_id: otherParticipantId,
+              amount: 1000,
+              settlement_payments: []
+            },
+            error: null
+          }
+        }
+      ],
+      participants: [{ result: { data: callerParticipant, error: null } }]
+    });
+  }
 
   it("トークンの計画に属さないsettlementIdを拒否する(トークンのみで書き込める経路の一つ)", async () => {
     const admin = tableSequenceClient({
@@ -265,12 +294,41 @@ describe("recordPublicSettlementPaymentAction", () => {
     });
     createSupabaseAdminClient.mockReturnValue(admin);
 
-    const formData = new FormData();
-    formData.set("amount", "1000");
-
     await expect(
-      recordPublicSettlementPaymentAction("token-1", "settlement-not-in-this-plan", formData)
+      recordPublicSettlementPaymentAction("token-1", "settlement-not-in-this-plan", paymentFormData())
     ).rejects.toThrow("清算内容が見つかりません");
+  });
+
+  // トークンは対象を探すためだけ。持っているだけで支払い記録を作れてはいけない。
+  it("未ログインならDBに触れずに拒否する", async () => {
+    getCurrentUserId.mockResolvedValue(null);
+    const admin = publicPaymentClient({ id: otherParticipantId });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    await expect(recordPublicSettlementPaymentAction("token-1", "settlement-1", paymentFormData())).rejects.toThrow(
+      "ログインが必要です"
+    );
+    expect(admin.from).not.toHaveBeenCalled();
+  });
+
+  /*
+   * 払ったのは from_participant。別人が記録できると、払っていない清算が
+   * 支払い済みになり、受け取る側は督促の手がかりを失う。
+   */
+  it("支払う本人でなければ記録させない", async () => {
+    createSupabaseAdminClient.mockReturnValue(publicPaymentClient({ id: "participant-someone-else" }));
+
+    await expect(recordPublicSettlementPaymentAction("token-1", "settlement-1", paymentFormData())).rejects.toThrow(
+      "支払う本人だけが記録できます"
+    );
+  });
+
+  it("参加者ですらなければ記録させない", async () => {
+    createSupabaseAdminClient.mockReturnValue(publicPaymentClient(null));
+
+    await expect(recordPublicSettlementPaymentAction("token-1", "settlement-1", paymentFormData())).rejects.toThrow(
+      "この清算の参加者ではありません"
+    );
   });
 });
 
@@ -300,6 +358,44 @@ describe("updateParticipantSettlementPaymentMethodAction", () => {
 describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
+  });
+
+  /*
+   * 支払い先は、その人の PayPay 等の受け取り先。他人が書き換えられると、
+   * 攻撃者の口座へ振り込ませられる。本人以外は触らせない。
+   */
+  it("自分以外の参加者の支払い先は設定させない", async () => {
+    const admin = tableSequenceClient({
+      share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
+      participants: [
+        { result: { data: { id: otherParticipantId, plan_id: planId, user_id: "another-user" }, error: null } }
+      ]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    const formData = new FormData();
+    formData.set("settlement_payment_method", "PayPay");
+
+    await expect(
+      updatePublicParticipantSettlementPaymentMethodAction("token-1", otherParticipantId, formData)
+    ).rejects.toThrow("本人だけが支払い方法を設定できます");
+  });
+
+  it("未ログインならDBに触れずに拒否する", async () => {
+    getCurrentUserId.mockResolvedValue(null);
+    const admin = tableSequenceClient({
+      share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    const formData = new FormData();
+    formData.set("settlement_payment_method", "PayPay");
+
+    await expect(
+      updatePublicParticipantSettlementPaymentMethodAction("token-1", otherParticipantId, formData)
+    ).rejects.toThrow("ログインが必要です");
+    expect(admin.from).not.toHaveBeenCalled();
   });
 
   it("無効化された共有リンクからの設定を拒否する", async () => {

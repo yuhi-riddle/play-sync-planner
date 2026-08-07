@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId, revalidatePath } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
   createSupabaseServerClient: vi.fn(),
+  getCurrentUserId: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
@@ -12,7 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   createSupabaseServerClient,
   getCurrentUser: vi.fn().mockResolvedValue(null),
-  getCurrentUserId: vi.fn().mockResolvedValue(null)
+  getCurrentUserId
 }));
 
 import { submitAvailabilityAnswersAction } from "@/lib/actions/plan/answers";
@@ -41,11 +42,15 @@ function settlementPaymentFormData() {
   return formData;
 }
 
+const viewerId = "user-viewer";
+
 describe("無効化された共有リンク", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // ログイン済みで確かめる。未ログインだと手前のログイン確認で止まり、無効化の判定まで届かない。
+    getCurrentUserId.mockResolvedValue(viewerId);
     createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) }
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: viewerId } } }) }
     });
   });
 

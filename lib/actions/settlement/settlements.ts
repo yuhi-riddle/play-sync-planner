@@ -541,6 +541,12 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 
 export async function recordPublicSettlementPaymentAction(token: string, settlementId: string, formData: FormData) {
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
+  // 共有リンクは対象を探すための入口。誰が払ったかはログインしているアカウントで決める。
+  const currentUserId = await getCurrentUserId();
+  if (!currentUserId) {
+    throw new Error("ログインが必要です");
+  }
+
   const supabase = createSupabaseAdminClient();
   const { data: link, error: linkError } = await supabase
     .from("share_links")
@@ -566,6 +572,25 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
 
   if (error || !settlement) {
     throw new Error("清算内容が見つかりません");
+  }
+
+  const { data: caller } = await supabase
+    .from("participants")
+    .select("id")
+    .eq("plan_id", link.plan_id)
+    .eq("user_id", currentUserId)
+    .maybeSingle();
+
+  if (!caller) {
+    throw new Error("この清算の参加者ではありません");
+  }
+
+  /*
+   * 払ったのは from_participant。別人が記録できると、払っていない清算が
+   * 支払い済みになり、受け取る側は督促の手がかりを失う。
+   */
+  if (caller.id !== settlement.from_participant_id) {
+    throw new Error("支払う本人だけが記録できます");
   }
 
   const currentProgress = summarizeSettlementPaymentProgress(
@@ -636,6 +661,11 @@ export async function updatePublicParticipantSettlementPaymentMethodAction(
   formData: FormData
 ) {
   const values = participantSettlementPaymentMethodSchema.parse(formDataToObject(formData));
+  const currentUserId = await getCurrentUserId();
+  if (!currentUserId) {
+    throw new Error("ログインが必要です");
+  }
+
   const supabase = createSupabaseAdminClient();
   const { data: link, error: linkError } = await supabase
     .from("share_links")
@@ -654,13 +684,21 @@ export async function updatePublicParticipantSettlementPaymentMethodAction(
 
   const { data: participant, error } = await supabase
     .from("participants")
-    .select("id, plan_id")
+    .select("id, plan_id, user_id")
     .eq("id", participantId)
     .eq("plan_id", link.plan_id)
     .single();
 
   if (error || !participant) {
     throw new Error("参加者が見つかりません");
+  }
+
+  /*
+   * 支払い先は、その人の受け取り先（PayPay等）。他人が書き換えられると、
+   * 攻撃者の口座へ振り込ませられる。トークンを持っていても本人以外は触らせない。
+   */
+  if (participant.user_id !== currentUserId) {
+    throw new Error("本人だけが支払い方法を設定できます");
   }
 
   const { error: updateError } = await supabase

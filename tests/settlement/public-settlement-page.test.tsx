@@ -2,11 +2,18 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, getCurrentUserId } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, getCurrentUserId, notFound, redirect } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
-  getCurrentUserId: vi.fn()
+  getCurrentUserId: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+  redirect: vi.fn(() => {
+    throw new Error("NEXT_REDIRECT");
+  })
 }));
 
+vi.mock("next/navigation", () => ({ notFound, redirect }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   getCurrentUserId,
@@ -59,8 +66,16 @@ function mockCurrentUser(userId: string | null) {
   getCurrentUserId.mockResolvedValue(userId);
 }
 
+function renderPage(searchParams: Record<string, string> = {}) {
+  return PublicSettlementPage({
+    params: Promise.resolve({ token: "tok-1" }),
+    searchParams: Promise.resolve(searchParams)
+  });
+}
+
 describe("PublicSettlementPage", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubGlobal("React", React);
   });
 
@@ -68,42 +83,43 @@ describe("PublicSettlementPage", () => {
     mockLink(basePlan);
     mockCurrentUser("user-1");
 
-    render(
-      await PublicSettlementPage({
-        params: Promise.resolve({ token: "tok-1" }),
-        searchParams: Promise.resolve({})
-      })
-    );
+    render(await renderPage());
 
     expect(screen.getByText("あなたの受け取り方法")).toBeInTheDocument();
     expect(screen.getByDisplayValue("PayPay")).toBeInTheDocument();
   });
 
-  it("shows a name picker when nobody is logged in and no viewer is selected", async () => {
+  // 共有リンクは入口でしかない。トークンだけで金額を読めてはいけない。
+  it("未ログインならログインへ送る", async () => {
     mockLink(basePlan);
     mockCurrentUser(null);
 
-    render(
-      await PublicSettlementPage({
-        params: Promise.resolve({ token: "tok-1" }),
-        searchParams: Promise.resolve({})
-      })
-    );
-
-    expect(screen.getByText("あなたのお名前")).toBeInTheDocument();
+    await expect(renderPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/login?next=/s/tok-1/settlement");
   });
 
-  it("resolves the viewer from the viewer query parameter when not logged in", async () => {
+  it("参加者でないログインユーザーには清算額を見せない", async () => {
     mockLink(basePlan);
-    mockCurrentUser(null);
+    mockCurrentUser("user-nobody");
 
-    render(
-      await PublicSettlementPage({
-        params: Promise.resolve({ token: "tok-1" }),
-        searchParams: Promise.resolve({ viewer: "p2" })
-      })
-    );
+    render(await renderPage());
 
-    expect(screen.getByText("あなたの支払い方法")).toBeInTheDocument();
+    expect(screen.getByText(/参加者ではありません/)).toBeInTheDocument();
+    expect(screen.queryByText("2,000円")).not.toBeInTheDocument();
+  });
+
+  /*
+   * 以前は ?viewer= で誰にでもなりすませた。選ばせるのをやめ、
+   * 本人はログインしているアカウントだけから決める。
+   */
+  it("viewer クエリでは本人を選ばせない", async () => {
+    mockLink(basePlan);
+    mockCurrentUser("user-nobody");
+
+    render(await renderPage({ viewer: "p2" }));
+
+    expect(screen.queryByText("あなたの支払い方法")).not.toBeInTheDocument();
+    expect(screen.queryByText("あなたのお名前")).not.toBeInTheDocument();
+    expect(screen.getByText(/参加者ではありません/)).toBeInTheDocument();
   });
 });

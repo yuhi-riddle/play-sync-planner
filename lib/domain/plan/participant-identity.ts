@@ -35,25 +35,3 @@ export function canConfirmSettlementPayment({
   return Boolean(receiverUserId && currentUserId === receiverUserId);
 }
 
-export function resolveViewerParticipant({
-  participants,
-  userId,
-  selectedParticipantId
-}: {
-  participants: ParticipantIdentity[];
-  userId: string | null;
-  selectedParticipantId: string | null;
-}): ParticipantIdentity | null {
-  if (userId) {
-    const byUser = participants.find((participant) => participant.userId === userId);
-    if (byUser) {
-      return byUser;
-    }
-  }
-
-  if (selectedParticipantId) {
-    return participants.find((participant) => participant.id === selectedParticipantId) ?? null;
-  }
-
-  return null;
-}
