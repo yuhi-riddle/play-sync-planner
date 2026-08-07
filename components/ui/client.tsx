@@ -155,8 +155,7 @@ export function TextField({
   step,
   min,
   requiredMessage,
-  onValueChange,
-  onBlurValue
+  onValueChange
 }: {
   label: string;
   name: string;
@@ -174,11 +173,6 @@ export function TextField({
    * （経費フォームが「1人あたりいくら」を出すために金額の変化だけを見ている）。
    */
   onValueChange?: (value: string) => void;
-  /**
-   * 入力欄を離れたときの値。打っている途中では走らせたくない処理向け
-   * （回答ページが、名前を打ち終えてから前回の回答を引いている）。
-   */
-  onBlurValue?: (value: string) => void;
 }) {
   function handleInvalid(event: InvalidEvent<HTMLInputElement>) {
     if (requiredMessage && event.currentTarget.validity.valueMissing) {
@@ -205,7 +199,6 @@ export function TextField({
         min={min}
         onInvalid={handleInvalid}
         onInput={handleInput}
-        onBlur={onBlurValue ? (event) => onBlurValue(event.currentTarget.value) : undefined}
         data-field-label={label}
         data-required-message={requiredMessage}
         data-invalid-message={type === "url" ? "URLの形式を確認してください。" : undefined}

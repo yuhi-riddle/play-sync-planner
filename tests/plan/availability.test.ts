@@ -21,17 +21,15 @@ describe("canAnswerPlan", () => {
 });
 
 describe("normalizeAvailabilityInput", () => {
-  it("trims the participant name and keeps valid answers", () => {
+  it("空コメントは null に寄せる", () => {
     const result = normalizeAvailabilityInput({
-      displayName: "  Haru  ",
       answers: [
         { candidateDateId: "date-1", answer: "yes", comment: "OK" },
-        { candidateDateId: "date-2", answer: "maybe", comment: "" }
+        { candidateDateId: "date-2", answer: "maybe", comment: "  " }
       ]
     });
 
     expect(result).toEqual({
-      displayName: "Haru",
       answers: [
         { candidateDateId: "date-1", answer: "yes", comment: "OK" },
         { candidateDateId: "date-2", answer: "maybe", comment: null }
@@ -39,19 +37,9 @@ describe("normalizeAvailabilityInput", () => {
     });
   });
 
-  it("throws when the participant name is empty", () => {
-    expect(() =>
-      normalizeAvailabilityInput({
-        displayName: " ",
-        answers: [{ candidateDateId: "date-1", answer: "yes", comment: null }]
-      })
-    ).toThrow("名前を入力してください");
-  });
-
   it("throws when an answer value is invalid", () => {
     expect(() =>
       normalizeAvailabilityInput({
-        displayName: "Haru",
         answers: [{ candidateDateId: "date-1", answer: "invalid" as never, comment: null }]
       })
     ).toThrow("回答は ○ / △ / × から選んでください");

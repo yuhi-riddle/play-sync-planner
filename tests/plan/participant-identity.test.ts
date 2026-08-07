@@ -2,72 +2,34 @@ import { describe, expect, it } from "vitest";
 
 import {
   canConfirmSettlementPayment,
-  resolveAnswerParticipantForSubmission,
+  findAnswerParticipant,
   resolveViewerParticipant
 } from "@/lib/domain/plan/participant-identity";
 
-describe("resolveAnswerParticipantForSubmission", () => {
+describe("findAnswerParticipant", () => {
   const participants = [
     { id: "participant-1", displayName: "Alice", userId: null },
     { id: "participant-2", displayName: "Bob", userId: "user-bob" }
   ];
 
-  it("uses the logged-in participant before matching by display name", () => {
-    expect(
-      resolveAnswerParticipantForSubmission({
-        participants,
-        displayName: "Alice",
-        userId: "user-bob"
-      })
-    ).toEqual({
-      kind: "existing",
-      participantId: "participant-2",
-      userIdToLink: null
-    });
+  it("回答者は user_id で決める", () => {
+    expect(findAnswerParticipant({ participants, userId: "user-bob" })).toEqual(participants[1]);
   });
 
-  it("links an existing display-name participant to the current Google user", () => {
-    expect(
-      resolveAnswerParticipantForSubmission({
-        participants,
-        displayName: "Alice",
-        userId: "user-alice"
-      })
-    ).toEqual({
-      kind: "existing",
-      participantId: "participant-1",
-      userIdToLink: "user-alice"
-    });
+  it("未ログインは誰にもならない", () => {
+    expect(findAnswerParticipant({ participants, userId: null })).toBeNull();
   });
 
-  it("creates a registered participant for a new logged-in user", () => {
-    expect(
-      resolveAnswerParticipantForSubmission({
-        participants,
-        displayName: "Chika",
-        userId: "user-chika"
-      })
-    ).toEqual({
-      kind: "create",
-      displayName: "Chika",
-      participantType: "registered",
-      userId: "user-chika"
-    });
+  it("参加者に入っていないログインユーザーは弾く", () => {
+    expect(findAnswerParticipant({ participants, userId: "user-chika" })).toBeNull();
   });
 
-  it("creates a guest participant when the answerer is not logged in", () => {
-    expect(
-      resolveAnswerParticipantForSubmission({
-        participants,
-        displayName: "Dana",
-        userId: null
-      })
-    ).toEqual({
-      kind: "create",
-      displayName: "Dana",
-      participantType: "guest",
-      userId: null
-    });
+  /*
+   * 名前で照合していたころは、共有リンクを知っている人が名前を当てるだけで
+   * その人になりすまして回答を上書きできた。名前は本人確認に使わない。
+   */
+  it("user_id の無い参加者は、名前が一致しても引き当てない", () => {
+    expect(findAnswerParticipant({ participants, userId: "Alice" })).toBeNull();
   });
 });
 

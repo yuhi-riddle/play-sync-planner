@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPreviousAnswerMap, canApplyPreviousAnswers } from "@/lib/domain/plan/previous-answers";
+import { buildPreviousAnswerMap } from "@/lib/domain/plan/previous-answers";
 
 describe("buildPreviousAnswerMap", () => {
   it("候補日IDをキーにして戻す", () => {
@@ -33,20 +33,5 @@ describe("buildPreviousAnswerMap", () => {
     ]);
 
     expect(map).toEqual({});
-  });
-});
-
-describe("canApplyPreviousAnswers", () => {
-  it("何も入っていなければそのまま当てる", () => {
-    expect(canApplyPreviousAnswers({ answeredCount: 0, commentCount: 0 })).toBe(true);
-  });
-
-  it("回答を選んでいたら当てない", () => {
-    expect(canApplyPreviousAnswers({ answeredCount: 1, commentCount: 0 })).toBe(false);
-  });
-
-  it("コメントだけでも当てない", () => {
-    // 回答より先にコメントを書く人がいる。消したら気づけない
-    expect(canApplyPreviousAnswers({ answeredCount: 0, commentCount: 1 })).toBe(false);
   });
 });

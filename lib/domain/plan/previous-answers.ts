@@ -40,19 +40,3 @@ export function buildPreviousAnswerMap(rows: PreviousAnswerRow[]): Record<string
 
   return map;
 }
-
-/**
- * 前回の回答を、入力中のものを消さずに当てても良いか。
- *
- * 名前を打ち終えるより先に候補を選ぶ人がいる。そこに黙って上書きすると、
- * 手で選んだ回答が消える。何か入っていたら、押してもらう形にする。
- */
-export function canApplyPreviousAnswers({
-  answeredCount,
-  commentCount
-}: {
-  answeredCount: number;
-  commentCount: number;
-}) {
-  return answeredCount === 0 && commentCount === 0;
-}
