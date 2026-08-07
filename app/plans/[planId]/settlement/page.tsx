@@ -21,6 +21,7 @@ import {
   updateSettlementPaymentInstructionAction,
   updateExpenseAction
 } from "@/lib/actions/settlements";
+import { isEqualSplit } from "@/lib/domain/expense-split";
 import {
   buildSettlementConfirmationRequestMessage,
   buildSettlementPaymentRequestMessage,
@@ -526,7 +527,15 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                             memo: expense.memo,
                             paymentUrl: expense.payment_url,
                             isImportant: expense.is_important,
-                            splitMode: "individual",
+                            // 保存されているのは結果の金額だけなので、均等割りで作られたかを
+                            // 組み直して判定する。ここを "individual" 固定にすると、均等割りの
+                            // 経費でも金額を直すたびに全員の負担額を手で入れ直すことになる。
+                            splitMode: isEqualSplit(
+                              expense.amount,
+                              expense.expense_splits.map((split) => split.amount)
+                            )
+                              ? "equal"
+                              : "individual",
                             splitParticipantIds: expense.expense_splits.map((split) => split.participant_id),
                             individualAmounts: Object.fromEntries(expense.expense_splits.map((split) => [split.participant_id, split.amount]))
                           }}
