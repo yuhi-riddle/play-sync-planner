@@ -2,23 +2,18 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseAdminEnv, notFound, redirect } = vi.hoisted(() => ({
-  createSupabaseAdminClient: vi.fn(),
+const { createSupabaseServerClient, hasSupabaseEnv, redirect } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  hasSupabaseAdminEnv: vi.fn().mockReturnValue(true),
-  notFound: vi.fn(() => {
-    throw new Error("NEXT_NOT_FOUND");
-  }),
+  hasSupabaseEnv: vi.fn().mockReturnValue(true),
   redirect: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
   })
 }));
 
-vi.mock("next/navigation", () => ({ notFound, redirect }));
+vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAdminClient,
   createSupabaseServerClient,
-  hasSupabaseAdminEnv
+  hasSupabaseEnv
 }));
 vi.mock("@/components/plan/answer-form", () => ({
   AnswerForm: (props: { participantName: string; initialAnswers?: Record<string, unknown> }) => (
@@ -30,12 +25,17 @@ import PublicAnswerPage from "@/app/s/[token]/answer/page";
 
 const viewerId = "user-viewer";
 
-/** 表ごとに違う結果を返す admin クライアント。share_links だけ .single() で取る。 */
-function adminClient({
+/*
+ * ページは service role をやめ、ログイン中の本人のクライアント1つで読む。
+ * だから auth と from を同じ入れ物に持たせる。share_links だけ .single() で取る。
+ */
+function loggedInClient({
+  userId = viewerId,
   link,
   participants = [],
   previousAnswers = []
 }: {
+  userId?: string | null;
   link: Record<string, unknown> | null;
   participants?: Array<Record<string, unknown>>;
   previousAnswers?: Array<Record<string, unknown>>;
@@ -52,13 +52,14 @@ function adminClient({
     return builder;
   });
 
-  return { from };
+  return {
+    auth: { getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })) },
+    from
+  };
 }
 
-function serverClient(userId: string | null) {
-  return {
-    auth: { getUser: vi.fn(async () => ({ data: { user: userId ? { id: userId } : null } })) }
-  };
+function mockClient(options: Parameters<typeof loggedInClient>[0]) {
+  createSupabaseServerClient.mockResolvedValue(loggedInClient(options));
 }
 
 function linkRow(overrides: Record<string, unknown> = {}) {
@@ -87,12 +88,11 @@ describe("公開回答ページ", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("React", React);
-    hasSupabaseAdminEnv.mockReturnValue(true);
-    createSupabaseServerClient.mockResolvedValue(serverClient(viewerId));
+    hasSupabaseEnv.mockReturnValue(true);
   });
 
   it("参加者なら回答フォームを表示する", async () => {
-    createSupabaseAdminClient.mockReturnValue(adminClient({ link: linkRow(), participants: [viewerParticipant] }));
+    mockClient({ link: linkRow(), participants: [viewerParticipant] });
 
     render(await renderPage());
 
@@ -100,9 +100,7 @@ describe("公開回答ページ", () => {
   });
 
   it("無効化されたリンクなら回答フォームを出さず、無効化を伝える", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClient({ link: linkRow({ status: "revoked" }), participants: [viewerParticipant] })
-    );
+    mockClient({ link: linkRow({ status: "revoked" }), participants: [viewerParticipant] });
 
     render(await renderPage());
 
@@ -112,25 +110,35 @@ describe("公開回答ページ", () => {
 
   // 共有リンクは入口でしかない。トークンだけで中身を読めてはいけない。
   it("未ログインならログインへ送る", async () => {
-    createSupabaseServerClient.mockResolvedValue(serverClient(null));
-    createSupabaseAdminClient.mockReturnValue(adminClient({ link: linkRow(), participants: [viewerParticipant] }));
+    mockClient({ userId: null, link: linkRow(), participants: [viewerParticipant] });
 
     await expect(renderPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/login?next=/s/token-1/answer");
   });
 
   it("参加者でないログインユーザーには候補日時も見せない", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClient({
-        link: linkRow(),
-        participants: [{ id: "participant-9", display_name: "ほかの人", user_id: "user-other" }]
-      })
-    );
+    mockClient({
+      link: linkRow(),
+      participants: [{ id: "participant-9", display_name: "ほかの人", user_id: "user-other" }]
+    });
 
     render(await renderPage());
 
     expect(screen.queryByTestId("answer-form")).not.toBeInTheDocument();
-    expect(screen.getByText(/参加者ではありません/)).toBeInTheDocument();
+    expect(screen.getByText(/このリンクは開けません/)).toBeInTheDocument();
+  });
+
+  /*
+   * RLSに切り替えたので、参加者でなければ share_links の行そのものが返らない。
+   * トークンが実在するかどうかも答えないよう、同じ文言に寄せる。
+   */
+  it("RLSが行を返さないときも、リンクの有無を漏らさない", async () => {
+    mockClient({ link: null });
+
+    render(await renderPage());
+
+    expect(screen.queryByTestId("answer-form")).not.toBeInTheDocument();
+    expect(screen.getByText(/このリンクは開けません/)).toBeInTheDocument();
   });
 
   /*
@@ -138,27 +146,23 @@ describe("公開回答ページ", () => {
    * user_id が空の行は、名前が一致しても本人にしない。
    */
   it("user_id の無い参加者は、名前が同じでも本人扱いしない", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClient({
-        link: linkRow(),
-        participants: [{ id: "participant-2", display_name: "たろう", user_id: null }]
-      })
-    );
+    mockClient({
+      link: linkRow(),
+      participants: [{ id: "participant-2", display_name: "たろう", user_id: null }]
+    });
 
     render(await renderPage());
 
     expect(screen.queryByTestId("answer-form")).not.toBeInTheDocument();
-    expect(screen.getByText(/参加者ではありません/)).toBeInTheDocument();
+    expect(screen.getByText(/このリンクは開けません/)).toBeInTheDocument();
   });
 
   it("前回の回答をフォームに渡す", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClient({
-        link: linkRow(),
-        participants: [viewerParticipant],
-        previousAnswers: [{ candidate_date_id: "candidate-1", answer: "yes", comment: "昼から" }]
-      })
-    );
+    mockClient({
+      link: linkRow(),
+      participants: [viewerParticipant],
+      previousAnswers: [{ candidate_date_id: "candidate-1", answer: "yes", comment: "昼から" }]
+    });
 
     render(await renderPage());
 

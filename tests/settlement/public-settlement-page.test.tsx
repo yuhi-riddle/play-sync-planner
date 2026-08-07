@@ -2,22 +2,19 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, getCurrentUserId, notFound, redirect } = vi.hoisted(() => ({
-  createSupabaseAdminClient: vi.fn(),
+const { createSupabaseServerClient, getCurrentUserId, redirect } = vi.hoisted(() => ({
+  createSupabaseServerClient: vi.fn(),
   getCurrentUserId: vi.fn(),
-  notFound: vi.fn(() => {
-    throw new Error("NEXT_NOT_FOUND");
-  }),
   redirect: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
   })
 }));
 
-vi.mock("next/navigation", () => ({ notFound, redirect }));
+vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseAdminClient,
+  createSupabaseServerClient,
   getCurrentUserId,
-  hasSupabaseAdminEnv: vi.fn(() => true)
+  hasSupabaseEnv: vi.fn(() => true)
 }));
 vi.mock("@/lib/actions/settlement/settlements", () => ({
   recordPublicSettlementPaymentAction: vi.fn(),
@@ -52,12 +49,15 @@ const basePlan = {
   ]
 };
 
-function mockLink(plan: Record<string, unknown> | null) {
-  createSupabaseAdminClient.mockReturnValue({
+/** RLSに切り替えたので、ページはログイン中の本人のクライアントで読む。 */
+function mockLink(plan: Record<string, unknown> | null, link: Record<string, unknown> | null = {}) {
+  createSupabaseServerClient.mockResolvedValue({
     from: vi.fn(() => ({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { token: "tok-1", status: "open", plans: plan } })
+      single: vi.fn().mockResolvedValue({
+        data: link === null ? null : { token: "tok-1", status: "open", plans: plan, ...link }
+      })
     }))
   });
 }
@@ -104,7 +104,7 @@ describe("PublicSettlementPage", () => {
 
     render(await renderPage());
 
-    expect(screen.getByText(/参加者ではありません/)).toBeInTheDocument();
+    expect(screen.getByText(/このリンクは開けません/)).toBeInTheDocument();
     expect(screen.queryByText("2,000円")).not.toBeInTheDocument();
   });
 
@@ -120,6 +120,20 @@ describe("PublicSettlementPage", () => {
 
     expect(screen.queryByText("あなたの支払い方法")).not.toBeInTheDocument();
     expect(screen.queryByText("あなたのお名前")).not.toBeInTheDocument();
-    expect(screen.getByText(/参加者ではありません/)).toBeInTheDocument();
+    expect(screen.getByText(/このリンクは開けません/)).toBeInTheDocument();
+  });
+
+  /*
+   * RLSに切り替えたので、参加者でなければ share_links の行そのものが返らない。
+   * トークンが実在するかどうかも答えないよう、同じ文言に寄せる。
+   */
+  it("RLSが行を返さないときも、リンクの有無を漏らさない", async () => {
+    mockLink(null, null);
+    mockCurrentUser("user-nobody");
+
+    render(await renderPage());
+
+    expect(screen.getByText(/このリンクは開けません/)).toBeInTheDocument();
+    expect(screen.queryByText("2,000円")).not.toBeInTheDocument();
   });
 });
