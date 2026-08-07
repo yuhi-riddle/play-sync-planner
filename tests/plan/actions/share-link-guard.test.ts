@@ -21,8 +21,8 @@ import { recordPublicSettlementPaymentAction } from "@/lib/actions/settlement/se
 
 const revokedToken = "revoked-token";
 
-/** share_links の1件だけを返す最小の admin クライアント。 */
-function adminClientReturningLink(link: Record<string, unknown> | null) {
+/** share_links の1件だけを返す最小のクライアント。ログイン中の本人として読む。 */
+function clientReturningLink(link: Record<string, unknown> | null) {
   const builder: Record<string, unknown> = {};
   const chain = (name: string) => {
     builder[name] = vi.fn(() => builder);
@@ -33,7 +33,11 @@ function adminClientReturningLink(link: Record<string, unknown> | null) {
   builder.single = vi.fn(async () => ({ data: link, error: link ? null : { message: "not found" } }));
   builder.maybeSingle = builder.single;
 
-  return { from: vi.fn(() => builder) };
+  return {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: viewerId } } }) },
+    from: vi.fn(() => builder),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null })
+  };
 }
 
 function settlementPaymentFormData() {
@@ -49,14 +53,12 @@ describe("無効化された共有リンク", () => {
     vi.clearAllMocks();
     // ログイン済みで確かめる。未ログインだと手前のログイン確認で止まり、無効化の判定まで届かない。
     getCurrentUserId.mockResolvedValue(viewerId);
-    createSupabaseServerClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: viewerId } } }) }
-    });
+    createSupabaseAdminClient.mockReturnValue({ from: vi.fn(() => ({ upsert: vi.fn() })) });
   });
 
   it("日程回答を受け付けない", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClientReturningLink({
+    createSupabaseServerClient.mockResolvedValue(
+      clientReturningLink({
         plan_id: "plan-1",
         status: "revoked",
         expires_at: null,
@@ -70,9 +72,7 @@ describe("無効化された共有リンク", () => {
   });
 
   it("公開清算ページからの支払い記録を受け付けない", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClientReturningLink({ plan_id: "plan-1", status: "revoked" })
-    );
+    createSupabaseServerClient.mockResolvedValue(clientReturningLink({ plan_id: "plan-1", status: "revoked" }));
 
     await expect(
       recordPublicSettlementPaymentAction(revokedToken, "settlement-1", settlementPaymentFormData())

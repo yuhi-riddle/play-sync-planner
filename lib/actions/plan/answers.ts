@@ -22,11 +22,14 @@ type AnswerPlanRow = {
 };
 
 export async function submitAvailabilityAnswersAction(token: string, formData: FormData) {
-  const supabase = createSupabaseAdminClient();
-  const serverSupabase = await createSupabaseServerClient();
+  /*
+   * ログイン中の本人としてDBを触る。service role をやめたので、参加者でなければ
+   * RLSが読み書きを通さない。下の findAnswerParticipant と二重の守りになる。
+   */
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user }
-  } = await serverSupabase.auth.getUser();
+  } = await supabase.auth.getUser();
   const currentUserId = user?.id ?? null;
   // トークンは対象の日程調整を探すためだけのもの。誰かはログインで決める。
   if (!currentUserId) {
@@ -135,7 +138,12 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
       })
     );
 
-    const { error: notificationError } = await supabase.from("notifications").upsert(
+    /*
+     * 通知は主催者宛の行なので、回答者本人の権限では書けない。
+     * ここだけ service role を使う（notifySettlementConfirmationDue と同じ扱い）。
+     */
+    const admin = createSupabaseAdminClient();
+    const { error: notificationError } = await admin.from("notifications").upsert(
       {
         user_id: notification.userId,
         kind: notification.kind,

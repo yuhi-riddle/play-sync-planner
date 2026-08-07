@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import {
   PublicSettlementSummary,
@@ -17,9 +17,24 @@ import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync
 import { resolveParticipantSettlementRole } from "@/lib/domain/settlement/settlement";
 import { findAnswerParticipant } from "@/lib/domain/plan/participant-identity";
 import { formatDateTimeRange } from "@/lib/shared/format";
-import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseAdminEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+/*
+ * リンクが開けない理由は区別せずに1つの文言へ寄せる。トークンが存在するかどうかを
+ * 答えてしまうと、当てずっぽうに叩いて生きているリンクを探せてしまう。
+ */
+function UnavailablePage() {
+  return (
+    <div className="space-y-6">
+      <PageHeader eyebrow="Settlement" title="支払い・清算" />
+      <Card>
+        <EmptyState>このリンクは開けません。参加者として招待されているか、主催者に確認してください。</EmptyState>
+      </Card>
+    </div>
+  );
+}
 
 type ParticipantRelation =
   | { id: string; display_name: string; user_id: string | null; settlement_payment_method: string | null }
@@ -81,7 +96,7 @@ export default async function PublicSettlementPage({
 }) {
   const { token } = await params;
   const query = (await searchParams) ?? {};
-  if (!hasSupabaseAdminEnv()) {
+  if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Settlement" title="支払い・清算" />
@@ -96,7 +111,11 @@ export default async function PublicSettlementPage({
     redirect(`/login?next=/s/${token}/settlement`);
   }
 
-  const supabase = createSupabaseAdminClient();
+  /*
+   * ログイン中の本人としてDBを読む。service role をやめたので、参加者でなければ
+   * RLSが1行も返さない。下の findAnswerParticipant と二重の守りになる。
+   */
+  const supabase = await createSupabaseServerClient();
   const { data: link } = await supabase
     .from("share_links")
     .select(
@@ -107,7 +126,7 @@ export default async function PublicSettlementPage({
     .single();
 
   if (!link) {
-    notFound();
+    return <UnavailablePage />;
   }
 
   if (link.status === "revoked") {
@@ -123,7 +142,7 @@ export default async function PublicSettlementPage({
 
   const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as PublicPlanRow | null;
   if (!plan) {
-    notFound();
+    return <UnavailablePage />;
   }
 
   const participants = (plan.participants ?? []) as PublicParticipantRow[];
@@ -141,14 +160,7 @@ export default async function PublicSettlementPage({
    * トークンさえ知っていれば他人の支払い先を書き換えられた。
    */
   if (!viewerParticipant) {
-    return (
-      <div className="space-y-6">
-        <PageHeader eyebrow="Settlement" title="支払い・清算" />
-        <Card>
-          <EmptyState>この清算の参加者ではありません。主催者に招待を確認してください。</EmptyState>
-        </Card>
-      </div>
-    );
+    return <UnavailablePage />;
   }
 
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;

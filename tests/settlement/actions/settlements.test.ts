@@ -67,7 +67,9 @@ function tableSequenceClient(responses: Record<string, Array<{ result: MockResul
     const entry = responses[table]?.[index] ?? { result: { data: null, error: null } };
     return chainable(entry.result, entry.calls);
   });
-  return { from };
+  // plans.settlement_status は参加者に直接 update させず、RPC 越しに動かす。
+  const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+  return { from, rpc };
 }
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -292,7 +294,7 @@ describe("recordPublicSettlementPaymentAction", () => {
       share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
       settlements: [{ result: { data: null, error: { message: "not found" } } }]
     });
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     await expect(
       recordPublicSettlementPaymentAction("token-1", "settlement-not-in-this-plan", paymentFormData())
@@ -303,7 +305,7 @@ describe("recordPublicSettlementPaymentAction", () => {
   it("未ログインならDBに触れずに拒否する", async () => {
     getCurrentUserId.mockResolvedValue(null);
     const admin = publicPaymentClient({ id: otherParticipantId });
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     await expect(recordPublicSettlementPaymentAction("token-1", "settlement-1", paymentFormData())).rejects.toThrow(
       "ログインが必要です"
@@ -316,7 +318,7 @@ describe("recordPublicSettlementPaymentAction", () => {
    * 支払い済みになり、受け取る側は督促の手がかりを失う。
    */
   it("支払う本人でなければ記録させない", async () => {
-    createSupabaseAdminClient.mockReturnValue(publicPaymentClient({ id: "participant-someone-else" }));
+    createSupabaseServerClient.mockResolvedValue(publicPaymentClient({ id: "participant-someone-else" }));
 
     await expect(recordPublicSettlementPaymentAction("token-1", "settlement-1", paymentFormData())).rejects.toThrow(
       "支払う本人だけが記録できます"
@@ -324,7 +326,7 @@ describe("recordPublicSettlementPaymentAction", () => {
   });
 
   it("参加者ですらなければ記録させない", async () => {
-    createSupabaseAdminClient.mockReturnValue(publicPaymentClient(null));
+    createSupabaseServerClient.mockResolvedValue(publicPaymentClient(null));
 
     await expect(recordPublicSettlementPaymentAction("token-1", "settlement-1", paymentFormData())).rejects.toThrow(
       "この清算の参加者ではありません"
@@ -372,7 +374,7 @@ describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
         { result: { data: { id: otherParticipantId, plan_id: planId, user_id: "another-user" }, error: null } }
       ]
     });
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const formData = new FormData();
     formData.set("settlement_payment_method", "PayPay");
@@ -387,7 +389,7 @@ describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
     const admin = tableSequenceClient({
       share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }]
     });
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const formData = new FormData();
     formData.set("settlement_payment_method", "PayPay");
@@ -402,7 +404,7 @@ describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
     const admin = tableSequenceClient({
       share_links: [{ result: { data: { plan_id: planId, status: "revoked" }, error: null } }]
     });
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const formData = new FormData();
     formData.set("settlement_payment_method", "PayPay");
@@ -417,7 +419,7 @@ describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
       share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }],
       participants: [{ result: { data: null, error: { message: "not found" } } }]
     });
-    createSupabaseAdminClient.mockReturnValue(admin);
+    createSupabaseServerClient.mockResolvedValue(admin);
 
     const formData = new FormData();
     formData.set("settlement_payment_method", "PayPay");

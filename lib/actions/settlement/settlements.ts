@@ -547,7 +547,11 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
     throw new Error("ログインが必要です");
   }
 
-  const supabase = createSupabaseAdminClient();
+  /*
+   * ログイン中の本人としてDBを触る。service role をやめたので、参加者でなければ
+   * RLSが行を返さず、払う本人でなければ insert も通らない。下のチェックと二重になる。
+   */
+  const supabase = await createSupabaseServerClient();
   const { data: link, error: linkError } = await supabase
     .from("share_links")
     .select("plan_id, status")
@@ -644,7 +648,11 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
     })
     .eq("id", settlement.id);
 
-  await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
+  /*
+   * plans は参加者に update させない。RLSでは列を絞れないので、開くと他の項目まで
+   * 書き換えられてしまう。settlement_status だけを動かす関数を呼ぶ。
+   */
+  await supabase.rpc("mark_plan_settling", { target_plan_id: settlement.plan_id });
   if (insertedPayment?.id) {
     await notifySettlementConfirmationDue({ settlementId: settlement.id, paymentId: insertedPayment.id });
   }
@@ -666,7 +674,11 @@ export async function updatePublicParticipantSettlementPaymentMethodAction(
     throw new Error("ログインが必要です");
   }
 
-  const supabase = createSupabaseAdminClient();
+  /*
+   * ログイン中の本人としてDBを触る。service role をやめたので、自分の participants
+   * 行以外は RLS が update を通さない。下のチェックと二重になる。
+   */
+  const supabase = await createSupabaseServerClient();
   const { data: link, error: linkError } = await supabase
     .from("share_links")
     .select("plan_id, status")

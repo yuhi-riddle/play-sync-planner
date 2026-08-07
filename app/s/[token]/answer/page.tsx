@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { AnswerForm } from "@/components/plan/answer-form";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
@@ -6,13 +6,28 @@ import { SetupPanel } from "@/components/ui/state-panels";
 import { canAnswerPlan } from "@/lib/domain/plan/availability";
 import { findAnswerParticipant } from "@/lib/domain/plan/participant-identity";
 import { buildPreviousAnswerMap, type PreviousAnswerRow } from "@/lib/domain/plan/previous-answers";
-import { createSupabaseAdminClient, createSupabaseServerClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+/*
+ * リンクが開けない理由は区別せずに1つの文言へ寄せる。トークンが存在するかどうかを
+ * 答えてしまうと、当てずっぽうに叩いて生きているリンクを探せてしまう。
+ */
+function UnavailablePage() {
+  return (
+    <div className="space-y-6">
+      <PageHeader eyebrow="Answer" title="日程回答" />
+      <Card>
+        <EmptyState>このリンクは開けません。参加者として招待されているか、主催者に確認してください。</EmptyState>
+      </Card>
+    </div>
+  );
+}
+
 export default async function PublicAnswerPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (!hasSupabaseAdminEnv()) {
+  if (!hasSupabaseEnv()) {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Answer" title="日程回答" />
@@ -22,15 +37,18 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
   }
 
   // middlewareでも止めているが、ここが最後の砦。共有リンクは入口でしかない。
-  const serverSupabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user }
-  } = await serverSupabase.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) {
     redirect(`/login?next=/s/${token}/answer`);
   }
 
-  const supabase = createSupabaseAdminClient();
+  /*
+   * ログイン中の本人としてDBを読む。service role をやめたので、参加者でなければ
+   * RLSが1行も返さない。下の findAnswerParticipant と二重の守りになる。
+   */
   const { data: link } = await supabase
     .from("share_links")
     .select(
@@ -41,7 +59,7 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
     .single();
 
   if (!link) {
-    notFound();
+    return <UnavailablePage />;
   }
 
   const plan = Array.isArray(link.plans) ? link.plans[0] : link.plans;
@@ -69,14 +87,7 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
    * いつ集まるのかまでは読み取れないようにする。
    */
   if (!participant) {
-    return (
-      <div className="space-y-6">
-        <PageHeader eyebrow="Answer" title="日程回答" />
-        <Card>
-          <EmptyState>この日程調整の参加者ではありません。主催者に招待を確認してください。</EmptyState>
-        </Card>
-      </div>
-    );
+    return <UnavailablePage />;
   }
 
   // 前回の回答。誰かは分かっているので、名前を聞かずに最初から入れておく。
