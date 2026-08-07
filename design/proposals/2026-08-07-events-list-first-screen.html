@@ -1,0 +1,518 @@
+<title>イベント一覧の初期表示（375px）</title>
+<style>
+  :root {
+    --canvas: #efe7d8;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --ink: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --page-bg: #e6dccb;
+    --page-fg: #262320;
+    --panel: #fffdf7;
+    --panel-line: #d6c9b1;
+    --shadow-raise: 0 1px 2px rgba(62, 51, 39, 0.04), 0 3px 10px rgba(62, 51, 39, 0.05);
+    --shadow-soft: 0 8px 26px rgba(62, 51, 39, 0.09);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #24211d;
+      --page-fg: #ede6d9;
+      --panel: #2e2a25;
+      --panel-line: #453f37;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --page-bg: #24211d;
+    --page-fg: #ede6d9;
+    --panel: #2e2a25;
+    --panel-line: #453f37;
+  }
+
+  :root[data-theme="light"] {
+    --page-bg: #e6dccb;
+    --page-fg: #262320;
+    --panel: #fffdf7;
+    --panel-line: #d6c9b1;
+  }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, sans-serif;
+    line-height: 1.7;
+  }
+
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin: 0 0 28px;
+    max-width: 62ch;
+    color: color-mix(in srgb, var(--page-fg) 72%, transparent);
+    font-size: 0.9375rem;
+  }
+
+  .lede b { color: var(--page-fg); }
+
+  .rail {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    align-items: flex-start;
+  }
+
+  .col {
+    flex: 0 0 auto;
+    width: 375px;
+  }
+
+  .col-head {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .col-head .tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  :root[data-theme="dark"] .col-head .tag,
+  :root[data-theme="dark"] .col-head .aim { color: #a89e8e; }
+
+  @media (prefers-color-scheme: dark) {
+    .col-head .tag, .col-head .aim { color: #a89e8e; }
+  }
+
+  .col-head h2 {
+    margin: 2px 0 4px;
+    font-size: 1.0625rem;
+    font-weight: 700;
+  }
+
+  .col-head .aim {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .metric {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .metric span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bad { background: rgba(223, 125, 105, 0.18); color: var(--clay-ink); border: 1px solid rgba(223, 125, 105, 0.45); }
+  .good { background: rgba(95, 125, 101, 0.16); color: var(--pine); border: 1px solid rgba(95, 125, 101, 0.4); }
+
+  /* ---- 端末の枠 ---- */
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--canvas);
+    border: 1px solid var(--line-strong);
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    color: var(--ink);
+    font-size: 14px;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .phone .scroll {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .appbar {
+    height: 60px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .logo {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--moss);
+  }
+
+  .body { padding: 16px; display: grid; gap: 16px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--shadow-raise);
+  }
+
+  .card.tight { padding: 16px; }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+  }
+
+  .h1m { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; margin: 4px 0 6px; }
+  .desc { font-size: 14px; color: var(--muted); margin: 0; }
+
+  .btn-primary {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; border-radius: 999px;
+    background: var(--ink); color: #fff; font-weight: 700; font-size: 14px;
+    margin-top: 14px;
+  }
+
+  .label { font-size: 14px; font-weight: 500; color: var(--muted); }
+
+  .select {
+    margin-top: 8px; min-height: 44px;
+    border: 1px solid var(--line-strong); border-radius: 10px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; font-size: 16px; font-weight: 500; color: var(--ink);
+  }
+
+  .select::after { content: "⌄"; color: var(--muted); font-size: 15px; }
+
+  .row-btns { display: flex; gap: 8px; margin-top: 16px; }
+
+  .pill {
+    min-height: 44px; display: flex; align-items: center; justify-content: center;
+    padding: 0 18px; border-radius: 999px; font-weight: 700; font-size: 14px;
+  }
+
+  .pill.solid { background: var(--ink); color: #fff; }
+  .pill.ghost { background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); }
+
+  .title-m { font-size: 17px; font-weight: 700; margin: 0; }
+  .cap { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+
+  /* イベントカード */
+  .ev {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: var(--shadow-raise);
+  }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px;
+  }
+
+  .badge.wait { background: rgba(217, 170, 79, 0.2); color: var(--honey-ink); border: 1px solid rgba(217, 170, 79, 0.45); }
+  .badge.fixed { background: rgba(95, 125, 101, 0.16); color: var(--pine); border: 1px solid rgba(95, 125, 101, 0.4); }
+
+  .ev h3 { margin: 8px 0 2px; font-size: 17px; font-weight: 700; }
+  .ev p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  /* 折りたたみ済みの絞り込み */
+  .summary-row {
+    display: flex; align-items: center; gap: 8px;
+    min-height: 44px;
+  }
+
+  .summary-row .now {
+    font-size: 13px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .caret { margin-left: auto; color: var(--muted); }
+
+  /* チップ列 */
+  .chips { display: flex; gap: 8px; overflow: hidden; }
+
+  .chip {
+    min-height: 40px; display: flex; align-items: center; padding: 0 16px;
+    border-radius: 999px; border: 1px solid var(--line-strong);
+    background: var(--surface); font-size: 13px; font-weight: 700; color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .fab {
+    position: absolute; right: 16px; bottom: 88px;
+    min-height: 48px; display: flex; align-items: center; gap: 6px;
+    background: var(--ink); color: #fff; border-radius: 999px;
+    padding: 0 16px; font-size: 14px; font-weight: 700;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 73px;
+    background: var(--surface); border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+  }
+
+  .tab { display: grid; place-items: center; gap: 2px; font-size: 11px; color: var(--muted); }
+  .tab i { width: 20px; height: 20px; border: 2px solid currentColor; border-radius: 5px; display: block; }
+  .tab.on { color: var(--pine); font-weight: 700; }
+
+  /* 折り目 */
+  .fold {
+    position: absolute; left: 0; right: 0;
+    border-top: 2px dashed var(--clay);
+    display: flex; justify-content: flex-end;
+  }
+
+  .fold b {
+    background: var(--clay); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 1px 8px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .note {
+    margin-top: 32px;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  .note h2 { margin: 0 0 10px; font-size: 1.0625rem; }
+  .note ul { margin: 0; padding-left: 1.25em; }
+  .note li { margin-bottom: 6px; font-size: 0.9375rem; }
+  .note li:last-child { margin-bottom: 0; }
+</style>
+
+<div class="wrap">
+  <h1>イベント一覧の初期表示を直す</h1>
+  <p class="lede">
+    実機（375×812）で測ると、いまは <b>1件目のイベントが y≈900px</b> にあり、最初の画面にイベントが1枚も入りません。
+    <b>絞り込みだけで629px</b> 使っています。3案とも同じイベントデータ・同じ画面幅で並べています。
+    赤い破線が画面の折り目（812px）です。
+  </p>
+
+  <div class="rail">
+
+    <!-- 案A: 現状 -->
+    <div class="col">
+      <div class="col-head">
+        <span class="tag">案A</span>
+        <h2>いまの画面</h2>
+        <p class="aim">絞り込みを常に全部開いている。</p>
+        <div class="metric"><span class="bad">1件目まで 900px</span><span class="bad">初期表示のイベント 0件</span></div>
+      </div>
+      <div class="phone">
+        <div class="scroll">
+          <div class="appbar"><span class="logo"></span>Madoi</div>
+          <div class="body">
+            <div class="card">
+              <div class="eyebrow">EVENTS</div>
+              <div class="h1m">イベント一覧</div>
+              <p class="desc">予定と残っている対応をまとめて確認します。</p>
+              <div class="btn-primary">イベント作成</div>
+            </div>
+            <div class="card">
+              <p class="title-m">絞り込み</p>
+              <p class="cap">状態、カテゴリ、表示順をまとめて変更できます。</p>
+              <div style="margin-top:16px">
+                <div class="label">状態</div><div class="select">進行中</div>
+              </div>
+              <div style="margin-top:16px">
+                <div class="label">カテゴリ</div><div class="select">すべて</div>
+              </div>
+              <div style="margin-top:16px">
+                <div class="label">表示順</div><div class="select">新しく作成した順</div>
+              </div>
+              <div style="margin-top:16px">
+                <div class="label">表示件数</div><div class="select">10件</div>
+              </div>
+              <div class="row-btns">
+                <div class="pill solid">表示する</div>
+                <div class="pill ghost">条件をリセット</div>
+              </div>
+            </div>
+            <div class="ev">
+              <span class="badge fixed">開催待ち</span>
+              <h3>夏の海キャンプ</h3>
+              <p>確定 2026/08/22 19:00 - 21:00</p>
+            </div>
+          </div>
+        </div>
+        <div class="fold" style="top:810px"><b>ここまでが1画面</b></div>
+        <div class="fab">＋ イベントを作る</div>
+        <div class="tabbar">
+          <div class="tab"><i></i>ホーム</div>
+          <div class="tab on"><i></i>イベント</div>
+          <div class="tab"><i></i>カレンダー</div>
+          <div class="tab"><i></i>つながり</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案B -->
+    <div class="col">
+      <div class="col-head">
+        <span class="tag">案B</span>
+        <h2>絞り込みを畳む</h2>
+        <p class="aim">立替フォームと同じ段階的開示。閉じた状態でも「いまの条件」が1行で読める。</p>
+        <div class="metric"><span class="good">1件目まで 372px</span><span class="good">初期表示 2件</span></div>
+      </div>
+      <div class="phone">
+        <div class="scroll">
+          <div class="appbar"><span class="logo"></span>Madoi</div>
+          <div class="body">
+            <div class="card">
+              <div class="eyebrow">EVENTS</div>
+              <div class="h1m">イベント一覧</div>
+              <p class="desc">予定と残っている対応をまとめて確認します。</p>
+              <div class="btn-primary">イベント作成</div>
+            </div>
+            <div class="card tight">
+              <div class="summary-row">
+                <b style="font-size:14px">絞り込み</b>
+                <span class="now">進行中 · すべて · 新しい順</span>
+                <span class="caret">⌄</span>
+              </div>
+            </div>
+            <div class="ev">
+              <span class="badge fixed">開催待ち</span>
+              <h3>夏の海キャンプ</h3>
+              <p>確定 2026/08/22 19:00 - 21:00</p>
+            </div>
+            <div class="ev">
+              <span class="badge wait">参加者待ち</span>
+              <h3>忘年会の日程決め</h3>
+              <p>参加 1人</p>
+            </div>
+            <div class="ev">
+              <span class="badge wait">回答待ち</span>
+              <h3>スノボ合宿</h3>
+              <p>参加 0人</p>
+            </div>
+          </div>
+        </div>
+        <div class="fold" style="top:810px"><b>ここまでが1画面</b></div>
+        <div class="fab">＋ イベントを作る</div>
+        <div class="tabbar">
+          <div class="tab"><i></i>ホーム</div>
+          <div class="tab on"><i></i>イベント</div>
+          <div class="tab"><i></i>カレンダー</div>
+          <div class="tab"><i></i>つながり</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案C -->
+    <div class="col">
+      <div class="col-head">
+        <span class="tag">案C（おすすめ）</span>
+        <h2>状態はチップ、残りは畳む</h2>
+        <p class="aim">いちばん押される「状態」だけ1タップに出し、ページ見出しも1行に詰める。</p>
+        <div class="metric"><span class="good">1件目まで 232px</span><span class="good">初期表示 3件</span></div>
+      </div>
+      <div class="phone">
+        <div class="scroll">
+          <div class="appbar"><span class="logo"></span>Madoi</div>
+          <div class="body">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div>
+                <div class="eyebrow">EVENTS</div>
+                <div class="h1m" style="font-size:24px;margin:2px 0 0">イベント一覧</div>
+              </div>
+              <div class="pill solid" style="margin-left:auto;min-height:44px">＋ 作る</div>
+            </div>
+            <div class="chips">
+              <div class="chip on">進行中</div>
+              <div class="chip">下書き 2</div>
+              <div class="chip">完了</div>
+              <div class="chip">中止</div>
+            </div>
+            <div class="summary-row" style="min-height:36px">
+              <span class="now">すべて · 新しい順 · 10件</span>
+              <span class="caret" style="font-size:13px">条件を変える ⌄</span>
+            </div>
+            <div class="ev">
+              <span class="badge fixed">開催待ち</span>
+              <h3>夏の海キャンプ</h3>
+              <p>確定 2026/08/22 19:00 - 21:00</p>
+            </div>
+            <div class="ev">
+              <span class="badge wait">参加者待ち</span>
+              <h3>忘年会の日程決め</h3>
+              <p>参加 1人</p>
+            </div>
+            <div class="ev">
+              <span class="badge wait">回答待ち</span>
+              <h3>スノボ合宿</h3>
+              <p>参加 0人</p>
+            </div>
+            <div class="ev">
+              <span class="badge wait">参加者待ち</span>
+              <h3>花見の場所決め</h3>
+              <p>参加 3人</p>
+            </div>
+          </div>
+        </div>
+        <div class="fold" style="top:810px"><b>ここまでが1画面</b></div>
+        <div class="tabbar">
+          <div class="tab"><i></i>ホーム</div>
+          <div class="tab on"><i></i>イベント</div>
+          <div class="tab"><i></i>カレンダー</div>
+          <div class="tab"><i></i>つながり</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <h2>案Cで一緒に消えるもの</h2>
+    <ul>
+      <li><b>「イベント作成」の二重表示</b> — いまは画面上部の黒ボタンと右下のFABが両方「イベントを作る」導線。しかも文言が違う（作成／作る）。案Cは見出し横の1つに寄せ、`/events` ではFABを出さない（ホームと `/plans` では残す）。</li>
+      <li><b>「表示する」ボタン</b> — チップとセレクトの変更でそのまま反映するなら不要。押し忘れて「変わらない」と思われる原因も消える。</li>
+      <li><b>説明文「予定と残っている対応をまとめて確認します。」</b> — 一覧を見れば分かることなので、375pxでは削る。</li>
+    </ul>
+  </div>
+</div>
