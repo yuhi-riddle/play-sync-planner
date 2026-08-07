@@ -59,3 +59,21 @@ export function jstIsoFromDateTimeLocal(value: string): string {
 export function jstTimeFromDateTimeLocal(value: string): number {
   return new Date(`${value}:00+09:00`).getTime();
 }
+
+/** タイムゾーン指定を持たない日時文字列（"2026-08-15T10:00" / 秒つきも可）。 */
+const naiveDateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
+
+/**
+ * 文字列を Date にする。オフセットも Z も付いていない値は JST の壁時計として読む。
+ *
+ * `<input type="datetime-local">` の値がそのまま表示や比較に回ってくる箇所があり、
+ * これを実行環境まかせで解釈すると本番(UTC)のサーバー描画だけ 9 時間ずれる。
+ * オフセット付き・Z 付き・日付だけの値には手を加えない（足すと逆にずれる）。
+ */
+export function toJstDate(value: string | Date): Date {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return new Date(naiveDateTimePattern.test(value) ? `${value.length === 16 ? `${value}:00` : value}+09:00` : value);
+}

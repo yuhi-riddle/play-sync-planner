@@ -122,3 +122,31 @@ describe("表示フォーマットの TZ 固定", () => {
     expect(withTz("Asia/Tokyo", () => toDateTimeLocalValue(morning))).toBe("2026-07-15T10:00");
   });
 });
+
+describe("オフセット無しの日時文字列の解釈", () => {
+  // <input type="datetime-local"> の生の値。ユーザーが画面で見ている JST の壁時計であって
+  // 絶対時刻ではない。実行環境の TZ で解釈すると、本番(UTC)のサーバー描画だけ 9 時間ずれる。
+  // 実際に TZ=UTC の dev サーバーで /plans/[id]/edit を開いたところ、サーバーが
+  // 「2026/08/15 19:00 - 21:00」を描き、JST のブラウザが 10:00 に描き直して
+  // ハイドレーション不一致になっていた。
+  const naive = "2026-08-15T10:00";
+  const naiveEnd = "2026-08-15T12:00";
+
+  it("formatDateTime はオフセット無しの値を JST の壁時計として読む", () => {
+    expect(withTz("UTC", () => formatDateTime(naive))).toContain("10:00");
+    expect(withTz("UTC", () => formatDateTime(naive))).toBe(withTz("Asia/Tokyo", () => formatDateTime(naive)));
+  });
+
+  it("formatDateTimeRange も同じ", () => {
+    const utc = withTz("UTC", () => formatDateTimeRange(naive, naiveEnd));
+    expect(utc).toContain("10:00");
+    expect(utc).toContain("12:00");
+    expect(utc).toBe(withTz("Asia/Tokyo", () => formatDateTimeRange(naive, naiveEnd)));
+  });
+
+  it("オフセット付きの値は今までどおり絶対時刻として扱う", () => {
+    // 誤って全部 +09:00 を足してしまうと、こちらが 19:00 になって壊れる。
+    expect(withTz("UTC", () => formatDateTime("2026-08-15T01:00:00+00:00"))).toContain("10:00");
+    expect(withTz("UTC", () => formatDateTime("2026-08-15T01:00:00Z"))).toContain("10:00");
+  });
+});

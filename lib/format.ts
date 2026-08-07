@@ -1,3 +1,5 @@
+import { toJstDate } from "@/lib/jst";
+
 const unsetLabel = "未設定";
 
 /**
@@ -13,9 +15,7 @@ const unsetLabel = "未設定";
 const JST = "Asia/Tokyo";
 
 function jstFormat(value: string | Date, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat("ja-JP", { timeZone: JST, ...options }).format(
-    typeof value === "string" ? new Date(value) : value
-  );
+  return new Intl.DateTimeFormat("ja-JP", { timeZone: JST, ...options }).format(toJstDate(value));
 }
 
 /** JST でのカレンダー上の日付。同日判定に使う（ローカルゲッターだと TZ でずれる）。 */
@@ -25,7 +25,7 @@ function jstDateKey(value: string | Date): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
-  }).format(typeof value === "string" ? new Date(value) : value);
+  }).format(toJstDate(value));
 }
 
 export function formatYenText(amount: number): string {
@@ -71,7 +71,7 @@ export function formatJstTime(value: string | null | undefined): string {
     timeZone: JST,
     hour: "2-digit",
     minute: "2-digit"
-  }).format(new Date(value));
+  }).format(toJstDate(value));
 }
 
 export function formatDateTimeRange(start: string | null | undefined, end: string | null | undefined, isAllDay = false): string {
@@ -98,7 +98,7 @@ function formatAllDayRange(start: string, end: string | null | undefined): strin
     return `${startLabel} 終日`;
   }
 
-  const inclusiveEndDate = new Date(new Date(end).getTime() - 24 * 60 * 60 * 1000);
+  const inclusiveEndDate = new Date(toJstDate(end).getTime() - 24 * 60 * 60 * 1000);
   const sameDay = jstDateKey(start) === jstDateKey(inclusiveEndDate);
 
   return sameDay ? `${startLabel} 終日` : `${startLabel} - ${formatDate(inclusiveEndDate.toISOString())} 終日`;
@@ -128,7 +128,7 @@ export function toDateTimeLocalValue(value: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false
-  }).formatToParts(new Date(value));
+  }).formatToParts(toJstDate(value));
   const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
 
   return `${pick("year")}-${pick("month")}-${pick("day")}T${pick("hour")}:${pick("minute")}`;
