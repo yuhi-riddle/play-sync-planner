@@ -13,7 +13,10 @@ type AvailabilitySlot = {
 type AvailabilityResponse = {
   month: string;
   updatedAt: string;
-  participantCount: number;
+  /** カレンダーを連携している人数。空きの計算はこの人数を母数にする。 */
+  connectedCount: number;
+  /** イベントの参加者総数。連携していない人もここには入る。 */
+  memberCount: number;
   slots: AvailabilitySlot[];
 };
 
@@ -42,6 +45,7 @@ function selectedAvailability(slots: AvailabilitySlot[], selectedRange: { start:
   return Math.min(...selectedSlots.map((slot) => slot.availableCount));
 }
 
+/** participantCount は連携している人数。ここに総数を渡すと、未連携の人まで空き扱いになる。 */
 function summarizeDailyAvailability(slots: AvailabilitySlot[], participantCount: number) {
   const totals = slots.reduce<Record<string, { total: number; slotCount: number }>>((result, slot) => {
     const date = slot.start.slice(0, 10);
@@ -112,8 +116,8 @@ export function GroupAvailabilityCalendar({
     [availability?.slots, selectedRange]
   );
   const availabilityByDate = useMemo(
-    () => summarizeDailyAvailability(availability?.slots ?? [], availability?.participantCount ?? 0),
-    [availability?.participantCount, availability?.slots]
+    () => summarizeDailyAvailability(availability?.slots ?? [], availability?.connectedCount ?? 0),
+    [availability?.connectedCount, availability?.slots]
   );
   const refresh = useCallback(() => setRefreshKey((current) => current + 1), []);
 
@@ -159,16 +163,34 @@ export function GroupAvailabilityCalendar({
           </div>
         ) : null}
         {!loading && !error && availability ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-surface px-3 py-1.5 text-sm font-bold text-pine">参加者 {availability.participantCount}人</span>
-            {selectedAvailableCount === null ? (
-              <span className="text-sm text-muted">日時を選ぶと、その候補で空いている人数を表示します。</span>
-            ) : (
-              <span className="rounded-full bg-moss/12 px-3 py-1.5 text-sm font-bold text-pine">
-                選択中: 空き {selectedAvailableCount}/{availability.participantCount}人以上
+          availability.connectedCount === 0 ? (
+            /* 誰も連携していないと集計するものが無い。空きゼロと紛らわしいので、はっきり分ける。 */
+            <p className="text-sm leading-6 text-muted">
+              カレンダーを連携している参加者がまだいません。候補日時を出して、回答を集めてください。
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {/*
+               * 分母は必ず出す。連携している人数を書かずに「空き8人」とだけ見せると、
+               * 連携していない人まで空いていると読めてしまう。
+               */}
+              <span className="rounded-full bg-surface px-3 py-1.5 text-sm font-bold text-pine">
+                参加者 {availability.memberCount}人中 {availability.connectedCount}人分のカレンダー
               </span>
-            )}
-          </div>
+              {selectedAvailableCount === null ? (
+                <span className="text-sm text-muted">日時を選ぶと、その候補で空いている人数を表示します。</span>
+              ) : (
+                <span className="rounded-full bg-moss/12 px-3 py-1.5 text-sm font-bold text-pine">
+                  選択中: 空き {selectedAvailableCount}/{availability.connectedCount}人以上
+                </span>
+              )}
+              {availability.connectedCount < availability.memberCount ? (
+                <span className="w-full text-sm leading-6 text-muted">
+                  未連携の{availability.memberCount - availability.connectedCount}人はこの集計に入っていません。空いているかどうかは回答で確かめてください。
+                </span>
+              ) : null}
+            </div>
+          )
         ) : null}
       </div>
     </section>

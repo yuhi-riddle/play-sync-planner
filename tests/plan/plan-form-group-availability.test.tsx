@@ -17,7 +17,8 @@ describe("PlanForm group availability", () => {
         json: async () => ({
           month: "2026-07",
           updatedAt: "2026-07-01T00:00:00Z",
-          participantCount: 2,
+          connectedCount: 2,
+          memberCount: 2,
           slots: [
             { start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 },
             { start: "2026-07-15T10:15:00+09:00", end: "2026-07-15T10:30:00+09:00", availableCount: 1 }

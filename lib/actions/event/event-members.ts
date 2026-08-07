@@ -122,21 +122,11 @@ export async function joinEventFromInviteAction(token: string) {
     throw new Error("この招待リンクは利用できません。");
   }
 
-  const { data: integration, error: integrationError } = await admin
-    .from("calendar_integrations")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("provider", "google")
-    .maybeSingle();
-
-  if (integrationError) {
-    throw new Error(integrationError.message);
-  }
-
-  if (!integration) {
-    redirect(`/api/google-calendar/connect?next=${encodeURIComponent(invitePath)}`);
-  }
-
+  /*
+   * カレンダー連携は求めない。Googleカレンダーを使っていない人も参加できる。
+   * 連携は空き時間を自動で埋めるための近道で、候補日時への回答は手でもできる。
+   * 連携への案内は招待ページ側に出す。
+   */
   const { error: memberError } = await admin.from("event_members").upsert(
     {
       event_id: invite.event_id,
