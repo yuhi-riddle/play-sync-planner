@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { formDataToObject } from "@/lib/form-data";
 import { jstIsoFromDateTimeLocal } from "@/lib/jst";
 import { errorState, failWith, type ActionState } from "@/lib/domain/action-state";
+import { extendedAnswerDeadline, parseAnswerDeadlineExtensionDays } from "@/lib/domain/answer-deadline";
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plans";
 import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
@@ -212,6 +213,61 @@ export async function updatePlanAction(
   revalidatePath(`/events/${plan.event_id}`);
   revalidatePath(`/plans/${planId}`);
   redirect(`/plans/${planId}`);
+}
+
+/**
+ * 回答期限を延ばす。
+ *
+ * 期限切れの共有リンクは行き止まりで、参加者から主催者に知らせる手段が画面に無い。
+ * 予定編集の4ステップを通さずに、その場で開け直せるようにする。
+ *
+ * plans.answer_deadline_at だけ延ばしても回答はできない。共有リンクは
+ * 作成時点の期限を expires_at に写して持っており（buildAnswerShareLink）、
+ * 回答の受付は両方を見ているため（lib/actions/answers.ts）。
+ */
+export async function extendPlanAnswerDeadlineAction(planId: string, formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const days = parseAnswerDeadlineExtensionDays(formData.get("days"));
+  if (!days) {
+    throw new Error("延ばす日数が正しくありません。");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: plan, error: planError } = await supabase
+    .from("plans")
+    .select("id, event_id, answer_deadline_at")
+    .eq("id", planId)
+    .eq("owner_user_id", userId)
+    .maybeSingle();
+
+  if (planError || !plan) {
+    throw new Error("この日程調整を管理する権限がありません。");
+  }
+
+  const deadline = extendedAnswerDeadline(plan.answer_deadline_at, days, new Date());
+
+  const admin = createSupabaseAdminClient();
+  const [{ error: planUpdateError }, { error: shareLinkUpdateError }] = await Promise.all([
+    admin.from("plans").update({ answer_deadline_at: deadline }).eq("id", planId),
+    admin
+      .from("share_links")
+      .update({ expires_at: deadline })
+      .eq("plan_id", planId)
+      .eq("purpose", "answer")
+      .eq("status", "open")
+  ]);
+
+  if (planUpdateError || shareLinkUpdateError) {
+    throw new Error(planUpdateError?.message ?? shareLinkUpdateError?.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/events/${plan.event_id}`);
+  revalidatePath(`/plans/${planId}`);
 }
 
 export async function restartPlanAdjustmentAction(planId: string) {
