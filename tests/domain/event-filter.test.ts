@@ -15,7 +15,7 @@ import {
   matchesEventListFilter,
   normalizeEventListQuery,
   resolveEventCategoryFilter
-} from "@/lib/event-filter";
+} from "@/lib/domain/event/event-filter";
 
 describe("event category filtering", () => {
   it("counts events by category", () => {

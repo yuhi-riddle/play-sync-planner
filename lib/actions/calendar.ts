@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { buildConfirmedCalendarEvent } from "@/lib/domain/calendar-sync";
+import { buildConfirmedCalendarEvent } from "@/lib/domain/calendar/calendar-sync";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { insertCalendarEvent } from "@/lib/google-calendar/calendar-events";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";

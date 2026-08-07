@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { participantDeletionRefusal } from "@/lib/domain/participant-deletion";
+import { participantDeletionRefusal } from "@/lib/domain/plan/participant-deletion";
 
 const noLinks = { paidExpenseTitles: [], splitExpenseTitles: [] };
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { WITHDRAWN_DISPLAY_NAME, isWithdrawalConfirmed } from "@/lib/domain/account";
+import { WITHDRAWN_DISPLAY_NAME, isWithdrawalConfirmed } from "@/lib/domain/account/account";
 
 describe("isWithdrawalConfirmed", () => {
   it("表示名が一致すれば確認済みとみなす", () => {

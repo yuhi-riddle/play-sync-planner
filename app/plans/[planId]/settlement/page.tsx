@@ -1,15 +1,15 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { ExpenseForm } from "@/components/expense-form";
-import { isPayPayMethod, PayPayActionPanel } from "@/components/paypay-action-panel";
-import { PaymentDestinationLink } from "@/components/payment-destination-link";
-import { ShareLinkCard } from "@/components/share-link-card";
-import { SettlementCompletionNotice } from "@/components/settlement-completion-notice";
-import { SettlementConfirmationQueue } from "@/components/settlement-confirmation-queue";
-import { SettlementPaymentMethodForm } from "@/components/settlement-payment-method-form";
-import { SettlementProgressSteps } from "@/components/settlement-progress-steps";
-import { SettlementReminderCard } from "@/components/settlement-reminder-card";
+import { ExpenseForm } from "@/components/settlement/expense-form";
+import { isPayPayMethod, PayPayActionPanel } from "@/components/settlement/paypay-action-panel";
+import { PaymentDestinationLink } from "@/components/settlement/payment-destination-link";
+import { ShareLinkCard } from "@/components/plan/share-link-card";
+import { SettlementCompletionNotice } from "@/components/settlement/settlement-completion-notice";
+import { SettlementConfirmationQueue } from "@/components/settlement/settlement-confirmation-queue";
+import { SettlementPaymentMethodForm } from "@/components/settlement/settlement-payment-method-form";
+import { SettlementProgressSteps } from "@/components/settlement/settlement-progress-steps";
+import { SettlementReminderCard } from "@/components/settlement/settlement-reminder-card";
 import { Badge, Card, EmptyState, MadoiForm, PageHeader, SecondaryLink, Stat, SubmitButton } from "@/components/ui";
 import {
   confirmSettlementPaymentAction,
@@ -21,7 +21,7 @@ import {
   updateSettlementPaymentInstructionAction,
   updateExpenseAction
 } from "@/lib/actions/settlements";
-import { isEqualSplit } from "@/lib/domain/expense-split";
+import { isEqualSplit } from "@/lib/domain/settlement/expense-split";
 import {
   buildSettlementConfirmationRequestMessage,
   buildSettlementPaymentRequestMessage,
@@ -32,10 +32,10 @@ import {
   summarizeSettlementPaymentProgress,
   type SettlementNextActionItem,
   type SettlementPaymentProgress
-} from "@/lib/domain/settlement";
-import { buildPublicSettlementUrl } from "@/lib/domain/plans";
-import { summarizeSettlementReminderLogs, type SettlementReminderLogView } from "@/lib/domain/reminder-log";
-import { formatDateTime, formatYenText } from "@/lib/format";
+} from "@/lib/domain/settlement/settlement";
+import { buildPublicSettlementUrl } from "@/lib/domain/plan/plans";
+import { summarizeSettlementReminderLogs, type SettlementReminderLogView } from "@/lib/domain/settlement/reminder-log";
+import { formatDateTime, formatYenText } from "@/lib/shared/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

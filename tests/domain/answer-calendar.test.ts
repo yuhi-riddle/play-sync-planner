@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCandidateCalendarHints, monthsForCandidates } from "@/lib/domain/answer-calendar";
+import { buildCandidateCalendarHints, monthsForCandidates } from "@/lib/domain/plan/answer-calendar";
 
 const candidates = [
   {

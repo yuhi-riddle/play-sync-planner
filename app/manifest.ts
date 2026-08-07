@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { brand } from "@/lib/brand";
+import { brand } from "@/lib/shared/brand";
 
 /**
  * ホーム画面に追加できるようにするための manifest。

@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/availability";
-import { resolveAnswerParticipantForSubmission } from "@/lib/domain/participant-identity";
-import { buildPreviousAnswerMap, type PreviousAnswer, type PreviousAnswerRow } from "@/lib/domain/previous-answers";
-import { buildAnswerReceivedNotificationInput, buildNotificationCandidate } from "@/lib/domain/site-notifications";
+import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/plan/availability";
+import { resolveAnswerParticipantForSubmission } from "@/lib/domain/plan/participant-identity";
+import { buildPreviousAnswerMap, type PreviousAnswer, type PreviousAnswerRow } from "@/lib/domain/plan/previous-answers";
+import { buildAnswerReceivedNotificationInput, buildNotificationCandidate } from "@/lib/domain/shared/site-notifications";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CandidateRow = {

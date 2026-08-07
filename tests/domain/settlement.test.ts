@@ -12,7 +12,7 @@ import {
   summarizeSettlementOverview,
   summarizeSettlementPaymentProgress,
   validateIndividualSplits
-} from "@/lib/domain/settlement";
+} from "@/lib/domain/settlement/settlement";
 
 const participants = [
   { id: "alice", displayName: "Alice" },

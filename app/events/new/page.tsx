@@ -1,8 +1,8 @@
-import { EventForm } from "@/components/event-form";
-import { BackLink } from "@/components/back-link";
+import { EventForm } from "@/components/event/event-form";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, PageHeader } from "@/components/ui";
 import { createEventAction, saveEventDraftAction } from "@/lib/actions/events";
-import { shouldResumeEventDraft } from "@/lib/domain/event-flow";
+import { shouldResumeEventDraft } from "@/lib/domain/event/event-flow";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 export default async function NewEventPage({

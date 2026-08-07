@@ -1,4 +1,4 @@
-import type { HomeCalendarItem } from "@/lib/domain/home-calendar";
+import type { HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 
 export type GoogleCalendarResponse = {
   connected: boolean;

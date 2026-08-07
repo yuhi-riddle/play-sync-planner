@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event-adjustment";
+import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event/event-adjustment";
 
 describe("canStartDateAdjustment", () => {
   it("招待を締め切っていれば日程調整へ進める", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAfterEventCreatePath, getEventDraftResumePath, shouldResumeEventDraft } from "@/lib/domain/event-flow";
+import { getAfterEventCreatePath, getEventDraftResumePath, shouldResumeEventDraft } from "@/lib/domain/event/event-flow";
 
 describe("getAfterEventCreatePath", () => {
   it("sends the user to the event page so members can join first", () => {

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { ConnectionList } from "@/components/connection-list";
-import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/received-event-invitations";
-import { SetupPanel } from "@/components/state-panels";
+import { ConnectionList } from "@/components/account/connection-list";
+import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/event/received-event-invitations";
+import { SetupPanel } from "@/components/ui/state-panels";
 import { PageHeader } from "@/components/ui";
 import {
   buildBlockedUsers,
@@ -10,7 +10,7 @@ import {
   sortInviteCandidates,
   type BlockedUser,
   type ConnectionCandidate
-} from "@/lib/domain/connections";
+} from "@/lib/domain/account/connections";
 import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

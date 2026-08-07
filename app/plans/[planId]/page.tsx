@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
-import { CalendarShareLink } from "@/components/calendar-share-link";
-import { ParticipantDeleteButton } from "@/components/participant-delete-button";
-import { ReminderMessageCard } from "@/components/reminder-message-card";
-import { SettlementStatusBadge } from "@/components/settlement-status-badge";
-import { ShareLinkCard } from "@/components/share-link-card";
+import { CalendarShareLink } from "@/components/calendar/calendar-share-link";
+import { ParticipantDeleteButton } from "@/components/plan/participant-delete-button";
+import { ReminderMessageCard } from "@/components/settlement/reminder-message-card";
+import { SettlementStatusBadge } from "@/components/settlement/settlement-status-badge";
+import { ShareLinkCard } from "@/components/plan/share-link-card";
 import {
   Badge,
   ButtonLink,
@@ -25,19 +25,19 @@ import { deletePlanParticipantAction } from "@/lib/actions/participants";
 import { extendPlanAnswerDeadlineAction, restartPlanAdjustmentAction } from "@/lib/actions/plans";
 import { markReminderSentAction } from "@/lib/actions/reminders";
 import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/share-links";
-import { planStatusLabels } from "@/lib/constants";
+import { planStatusLabels } from "@/lib/shared/constants";
 import {
   summarizeCandidateAnswers,
   summarizeParticipantProgress,
   type CandidateAnswerSummary
-} from "@/lib/domain/confirmation";
-import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
-import { ANSWER_DEADLINE_EXTENSION_DAYS, extendedAnswerDeadline } from "@/lib/domain/answer-deadline";
-import { buildProgressSummaryLine } from "@/lib/domain/plans";
-import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
-import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
-import { getSettlementStatusView } from "@/lib/domain/settlement";
-import { formatDateTime, formatDateTimeRange } from "@/lib/format";
+} from "@/lib/domain/plan/confirmation";
+import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync";
+import { ANSWER_DEADLINE_EXTENSION_DAYS, extendedAnswerDeadline } from "@/lib/domain/plan/answer-deadline";
+import { buildProgressSummaryLine } from "@/lib/domain/plan/plans";
+import { summarizeReminderLogs } from "@/lib/domain/settlement/reminder-log";
+import { buildReminderMessage, pendingParticipants } from "@/lib/domain/settlement/reminder-message";
+import { getSettlementStatusView } from "@/lib/domain/settlement/settlement";
+import { formatDateTime, formatDateTimeRange } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

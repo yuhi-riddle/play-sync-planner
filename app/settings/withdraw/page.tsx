@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-import { LoginPanel, SetupPanel } from "@/components/state-panels";
+import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { PageHeader } from "@/components/ui";
-import { WithdrawAccountCard } from "@/components/withdraw-account-card";
-import { getUserDisplayName } from "@/lib/domain/profile";
+import { WithdrawAccountCard } from "@/components/account/withdraw-account-card";
+import { getUserDisplayName } from "@/lib/domain/account/profile";
 import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

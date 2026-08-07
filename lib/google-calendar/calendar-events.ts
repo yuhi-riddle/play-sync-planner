@@ -1,5 +1,5 @@
-import type { BusyRange } from "@/lib/domain/calendar-availability";
-import type { ConfirmedCalendarEvent } from "@/lib/domain/calendar-sync";
+import type { BusyRange } from "@/lib/domain/calendar/calendar-availability";
+import type { ConfirmedCalendarEvent } from "@/lib/domain/calendar/calendar-sync";
 
 export type CalendarEventRange = BusyRange & {
   title: string | null;

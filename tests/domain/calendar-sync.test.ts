@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildConfirmedCalendarEvent, buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
+import { buildConfirmedCalendarEvent, buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync";
 
 describe("buildConfirmedCalendarEvent", () => {
   it("uses the plan title, event title, location, and confirmed time range", () => {

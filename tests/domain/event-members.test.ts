@@ -6,7 +6,7 @@ import {
   canStartPlanFromMembers,
   snapshotEventMembersForPlan,
   type EventMember
-} from "@/lib/domain/event-members";
+} from "@/lib/domain/event/event-members";
 
 const members: EventMember[] = [
   {

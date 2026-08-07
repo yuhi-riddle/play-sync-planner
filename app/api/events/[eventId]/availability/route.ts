@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { monthRangeInTokyo, buildAvailabilitySlots } from "@/lib/domain/group-availability";
-import { canReadGroupAvailability } from "@/lib/domain/calendar-availability-access";
+import { monthRangeInTokyo, buildAvailabilitySlots } from "@/lib/domain/plan/group-availability";
+import { canReadGroupAvailability } from "@/lib/domain/calendar/calendar-availability-access";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { CalendarFreeBusyError, fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
 import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server";

@@ -4,7 +4,7 @@ import {
   ANSWER_DEADLINE_EXTENSION_DAYS,
   extendedAnswerDeadline,
   parseAnswerDeadlineExtensionDays
-} from "@/lib/domain/answer-deadline";
+} from "@/lib/domain/plan/answer-deadline";
 
 const now = new Date("2026-08-07T06:00:00.000Z");
 

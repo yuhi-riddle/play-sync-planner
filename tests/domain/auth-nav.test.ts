@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAuthNavState } from "@/lib/domain/auth-nav";
+import { getAuthNavState } from "@/lib/domain/account/auth-nav";
 
 describe("getAuthNavState", () => {
   it("shows a login link when the user is signed out", () => {

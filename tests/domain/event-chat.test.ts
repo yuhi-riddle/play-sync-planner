@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeEventMessageBody } from "@/lib/domain/event-chat";
+import { normalizeEventMessageBody } from "@/lib/domain/event/event-chat";
 
 describe("normalizeEventMessageBody", () => {
   it("trims a message before returning it", () => {

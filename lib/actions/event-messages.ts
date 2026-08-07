@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { normalizeEventMessageBody } from "@/lib/domain/event-chat";
+import { normalizeEventMessageBody } from "@/lib/domain/event/event-chat";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 export async function createEventMessageAction(eventId: string, formData: FormData): Promise<void> {

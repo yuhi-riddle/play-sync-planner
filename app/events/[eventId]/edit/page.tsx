@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { EventForm } from "@/components/event-form";
-import { BackLink } from "@/components/back-link";
+import { EventForm } from "@/components/event/event-form";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, PageHeader } from "@/components/ui";
 import { updateEventAction } from "@/lib/actions/events";
 import { createSupabaseServerClient } from "@/lib/supabase/server";

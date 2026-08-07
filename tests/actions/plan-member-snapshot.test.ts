@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPlanParticipantsFromMembers, type EventMember } from "@/lib/domain/event-members";
+import { buildPlanParticipantsFromMembers, type EventMember } from "@/lib/domain/event/event-members";
 
 describe("plan member snapshot", () => {
   it("creates registered plan participants from joined event members", () => {

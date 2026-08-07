@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
-import { errorState, failWith, type ActionState } from "@/lib/domain/action-state";
+import { errorState, failWith, type ActionState } from "@/lib/domain/shared/action-state";
 import {
   buildEqualExpenseSplits,
   calculateSettlementTransfers,
   summarizeSettlementPaymentProgress,
   validateIndividualSplits
-} from "@/lib/domain/settlement";
-import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
-import { canConfirmSettlementPayment } from "@/lib/domain/participant-identity";
-import { formDataToObject } from "@/lib/form-data";
+} from "@/lib/domain/settlement/settlement";
+import { buildNotificationCandidate } from "@/lib/domain/shared/site-notifications";
+import { canConfirmSettlementPayment } from "@/lib/domain/plan/participant-identity";
+import { formDataToObject } from "@/lib/shared/form-data";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 import {
   expenseSchema,
@@ -20,8 +20,8 @@ import {
   settlementPaymentInstructionSchema,
   settlementPaymentSchema,
   type ExpenseFormValues
-} from "@/lib/validators";
-import type { SettlementReminderKind } from "@/lib/domain/reminder-log";
+} from "@/lib/shared/validators";
+import type { SettlementReminderKind } from "@/lib/domain/settlement/reminder-log";
 
 type ParticipantRow = {
   id: string;

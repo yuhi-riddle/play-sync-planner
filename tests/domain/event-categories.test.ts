@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EVENT_CATEGORIES } from "@/lib/constants";
+import { EVENT_CATEGORIES } from "@/lib/shared/constants";
 
 describe("EVENT_CATEGORIES", () => {
   it("keeps nazotoki near the middle instead of first", () => {

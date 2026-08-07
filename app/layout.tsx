@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from "next";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 
-import { AuthNav } from "@/components/auth-nav";
-import { MobileEventFab } from "@/components/mobile-event-fab";
-import { PrimaryNav } from "@/components/primary-nav";
-import { WebVitalsReporter } from "@/components/web-vitals-reporter";
-import { brand } from "@/lib/brand";
+import { AuthNav } from "@/components/layout/auth-nav";
+import { MobileEventFab } from "@/components/layout/mobile-event-fab";
+import { PrimaryNav } from "@/components/layout/primary-nav";
+import { WebVitalsReporter } from "@/components/ui/web-vitals-reporter";
+import { brand } from "@/lib/shared/brand";
 import { getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 import "./globals.css";

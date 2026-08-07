@@ -5,7 +5,7 @@ const { createSupabaseAdminClient } = vi.hoisted(() => ({ createSupabaseAdminCli
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient }));
 
 import { markLegalConsentAccepted } from "@/lib/auth/legal-consent-mark";
-import { LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/legal-consent";
+import { LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/account/legal-consent";
 
 describe("markLegalConsentAccepted", () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import type { BusyRange } from "@/lib/domain/calendar-availability";
+import type { BusyRange } from "@/lib/domain/calendar/calendar-availability";
 
 export type GoogleFreeBusyResponse = {
   calendars?: Record<string, { busy?: BusyRange[] }>;

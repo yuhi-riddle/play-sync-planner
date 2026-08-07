@@ -4,7 +4,7 @@ import {
   canConfirmSettlementPayment,
   resolveAnswerParticipantForSubmission,
   resolveViewerParticipant
-} from "@/lib/domain/participant-identity";
+} from "@/lib/domain/plan/participant-identity";
 
 describe("resolveAnswerParticipantForSubmission", () => {
   const participants = [

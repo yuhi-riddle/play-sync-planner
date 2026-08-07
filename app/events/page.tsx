@@ -2,13 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 
-import { EventCancelAction } from "@/components/event-cancel-action";
-import { EventListControls } from "@/components/event-list-controls";
+import { EventCancelAction } from "@/components/event/event-cancel-action";
+import { EventListControls } from "@/components/event/event-list-controls";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
-import { LoginPanel, SetupPanel } from "@/components/state-panels";
+import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { cancelEventAction } from "@/lib/actions/events";
-import { categoryLabels } from "@/lib/constants";
-import { getEventDraftResumePath } from "@/lib/domain/event-flow";
+import { categoryLabels } from "@/lib/shared/constants";
+import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import {
   buildEventListHref,
   eventDisplayStateLabels,
@@ -18,8 +18,8 @@ import {
   normalizeCategory,
   normalizeEventListQuery,
   type EventListItem
-} from "@/lib/event-filter";
-import { formatDate, formatDateTimeRange } from "@/lib/format";
+} from "@/lib/domain/event/event-filter";
+import { formatDate, formatDateTimeRange } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

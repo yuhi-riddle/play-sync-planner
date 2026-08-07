@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dateLabel, defaultDateForMonth, monthLabel, monthParam, moveMonth, parseMonth } from "@/lib/domain/calendar-month";
+import { dateLabel, defaultDateForMonth, monthLabel, monthParam, moveMonth, parseMonth } from "@/lib/domain/calendar/calendar-month";
 
 describe("parseMonth", () => {
   it("splits a YYYY-MM string into year and month", () => {

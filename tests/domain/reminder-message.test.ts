@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
+import { buildReminderMessage, pendingParticipants } from "@/lib/domain/settlement/reminder-message";
 
 describe("pendingParticipants", () => {
   it("returns participants whose status is invited", () => {

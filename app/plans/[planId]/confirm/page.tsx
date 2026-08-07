@@ -1,9 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 
-import { ConfirmForm } from "@/components/confirm-form";
-import { BackLink } from "@/components/back-link";
+import { ConfirmForm } from "@/components/plan/confirm-form";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
-import { summarizeCandidateAnswers } from "@/lib/domain/confirmation";
+import { summarizeCandidateAnswers } from "@/lib/domain/plan/confirmation";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

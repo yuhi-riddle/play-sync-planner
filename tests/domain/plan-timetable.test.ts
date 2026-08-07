@@ -10,7 +10,7 @@ import {
   sortTimetableItems,
   toJstDateKey,
   type TimetableItem
-} from "@/lib/domain/plan-timetable";
+} from "@/lib/domain/plan/plan-timetable";
 
 /** テストごとに必要な項目だけ上書きする。 */
 function item(overrides: Partial<TimetableItem> & Pick<TimetableItem, "id" | "startAt">): TimetableItem {

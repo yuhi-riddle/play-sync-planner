@@ -1,16 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import React from "react";
 
-import { PlanTimetable } from "@/components/plan-timetable";
-import { PlanTimetableForm } from "@/components/plan-timetable-form";
+import { PlanTimetable } from "@/components/plan/plan-timetable";
+import { PlanTimetableForm } from "@/components/plan/plan-timetable-form";
 import { Alert, Card, PageHeader, SecondaryLink } from "@/components/ui";
 import {
   createPlanTimetableItemAction,
   deletePlanTimetableItemAction,
   updatePlanTimetableItemAction
 } from "@/lib/actions/plan-timetable";
-import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan-timetable";
-import { formatDateTimeRange, formatJstTime } from "@/lib/format";
+import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan/plan-timetable";
+import { formatDateTimeRange, formatJstTime } from "@/lib/shared/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDuplicatedEvent, duplicatedEventTitle } from "@/lib/domain/event-duplication";
+import { buildDuplicatedEvent, duplicatedEventTitle } from "@/lib/domain/event/event-duplication";
 
 describe("duplicatedEventTitle", () => {
   it("コピーであることが分かる名前にする", () => {

@@ -4,19 +4,19 @@ import {
   PublicSettlementSummary,
   type PublicSettlementExpense,
   type PublicSettlementItem
-} from "@/components/public-settlement-summary";
-import { CalendarShareLink } from "@/components/calendar-share-link";
-import { PaymentRecordedNotice } from "@/components/payment-recorded-notice";
-import { SetupPanel } from "@/components/state-panels";
+} from "@/components/settlement/public-settlement-summary";
+import { CalendarShareLink } from "@/components/calendar/calendar-share-link";
+import { PaymentRecordedNotice } from "@/components/settlement/payment-recorded-notice";
+import { SetupPanel } from "@/components/ui/state-panels";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import {
   recordPublicSettlementPaymentAction,
   updatePublicParticipantSettlementPaymentMethodAction
 } from "@/lib/actions/settlements";
-import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
-import { resolveParticipantSettlementRole } from "@/lib/domain/settlement";
-import { resolveViewerParticipant } from "@/lib/domain/participant-identity";
-import { formatDateTimeRange } from "@/lib/format";
+import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync";
+import { resolveParticipantSettlementRole } from "@/lib/domain/settlement/settlement";
+import { resolveViewerParticipant } from "@/lib/domain/plan/participant-identity";
+import { formatDateTimeRange } from "@/lib/shared/format";
 import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

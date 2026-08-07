@@ -9,7 +9,7 @@ import {
   resolveInviteProfileNames,
   sortInviteCandidates,
   type ConnectionCandidate
-} from "@/lib/domain/connections";
+} from "@/lib/domain/account/connections";
 
 const baseCandidate: ConnectionCandidate = {
   userId: "base",

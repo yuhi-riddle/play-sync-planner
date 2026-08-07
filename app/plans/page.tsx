@@ -1,10 +1,10 @@
 import { CalendarPlus } from "lucide-react";
 
-import { AdjustmentCalendarView } from "@/components/adjustment-calendar-view";
+import { AdjustmentCalendarView } from "@/components/plan/adjustment-calendar-view";
 import { ButtonLink, PageHeader } from "@/components/ui";
-import { LoginPanel, SetupPanel } from "@/components/state-panels";
-import { defaultSelectedDateKey, type AdjustmentCandidate } from "@/lib/domain/adjustment-calendar";
-import { monthRangeInTokyo } from "@/lib/domain/group-availability";
+import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
+import { defaultSelectedDateKey, type AdjustmentCandidate } from "@/lib/domain/plan/adjustment-calendar";
+import { monthRangeInTokyo } from "@/lib/domain/plan/group-availability";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
