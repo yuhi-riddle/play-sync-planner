@@ -42,10 +42,26 @@ export function PageHeader({
 export function Card({
   children,
   className,
+  padding = "p-5",
   ...props
-}: { children: ReactNode; className?: string } & React.ComponentPropsWithoutRef<"section">) {
+}: {
+  children: ReactNode;
+  className?: string;
+  /**
+   * 内側の余白。既定は p-5。
+   *
+   * className に p-3 などを足しても効かないので、専用の口にしている。
+   * このプロジェクトは clsx だけで tailwind-merge を使っておらず、clsx は
+   * 衝突するクラスを畳まない。生成されるCSSは p-3 -> p-5 の順に並ぶため、
+   * 両方が class 属性に載ると後勝ちで p-5 になる。
+   */
+  padding?: string;
+} & React.ComponentPropsWithoutRef<"section">) {
   return (
-    <section className={clsx("rounded-card border border-line bg-surface p-5 shadow-raise", className)} {...props}>
+    <section
+      className={clsx("rounded-card border border-line bg-surface shadow-raise", padding, className)}
+      {...props}
+    >
       {children}
     </section>
   );

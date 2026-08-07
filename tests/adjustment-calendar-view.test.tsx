@@ -68,6 +68,51 @@ describe("AdjustmentCalendarView", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/google-calendar/freebusy?month=2026-07");
   });
 
+  it("375px に7列が収まるよう、月グリッドに固定の最小幅を持たせない", async () => {
+    // かつては min-w-[24rem]（384px）だった。375px 端末でグリッドに使える幅は 301px しかなく、
+    // 金曜の途中から右が隠れて土曜が完全に見えなくなっていた。日程を決める画面で
+    // 週末が初期表示に出ないのは困るので、幅に追従させる。
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />);
+
+    const scroller = screen.getByLabelText("日程調整カレンダーの日付一覧");
+    const sizer = scroller.firstElementChild as HTMLElement;
+    expect(sizer.className).toBe("");
+
+    await waitFor(() => {
+      expect(screen.getByText("Google Calendarは未連携です")).toBeInTheDocument();
+    });
+  });
+
+  it("モバイルは溝と余白を詰めて、セルに回す幅を稼ぐ", async () => {
+    // 幅を削る先はセルではなく余白。溝 4->2px、カード余白 20->12px にすることで、
+    // 7列を収めたうえで1日あたりの幅は min-w を外すだけの場合より広くなる。
+    // sm: 以上は現状のまま（components/home-selected-date-agenda.tsx と同じ流儀）。
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    const { container } = render(
+      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />
+    );
+
+    expect(screen.getByTestId("adjustment-month-grid")).toHaveClass("gap-0.5", "sm:gap-1");
+
+    const card = container.querySelector("section.rounded-card") as HTMLElement;
+    expect(card).toHaveClass("p-3", "sm:p-5");
+    // 既定の p-5 が残っていると、生成CSSの順序で p-3 が負けて余白が詰まらない。
+    expect(card.className.split(" ")).not.toContain("p-5");
+
+    await waitFor(() => {
+      expect(screen.getByText("Google Calendarは未連携です")).toBeInTheDocument();
+    });
+  });
+
   it("keeps the month grid in a horizontally scrollable area for narrow screens", async () => {
     vi.stubGlobal(
       "fetch",

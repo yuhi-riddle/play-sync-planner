@@ -1,0 +1,565 @@
+<title>375px カレンダー: 土日を見せる 3案</title>
+<style>
+  :root {
+    --paper: #efe7d8;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --ink: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --skywash: #d9e8e7;
+    --sky-ink: #1f5f6b;
+    --mist: #eff3ee;
+
+    --page-bg: var(--paper);
+    --page-fg: var(--ink);
+    --page-dim: var(--muted);
+    --panel: #fbf6ec;
+    --rule: var(--line-strong);
+    --device-shell: #2f2b26;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+      "Noto Sans JP", Meiryo, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #1c1a17;
+      --page-fg: #ece5d8;
+      --page-dim: #a49a8a;
+      --panel: #24211d;
+      --rule: #3d3830;
+      --device-shell: #0f0e0c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1c1a17;
+    --page-fg: #ece5d8;
+    --page-dim: #a49a8a;
+    --panel: #24211d;
+    --rule: #3d3830;
+    --device-shell: #0f0e0c;
+  }
+  :root[data-theme="light"] {
+    --page-bg: var(--paper);
+    --page-fg: var(--ink);
+    --page-dim: var(--muted);
+    --panel: #fbf6ec;
+    --rule: var(--line-strong);
+    --device-shell: #2f2b26;
+  }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 20px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--page-dim);
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 30px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    margin: 6px 0 0;
+    text-wrap: balance;
+  }
+
+  .lede {
+    max-width: 62ch;
+    margin: 12px 0 0;
+    color: var(--page-dim);
+  }
+
+  /* 事実の要約: この文書の主題は幅の算数なので、数字は専用書体で組む */
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .fact {
+    background: var(--panel);
+    padding: 14px 16px;
+  }
+  .fact dt {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--page-dim);
+    margin: 0;
+  }
+  .fact dd {
+    margin: 4px 0 0;
+    font-family: var(--mono);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-fg);
+  }
+  .fact dd.bad { color: var(--clay-ink); }
+  @media (prefers-color-scheme: dark) {
+    .fact dd.bad { color: #f0a48f; }
+  }
+  :root[data-theme="dark"] .fact dd.bad { color: #f0a48f; }
+
+  .specimens {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .specimen {
+    flex: 0 0 auto;
+    width: 375px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .specimen header h2 {
+    font-size: 17px;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .specimen header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--page-dim);
+  }
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    vertical-align: 2px;
+    margin-left: 6px;
+  }
+  .tag.now { color: var(--clay-ink); }
+  .tag.rec { color: var(--pine); }
+  @media (prefers-color-scheme: dark) {
+    .tag.now { color: #f0a48f; }
+    .tag.rec { color: #9dc0a5; }
+  }
+  :root[data-theme="dark"] .tag.now { color: #f0a48f; }
+  :root[data-theme="dark"] .tag.rec { color: #9dc0a5; }
+
+  /* 端末枠。中身は実アプリの配色そのままなので、常に明るいまま置く */
+  .device {
+    width: 375px;
+    background: var(--device-shell);
+    border-radius: 20px;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  .viewport {
+    width: 359px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--paper);
+    color: var(--ink);
+    position: relative;
+  }
+  /* 実機は375px。枠の内側を375pxにしたいので、中身は左端基準で切り出す */
+  .screen {
+    width: 375px;
+    padding: 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    margin: 16px;
+    box-shadow: 0 1px 2px rgba(38, 35, 32, 0.05);
+  }
+  .card.pad5 { padding: 20px; }
+  .card.pad3 { padding: 12px; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+  .dot.honey { background: var(--honey); }
+  .dot.moss { background: var(--moss); }
+  .dot.sky { background: var(--skywash); box-shadow: 0 0 0 1px #7fb5c4 inset; }
+
+  .scroller { overflow: hidden; }
+  .scroller.scrolls { position: relative; }
+  .scroller.scrolls::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 28px;
+    background: linear-gradient(90deg, rgba(255, 253, 247, 0), rgba(255, 253, 247, 0.96));
+    pointer-events: none;
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .wk { text-align: center; font-size: 11px; font-weight: 700; padding: 6px 0; }
+  .wk.sun { color: var(--clay-ink); }
+  .wk.sat { color: var(--sky-ink); }
+  .wk.wd { color: var(--muted); }
+
+  .cell {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    min-height: 64px;
+    padding: 6px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  .cell.sun { background: rgba(223, 125, 105, 0.08); color: var(--clay-ink); }
+  .cell.sat { background: rgba(217, 232, 231, 0.55); color: var(--sky-ink); }
+  .cell.out { color: var(--muted); }
+  .cell.sel { border-color: var(--pine); background: rgba(95, 125, 101, 0.18); color: var(--ink); }
+  .cell .num { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cell .marks { margin-top: auto; display: flex; flex-wrap: wrap; gap: 3px; }
+
+  /* 幅の予算バー: この文書の構造装置。装飾ではなく375pxの内訳そのもの */
+  .budget { display: flex; flex-direction: column; gap: 6px; }
+  .budget .bar {
+    display: flex;
+    height: 26px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .budget .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .seg.chrome { background: var(--sunken); color: var(--muted); }
+  .seg.grid7 { background: var(--mist); color: var(--pine); }
+  .seg.over { background: var(--clay); color: #fff; }
+  .budget .note {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-dim);
+    margin: 0;
+  }
+  .budget .note b { color: var(--page-fg); font-weight: 700; }
+
+  .verdict {
+    border-left: 2px solid var(--rule);
+    padding-left: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .verdict p { margin: 0; }
+  .verdict .con { color: var(--clay-ink); }
+  @media (prefers-color-scheme: dark) { .verdict .con { color: #f0a48f; } }
+  :root[data-theme="dark"] .verdict .con { color: #f0a48f; }
+
+  .diffs { display: flex; flex-direction: column; gap: 16px; }
+  .diff {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .diff h3 { margin: 0 0 8px; font-size: 14px; }
+  pre {
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--page-fg);
+  }
+  pre .del { color: var(--clay-ink); }
+  pre .add { color: var(--pine); }
+  @media (prefers-color-scheme: dark) {
+    pre .del { color: #f0a48f; }
+    pre .add { color: #9dc0a5; }
+  }
+  :root[data-theme="dark"] pre .del { color: #f0a48f; }
+  :root[data-theme="dark"] pre .add { color: #9dc0a5; }
+
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+
+  .foot { font-size: 12px; color: var(--page-dim); max-width: 62ch; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Madoi / adjustment calendar</p>
+    <h1>375px で土日を見せる</h1>
+    <p class="lede">
+      日程調整のカレンダーは <code>min-w-[24rem]</code>（384px）で組まれている。375px の端末でグリッドに使える幅は
+      301px しかないので、初期表示では金曜の途中から右が隠れる。週末が最初に見えないのは、日程を決めるアプリとしては痛い。
+      カード内で横スクロールはできるので不具合ではないが、直す価値はある。
+    </p>
+  </header>
+
+  <dl class="facts">
+    <div class="fact"><dt>端末幅</dt><dd>375 px</dd></div>
+    <div class="fact"><dt>グリッドに使える幅</dt><dd>301 px</dd></div>
+    <div class="fact"><dt>現在のグリッド幅</dt><dd class="bad">384 px</dd></div>
+    <div class="fact"><dt>隠れる量</dt><dd class="bad">83 px / 約1.6列</dd></div>
+  </dl>
+
+  <hr />
+
+  <section class="specimens" id="specimens"></section>
+
+  <hr />
+
+  <section class="diffs">
+    <div class="diff">
+      <h3>案A の変更</h3>
+      <pre><span class="del">- &lt;div className="min-w-[24rem]"&gt;</span>
+<span class="add">+ &lt;div&gt;</span></pre>
+    </div>
+    <div class="diff">
+      <h3>案B の変更</h3>
+      <pre><span class="del">- &lt;section className="... p-5 ..."&gt;</span>
+<span class="add">+ &lt;section className="... p-3 sm:p-5 ..."&gt;</span>
+
+<span class="del">- &lt;div className="-mx-2 mt-5 overflow-x-auto px-2 pb-2"&gt;
+-   &lt;div className="min-w-[24rem]"&gt;</span>
+<span class="add">+ &lt;div className="mt-5 pb-2"&gt;
++   &lt;div&gt;</span>
+
+<span class="del">- &lt;div className="grid grid-cols-7 gap-1 ..."&gt;</span>
+<span class="add">+ &lt;div className="grid grid-cols-7 gap-0.5 sm:gap-1 ..."&gt;</span></pre>
+    </div>
+    <div class="diff">
+      <h3>案C の変更</h3>
+      <pre><span class="add">+ 右端にフェードを重ね、スクロール可能なことを示す
++ 選択中の日が画面内に来るよう初期スクロール位置を寄せる
++ snap-x snap-mandatory で週の途中で止まらないようにする</span>
+
+グリッド幅・セル寸法は現状のまま（<span class="del">min-w-[24rem]</span> を維持）</pre>
+    </div>
+  </section>
+
+  <p class="foot">
+    端末の中身は実装の配色トークン（surface #fffdf7 / line #e4dac6 / clay #df7d69 / moss #5f7d65 ほか）で描いた参考モック。
+    アプリ本体はライトのみなので、ページの明暗を切り替えても端末の中は明るいままにしてある。
+    セル寸法は 375px から余白・境界・溝を引いた実測値にもとづく計算値。
+  </p>
+</div>
+
+<script>
+  // 2026年8月。8/1(土)始まり、グリッドは 7/26(日) から 6 週。
+  const CELLS = [];
+  const start = new Date(Date.UTC(2026, 6, 26));
+  for (let i = 0; i < 42; i += 1) {
+    const d = new Date(start);
+    d.setUTCDate(start.getUTCDate() + i);
+    CELLS.push({ day: d.getUTCDate(), dow: d.getUTCDay(), inMonth: d.getUTCMonth() === 7 });
+  }
+
+  // 3案で内容は同じにする。比較の条件を変えないため。
+  const SELECTED = 15;
+  const MARKS = {
+    9: ['sky'], 10: ['sky'], 11: ['sky'],
+    15: ['moss'], 16: ['honey'],
+    22: ['honey', 'moss'], 23: ['sky'], 29: ['honey']
+  };
+
+  function grid(cellPx, gapPx) {
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const head = weekdays
+      .map((w, i) => `<div class="wk ${i === 0 ? 'sun' : i === 6 ? 'sat' : 'wd'}">${w}</div>`)
+      .join('');
+
+    const body = CELLS.map((c) => {
+      const classes = ['cell'];
+      if (!c.inMonth) classes.push('out');
+      else if (c.dow === 0) classes.push('sun');
+      else if (c.dow === 6) classes.push('sat');
+      if (c.inMonth && c.day === SELECTED) classes.push('sel');
+
+      const marks = (c.inMonth && MARKS[c.day] ? MARKS[c.day] : [])
+        .map((m) => `<span class="dot ${m}"></span>`)
+        .join('');
+
+      return `<div class="${classes.join(' ')}"><span class="num">${c.day}</span><span class="marks">${marks}</span></div>`;
+    }).join('');
+
+    const w = cellPx * 7 + gapPx * 6;
+    return `
+      <div class="grid" style="gap:${gapPx}px;width:${w}px">${head}</div>
+      <div class="grid" style="gap:${gapPx}px;width:${w}px;margin-top:${gapPx}px">${body}</div>`;
+  }
+
+  function legend() {
+    return `<div class="legend">
+      <span><i class="dot honey"></i>調整中</span>
+      <span><i class="dot moss"></i>確定済み</span>
+      <span><i class="dot sky"></i>Google Calendar</span>
+    </div>`;
+  }
+
+  function budget(segments, note) {
+    const total = 375;
+    const bar = segments
+      .map((s) => `<div class="seg ${s.kind}" style="flex:0 0 ${(s.px / total) * 100}%">${s.label}</div>`)
+      .join('');
+    return `<div class="budget"><div class="bar">${bar}</div><p class="note">${note}</p></div>`;
+  }
+
+  const OPTIONS = [
+    {
+      id: 'now',
+      title: '現状',
+      tagClass: 'now',
+      tagText: 'いま',
+      aim: '週末が画面の外にある。金曜も途中で切れる。',
+      pad: 'pad5',
+      cell: 51,
+      gap: 4,
+      scrolls: true,
+      segments: [
+        { kind: 'chrome', px: 37, label: '余白 37' },
+        { kind: 'grid7', px: 301, label: 'グリッド 301' },
+        { kind: 'over', px: 37, label: '' }
+      ],
+      note: 'セル <b>51px</b> × 7 + 溝 24 = <b>384px</b>。<b>83px（約1.6列）</b>がはみ出す。',
+      pros: [],
+      cons: ['土曜が完全に隠れ、金曜も切れる', 'スクロールできることが画面上に示されていない']
+    },
+    {
+      id: 'a',
+      title: '案A: グリッドを画面幅に収める',
+      tagClass: '',
+      tagText: '',
+      aim: 'min-w を外すだけ。7列を301pxに割り付ける。',
+      pad: 'pad5',
+      cell: 39.5,
+      gap: 4,
+      scrolls: false,
+      segments: [
+        { kind: 'chrome', px: 74, label: '余白 74' },
+        { kind: 'grid7', px: 301, label: 'グリッド 301' }
+      ],
+      note: 'セル <b>39.6px</b> × 7 + 溝 24 = <b>301px</b>。はみ出しなし。',
+      pros: ['変更が1行。壊す余地がほぼない', '土日が最初から見える'],
+      cons: ['セルが狭く、印3つ＋「重」バッジが折り返しやすい']
+    },
+    {
+      id: 'b',
+      title: '案B: 余白と溝を詰めて収める',
+      tagClass: 'rec',
+      tagText: '推奨',
+      aim: 'セルではなくカード余白から幅を取り戻す。',
+      pad: 'pad3',
+      cell: 43.5,
+      gap: 2,
+      scrolls: false,
+      segments: [
+        { kind: 'chrome', px: 58, label: '余白 58' },
+        { kind: 'grid7', px: 317, label: 'グリッド 317' }
+      ],
+      note: 'カード余白 20→12px、溝 4→2px。セル <b>43.6px</b> × 7 + 溝 12 = <b>317px</b>。案Aより<b>10%広い</b>。',
+      pros: ['土日が見えて、なおセル幅は案Aより広い', '削るのは余白なので情報量は減らない'],
+      cons: ['モバイルだけ余白が変わる（sm: 以上は現状維持）']
+    },
+    {
+      id: 'c',
+      title: '案C: 横スクロールのまま可視化する',
+      tagClass: '',
+      tagText: '',
+      aim: 'セルの読みやすさを優先し、スクロールできることを示す。',
+      pad: 'pad5',
+      cell: 51,
+      gap: 4,
+      scrolls: true,
+      segments: [
+        { kind: 'chrome', px: 37, label: '余白 37' },
+        { kind: 'grid7', px: 301, label: 'グリッド 301' },
+        { kind: 'over', px: 37, label: '' }
+      ],
+      note: 'セル寸法は現状維持。右端のフェードと初期スクロール位置だけ足す。',
+      pros: ['セルが最も広く、印もバッジも余裕をもって並ぶ'],
+      cons: ['土日を見るには操作が要る。元の不満は解消しきらない']
+    }
+  ];
+
+  document.getElementById('specimens').innerHTML = OPTIONS.map((o) => {
+    const tag = o.tagText ? `<span class="tag ${o.tagClass}">${o.tagText}</span>` : '';
+    const pros = o.pros.map((p) => `<p>○ ${p}</p>`).join('');
+    const cons = o.cons.map((c) => `<p class="con">△ ${c}</p>`).join('');
+    return `
+      <article class="specimen">
+        <header>
+          <h2>${o.title}${tag}</h2>
+          <p>${o.aim}</p>
+        </header>
+        <div class="device">
+          <div class="viewport">
+            <div class="screen">
+              <div class="card ${o.pad}">
+                ${legend()}
+                <div class="scroller ${o.scrolls ? 'scrolls' : ''}">
+                  ${grid(o.cell, o.gap)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${budget(o.segments, o.note)}
+        <div class="verdict">${pros}${cons}</div>
+      </article>`;
+  }).join('');
+</script>

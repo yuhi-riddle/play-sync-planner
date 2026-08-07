@@ -175,7 +175,9 @@ export function AdjustmentCalendarView({
 
   return (
     <>
-      <Card>
+      {/* 375px で7列を収めるため、モバイルだけ余白を詰める。
+          削るのは余白であってセルではないので、1日あたりの表示領域はむしろ広がる。 */}
+      <Card padding="p-3 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <Link
             href={`/plans?month=${previousMonth}&date=${defaultDateForMonth(previousMonth)}`}
@@ -211,9 +213,11 @@ export function AdjustmentCalendarView({
           </span>
         </div>
 
+        {/* overflow-x-auto は残す。下のグリッドは幅に追従するので通常はスクロールしないが、
+            極端に狭い端末や将来セルの中身が増えたときの逃げ道として効かせておく。 */}
         <div aria-label="日程調整カレンダーの日付一覧" className="-mx-2 mt-5 overflow-x-auto px-2 pb-2">
-          <div className="min-w-[24rem]">
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold">
+          <div>
+            <div className="grid grid-cols-7 gap-0.5 text-center text-xs font-bold sm:gap-1">
               {["日", "月", "火", "水", "木", "金", "土"].map((label, index) => (
                 <div key={label} className={clsx("py-2", weekdayClass(index))}>
                   {label}
@@ -221,7 +225,7 @@ export function AdjustmentCalendarView({
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-1">
+            <div data-testid="adjustment-month-grid" className="grid grid-cols-7 gap-0.5 sm:gap-1">
               {calendar.weeks.flat().map((day) => {
                 const googleCount = googleCalendar.daysByKey.get(day.dateKey)?.googleCount ?? 0;
                 return (
