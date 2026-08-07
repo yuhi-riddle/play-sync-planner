@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { submitAvailabilityAnswersAction } from "@/lib/actions/answers";
+import { loadPreviousAnswersAction, submitAvailabilityAnswersAction } from "@/lib/actions/answers";
 import {
   buildCandidateCalendarHints,
   monthsForCandidates,
   type AnswerCalendarEvent,
   type AnswerCandidateDate
 } from "@/lib/domain/answer-calendar";
+import { canApplyPreviousAnswers, type PreviousAnswer } from "@/lib/domain/previous-answers";
 import { formatDateTimeRange } from "@/lib/format";
 import { MadoiForm, Skeleton, TextField } from "@/components/ui";
 
@@ -19,6 +20,11 @@ export const CALENDAR_NOTICE_MIN_HEIGHT_CLASS = "min-h-4";
 export const CANDIDATE_WARNING_MIN_HEIGHT_CLASS = "min-h-9";
 
 type AnswerChoice = "yes" | "maybe" | "no";
+
+type PreviousAnswers = {
+  participantName: string;
+  answers: Record<string, PreviousAnswer>;
+};
 
 type GoogleCalendarResponse = {
   connected: boolean;
@@ -93,12 +99,19 @@ function CandidateCalendarWarning({ events, loading }: { events: AnswerCalendarE
 export function AnswerForm({ token, candidateDates }: { token: string; candidateDates: AnswerCandidateDate[] }) {
   const action = submitAvailabilityAnswersAction.bind(null, token);
   const [answers, setAnswers] = useState<Record<string, AnswerChoice | undefined>>({});
+  const [comments, setComments] = useState<Record<string, string>>({});
   const [calendarEvents, setCalendarEvents] = useState<AnswerCalendarEvent[]>([]);
   const [calendarState, setCalendarState] = useState<"idle" | "loading" | "ready" | "disconnected" | "error">("idle");
+  const [previousOffer, setPreviousOffer] = useState<PreviousAnswers | null>(null);
+  const [appliedName, setAppliedName] = useState<string | null>(null);
+  const [isLookingUp, startLookup] = useTransition();
+  // 同じ名前で何度も引かない。名前欄は候補を選ぶたびに出入りする
+  const lookedUpName = useRef("");
   const answeredCount = useMemo(
     () => candidateDates.filter((candidate) => answers[candidate.id]).length,
     [answers, candidateDates]
   );
+  const commentCount = useMemo(() => Object.values(comments).filter((comment) => comment.trim()).length, [comments]);
   const allAnswered = candidateDates.length > 0 && answeredCount === candidateDates.length;
   const remainingCount = candidateDates.length - answeredCount;
   const progressPercent = candidateDates.length === 0 ? 0 : Math.round((answeredCount / candidateDates.length) * 100);
@@ -165,9 +178,84 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
     setAnswers(Object.fromEntries(candidateDates.map((candidate) => [candidate.id, answer])));
   }
 
+  /*
+   * 前回の回答を当てる。丸ごと入れ替えずに重ねるのは、前回のあとで
+   * 候補が増えていることがあるため。増えた分は空のまま残す。
+   */
+  function applyPrevious(previous: PreviousAnswers) {
+    const entries = Object.entries(previous.answers);
+    setAnswers((current) => ({
+      ...current,
+      ...Object.fromEntries(entries.map(([candidateId, saved]) => [candidateId, saved.answer]))
+    }));
+    setComments((current) => ({
+      ...current,
+      ...Object.fromEntries(entries.map(([candidateId, saved]) => [candidateId, saved.comment]))
+    }));
+    setAppliedName(previous.participantName);
+    setPreviousOffer(null);
+  }
+
+  function handleNameBlur(value: string) {
+    const name = value.trim();
+    if (!name || name === lookedUpName.current) {
+      return;
+    }
+
+    lookedUpName.current = name;
+    setPreviousOffer(null);
+    setAppliedName(null);
+
+    startLookup(async () => {
+      const result = await loadPreviousAnswersAction(token, name);
+      if (!result.found) {
+        return;
+      }
+
+      const previous = { participantName: result.participantName, answers: result.answers };
+      // 手で選んだ回答を黙って消さない。何か入っていたら押してもらう
+      if (canApplyPreviousAnswers({ answeredCount, commentCount })) {
+        applyPrevious(previous);
+        return;
+      }
+
+      setPreviousOffer(previous);
+    });
+  }
+
   return (
     <MadoiForm action={action} className="grid gap-5">
-      <TextField label="名前" name="displayName" required requiredMessage="回答する人の名前を入力してください" />
+      <div className="grid gap-3">
+        <TextField
+          label="名前"
+          name="displayName"
+          required
+          requiredMessage="回答する人の名前を入力してください"
+          // 前に回答した人なら、名前を入れた時点で前回の内容を戻す
+          onBlurValue={handleNameBlur}
+        />
+        <div aria-live="polite">
+          {isLookingUp ? <p className="text-caption text-muted">前回の回答を確認しています。</p> : null}
+          {appliedName ? (
+            <p className="text-caption text-pine">
+              {appliedName}さんの前回の回答を読み込みました。変えたいところだけ直してください。
+            </p>
+          ) : null}
+          {previousOffer ? (
+            <div className="rounded-control border border-line-strong bg-sunken p-3">
+              <p className="text-body font-bold text-ink">{previousOffer.participantName}さんの前回の回答があります。</p>
+              <p className="mt-1 text-caption leading-5 text-muted">読み込むと、いま選んでいる内容は上書きされます。</p>
+              <button
+                type="button"
+                onClick={() => applyPrevious(previousOffer)}
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              >
+                前回の回答を読み込む
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
       <div className="rounded-control border border-line bg-surface p-4 shadow-soft">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -239,9 +327,14 @@ export function AnswerForm({ token, candidateDates }: { token: string; candidate
               <CandidateCalendarWarning events={conflictingEvents} loading={calendarState === "loading"} />
               <label className="mt-3 block text-sm font-medium text-ink">
                 <span>コメント</span>
+                {/* 前回のコメントを戻せるように制御する。非制御だと、回答だけ戻ってコメントが空のまま送られる */}
                 <input
                   className="mt-2 min-h-10 w-full rounded-control border border-line bg-surface px-3 py-2 outline-none focus:border-moss focus:ring-2 focus:ring-moss/20"
                   name={`comment:${candidate.id}`}
+                  value={comments[candidate.id] ?? ""}
+                  onChange={(event) =>
+                    setComments((current) => ({ ...current, [candidate.id]: event.target.value }))
+                  }
                 />
               </label>
             </fieldset>

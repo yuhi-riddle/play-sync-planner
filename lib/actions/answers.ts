@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { canAnswerPlan, normalizeAvailabilityInput, type AvailabilityAnswer } from "@/lib/domain/availability";
 import { resolveAnswerParticipantForSubmission } from "@/lib/domain/participant-identity";
+import { buildPreviousAnswerMap, type PreviousAnswer, type PreviousAnswerRow } from "@/lib/domain/previous-answers";
 import { buildAnswerReceivedNotificationInput, buildNotificationCandidate } from "@/lib/domain/site-notifications";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -169,6 +170,95 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
   revalidatePath("/");
   revalidatePath(`/plans/${link.plan_id}`);
   redirect(`/s/${token}/answer/complete`);
+}
+
+export type PreviousAnswersResult =
+  | { found: false }
+  | { found: true; participantName: string; answers: Record<string, PreviousAnswer> };
+
+const NOT_FOUND: PreviousAnswersResult = { found: false };
+
+/**
+ * 名前を入れた時点で、その人の前回の回答を引く。
+ *
+ * 誰を引くかは submitAvailabilityAnswersAction と同じ
+ * resolveAnswerParticipantForSubmission で決める。ここがずれると、
+ * 画面にはAさんの回答が出ているのに送信でBさんを上書きする、という事故になる。
+ *
+ * 見つからない理由（リンク切れ・期限切れ・初回）は返さない。
+ * 名前を入れただけの人に出す情報ではないし、回答ページ側で別途出している。
+ */
+export async function loadPreviousAnswersAction(token: string, displayName: string): Promise<PreviousAnswersResult> {
+  const trimmedName = displayName.trim();
+  if (!trimmedName) {
+    return NOT_FOUND;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const serverSupabase = await createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await serverSupabase.auth.getUser();
+
+  const { data: link, error: linkError } = await supabase
+    .from("share_links")
+    .select("plan_id, expires_at, status, plans(answer_deadline_at)")
+    .eq("token", token)
+    .eq("purpose", "answer")
+    .single();
+
+  if (linkError || !link || link.status === "revoked") {
+    return NOT_FOUND;
+  }
+
+  const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as { answer_deadline_at: string | null } | null;
+  const now = new Date();
+  // 回答できない状態なら、前回の回答も出さない。出しても送信で弾かれる。
+  if (!canAnswerPlan(plan?.answer_deadline_at ?? null, now) || !canAnswerPlan(link.expires_at, now)) {
+    return NOT_FOUND;
+  }
+
+  const { data: participants, error: participantsError } = await supabase
+    .from("participants")
+    .select("id, display_name, user_id")
+    .eq("plan_id", link.plan_id);
+
+  if (participantsError) {
+    return NOT_FOUND;
+  }
+
+  const resolution = resolveAnswerParticipantForSubmission({
+    participants: (participants ?? []).map((participant) => ({
+      id: participant.id,
+      displayName: participant.display_name,
+      userId: participant.user_id
+    })),
+    displayName: trimmedName,
+    userId: user?.id ?? null
+  });
+
+  if (resolution.kind !== "existing") {
+    return NOT_FOUND;
+  }
+
+  const { data: rows, error: rowsError } = await supabase
+    .from("availability_answers")
+    .select("candidate_date_id, answer, comment")
+    .eq("participant_id", resolution.participantId);
+
+  if (rowsError) {
+    return NOT_FOUND;
+  }
+
+  const answers = buildPreviousAnswerMap((rows ?? []) as PreviousAnswerRow[]);
+  if (Object.keys(answers).length === 0) {
+    return NOT_FOUND;
+  }
+
+  const participantName =
+    (participants ?? []).find((participant) => participant.id === resolution.participantId)?.display_name ?? trimmedName;
+
+  return { found: true, participantName, answers };
 }
 
 function answerNotificationTitle(plan: AnswerPlanRow) {
