@@ -70,6 +70,37 @@ function recordingSupabaseClient() {
   return { client: { from }, inserted };
 }
 
+/**
+ * updatePlanAction 用。delete も表ごとに拾う。
+ * 参加者を消したかどうかは insert だけ見ていても分からない。
+ */
+function updateRecordingClient() {
+  const inserted: Record<string, unknown[]> = {};
+  const deleted: string[] = [];
+  const from = vi.fn((table: string) => {
+    const builder: Record<string, unknown> = {};
+    builder.select = vi.fn(() => builder);
+    builder.eq = vi.fn(() => builder);
+    builder.in = vi.fn(() => builder);
+    builder.update = vi.fn(() => builder);
+    builder.upsert = vi.fn(() => builder);
+    builder.delete = vi.fn(() => {
+      deleted.push(table);
+      return builder;
+    });
+    builder.insert = vi.fn((payload: unknown) => {
+      inserted[table] = [...(inserted[table] ?? []), payload];
+      return builder;
+    });
+    builder.single = vi.fn(async () => ({ data: { id: planId, event_id: eventId }, error: null }));
+    builder.then = (resolve: (value: { data: never[]; error: null }) => unknown) =>
+      Promise.resolve({ data: [] as never[], error: null }).then(resolve);
+    return builder;
+  });
+
+  return { client: { from }, inserted, deleted };
+}
+
 function planFormData(overrides: Record<string, string> = {}) {
   const formData = new FormData();
   formData.set("title", "夏の予定");
@@ -150,5 +181,21 @@ describe("updatePlanAction", () => {
     expect(typeof result.message).toBe("string");
     expect(insertCalls).toEqual([]);
     expect(redirect).not.toHaveBeenCalled();
+  });
+
+  /*
+   * 参加者はイベントメンバーから作る（createPlanAction）。編集画面に名前の入力欄は無いので、
+   * participantNames が届くのは細工したPOSTのときだけ。受け付けると、
+   * イベントメンバーと紐付いた参加者が全部消えて、user_id の無いゲスト行に置き換わる。
+   */
+  it("participantNames を送ってもゲスト参加者を作り直さない", async () => {
+    const { client, inserted, deleted } = updateRecordingClient();
+    createSupabaseServerClient.mockResolvedValue(client);
+
+    await updatePlanAction(planId, { status: "idle" }, planFormData({ participantNames: "たろう\nはなこ" }));
+
+    expect(redirect).toHaveBeenCalled();
+    expect(deleted).not.toContain("participants");
+    expect(inserted["participants"]).toBeUndefined();
   });
 });
