@@ -1,5 +1,33 @@
 const unsetLabel = "未設定";
 
+/**
+ * このアプリの日時表示は JST 固定。
+ *
+ * 本番(Vercel)の Node.js ランタイムは UTC で、プロジェクトに TZ 設定は無い。
+ * timeZone を指定しないと実行環境に従うため、開発機(JST)では正しく見えるのに
+ * 本番だけ 9 時間ずれる。サーバーコンポーネントの描画結果は再読込しても直らない。
+ *
+ * フォーマッタを呼び出しごとに作るのは、モジュール読み込み時に固めると
+ * テストが process.env.TZ を差し替えても効かず、timeZone の指定漏れを検出できないため。
+ */
+const JST = "Asia/Tokyo";
+
+function jstFormat(value: string | Date, options: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat("ja-JP", { timeZone: JST, ...options }).format(
+    typeof value === "string" ? new Date(value) : value
+  );
+}
+
+/** JST でのカレンダー上の日付。同日判定に使う（ローカルゲッターだと TZ でずれる）。 */
+function jstDateKey(value: string | Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: JST,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(typeof value === "string" ? new Date(value) : value);
+}
+
 export function formatYenText(amount: number): string {
   return `${amount.toLocaleString("ja-JP")}円`;
 }
@@ -9,9 +37,7 @@ export function formatDate(value: string | null | undefined): string {
     return unsetLabel;
   }
 
-  return new Intl.DateTimeFormat("ja-JP", {
-    dateStyle: "medium"
-  }).format(new Date(value));
+  return jstFormat(value, { dateStyle: "medium" });
 }
 
 export function formatDateTime(value: string | null | undefined): string {
@@ -19,10 +45,7 @@ export function formatDateTime(value: string | null | undefined): string {
     return unsetLabel;
   }
 
-  return new Intl.DateTimeFormat("ja-JP", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
+  return jstFormat(value, { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function formatTime(value: string | null | undefined): string {
@@ -30,28 +53,22 @@ export function formatTime(value: string | null | undefined): string {
     return unsetLabel;
   }
 
-  return new Intl.DateTimeFormat("ja-JP", {
-    timeStyle: "short"
-  }).format(new Date(value));
+  return jstFormat(value, { timeStyle: "short" });
 }
 
 /**
- * JST 固定の時刻表示。
+ * 24時間表記・ゼロ埋めの時刻（"09:05"）。
  *
- * 既存の formatTime は timeZone を指定しておらず実行環境の TZ に従うため、
- * TZ が UTC の本番（Vercel の Node.js ランタイム）では9時間ずれる。
- * 進行表は時刻そのものが中身なので、こちらを使う。
+ * formatTime との違いは表記だけで、どちらも JST 固定。
+ * 進行表は <input type="time"> の値と突き合わせるのでゼロ埋めが要る。
  */
 export function formatJstTime(value: string | null | undefined): string {
   if (!value) {
     return unsetLabel;
   }
 
-  // フォーマッタを呼び出しごとに作るのは、モジュール読み込み時に固めると
-  // テストが process.env.TZ を差し替えても効かず、timeZone の指定漏れを検出できないため。
-  // 進行表の行数はたかが知れているので、生成コストは問題にならない。
   return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Tokyo",
+    timeZone: JST,
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
@@ -70,12 +87,7 @@ export function formatDateTimeRange(start: string | null | undefined, end: strin
     return formatDateTime(start);
   }
 
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const sameDay =
-    startDate.getFullYear() === endDate.getFullYear() &&
-    startDate.getMonth() === endDate.getMonth() &&
-    startDate.getDate() === endDate.getDate();
+  const sameDay = jstDateKey(start) === jstDateKey(end);
 
   return sameDay ? `${formatDateTime(start)} - ${formatTime(end)}` : `${formatDateTime(start)} - ${formatDateTime(end)}`;
 }
@@ -86,12 +98,8 @@ function formatAllDayRange(start: string, end: string | null | undefined): strin
     return `${startLabel} 終日`;
   }
 
-  const startDate = new Date(start);
   const inclusiveEndDate = new Date(new Date(end).getTime() - 24 * 60 * 60 * 1000);
-  const sameDay =
-    startDate.getFullYear() === inclusiveEndDate.getFullYear() &&
-    startDate.getMonth() === inclusiveEndDate.getMonth() &&
-    startDate.getDate() === inclusiveEndDate.getDate();
+  const sameDay = jstDateKey(start) === jstDateKey(inclusiveEndDate);
 
   return sameDay ? `${startLabel} 終日` : `${startLabel} - ${formatDate(inclusiveEndDate.toISOString())} 終日`;
 }
@@ -109,7 +117,19 @@ export function toDateTimeLocalValue(value: string | null | undefined): string {
     return "";
   }
 
-  const date = new Date(value);
-  const timezoneOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+  // <input type="datetime-local"> に入れる「JST の壁時計」の文字列。
+  // getTimezoneOffset() を使うと実行環境の TZ になり、本番(UTC)では
+  // 保存済みの 10:00 が 01:00 として初期表示され、そのまま保存すると値が壊れる。
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: JST,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(new Date(value));
+  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${pick("year")}-${pick("month")}-${pick("day")}T${pick("hour")}:${pick("minute")}`;
 }

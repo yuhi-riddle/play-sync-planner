@@ -377,9 +377,9 @@ Phase 1 は完了済みです。
 - [ ] `005_settlement_core.sql` を適用済み。
 - [ ] `006_settlement_payments.sql` を適用済み。
 - [ ] `007_expense_important_notes.sql` を適用済み。
-- [ ] `008_settlement_reminder_type.sql` を適用済み。
-- [ ] `009_site_notifications.sql` を適用済み。
-- [ ] `020_event_list_performance_and_atomic_block.sql` を適用済み。
+- [x] `008_settlement_reminder_type.sql` を適用済み。（`settlement_reminder_logs.reminder_type` の存在で確認）
+- [x] `009_site_notifications.sql` は `013_repair_notifications_setup.sql` が代替済み。（009 を流すと `42P07 relation "notifications" already exists` になるが想定内。013 が 009 の内容を全部含む修復版）
+- [x] `020_event_list_performance_and_atomic_block.sql` を適用済み。（RPC `list_owned_event_ids` の応答で確認）
 - [x] `021_settlement_payment_total_guard.sql` を適用済み。
 - [x] `022_share_link_revocation.sql` を適用済み。
 - [x] `023_account_deletion.sql` を適用済み。
@@ -387,7 +387,7 @@ Phase 1 は完了済みです。
 - [x] `025_participant_settlement_payment_method.sql` を適用済み。
 - [x] `026_legal_consent_app_metadata.sql` を適用済み。
 - [x] `027_user_consents_no_delete.sql` を適用済み。
-- [ ] `028_plan_timetable.sql` を適用済み。（未適用。進行表ページが 42P01 で落ちる）
+- [x] `028_plan_timetable.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。

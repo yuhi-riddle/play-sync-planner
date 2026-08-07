@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { formatJstTime, formatYenText } from "@/lib/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatDateTimeRange,
+  formatJstTime,
+  formatTime,
+  formatYenText,
+  toDateTimeLocalValue
+} from "@/lib/format";
+
+/**
+ * 本番(Vercel)は UTC、開発機は JST。TZ を差し替えないと開発機ではずれようが無く、
+ * timeZone の指定漏れを検出できない（テストが素通りする）。
+ */
+function withTz<T>(timeZone: string, run: () => T): T {
+  const original = process.env.TZ;
+  process.env.TZ = timeZone;
+  try {
+    return run();
+  } finally {
+    process.env.TZ = original;
+  }
+}
 
 describe("formatYenText", () => {
   it("3桁区切りで金額に円を付ける", () => {
@@ -57,5 +79,46 @@ describe("formatJstTime", () => {
 
   it("未設定は未設定と出す", () => {
     expect(formatJstTime(null)).toBe("未設定");
+  });
+});
+
+describe("表示フォーマットの TZ 固定", () => {
+  // JST 2026-07-15 10:00 = UTC 2026-07-15 01:00
+  const morning = "2026-07-15T10:00:00+09:00";
+  // JST 2026-07-15 01:00 = UTC 2026-07-14 16:00（日付までまたぐ）
+  const lateNight = "2026-07-15T01:00:00+09:00";
+
+  it("formatDateTime はサーバーが UTC でも JST で出す", () => {
+    expect(withTz("UTC", () => formatDateTime(morning))).toBe(withTz("Asia/Tokyo", () => formatDateTime(morning)));
+    expect(withTz("UTC", () => formatDateTime(morning))).toContain("10:00");
+  });
+
+  it("formatTime はサーバーが UTC でも JST で出す", () => {
+    expect(withTz("UTC", () => formatTime(morning))).toContain("10:00");
+  });
+
+  it("formatDate は日付をまたぐ時刻でも JST の日で出す", () => {
+    // UTC 解釈だと 7月14日 になる。
+    expect(withTz("UTC", () => formatDate(lateNight))).toBe(withTz("Asia/Tokyo", () => formatDate(lateNight)));
+    expect(withTz("UTC", () => formatDate(lateNight))).toContain("15");
+  });
+
+  it("formatDateTimeRange の同日判定を JST で行う", () => {
+    // JST では 7/15 の 10:00-13:00（同日）。UTC 解釈でも同日なので、
+    // 日付をまたぐ側（JST 7/14 23:00 - 7/15 01:00）で両方向を固定する。
+    const sameDay = withTz("UTC", () => formatDateTimeRange(morning, "2026-07-15T13:00:00+09:00"));
+    expect(sameDay).toContain("10:00");
+    expect(sameDay).toContain("13:00");
+
+    // またぐ側: 終了だけ翌日なので、終了側も日付付きで出る必要がある。
+    const crossing = withTz("UTC", () => formatDateTimeRange("2026-07-14T23:00:00+09:00", lateNight));
+    expect(crossing).toBe(withTz("Asia/Tokyo", () => formatDateTimeRange("2026-07-14T23:00:00+09:00", lateNight)));
+  });
+
+  it("toDateTimeLocalValue は保存済みの時刻を JST の壁時計に戻す", () => {
+    // 編集フォームの初期値。UTC で動くとサーバーが 01:00 を入れてしまい、
+    // そのまま保存されると候補が 9 時間ずれる。
+    expect(withTz("UTC", () => toDateTimeLocalValue(morning))).toBe("2026-07-15T10:00");
+    expect(withTz("Asia/Tokyo", () => toDateTimeLocalValue(morning))).toBe("2026-07-15T10:00");
   });
 });
