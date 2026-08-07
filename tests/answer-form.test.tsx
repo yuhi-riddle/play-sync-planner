@@ -235,9 +235,15 @@ describe("AnswerForm", () => {
       typeName("はなこ");
 
       await waitFor(() => {
-        expect(loadPreviousAnswersAction).toHaveBeenCalled();
+        expect(loadPreviousAnswersAction).toHaveBeenCalledWith("token-1", "はなこ");
       });
-      expect(screen.queryByText(/前回の回答/)).not.toBeInTheDocument();
+      /*
+       * 「呼ばれた」だけで見ると、まだ transition の途中で
+       * 「前回の回答を確認しています。」が出ている。消えるまで待つ。
+       */
+      await waitFor(() => {
+        expect(screen.queryByText(/前回の回答/)).not.toBeInTheDocument();
+      });
       expect(screen.getByText("回答済み 0/2")).toBeInTheDocument();
     });
 
