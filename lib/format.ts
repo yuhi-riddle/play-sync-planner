@@ -35,6 +35,28 @@ export function formatTime(value: string | null | undefined): string {
   }).format(new Date(value));
 }
 
+/**
+ * JST 固定の時刻表示。
+ *
+ * 既存の formatTime は timeZone を指定しておらず実行環境の TZ に従うため、
+ * TZ が UTC の本番（Vercel の Node.js ランタイム）では9時間ずれる。
+ * 進行表は時刻そのものが中身なので、こちらを使う。
+ */
+export function formatJstTime(value: string | null | undefined): string {
+  if (!value) {
+    return unsetLabel;
+  }
+
+  // フォーマッタを呼び出しごとに作るのは、モジュール読み込み時に固めると
+  // テストが process.env.TZ を差し替えても効かず、timeZone の指定漏れを検出できないため。
+  // 進行表の行数はたかが知れているので、生成コストは問題にならない。
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Tokyo",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
 export function formatDateTimeRange(start: string | null | undefined, end: string | null | undefined, isAllDay = false): string {
   if (!start) {
     return unsetLabel;
