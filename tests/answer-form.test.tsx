@@ -1,11 +1,14 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AnswerForm, CALENDAR_NOTICE_MIN_HEIGHT_CLASS, CANDIDATE_WARNING_MIN_HEIGHT_CLASS } from "@/components/answer-form";
 
+const { loadPreviousAnswersAction } = vi.hoisted(() => ({ loadPreviousAnswersAction: vi.fn() }));
+
 vi.mock("@/lib/actions/answers", () => ({
-  submitAvailabilityAnswersAction: vi.fn()
+  submitAvailabilityAnswersAction: vi.fn(),
+  loadPreviousAnswersAction
 }));
 
 const candidates = [
@@ -23,6 +26,11 @@ const candidates = [
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  loadPreviousAnswersAction.mockResolvedValue({ found: false });
 });
 
 describe("AnswerForm", () => {
@@ -145,6 +153,113 @@ describe("AnswerForm", () => {
     expect(readyNotice).toHaveClass(CALENDAR_NOTICE_MIN_HEIGHT_CLASS);
     await waitFor(() => {
       expect(readyNotice.textContent).toBe("");
+    });
+  });
+
+  describe("前回の回答", () => {
+    const previous = {
+      found: true,
+      participantName: "たろう",
+      answers: {
+        "date-1": { answer: "yes", comment: "昼からなら" },
+        "date-2": { answer: "no", comment: "" }
+      }
+    };
+
+    function renderForm() {
+      vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+      render(<AnswerForm token="token-1" candidateDates={candidates} />);
+    }
+
+    function typeName(name: string) {
+      const field = screen.getByLabelText("名前");
+      fireEvent.input(field, { target: { value: name } });
+      fireEvent.blur(field);
+    }
+
+    it("名前を入れると前回の回答を引いて、そのまま当てる", async () => {
+      loadPreviousAnswersAction.mockResolvedValue(previous);
+      renderForm();
+
+      typeName("たろう");
+
+      expect(await screen.findByText("たろうさんの前回の回答を読み込みました。変えたいところだけ直してください。")).toBeInTheDocument();
+      expect(screen.getByLabelText("候補1に行けると回答")).toBeChecked();
+      expect(screen.getByLabelText("候補2に行けないと回答")).toBeChecked();
+      expect(screen.getByText("回答済み 2/2")).toBeInTheDocument();
+      expect(loadPreviousAnswersAction).toHaveBeenCalledWith("token-1", "たろう");
+    });
+
+    it("前回のコメントも戻す", async () => {
+      // 回答だけ戻すと、コメントが空のまま送られて前回の内容が消える
+      loadPreviousAnswersAction.mockResolvedValue(previous);
+      renderForm();
+
+      typeName("たろう");
+
+      await screen.findByText(/前回の回答を読み込みました/);
+      const comments = screen.getAllByRole("textbox").filter((field) => field.getAttribute("name")?.startsWith("comment:"));
+      expect(comments[0]).toHaveValue("昼からなら");
+      expect(comments[1]).toHaveValue("");
+    });
+
+    it("入力中の回答は黙って上書きしない", async () => {
+      loadPreviousAnswersAction.mockResolvedValue(previous);
+      renderForm();
+
+      fireEvent.click(screen.getByLabelText("候補1に調整できるかもと回答"));
+      typeName("たろう");
+
+      expect(await screen.findByText("たろうさんの前回の回答があります。")).toBeInTheDocument();
+      expect(screen.getByLabelText("候補1に調整できるかもと回答")).toBeChecked();
+      expect(screen.getByLabelText("候補1に行けると回答")).not.toBeChecked();
+    });
+
+    it("押せば入力中の回答に上書きする", async () => {
+      loadPreviousAnswersAction.mockResolvedValue(previous);
+      renderForm();
+
+      fireEvent.click(screen.getByLabelText("候補1に調整できるかもと回答"));
+      typeName("たろう");
+
+      fireEvent.click(await screen.findByRole("button", { name: "前回の回答を読み込む" }));
+
+      expect(screen.getByLabelText("候補1に行けると回答")).toBeChecked();
+      expect(screen.queryByText("たろうさんの前回の回答があります。")).not.toBeInTheDocument();
+    });
+
+    it("初めての人には何も出さない", async () => {
+      loadPreviousAnswersAction.mockResolvedValue({ found: false });
+      renderForm();
+
+      typeName("はなこ");
+
+      await waitFor(() => {
+        expect(loadPreviousAnswersAction).toHaveBeenCalled();
+      });
+      expect(screen.queryByText(/前回の回答/)).not.toBeInTheDocument();
+      expect(screen.getByText("回答済み 0/2")).toBeInTheDocument();
+    });
+
+    it("名前が変わっていなければ引き直さない", async () => {
+      loadPreviousAnswersAction.mockResolvedValue(previous);
+      renderForm();
+
+      typeName("たろう");
+      await screen.findByText(/前回の回答を読み込みました/);
+
+      // 候補を選ぶたびに名前欄を出入りするので、blur ごとに叩くと無駄打ちになる
+      fireEvent.blur(screen.getByLabelText("名前"));
+
+      expect(loadPreviousAnswersAction).toHaveBeenCalledTimes(1);
+    });
+
+    it("名前が空なら引かない", () => {
+      renderForm();
+
+      typeName("   ");
+
+      expect(loadPreviousAnswersAction).not.toHaveBeenCalled();
     });
   });
 

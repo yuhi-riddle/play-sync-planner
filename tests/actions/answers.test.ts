@@ -17,7 +17,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import { submitAvailabilityAnswersAction } from "@/lib/actions/answers";
 
 /** thenable + どのメソッドチェーンでも同じ最終結果を返す最小のクエリビルダーモック。 */
-function chainable(result: { data?: unknown; error?: unknown }) {
+function chainable(result: { data?: unknown; error?: unknown }, onEq: (args: unknown[]) => void) {
   const proxy: unknown = new Proxy(
     {},
     {
@@ -28,6 +28,12 @@ function chainable(result: { data?: unknown; error?: unknown }) {
         if (prop === "single" || prop === "maybeSingle") {
           return () => Promise.resolve(result);
         }
+        if (prop === "eq") {
+          return (...args: unknown[]) => {
+            onEq(args);
+            return proxy;
+          };
+        }
         return () => proxy;
       }
     }
@@ -35,16 +41,19 @@ function chainable(result: { data?: unknown; error?: unknown }) {
   return proxy;
 }
 
-/** テーブルごとに呼び出し順で結果を返す admin クライアントのモック。 */
+/** テーブルごとに呼び出し順で結果を返す admin クライアントのモック。何で絞ったかも記録する。 */
 function adminClient(responses: Record<string, Array<{ data?: unknown; error?: unknown }>>) {
   const callIndex: Record<string, number> = {};
+  const eqCalls: Record<string, unknown[][]> = {};
   const from = vi.fn((table: string) => {
     const index = callIndex[table] ?? 0;
     callIndex[table] = index + 1;
     const result = responses[table]?.[index] ?? { data: null, error: null };
-    return chainable(result);
+    return chainable(result, (args) => {
+      (eqCalls[table] ??= []).push(args);
+    });
   });
-  return { from };
+  return Object.assign({ from }, { eqCalls });
 }
 
 function answerFormData(candidateId: string) {
@@ -98,5 +107,35 @@ describe("submitAvailabilityAnswersAction", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/");
     expect(revalidatePath).toHaveBeenCalledWith("/plans/plan-1");
     expect(redirect).toHaveBeenCalledWith("/s/token-1/answer/complete");
+  });
+
+  it("同姓同名を探す範囲を、このリンクの日程調整に絞る", async () => {
+    // 絞らないと、別の日程調整にいる同名の参加者が選ばれて、その人の回答を上書きする
+    const admin = adminClient({
+      share_links: [
+        {
+          data: {
+            plan_id: "plan-1",
+            expires_at: null,
+            status: "open",
+            plans: { id: "plan-1", title: "夏の集まり", owner_user_id: "owner-1", answer_deadline_at: null, events: { title: "夏祭り" } }
+          },
+          error: null
+        }
+      ],
+      candidate_dates: [{ data: [{ id: "candidate-1", plan_id: "plan-1" }], error: null }],
+      participants: [
+        { data: [], error: null },
+        { data: { id: "participant-1" }, error: null },
+        { data: null, error: null }
+      ],
+      availability_answers: [{ data: null, error: null }],
+      notifications: [{ data: null, error: null }]
+    });
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    await submitAvailabilityAnswersAction("token-1", answerFormData("candidate-1"));
+
+    expect(admin.eqCalls.participants).toContainEqual(["plan_id", "plan-1"]);
   });
 });
