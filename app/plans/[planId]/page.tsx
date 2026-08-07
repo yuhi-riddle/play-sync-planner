@@ -227,7 +227,7 @@ export default async function PlanDetailPage({
       />
 
       {isConfirmed ? (
-        <Card className="p-4">
+        <Card padding="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-title text-ink">Google カレンダー</h2>
@@ -260,7 +260,7 @@ export default async function PlanDetailPage({
       ) : null}
 
       {isConfirmed && isPlanOwner ? (
-        <Card className="p-4">
+        <Card padding="p-4">
           <details>
             <summary className="cursor-pointer text-body font-bold text-ink">再調整を始める</summary>
             <p className="mt-3 text-body text-muted">

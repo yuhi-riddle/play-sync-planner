@@ -168,7 +168,7 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
       />
 
       {plan.confirmed_start_at ? (
-        <Card className="p-4">
+        <Card padding="p-4">
           <p className="text-caption text-muted">開催日時</p>
           <p className="mt-1 text-body font-bold text-ink">
             {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)}
