@@ -20,7 +20,7 @@ import {
   type BadgeTone
 } from "@/components/ui";
 import { createGoogleCalendarEventForPlanAction } from "@/lib/actions/calendar";
-import { restartPlanAdjustmentAction } from "@/lib/actions/plans";
+import { extendPlanAnswerDeadlineAction, restartPlanAdjustmentAction } from "@/lib/actions/plans";
 import { markReminderSentAction } from "@/lib/actions/reminders";
 import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/share-links";
 import { planStatusLabels } from "@/lib/constants";
@@ -30,6 +30,7 @@ import {
   type CandidateAnswerSummary
 } from "@/lib/domain/confirmation";
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar-sync";
+import { ANSWER_DEADLINE_EXTENSION_DAYS, extendedAnswerDeadline } from "@/lib/domain/answer-deadline";
 import { buildProgressSummaryLine } from "@/lib/domain/plans";
 import { summarizeReminderLogs } from "@/lib/domain/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/reminder-message";
@@ -193,6 +194,17 @@ export default async function PlanDetailPage({
   const settlementStatus = getSettlementStatusView(plan.settlement_status);
   const isPlanOwner = currentUserId === plan.owner_user_id;
   const restartPlanAdjustment = restartPlanAdjustmentAction.bind(null, plan.id);
+  const extendAnswerDeadline = extendPlanAnswerDeadlineAction.bind(null, plan.id);
+  // 期限切れで未確定のときだけ出す。まだ回答を集めている最中は、期限を触る動機がない。
+  const canExtendDeadline = isPlanOwner && !isConfirmed && deadlineState === "closed";
+  const deadlineExtensionOptions = canExtendDeadline
+    ? ANSWER_DEADLINE_EXTENSION_DAYS.map((days) => ({
+        days,
+        // 押した結果がいつになるかを出す。日数だけだと、いまの期限からなのか
+        // 今からなのかが読み手に分からない。
+        deadlineAt: extendedAnswerDeadline(plan.answer_deadline_at, days, new Date())
+      }))
+    : [];
   // 共有リンクの無効化と再発行は主催者だけの操作。
   const revokeShareLink = isPlanOwner ? revokeShareLinkAction.bind(null, plan.id) : undefined;
   const reissueShareLink = isPlanOwner ? reissueShareLinkAction.bind(null, plan.id) : undefined;
@@ -259,10 +271,38 @@ export default async function PlanDetailPage({
         </Card>
       ) : null}
 
+      {canExtendDeadline ? (
+        <Card padding="p-4">
+          <h2 className="text-title text-ink">回答の受付が終わっています</h2>
+          <p className="mt-2 text-body text-muted">
+            {participantProgress.pending > 0
+              ? `あと${participantProgress.pending}人が未回答です。期限を延ばすと、配った共有リンクからまた回答してもらえます。`
+              : "期限を延ばすと、配った共有リンクからまた回答してもらえます。"}
+          </p>
+          <form action={extendAnswerDeadline} className="mt-4 grid gap-2">
+            {deadlineExtensionOptions.map((option) => (
+              <button
+                key={option.days}
+                type="submit"
+                name="days"
+                value={String(option.days)}
+                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+              >
+                <span>{option.days === 7 ? "1週間" : `${option.days}日`}延ばす</span>
+                <span className="text-caption font-normal text-muted">{formatDateTime(option.deadlineAt)}まで</span>
+              </button>
+            ))}
+          </form>
+        </Card>
+      ) : null}
+
       {isConfirmed && isPlanOwner ? (
         <Card padding="p-4">
           <details>
-            <summary className="cursor-pointer text-body font-bold text-ink">再調整を始める</summary>
+            {/* 他の折りたたみと違って ▶ が出ていた。list-none を足して見た目をそろえる。 */}
+            <summary className="cursor-pointer list-none text-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+              再調整を始める
+            </summary>
             <p className="mt-3 text-body text-muted">
               確定済みの予定を回答受付中に戻します。参加者の回答は削除され、もう一度回答を集めます。
             </p>
