@@ -3,15 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { formDataToObject } from "@/lib/form-data";
-import { jstIsoFromDateTimeLocal } from "@/lib/jst";
-import { errorState, failWith, type ActionState } from "@/lib/domain/action-state";
-import { extendedAnswerDeadline, parseAnswerDeadlineExtensionDays } from "@/lib/domain/answer-deadline";
-import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event-members";
-import { buildAnswerShareLink } from "@/lib/domain/plans";
-import { buildNotificationCandidate } from "@/lib/domain/site-notifications";
+import { formDataToObject } from "@/lib/shared/form-data";
+import { jstIsoFromDateTimeLocal } from "@/lib/shared/jst";
+import { errorState, failWith, type ActionState } from "@/lib/domain/shared/action-state";
+import { extendedAnswerDeadline, parseAnswerDeadlineExtensionDays } from "@/lib/domain/plan/answer-deadline";
+import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event/event-members";
+import { buildAnswerShareLink } from "@/lib/domain/plan/plans";
+import { buildNotificationCandidate } from "@/lib/domain/shared/site-notifications";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
-import { planSchema } from "@/lib/validators";
+import { planSchema } from "@/lib/shared/validators";
 
 /**
  * フォームから届くのは datetime-local の生文字列（"2026-07-15T10:00"、オフセット無し）。

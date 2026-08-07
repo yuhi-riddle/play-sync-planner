@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canAnswerPlan, normalizeAvailabilityInput } from "@/lib/domain/availability";
+import { canAnswerPlan, normalizeAvailabilityInput } from "@/lib/domain/plan/availability";
 
 describe("canAnswerPlan", () => {
   it("allows answers when the plan has no deadline", () => {

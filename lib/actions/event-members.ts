@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getUserDisplayName } from "@/lib/domain/profile";
+import { getUserDisplayName } from "@/lib/domain/account/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 async function requireEventOwner(eventId: string) {

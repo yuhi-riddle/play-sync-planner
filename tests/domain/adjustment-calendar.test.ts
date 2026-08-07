@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAdjustmentCalendar, defaultSelectedDateKey } from "@/lib/domain/adjustment-calendar";
+import { buildAdjustmentCalendar, defaultSelectedDateKey } from "@/lib/domain/plan/adjustment-calendar";
 
 /**
  * 本番(Vercel)は UTC、開発機は JST で動く。TZ を差し替えないと開発機では

@@ -6,7 +6,7 @@ import {
   rankCandidateSummaries,
   summarizeCandidateAnswers,
   summarizeParticipantProgress
-} from "@/lib/domain/confirmation";
+} from "@/lib/domain/plan/confirmation";
 
 describe("pickRecommendedCandidate", () => {
   it("picks the candidate with the most yes answers and then maybe answers", () => {

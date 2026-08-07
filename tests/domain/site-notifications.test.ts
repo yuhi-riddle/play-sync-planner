@@ -12,7 +12,7 @@ import {
   summarizeUnreadNotifications,
   type NotificationActionFilter,
   type NotificationCandidate
-} from "@/lib/domain/site-notifications";
+} from "@/lib/domain/shared/site-notifications";
 
 describe("buildNotificationCandidate", () => {
   it("builds an event message notification without message contents", () => {

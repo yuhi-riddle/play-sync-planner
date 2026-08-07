@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorState, failWith, successState } from "@/lib/domain/action-state";
+import { errorState, failWith, successState } from "@/lib/domain/shared/action-state";
 
 describe("errorState", () => {
   it("statusをerrorにしてメッセージを持たせる", () => {

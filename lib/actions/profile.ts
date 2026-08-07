@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { errorState } from "@/lib/domain/action-state";
+import { errorState } from "@/lib/domain/shared/action-state";
 import {
   PROFILE_AVATAR_BUCKET,
   getAvatarExtension,
@@ -13,7 +13,7 @@ import {
   profileInputSchema,
   validateAvatarFile,
   type ProfileActionState
-} from "@/lib/domain/profile";
+} from "@/lib/domain/account/profile";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const PROFILE_MIGRATION_MESSAGE =

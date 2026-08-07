@@ -1,9 +1,9 @@
 import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isWithdrawnUserMetadata } from "@/lib/domain/account";
-import { hasLegalConsentMark } from "@/lib/domain/legal-consent";
-import { getProfileOnboardingRedirect } from "@/lib/domain/profile";
+import { isWithdrawnUserMetadata } from "@/lib/domain/account/account";
+import { hasLegalConsentMark } from "@/lib/domain/account/legal-consent";
+import { getProfileOnboardingRedirect } from "@/lib/domain/account/profile";
 
 const publicPaths = new Set(["/login", "/terms", "/privacy", "/consent"]);
 

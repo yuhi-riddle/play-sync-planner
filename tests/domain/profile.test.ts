@@ -10,7 +10,7 @@ import {
   isProfileSchemaUnavailable,
   profileInputSchema,
   validateAvatarFile
-} from "@/lib/domain/profile";
+} from "@/lib/domain/account/profile";
 
 describe("profile domain", () => {
   it("uses the saved nickname before provider metadata", () => {

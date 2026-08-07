@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hasLegalConsentMark, LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/legal-consent";
+import { hasLegalConsentMark, LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/account/legal-consent";
 
 describe("hasLegalConsentMark", () => {
   it("app_metadataに同意日時の文字列があればtrueを返す", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildHomeAgendaDay, buildHomeAgendaDays, type HomeAgendaItem } from "@/lib/domain/home-agenda";
+import { buildHomeAgendaDay, buildHomeAgendaDays, type HomeAgendaItem } from "@/lib/domain/home/home-agenda";
 
 const items: HomeAgendaItem[] = [
   {

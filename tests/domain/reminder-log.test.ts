@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { summarizeReminderLogs, summarizeSettlementReminderLogs } from "@/lib/domain/reminder-log";
+import { summarizeReminderLogs, summarizeSettlementReminderLogs } from "@/lib/domain/settlement/reminder-log";
 
 describe("summarizeReminderLogs", () => {
   it("returns the latest sent time and total count", () => {

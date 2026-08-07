@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 
-import { ProfileSettingsCard } from "@/components/profile-settings-card";
-import { LoginPanel, SetupPanel } from "@/components/state-panels";
+import { ProfileSettingsCard } from "@/components/account/profile-settings-card";
+import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { Card, PageHeader } from "@/components/ui";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import {
   getGoogleProfileDefaults,
   getProfileAvatarUrl,
   isProfileSchemaUnavailable
-} from "@/lib/domain/profile";
+} from "@/lib/domain/account/profile";
 import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

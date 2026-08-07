@@ -20,7 +20,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { withdrawAccountAction } from "@/lib/actions/account";
-import { WITHDRAWN_DISPLAY_NAME } from "@/lib/domain/account";
+import { WITHDRAWN_DISPLAY_NAME } from "@/lib/domain/account/account";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { maxSessionWindowValue, type LayoutShiftSample } from "@/lib/domain/cls";
+import { maxSessionWindowValue, type LayoutShiftSample } from "@/lib/domain/shared/cls";
 
 function sample(value: number, startTime: number, hadRecentInput = false): LayoutShiftSample {
   return { value, startTime, hadRecentInput };

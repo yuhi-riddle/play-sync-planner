@@ -1,4 +1,4 @@
-import { LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/legal-consent";
+import { LEGAL_CONSENT_METADATA_KEY } from "@/lib/domain/account/legal-consent";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 /**

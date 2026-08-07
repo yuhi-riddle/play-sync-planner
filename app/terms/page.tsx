@@ -1,8 +1,8 @@
 import React from "react";
 import { Card, PageHeader, SecondaryLink } from "@/components/ui";
-import { LegalDocumentBody } from "@/components/legal-document-body";
+import { LegalDocumentBody } from "@/components/legal/legal-document-body";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { LEGAL_EFFECTIVE_DATE, TERMS_SECTIONS } from "@/lib/legal-documents";
+import { LEGAL_EFFECTIVE_DATE, TERMS_SECTIONS } from "@/lib/domain/account/legal-documents";
 
 export default async function TermsPage({ searchParams }: { searchParams: Promise<{ from?: string; next?: string }> }) {
   const { from, next } = await searchParams;

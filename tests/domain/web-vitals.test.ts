@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mapPathnameToPageTemplate, pageTemplates, isAllowedWebVitalName } from "@/lib/domain/web-vitals";
+import { mapPathnameToPageTemplate, pageTemplates, isAllowedWebVitalName } from "@/lib/domain/shared/web-vitals";
 
 // 実在する24ルートすべてを対応表どおりに検証する。
 const routeTable: Array<[string, string]> = [

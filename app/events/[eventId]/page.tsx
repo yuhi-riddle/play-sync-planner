@@ -2,17 +2,17 @@ import { CopyPlus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { EventMemberInviteCard } from "@/components/event-member-invite-card";
-import { EventInviteCandidates } from "@/components/event-invite-candidates";
-import { EventCancelAction } from "@/components/event-cancel-action";
-import { EventChat } from "@/components/event-chat";
-import { EventDetailTabs } from "@/components/event-detail-tabs";
-import { GoogleMapsDirectionsLink } from "@/components/google-maps-directions-link";
+import { EventMemberInviteCard } from "@/components/event/event-member-invite-card";
+import { EventInviteCandidates } from "@/components/event/event-invite-candidates";
+import { EventCancelAction } from "@/components/event/event-cancel-action";
+import { EventChat } from "@/components/event/event-chat";
+import { EventDetailTabs } from "@/components/event/event-detail-tabs";
+import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
 import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event-members";
 import { createEventMessageAction } from "@/lib/actions/event-messages";
 import { createEventUserInvitationsAction } from "@/lib/actions/connections";
-import { EventTaskList, type EventTaskMember } from "@/components/event-task-list";
+import { EventTaskList, type EventTaskMember } from "@/components/event/event-task-list";
 import {
   createEventTaskAction,
   deleteEventTaskAction,
@@ -20,16 +20,16 @@ import {
   updateEventTaskAssigneeAction
 } from "@/lib/actions/event-tasks";
 import { cancelEventAction, duplicateEventAction } from "@/lib/actions/events";
-import type { EventTask } from "@/lib/domain/event-tasks";
-import { categoryLabels, planStatusLabels } from "@/lib/constants";
-import { buildEventInviteUrl } from "@/lib/domain/event-members";
-import { normalizeEventDetailTab, resolveEventDetailDataNeeds } from "@/lib/domain/event-tabs";
-import { resolveEventProgress } from "@/lib/domain/event-progress";
-import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event-adjustment";
-import type { EventMessage } from "@/lib/domain/event-chat";
-import { buildInviteCandidates, resolveInviteProfileNames, type ConnectionCandidate } from "@/lib/domain/connections";
-import { getUserDisplayName } from "@/lib/domain/profile";
-import { formatDateTime } from "@/lib/format";
+import type { EventTask } from "@/lib/domain/event/event-tasks";
+import { categoryLabels, planStatusLabels } from "@/lib/shared/constants";
+import { buildEventInviteUrl } from "@/lib/domain/event/event-members";
+import { normalizeEventDetailTab, resolveEventDetailDataNeeds } from "@/lib/domain/event/event-tabs";
+import { resolveEventProgress } from "@/lib/domain/event/event-progress";
+import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event/event-adjustment";
+import type { EventMessage } from "@/lib/domain/event/event-chat";
+import { buildInviteCandidates, resolveInviteProfileNames, type ConnectionCandidate } from "@/lib/domain/account/connections";
+import { getUserDisplayName } from "@/lib/domain/account/profile";
+import { formatDateTime } from "@/lib/shared/format";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

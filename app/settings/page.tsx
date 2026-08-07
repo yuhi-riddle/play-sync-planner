@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-import { AccountEmailCard } from "@/components/account-email-card";
-import { CalendarConnectionCard } from "@/components/calendar-connection-card";
-import { ProfileSettingsCard } from "@/components/profile-settings-card";
-import { LoginPanel, SetupPanel } from "@/components/state-panels";
+import { AccountEmailCard } from "@/components/account/account-email-card";
+import { CalendarConnectionCard } from "@/components/calendar/calendar-connection-card";
+import { ProfileSettingsCard } from "@/components/account/profile-settings-card";
+import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { Card, PageHeader } from "@/components/ui";
-import { getGoogleProfileDefaults, getProfileAvatarUrl, isProfileSchemaUnavailable } from "@/lib/domain/profile";
+import { getGoogleProfileDefaults, getProfileAvatarUrl, isProfileSchemaUnavailable } from "@/lib/domain/account/profile";
 import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

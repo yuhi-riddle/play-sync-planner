@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { markLegalConsentAccepted } from "@/lib/auth/legal-consent-mark";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { hasAcceptedLegalDocuments, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
+import { hasAcceptedLegalDocuments, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/domain/account/legal";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 export async function acceptLegalDocumentsAction(formData: FormData) {

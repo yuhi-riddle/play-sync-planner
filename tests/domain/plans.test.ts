@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnswerShareLink, buildProgressSummaryLine, buildPublicSettlementUrl } from "@/lib/domain/plans";
+import { buildAnswerShareLink, buildProgressSummaryLine, buildPublicSettlementUrl } from "@/lib/domain/plan/plans";
 
 describe("buildAnswerShareLink", () => {
   it("uses the answer deadline as the share link expiration", () => {

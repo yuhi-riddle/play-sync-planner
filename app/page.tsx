@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Bell, CalendarPlus, Check } from "lucide-react";
 import { clsx } from "clsx";
 
-import { HomeNextConfirmedEventCard } from "@/components/home-next-confirmed-event-card";
-import { HomeSelectedDateAgenda } from "@/components/home-selected-date-agenda";
+import { HomeNextConfirmedEventCard } from "@/components/home/home-next-confirmed-event-card";
+import { HomeSelectedDateAgenda } from "@/components/home/home-selected-date-agenda";
 import {
   Badge,
   ButtonLink,
@@ -14,16 +14,16 @@ import {
   SectionHeading,
   type BadgeTone
 } from "@/components/ui";
-import { LoginPanel, SetupPanel } from "@/components/state-panels";
+import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/events";
-import { getEventDraftResumePath } from "@/lib/domain/event-flow";
-import { findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
+import { findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 import {
   countNotificationsByActionFilter,
   filterNotificationsByActionFilter,
   resolveNotificationActionFilter,
   type NotificationActionFilter
-} from "@/lib/domain/site-notifications";
+} from "@/lib/domain/shared/site-notifications";
 import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canReadGroupAvailability } from "@/lib/domain/calendar-availability-access";
+import { canReadGroupAvailability } from "@/lib/domain/calendar/calendar-availability-access";
 
 describe("canReadGroupAvailability", () => {
   it.each(["interested", "planning"])("allows the event owner while the event is %s", (eventStatus) => {

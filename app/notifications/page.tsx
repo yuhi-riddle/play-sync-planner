@@ -8,7 +8,7 @@ import { Badge, Card, EmptyState, PageHeader, SubmitButton, type BadgeTone } fro
 import {
   filterNotificationsByReadState,
   type NotificationReadFilter
-} from "@/lib/domain/site-notifications";
+} from "@/lib/domain/shared/site-notifications";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

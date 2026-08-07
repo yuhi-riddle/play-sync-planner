@@ -3,8 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { markLegalConsentAccepted } from "@/lib/auth/legal-consent-mark";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { getProfileCallbackRedirect } from "@/lib/domain/profile";
-import { PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
+import { getProfileCallbackRedirect } from "@/lib/domain/account/profile";
+import { PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/domain/account/legal";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {

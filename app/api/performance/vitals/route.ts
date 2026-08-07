@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { deviceClasses, pageTemplates } from "@/lib/domain/web-vitals";
+import { deviceClasses, pageTemplates } from "@/lib/domain/shared/web-vitals";
 
 const MAX_BODY_BYTES = 1024;
 

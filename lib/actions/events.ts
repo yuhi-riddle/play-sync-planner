@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { formDataToObject } from "@/lib/form-data";
-import { buildDuplicatedEvent } from "@/lib/domain/event-duplication";
-import { getAfterEventCreatePath } from "@/lib/domain/event-flow";
-import { getUserDisplayName } from "@/lib/domain/profile";
+import { formDataToObject } from "@/lib/shared/form-data";
+import { buildDuplicatedEvent } from "@/lib/domain/event/event-duplication";
+import { getAfterEventCreatePath } from "@/lib/domain/event/event-flow";
+import { getUserDisplayName } from "@/lib/domain/account/profile";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { eventDraftSchema, eventSchema } from "@/lib/validators";
+import { eventDraftSchema, eventSchema } from "@/lib/shared/validators";
 
 export async function createEventAction(formData: FormData) {
   const user = await getCurrentUser();

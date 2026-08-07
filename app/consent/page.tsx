@@ -1,4 +1,4 @@
-import { LoginConsentForm } from "@/components/login-consent-form";
+import { LoginConsentForm } from "@/components/account/login-consent-form";
 import { Card, PageHeader } from "@/components/ui";
 import { acceptLegalDocumentsAction } from "@/lib/actions/legal";
 import { safeNextPath } from "@/lib/auth/safe-next-path";

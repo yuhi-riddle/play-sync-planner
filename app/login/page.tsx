@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { LoginConsentForm } from "@/components/login-consent-form";
+import { LoginConsentForm } from "@/components/account/login-consent-form";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { hasAcceptedLegalDocuments, PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
+import { hasAcceptedLegalDocuments, PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/domain/account/legal";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

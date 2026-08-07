@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { buildConfirmationUpdates, pickRecommendedCandidate } from "@/lib/domain/confirmation";
-import { requireString } from "@/lib/form-data";
+import { buildConfirmationUpdates, pickRecommendedCandidate } from "@/lib/domain/plan/confirmation";
+import { requireString } from "@/lib/shared/form-data";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 type AnswerRow = {

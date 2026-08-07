@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sortEventTasks, summarizeEventTasks, type EventTask } from "@/lib/domain/event-tasks";
+import { sortEventTasks, summarizeEventTasks, type EventTask } from "@/lib/domain/event/event-tasks";
 
 function task(overrides: Partial<EventTask> & { id: string }): EventTask {
   return {

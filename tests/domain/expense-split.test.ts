@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { equalSplitShare, individualSplitTally, isEqualSplit } from "@/lib/domain/expense-split";
-import { buildEqualExpenseSplits } from "@/lib/domain/settlement";
+import { equalSplitShare, individualSplitTally, isEqualSplit } from "@/lib/domain/settlement/expense-split";
+import { buildEqualExpenseSplits } from "@/lib/domain/settlement/settlement";
 
 describe("equalSplitShare", () => {
   it("割り切れるときは min と max が同じ", () => {

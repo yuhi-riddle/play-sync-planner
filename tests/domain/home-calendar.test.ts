@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDayAriaLabel, buildHomeCalendar, findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home-calendar";
+import { buildDayAriaLabel, buildHomeCalendar, findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 
 const items: HomeCalendarItem[] = [
   {

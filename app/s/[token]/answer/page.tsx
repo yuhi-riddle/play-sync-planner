@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { AnswerForm } from "@/components/answer-form";
+import { AnswerForm } from "@/components/plan/answer-form";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
-import { SetupPanel } from "@/components/state-panels";
-import { canAnswerPlan } from "@/lib/domain/availability";
+import { SetupPanel } from "@/components/ui/state-panels";
+import { canAnswerPlan } from "@/lib/domain/plan/availability";
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

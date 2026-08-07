@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPreviousAnswerMap, canApplyPreviousAnswers } from "@/lib/domain/previous-answers";
+import { buildPreviousAnswerMap, canApplyPreviousAnswers } from "@/lib/domain/plan/previous-answers";
 
 describe("buildPreviousAnswerMap", () => {
   it("候補日IDをキーにして戻す", () => {

@@ -5,7 +5,7 @@ import {
   busyRangesForDate,
   hasBusyConflict,
   rangesOverlap
-} from "@/lib/domain/calendar-availability";
+} from "@/lib/domain/calendar/calendar-availability";
 
 const busy = [
   { start: "2026-07-01T10:00:00+09:00", end: "2026-07-01T11:00:00+09:00" },

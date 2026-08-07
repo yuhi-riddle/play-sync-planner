@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAvailabilitySlots, monthRangeInTokyo } from "@/lib/domain/group-availability";
+import { buildAvailabilitySlots, monthRangeInTokyo } from "@/lib/domain/plan/group-availability";
 
 describe("group availability", () => {
   it("creates an anonymous 15 minute availability count", () => {

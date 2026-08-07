@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { errorState } from "@/lib/domain/action-state";
+import { errorState } from "@/lib/domain/shared/action-state";
 import {
   WITHDRAWN_DISPLAY_NAME,
   isWithdrawalConfirmed,
   type AccountActionState
-} from "@/lib/domain/account";
-import { PROFILE_AVATAR_BUCKET, getUserDisplayName } from "@/lib/domain/profile";
+} from "@/lib/domain/account/account";
+import { PROFILE_AVATAR_BUCKET, getUserDisplayName } from "@/lib/domain/account/profile";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,

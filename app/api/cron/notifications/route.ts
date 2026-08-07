@@ -4,7 +4,7 @@ import {
   buildNotificationCandidate,
   buildPlanNotificationInputs,
   type PlanNotificationPlan
-} from "@/lib/domain/site-notifications";
+} from "@/lib/domain/shared/site-notifications";
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {

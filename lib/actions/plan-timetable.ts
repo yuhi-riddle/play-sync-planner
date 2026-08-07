@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { toJstDateKey } from "@/lib/domain/plan-timetable";
+import { toJstDateKey } from "@/lib/domain/plan/plan-timetable";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const MAX_TITLE_LENGTH = 100;
