@@ -138,7 +138,9 @@ status 候補：
 participant_type 候補：
 
 - registered
-- guest
+
+`guest` は migration 031 で制約から外した。共有ページがログイン必須になり、
+参加者は必ず `user_id` を持つようになったため、名前だけの参加者は作れない。
 
 status 候補：
 
