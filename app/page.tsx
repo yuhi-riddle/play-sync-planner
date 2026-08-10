@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 
 import { HomeNextConfirmedEventCard } from "@/components/home/home-next-confirmed-event-card";
 import { HomeSelectedDateAgenda } from "@/components/home/home-selected-date-agenda";
+import { WelcomeHero } from "@/components/home/welcome-hero";
 import {
   Badge,
   ButtonLink,
@@ -14,7 +15,7 @@ import {
   SectionHeading,
   type BadgeTone
 } from "@/components/ui";
-import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
+import { SetupPanel } from "@/components/ui/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/event/events";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import { findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
@@ -164,13 +165,12 @@ export default async function HomePage({
   const supabase = await createSupabaseServerClient();
   const user = await getCurrentUser();
 
+  /*
+   * 未ログインで最初に見る画面。以前は「共有リンクの回答以外はログインして使います」と
+   * 出していたが、共有リンクもログインが要るようになったので、その但し書きは嘘になった。
+   */
   if (!user) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="ホーム" description="共有リンクの回答以外は、ログインして使います。" />
-        <LoginPanel />
-      </div>
-    );
+    return <WelcomeHero />;
   }
 
   const plansPromise = supabase
