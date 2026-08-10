@@ -11,9 +11,10 @@ function readMigration(): string {
 
 // SQL の -- コメントを取り除いた本文。
 // 「ガードがコメントの中にだけ書いてある」ような偽装で assertion をすり抜けられないようにする。
+// 改行は CRLF に揃えられることがある（core.autocrlf）。行末の \r を落としてから見る。
 function stripSqlComments(sql: string): string {
   return sql
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => line.replace(/--.*$/, ""))
     .join("\n");
 }

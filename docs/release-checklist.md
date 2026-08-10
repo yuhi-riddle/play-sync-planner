@@ -127,8 +127,8 @@ npm.cmd run build
 
 ## 7. 公開前に決めること
 
-- [ ] 利用規約の問い合わせ先を決める。
-- [ ] プライバシーポリシーの問い合わせ先を決める。
+- [x] 利用規約の問い合わせ先を決める。（運営者「ゆうひ（個人）」、adeliaekun@gmail.com。2026-08-11）
+- [x] プライバシーポリシーの問い合わせ先を決める。（同上）
 - [ ] 本番の `NEXT_PUBLIC_SITE_URL` を決める。
 - [ ] 本番の Google OAuth redirect URI を追加する。
 - [ ] 本番の Vercel Cron で `CRON_SECRET` を使うか決める。
