@@ -1,6 +1,6 @@
 # Madoi リリース前チェックリスト
 
-最終更新: 2026-07-06
+最終更新: 2026-08-10
 
 このドキュメントは、Madoi を「いったん使える状態」として確認するための手順です。
 新機能を増やすための一覧ではなく、公開前に詰まりやすいところを潰すために使います。
@@ -40,8 +40,23 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] `supabase/migrations/017_connections_messages_and_invites.sql`
 - [ ] `supabase/migrations/018_require_follow_for_favorites.sql`
 - [ ] `supabase/migrations/019_user_profiles_and_avatars.sql`
+- [ ] `supabase/migrations/020_event_list_performance_and_atomic_block.sql`
+- [ ] `supabase/migrations/021_settlement_payment_total_guard.sql`
+- [ ] `supabase/migrations/022_share_link_revocation.sql`
+- [ ] `supabase/migrations/023_account_deletion.sql`
+- [ ] `supabase/migrations/024_event_tasks.sql`
+- [ ] `supabase/migrations/025_participant_settlement_payment_method.sql`
+- [ ] `supabase/migrations/026_legal_consent_app_metadata.sql`
+- [ ] `supabase/migrations/027_user_consents_no_delete.sql`
+- [ ] `supabase/migrations/028_plan_timetable.sql`
+- [ ] `supabase/migrations/029_event_list_search.sql`
+- [ ] `supabase/migrations/030_share_page_participant_rls.sql`
+- [ ] `supabase/migrations/031_drop_guest_participant_type.sql`
 
 途中でエラーが出た場合は、実行したファイル名とエラー全文を控えます。
+
+`009_site_notifications.sql` で `42P07 relation "notifications" already exists` が出た場合は想定内です。
+`013_repair_notifications_setup.sql` が 009 の内容を含む修復版なので、013 まで進めれば揃います。
 
 ## 3. Google 設定
 
@@ -76,9 +91,12 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] イベントに参加予定を作成する。
 - [ ] 候補日時を複数追加する。
 - [ ] 候補日時を選ぶ画面で Google Calendar の予定が見える。
+- [ ] Google Calendar を連携していないアカウントでも、イベントに参加でき、候補日時に手で回答できる。
+- [ ] 一部だけ連携している状態で、空きの集計が「参加者N人中M人分のカレンダー」と出る。
 - [ ] 調整カレンダーで Madoi の候補と Google Calendar の予定が同じタイムラインに表示される。
 - [ ] スマホ幅の調整カレンダーで、日付一覧を横スクロールでき、選択日のタイムラインが読める。
-- [ ] 共有回答リンクを別ブラウザ、またはシークレットウィンドウで開く。
+- [ ] 共有回答リンクを、参加者として招待済みの別アカウントで開く（migration 030 以降、ログインと参加者であることの両方が要る）。
+- [ ] 参加者ではないアカウントで同じリンクを開くと「このリンクは開けません」になる。
 - [ ] 予定詳細の「自分も回答する」から主催者として回答できる。
 - [ ] 日程回答を送信する。
 - [ ] 参加者が日程回答を送信したあと、主催者に「日程回答が届きました」通知が出る。
@@ -89,7 +107,7 @@ Supabase Dashboard の SQL Editor で、次の順番に実行します。
 - [ ] 清算結果を確認する。
 - [ ] スマホ幅の清算画面で、支払い先リンク、PayPayボタン、支払い記録ボタンが押しやすい。
 - [ ] 支払い依頼文面をコピーする。
-- [ ] 公開清算リンクを開く。
+- [ ] 公開清算リンクを、支払う本人のアカウントで開く（こちらもログインと参加者であることが要る）。
 - [ ] 一部支払いを記録する。
 - [ ] 主催者の清算ページで、受け取り確認待ちに表示される。
 - [ ] 主催者として受け取り確認する。

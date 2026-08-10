@@ -388,6 +388,9 @@ Phase 1 は完了済みです。
 - [x] `026_legal_consent_app_metadata.sql` を適用済み。
 - [x] `027_user_consents_no_delete.sql` を適用済み。
 - [x] `028_plan_timetable.sql` を適用済み。
+- [x] `029_event_list_search.sql` を適用済み。
+- [x] `030_share_page_participant_rls.sql` を適用済み。（参加者のJWTで3件、他人のJWTで0件を確認）
+- [ ] `031_drop_guest_participant_type.sql` を適用済み。
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。

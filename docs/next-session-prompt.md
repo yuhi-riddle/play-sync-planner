@@ -6,56 +6,58 @@
 
 play-sync-planner の続き。
 
-前回セッション（2026-08-03）でモバイル表示改善7件を main にマージ・push 済み（HEAD `4411ad1`）。
-157ファイル / 803テスト全通過、lint・tsc・build もクリーン。
-進行表（タイムスケジュール）の設計docも書いてある（実装計画はまだ）。
+前回セッション（2026-08-10）までに main へマージ・push 済み（HEAD は `feat/welcome-hero` のマージ）。
+172ファイル / 1061テスト全通過、lint・build もクリーン。
 
-まず `~/.claude/memory/projects/play-sync-planner/STATE.md` を読んで状況を確認してほしい。
+まず `C:\Users\yuyan\.claude\memory\MEMORY.md`（索引）を読んで状況を確認してほしい。
+
+## 直近で入ったもの
+
+- **ゲスト参加者の廃止** — 共有ページ（`/s/[token]/answer`、`/s/[token]/settlement`）を
+  ログイン必須にし、名前を選ばせるUIと `?viewer=` を消した
+- **共有ページの参加者RLS（migration 030）** — それまで全ポリシーが
+  `plans.owner_user_id = auth.uid()` のオーナー限定で、参加者は1行も読めなかった。
+  だから `/s/` は service role を使っていた。`security definer` のヘルパー6本を足して
+  参加者スコープを作り、両ページを本人のクライアントに移した。
+  列は RLS で絞れないため `settlement_status` だけは RPC `mark_plan_settling` 経由
+- **Googleカレンダー連携の任意化** — 招待参加時の強制リダイレクトを外した。
+  空きの集計の母数は「参加者総数」ではなく「連携している人数」。ここを総数のままにすると、
+  未連携の人が busy に出ないぶん、そのまま空き扱いになる
+- **ウェルカム画面** — 未ログインのホームを `LoginPanel` から `WelcomeHero` に差し替え。
+  入口は `/login` へのボタン1つ（認証はGoogleだけなので押し分けは作らない）
 
 ## 先に片付けたいもの
 
-**A. マイグレーション 025 の適用確認**
+**A. migration 031 の適用**
 
-`/plans/[planId]/settlement` が404になる原因。前回 read-only probe で
-`42703 column participants.settlement_payment_method does not exist` を確認済み。
-自分で SQL エディタに `supabase/migrations/025_participant_settlement_payment_method.sql` を
-流したら伝えるので、probe を投げ直して確認してほしい。
-あわせて `docs/current-status.md` の適用チェックリストに 025/026/027 の行を足したい
-（024 で止まっている）。
+`supabase/migrations/031_drop_guest_participant_type.sql` がまだ本番に流れていない。
+`participants.participant_type` の既定値を `registered` にして、
+CHECK 制約から `'guest'` を落とすだけ。流したら伝えるので、確認SQLを出してほしい。
 
-**B. 実機確認（375px）**
+**B. 利用規約に利用者の範囲を明記**
 
-自分でスクショを撮るので確認観点を出してほしい。前回の改修が効いているかを見たい。
+ゲスト参加が無くなり、利用者は全員ログイン済みになった。規約の文面がまだ追いついていない。
+問い合わせ先・運営者情報を自分が決めたら着手する（未定のあいだは触らない）。
 
-- ヘッダー1段化後、最初のカードがファーストビューに入るか
-- プロフィール未設定のアカウントで375px（名前が出るぶん幅が厳しい）
-- FAB が最後のカードに重ならないか
-- iOS と Android の両方でキーボードが入力欄を隠さないか
-- オーナー以外のアカウントでのタブ表示（前回アカウントが1つで未確認）
+**C. `plans.title` が3件とも null**
 
-## 本命
-
-**C. 進行表（タイムスケジュール）の実装**
-
-設計docは `docs/superpowers/specs/2026-08-03-plan-timetable-design.md` にある。
-実装計画から作ってほしい。**実装はサブエージェントで進めてよい。**
-
-決まっていること: plans紐づけ / 担当は participants / `end_at` は任意 /
-分岐は「end_at を持つ行同士の時間帯の重なり」で判定 / `/plans/[planId]/timetable` /
-マイグレーションは028以降。
+本番の掃除後に残った3件。コード側でどう扱うかを決めたい。
 
 ## そのあと（順不同、相談したい）
 
-- **追加UIの既存3箇所への展開** — タスク追加バー・立替フォーム・支払いを記録。
-  作法は前回決めてある（入口は折りたたみ、軽いものは `<details>` でその場、重いものは専用ページ）
-- **立替フォームの専用ページ化** — `ExpenseForm` は settlement ページで3箇所描画されている。
-  切り出せばあの巨大ページも軽くなる
-- **`event_tasks` の複数担当化 ＋ 受け取り方法の複数指定** — 同じトグルチップ部品で同時に解ける
+- **`feat/event-search`（`771b108`）の作り直し** — フォルダ構成が変わったので、
+  そのままでは載らない。migration 029 は main にあり本番にも適用済み
+- **`.ics` 書き出し** — いまは「Google Calendarに追加」しかなく、連携が任意になったぶん
+  Googleを使っていない人の出口が無い
+- **`event_members` の表示名ずれ** — 古いスナップショットが「ゆう」「ゆうひ」を持ち続ける。
+  どちらを正とするか決める必要がある
+- **ホームの大小メリハリ** — 案A/案Bを作ったがいったん棚上げ（2026-08-10、本人判断）
 - **codex/performance-security-foundation の分割取り込み計画** — 112ファイル・+14,413行。
-  マイグレーションは028番以降で書き直し。**このブランチは消さないこと**
+  マイグレーションは032番以降で書き直し。**このブランチは消さないこと**
 
 ## 小さい繰り越し（急がない）
 
+- `CRON_SECRET` を Vercel と GAS で揃える（本人作業）
 - 同型のエラー握り潰しが他に23箇所（`const { data: x } = await supabase` で error を捨てる）。
   うち8箇所は `notFound()` も併用。ページごとに正しい振る舞いが違うので一括修正は危険
 - `terminalStatuses` が `lib/event-filter.ts` にあり `lib/domain/` がそこに依存している。
@@ -63,15 +65,20 @@ play-sync-planner の続き。
 - `app/layout.tsx` に `import React` が無い
 - チャットの `aria-live` が1800文字超で打鍵ごとに発火して冗長。送信失敗→再送のテストも無い
 - 清算画面のバナー「受け取り方法が未設定の清算があります」が実態（本人のみ設定可能）とズレている
-- ローカルブランチの後片付け（git-guardrails フックが `git branch -D` を一律ブロックする）
+- リモートブランチの後片付け（`feat/expense-form-usability`、`redesign/madoi-brushup`、
+  `wip/legacy-helper-test`、`wip/member-first-answer-gate`）
 
 ---
 
-## 前回の学び（次も効くはず）
+## 前回までの学び（次も効くはず）
 
+- **テストは `--reporter=dot` で流す。** 既定のレポーターは170ファイル分を吐く。
+  `npx vitest run --reporter=dot 2>&1 | tail -n 12` なら結果は1行
+- **本番DBへの書き込みは通らない。** 回避しようとせず、SQLを出して本人に
+  Supabase SQL Editor で流してもらう。SQL Editor は**最後の文の結果しか表示しない**ので、
+  確認は1本の `select` にスカラーサブクエリを並べる形で書く
 - **最終レビュー（全体diff）はOpusで必ずやる。** 個別タスクのレビューが全部Approvedでも、
-  そのあと自分たちが入れた退行を2件拾った。条件を厳しくしたときの「false側」や、
-  「別の場所が状態を伝えているから」という前提そのものは、タスク単位では見えない
+  そのあと自分たちが入れた退行を2件拾った
 - **計画に書いたテストコードを疑う。** 守るべき分岐を一度も通っていないテストが混ざっていた。
   ミューテーション検査を実装者にやらせると確実
 - **設計は具体シナリオで殴ると穴が出る。**「旅行で二手に分かれたら?」の一言で進行表の
