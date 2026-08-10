@@ -18,7 +18,8 @@ describe("legal pages", () => {
 
     expect(screen.getByRole("heading", { name: "4. 共有範囲" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "7. 保存期間" })).toBeInTheDocument();
-    expect(screen.getByText(/日程回答用の共有リンク/)).toBeInTheDocument();
+    // 共有リンクはトークンを知っているだけでは開けない。本文もそう読める形になっている。
+    expect(screen.getByText(/リンクを知っているだけでは開けません/)).toBeInTheDocument();
   });
 
   it("退会の方法と、退会しても残る記録を説明する", async () => {
