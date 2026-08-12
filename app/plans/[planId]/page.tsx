@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
 
-import { CalendarShareLink } from "@/components/calendar/calendar-share-link";
+import { CalendarIcsLink, CalendarShareLink } from "@/components/calendar/calendar-share-link";
 import { ParticipantDeleteButton } from "@/components/plan/participant-delete-button";
 import { ReminderMessageCard } from "@/components/settlement/reminder-message-card";
 import { SettlementStatusBadge } from "@/components/settlement/settlement-status-badge";
@@ -238,6 +238,7 @@ export default async function PlanDetailPage({
             {isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/timetable`}>当日の進行表へ</SecondaryLink> : null}
             {isConfirmed ? <SecondaryLink href={`/plans/${plan.id}/settlement`}>支払い・清算へ</SecondaryLink> : null}
             {calendarShareUrl ? <CalendarShareLink href={calendarShareUrl} /> : null}
+            {calendarShareUrl ? <CalendarIcsLink href={`/api/plans/${plan.id}/calendar.ics`} /> : null}
           </div>
         }
       />

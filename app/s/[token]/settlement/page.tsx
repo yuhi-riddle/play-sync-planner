@@ -5,7 +5,7 @@ import {
   type PublicSettlementExpense,
   type PublicSettlementItem
 } from "@/components/settlement/public-settlement-summary";
-import { CalendarShareLink } from "@/components/calendar/calendar-share-link";
+import { CalendarIcsLink, CalendarShareLink } from "@/components/calendar/calendar-share-link";
 import { PaymentRecordedNotice } from "@/components/settlement/payment-recorded-notice";
 import { SetupPanel } from "@/components/ui/state-panels";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
@@ -231,7 +231,10 @@ export default async function PublicSettlementPage({
                 {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
               </p>
             </div>
-            <CalendarShareLink href={calendarShareUrl} />
+            <div className="flex flex-wrap gap-3">
+              <CalendarShareLink href={calendarShareUrl} />
+              <CalendarIcsLink href={`/api/plans/${plan.id}/calendar.ics`} />
+            </div>
           </div>
         </Card>
       ) : null}
