@@ -15,11 +15,14 @@ const basePagination = {
   rangeTo: 9
 };
 
+/** 1ページに収まらない件数。検索欄はこのときだけ出る。 */
+const manyPagination = { ...basePagination, totalItems: 27, totalPages: 3, to: 10 };
+
 describe("EventListControls", () => {
   it("状態はチップで出し、押すと1ページ目に戻る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 3 }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 3, search: "" }}
         draftCount={2}
         pagination={{ ...basePagination, page: 3, totalItems: 46, totalPages: 5, from: 21, to: 30 }}
       />
@@ -35,7 +38,7 @@ describe("EventListControls", () => {
   it("下書きの件数はチップに出る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1 }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
         draftCount={2}
         pagination={basePagination}
       />
@@ -47,7 +50,7 @@ describe("EventListControls", () => {
   it("下書きが0件なら数字を出さない", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1 }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -59,7 +62,7 @@ describe("EventListControls", () => {
   it("既定の条件なら詳しい絞り込みは畳んでおく", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "cancelled", category: "all", sort: "newest", pageSize: 10, page: 1 }}
+        query={{ status: "cancelled", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -73,7 +76,7 @@ describe("EventListControls", () => {
   it("既定以外の条件が入っていたら開いた状態で出す", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "active", category: "live", sort: "soonest", pageSize: 20, page: 1 }}
+        query={{ status: "active", category: "live", sort: "soonest", pageSize: 20, page: 1, search: "" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -86,7 +89,7 @@ describe("EventListControls", () => {
   it("カテゴリ・表示順・表示件数はGETフォームのまま残す", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1 }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
         draftCount={1}
         pagination={basePagination}
       />
@@ -105,7 +108,7 @@ describe("EventListControls", () => {
   it("条件を変えても、チップで選んだ状態は保たれる", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "completed", category: "all", sort: "newest", pageSize: 10, page: 1 }}
+        query={{ status: "completed", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -116,10 +119,129 @@ describe("EventListControls", () => {
     expect(hidden).toHaveValue("completed");
   });
 
+  it("検索欄は畳まず、いつでも見えるところに出す", () => {
+    // details の中に入れると「探せること」が画面のどこにも出ない
+    const { container } = render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        draftCount={0}
+        pagination={manyPagination}
+      />
+    );
+    const searchBox = container.querySelector('input[name="search"][type="search"]');
+    expect(searchBox).not.toBeNull();
+    expect(searchBox?.closest("details")).toBeNull();
+  });
+
+  it("1ページに収まる件数なら検索欄は出さない", () => {
+    // 375px で 56px 使うのに、全部見えている人には効かない
+    const { container } = render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    expect(container.querySelector('input[name="search"][type="search"]')).toBeNull();
+  });
+
+  it("検索中は、結果が1件でも検索欄を出し続ける", () => {
+    // 消すと検索語を直せなくなる
+    const { container } = render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        draftCount={0}
+        pagination={{ ...basePagination, totalItems: 1, totalPages: 1, from: 1, to: 1 }}
+      />
+    );
+
+    expect(container.querySelector('input[name="search"][type="search"]')).not.toBeNull();
+  });
+
+  it("検索しても絞り込みは持ち回す", () => {
+    const { container } = render(
+      <EventListControls
+        query={{ status: "completed", category: "live", sort: "soonest", pageSize: 20, page: 2, search: "" }}
+        draftCount={0}
+        pagination={{ ...manyPagination, pageSize: 20 }}
+      />
+    );
+
+    // 持ち回さないと、検索した瞬間に「進行中・すべて・新しい順」へ戻る
+    const form = container.querySelector('form[role="search"]');
+    const hidden = Object.fromEntries(
+      [...(form?.querySelectorAll('input[type="hidden"]') ?? [])].map((input) => [
+        input.getAttribute("name"),
+        input.getAttribute("value")
+      ])
+    );
+    expect(hidden).toEqual({ status: "completed", category: "live", sort: "soonest", limit: "20" });
+    // page は送らない。2ページ目のまま検索すると空振りする
+    expect(form?.querySelector('input[name="page"]')).toBeNull();
+  });
+
+  it("検索中は、検索語と解除の導線を出す", () => {
+    render(
+      <EventListControls
+        query={{ status: "active", category: "live", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        draftCount={0}
+        pagination={{ ...basePagination, totalItems: 0, totalPages: 0, from: 0, to: 0 }}
+      />
+    );
+
+    // 0件だと件数の行が出ないので、ここに解除が無いと戻れなくなる
+    expect(screen.getByText("「沖縄」で検索中")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "検索を解除" })).toHaveAttribute("href", "/events?category=live");
+  });
+
+  it("検索していなければ解除の導線は出さない", () => {
+    render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    expect(screen.queryByRole("link", { name: "検索を解除" })).not.toBeInTheDocument();
+  });
+
+  it("条件を変えても検索語は残る", () => {
+    const { container } = render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const detailForm = screen.getByRole("form", { name: "イベント一覧の表示条件" });
+    expect(detailForm.querySelector('input[type="hidden"][name="search"]')).toHaveValue("沖縄");
+    // 検索欄側にも今の語を残す。消えると打ち直しになる
+    expect(container.querySelector('input[name="search"][type="search"]')).toHaveValue("沖縄");
+  });
+
+  it("状態のチップは検索語を保ったまま切り替える", () => {
+    render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const chips = screen.getByRole("navigation", { name: "状態で絞り込む" });
+    expect(within(chips).getByRole("link", { name: "完了" })).toHaveAttribute(
+      "href",
+      "/events?status=completed&search=%E6%B2%96%E7%B8%84"
+    );
+  });
+
   it("ページ送りは絞り込みを保ったまま出す", () => {
     render(
       <EventListControls
-        query={{ status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2 }}
+        query={{ status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2, search: "" }}
         draftCount={0}
         pagination={{
           page: 2,

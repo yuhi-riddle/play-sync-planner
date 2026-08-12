@@ -166,7 +166,8 @@ describe("EventsPage", () => {
       p_category: "travel",
       p_sort: "soonest",
       p_limit: 20,
-      p_offset: 20
+      p_offset: 20,
+      p_query: null
     });
     expect(eventQuery.in).toHaveBeenCalledWith("id", ["event-1", "event-2"]);
     expect(screen.getAllByRole("heading", { level: 2, name: /番目/ }).map((heading) => heading.textContent)).toEqual([
@@ -174,6 +175,59 @@ describe("EventsPage", () => {
       "2番目"
     ]);
     expect(screen.getByText("21-40 / 1001件")).toBeInTheDocument();
+  });
+
+  it("検索語はデータベースに渡す", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 0);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ search: " 沖縄 " }) }));
+
+    // アプリ側で絞ると、件数とページ送りが検索結果と噛み合わなくなる
+    expect(rpc).toHaveBeenCalledWith("list_owned_event_ids", expect.objectContaining({ p_query: "沖縄" }));
+    expect(
+      screen.getByText("「沖縄」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。")
+    ).toBeInTheDocument();
+  });
+
+  it("下書きも検索でしぼる", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = vi.fn();
+    const draftQuery = createDraftQuery({
+      id: "draft-1",
+      payload: { title: "入力途中の旅行", category: "travel", location_name: "札幌" },
+      updated_at: "2026-07-15T00:00:00Z"
+    });
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    // 下書きはサーバーに無くcookieの中なので、SQL の ilike が効かない
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "draft", search: "沖縄" }) }));
+    expect(screen.queryByRole("heading", { name: "入力途中の旅行" })).not.toBeInTheDocument();
+  });
+
+  it("下書きは場所メモでも見つかる", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = vi.fn();
+    const draftQuery = createDraftQuery({
+      id: "draft-1",
+      payload: { title: "入力途中の旅行", category: "travel", location_name: "札幌" },
+      updated_at: "2026-07-15T00:00:00Z"
+    });
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "draft", search: "札幌" }) }));
+    expect(screen.getByRole("heading", { name: "入力途中の旅行" })).toBeInTheDocument();
   });
 
   it("shows the saved draft instead of querying event rows when draft is selected", async () => {
