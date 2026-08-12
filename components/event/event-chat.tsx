@@ -5,6 +5,24 @@ import { unstable_rethrow } from "next/navigation";
 
 import type { EventMessage } from "@/lib/domain/event/event-chat";
 
+const MAX_BODY_LENGTH = 2000;
+const REMAINING_NOTICE_THRESHOLD = 1800;
+
+/**
+ * 読み上げる区切り。残り文字数が最初に当てはまった値を読む。
+ * 残り文字数そのものを aria-live に載せると、1文字打つたびに読み上げが割り込んで
+ * 入力の邪魔になる。区切りを跨いだときだけ文言が変わるようにしてある。
+ */
+const ANNOUNCE_BANDS = [0, 50, 100, 200];
+
+function buildRemainingAnnouncement(remaining: number): string {
+  const band = ANNOUNCE_BANDS.find((value) => remaining <= value);
+
+  if (band === undefined) return "";
+  if (band === 0) return "文字数の上限に達しました";
+  return `残り ${band}文字以下です`;
+}
+
 export function EventChat({
   messages,
   action,
@@ -74,13 +92,19 @@ export function EventChat({
             id="event-chat-message"
             name="body"
             rows={2}
-            maxLength={2000}
+            maxLength={MAX_BODY_LENGTH}
             placeholder="参加者にメッセージを送る"
             onChange={(event) => setBodyLength(event.target.value.length)}
             className="w-full rounded-control border border-moss/18 bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
           />
           <div className="flex items-center justify-between gap-3">
-            <p aria-live="polite" className="text-xs text-muted">{bodyLength > 1800 ? `残り ${2000 - bodyLength}文字` : ""}</p>
+            {/* 目で見るほうは打鍵ごとに更新する。読み上げは下の区切りだけに任せる。 */}
+            <p className="text-xs text-muted">
+              {bodyLength > REMAINING_NOTICE_THRESHOLD ? `残り ${MAX_BODY_LENGTH - bodyLength}文字` : ""}
+            </p>
+            <span aria-live="polite" className="sr-only">
+              {buildRemainingAnnouncement(MAX_BODY_LENGTH - bodyLength)}
+            </span>
             <button
               type="submit"
               disabled={isPending}

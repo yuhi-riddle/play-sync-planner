@@ -5,10 +5,13 @@ import { describe, expect, it } from "vitest";
 
 const migrationPath = resolve(process.cwd(), "supabase/migrations/028_plan_timetable.sql");
 
-/** コメント行に退避したガードを「ある」と誤判定しないため、検証前に落とす。 */
+/**
+ * コメント行に退避したガードを「ある」と誤判定しないため、検証前に落とす。
+ * 改行は CRLF に揃えられることがある（core.autocrlf）ので、\r ごと切り分ける。
+ */
 function withoutComments(sql: string): string {
   return sql
-    .split("\n")
+    .split(/\r?\n/)
     .filter((line) => !line.trimStart().startsWith("--"))
     .join("\n");
 }

@@ -59,13 +59,38 @@ describe("EventChat", () => {
     expect(screen.queryByText("2,000文字まで")).not.toBeInTheDocument();
   });
 
-  it("1800文字を超えたら残り文字数をaria-liveで知らせる", () => {
+  it("1800文字を超えたら残り文字数を目に見える形で出す", () => {
     render(<EventChat messages={[]} action={vi.fn()} canPost />);
 
     const textarea = screen.getByLabelText("メッセージ");
     fireEvent.change(textarea, { target: { value: "あ".repeat(1801) } });
 
-    const remainingNote = screen.getByText("残り 199文字");
-    expect(remainingNote).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText("残り 199文字")).toBeInTheDocument();
+  });
+
+  /*
+   * 残り文字数そのものに aria-live を付けると、1文字打つたびに読み上げが割り込む。
+   * 目に見えるカウンタは毎回更新しつつ、読み上げは区切りを跨いだときだけ変える。
+   */
+  it("読み上げは打鍵ごとに変わらず、区切りを跨いだときだけ変わる", () => {
+    render(<EventChat messages={[]} action={vi.fn()} canPost />);
+
+    const textarea = screen.getByLabelText("メッセージ");
+
+    fireEvent.change(textarea, { target: { value: "あ".repeat(1801) } });
+    expect(screen.getByText("残り 199文字")).not.toHaveAttribute("aria-live");
+    const live = screen.getByText("残り 200文字以下です");
+    expect(live).toHaveAttribute("aria-live", "polite");
+
+    // 1文字増えても読み上げ用の文言は動かない。
+    fireEvent.change(textarea, { target: { value: "あ".repeat(1802) } });
+    expect(screen.getByText("残り 200文字以下です")).toBeInTheDocument();
+
+    // 区切りを跨いだら変わる。
+    fireEvent.change(textarea, { target: { value: "あ".repeat(1955) } });
+    expect(screen.getByText("残り 50文字以下です")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "あ".repeat(2000) } });
+    expect(screen.getByText("文字数の上限に達しました")).toBeInTheDocument();
   });
 });
