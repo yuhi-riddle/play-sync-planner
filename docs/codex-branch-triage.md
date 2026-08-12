@@ -18,8 +18,8 @@
 | # | 内容 | 状態 |
 |---|---|---|
 | 1 | 現状値と管理権限の利用箇所を固定する | **作り直し**。migration 030 で service role の使い所が激変したので、当時の棚卸しは使えない |
-| 2 | 保護関数の匿名実行を止める（021） | 未取り込み。**要修正**（下記） |
-| 3 | DB権限を実環境で検証するスクリプト | 未取り込み。そのまま使える |
+| 2 | 保護関数の匿名実行を止める（021） | 未取り込み。**要修正**（下記）。実測で穴が確認された |
+| 3 | DB権限を実環境で検証するスクリプト | ✅ 取り込み済み（2026-08-12） |
 | 4 | 用途別RPCと索引（022） | **一部済み**。イベント一覧は 020/029 で実現済み。つながり・予定・招待候補が残り |
 | 5 | つながりを分類別20件のカーソル取得へ | 未取り込み |
 | 6 | カレンダー取得を表示月だけに | 未取り込み（`timeMin` の絞りは一部入っている） |
@@ -62,16 +62,54 @@ main の `middleware.ts`（211行）は、ブランチ版（209行）に対し�
 
 | ブランチ | 振り直し先 | 中身 | 注意 |
 |---|---|---|---|
-| `021_function_privilege_hardening` (312行) | `032_` | `private` スキーマへの補助関数移設、`public` 関数の実行権限剥奪 | **030 が足した `public.is_plan_participant` ほか6本を知らない。**そのままだと剥奪漏れになる |
+| `021_function_privilege_hardening` (312行) | `032_` | `private` スキーマへの補助関数移設、`public` 関数の実行権限剥奪 | `list_owned_event_ids` の剥奪が**旧5引数のシグネチャ**を指している。029 で `p_query` が増えたので、そのままでは対象の関数が見つからない |
 | `022_page_query_performance` (661行) | `033_` | 索引7本、RPC 5本、ポリシー2本 | ポリシー `Joined members can view plans` などが 030 の参加者ポリシーと**重なる**。名前は違うので壊れないが、同じ意味の許可が二重になる |
 | `023_rate_limits_and_security_audit` (2,085行) | `034_` | `private.rate_limit_buckets` / `private.security_audit_logs` の2テーブルと関数13本 | 単独で最大。分割を検討する |
 | `024_performance_measurements` (136行) | `035_` | `private.web_vital_samples` テーブルと記録・削除の関数 | `private.rate_limit_for` を 023 と重複定義している。023 を入れる前提の順番になっている |
+
+## 実測でわかったこと（2026-08-12、タスク3の成果）
+
+`scripts/security/verify-function-privileges.mjs` を本番へ当てた結果、
+**保護対象13関数すべてが匿名で実行できた**（全部 status 200）。
+
+各マイグレーションには `revoke all on function ... from public` が書いてあるのに効いていない。
+Supabase が `anon` ロールへ実行権限を**個別に**付与しているため、`public` からの剥奪だけでは残る。
+ブランチの 021 が `from public` と `from anon` の両方を剥奪しているのは、これを踏まえたものだった。
+
+### 実害があるのは3本
+
+| 関数 | 引数 | `auth.uid()` の照合 | 匿名で呼んだとき |
+|---|---|---|---|
+| `have_shared_event(a, b)` | 他人のUUID 2つ | **無し** | 2人が同じイベントにいるかが分かる |
+| `is_user_blocked(a, b)` | 他人のUUID 2つ | **無し** | 2人がブロック関係かが分かる |
+| `is_following(a, b)` | 他人のUUID 2つ | **無し** | a が b をフォローしているかが分かる |
+
+いずれも `security definer` で、呼び出し元を見ていない。ユーザーUUIDを2つ知っていれば、
+ログインせずに交友関係を1件ずつ確かめられる。
+
+残り10本（`is_plan_participant` など単一IDの判定と `list_owned_event_ids`）は
+内部で `auth.uid()` と突き合わせるので、匿名では常に false か空を返す。
+叩けること自体は望ましくないが、情報は漏れない。
+
+### 使い方
+
+```
+set -a; . ./.env.local; set +a
+SECURITY_TEST_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+SECURITY_TEST_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+ALLOW_PRODUCTION_SECURITY_PROBE=true \
+node scripts/security/verify-function-privileges.mjs
+```
+
+本番へ向けるときは `ALLOW_PRODUCTION_SECURITY_PROBE=true` が要る。うっかり本番へ
+本物のJWTを流さないための入口。既定の `anon-only` モードは読み取りだけで、
+状態を変える関数（`block_user_atomic`、`mark_plan_settling`）には触れない。
 
 ## 取り込みの順番（案）
 
 依存の少ないものから。1スライス = 1ブランチ = 1マージ。
 
-1. **DB権限の検証スクリプト**（タスク3）— DBを変えずに現状を可視化できる。何が守られていないか分かってから 032 を書ける
+1. ~~**DB権限の検証スクリプト**（タスク3）~~ — 済（2026-08-12）。上の実測結果がその成果
 2. **関数の権限剥奪**（タスク2 → 032）— 030 の6関数を足したうえで書き直す
 3. **Web Vitals の保存**（タスク10 → 035 相当）— 小さく、既存コードの穴埋めで完結する。ただし 023 の `rate_limit_for` を切り出す必要あり
 4. **索引とRPC**（タスク4 → 033）— 効果が見えやすい。ポリシー2本は 030 と突き合わせてから
