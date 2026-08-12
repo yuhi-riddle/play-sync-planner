@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 import React from "react";
 
 import { categoryLabels, EVENT_CATEGORIES } from "@/lib/shared/constants";
 import {
   buildEventListHref,
   EVENT_LIST_PAGE_SIZES,
+  EVENT_SEARCH_MAX_LENGTH,
   type EventListFilter,
   type EventListPagination,
   type EventListQuery,
@@ -44,6 +46,7 @@ export function EventListControls({
    * 残り（カテゴリ・表示順・表示件数）は畳んでおく。立替フォームと同じ段階的開示。
    */
   const isDefaultDetail = query.category === "all" && query.sort === "newest" && query.pageSize === 10;
+  const isSearchVisible = Boolean(query.search) || pagination.totalItems > pagination.pageSize;
   const detailSummary = [
     query.category === "all" ? "すべてのカテゴリ" : categoryLabels[query.category],
     sortLabels[query.sort],
@@ -58,6 +61,50 @@ export function EventListControls({
       レイアウトボックスを残すので、閉じていても効いてしまう。
     */
     <section className="grid grid-cols-1 gap-3">
+      {/*
+        検索は畳まない。畳むと「探せること」が画面のどこにも出ない。
+        代わりに、1ページに収まる件数のときは出さない。375px で 56px 使うのに、
+        全部見えている人には効かない。検索中は結果が1件でも出し続ける（消すと直せなくなる）。
+        条件は hidden で持ち回す。持たないと、検索した瞬間に絞り込みが既定へ戻る。
+      */}
+      {isSearchVisible ? (
+        <form action="/events" method="get" role="search" className="flex gap-2">
+          <input type="hidden" name="status" value={query.status} />
+          <input type="hidden" name="category" value={query.category} />
+          <input type="hidden" name="sort" value={query.sort} />
+          <input type="hidden" name="limit" value={String(query.pageSize)} />
+          <input
+            type="search"
+            name="search"
+            defaultValue={query.search}
+            maxLength={EVENT_SEARCH_MAX_LENGTH}
+            aria-label="イベントを検索"
+            placeholder="タイトル・場所で探す"
+            className="min-h-11 min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
+          />
+          <button
+            type="submit"
+            aria-label="検索する"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          >
+            <Search aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </form>
+      ) : null}
+
+      {/* 0件のときは件数の行が出ないので、解除の導線をここに置かないと戻れなくなる。 */}
+      {query.search ? (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted">
+          <span className="min-w-0 break-all">「{query.search}」で検索中</span>
+          <Link
+            href={buildEventListHref({ ...query, search: "" }, 1)}
+            className="whitespace-nowrap font-bold text-pine underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          >
+            検索を解除
+          </Link>
+        </p>
+      ) : null}
+
       {/* 状態は横スクロールの帯に置く。4つとも常に見せると2段になって、また縦に伸びる。 */}
       {/*
         min-w-0 が要る。grid の子は既定の最小幅が min-content なので、
@@ -111,8 +158,9 @@ export function EventListControls({
           aria-label="イベント一覧の表示条件"
           className="grid grid-cols-1 gap-4 border-t border-line p-4 sm:grid-cols-3"
         >
-          {/* 状態はチップ側で切り替える。ここで送らないと、条件を変えた瞬間に「進行中」へ戻ってしまう。 */}
+          {/* 状態はチップ側、検索は上の欄で切り替える。ここで送らないと、条件を変えた瞬間に消える。 */}
           <input type="hidden" name="status" value={query.status} />
+          <input type="hidden" name="search" value={query.search} />
 
           <label className="text-body font-medium text-muted">
             カテゴリ

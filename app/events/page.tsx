@@ -12,6 +12,7 @@ import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import {
   buildEventListHref,
   eventDisplayStateLabels,
+  eventMatchesSearch,
   getEventCardSummary,
   getEventListPagination,
   isEventLifecycleFinished,
@@ -30,6 +31,7 @@ type EventFilterQuery = {
   sort?: string;
   limit?: string;
   page?: string;
+  search?: string;
 };
 
 type EventRow = EventListItem & {
@@ -98,7 +100,9 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   const visibleDraft =
     query.status === "draft" &&
     eventDraft &&
-    (query.category === "all" || query.category === draftCategory)
+    (query.category === "all" || query.category === draftCategory) &&
+    // 下書きはサーバーに無くcookieの中なので、検索はここで自前でかける
+    eventMatchesSearch({ title: draftPayload.title, location_name: draftPayload.location_name }, query.search)
       ? eventDraft
       : null;
 
@@ -112,7 +116,9 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       p_category: query.category,
       p_sort: query.sort,
       p_limit: query.pageSize,
-      p_offset: requestedOffset
+      p_offset: requestedOffset,
+      // 空文字ではなく null で渡す。SQL 側は null を「検索していない」として扱う
+      p_query: query.search || null
     });
     if (rpcError) throw new Error(rpcError.message);
 
@@ -198,7 +204,11 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           ))}
         </div>
       ) : (
-        <EmptyState>条件に合うイベントはありません。絞り込みを変えるか、「イベント作成」から新しく作成してください。</EmptyState>
+        <EmptyState>
+          {query.search
+            ? `「${query.search}」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。`
+            : "条件に合うイベントはありません。絞り込みを変えるか、「イベント作成」から新しく作成してください。"}
+        </EmptyState>
       )}
     </div>
   );

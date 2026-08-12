@@ -4,6 +4,7 @@ import {
   buildEventListHref,
   countEventsByCategory,
   eventDisplayStateLabels,
+  eventMatchesSearch,
   filterAndSortEventsForList,
   getEventCardSummary,
   getEventDisplayState,
@@ -14,6 +15,7 @@ import {
   getEventStatusesForListFilter,
   matchesEventListFilter,
   normalizeEventListQuery,
+  normalizeEventSearch,
   resolveEventCategoryFilter
 } from "@/lib/domain/event/event-filter";
 
@@ -48,7 +50,8 @@ describe("event list query", () => {
       category: "all",
       sort: "newest",
       pageSize: 10,
-      page: 1
+      page: 1,
+      search: ""
     });
     expect(getEventStatusesForListFilter("active")).toEqual(["interested", "planning", "confirmed"]);
     expect(getEventStatusesForListFilter("draft")).toEqual([]);
@@ -70,7 +73,8 @@ describe("event list query", () => {
       category: "travel",
       sort: "soonest",
       pageSize: 50,
-      page: 3
+      page: 3,
+      search: ""
     });
 
     expect(normalizeEventListQuery({ status: "unknown", sort: "unknown", limit: "25", page: "0" })).toEqual({
@@ -78,7 +82,8 @@ describe("event list query", () => {
       category: "all",
       sort: "newest",
       pageSize: 10,
-      page: 1
+      page: 1,
+      search: ""
     });
   });
 
@@ -106,10 +111,61 @@ describe("event list query", () => {
 
     expect(
       buildEventListHref(
-        { status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2 },
+        { status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2, search: "" },
         3
       )
     ).toBe("/events?status=cancelled&category=live&sort=latest&limit=20&page=3");
+  });
+});
+
+describe("event search", () => {
+  it("検索語はURLに残す", () => {
+    expect(
+      buildEventListHref(
+        { status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄 旅行" },
+        2
+      )
+    ).toBe("/events?search=%E6%B2%96%E7%B8%84+%E6%97%85%E8%A1%8C&page=2");
+  });
+
+  it("検索していなければURLに出さない", () => {
+    expect(
+      buildEventListHref({ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" })
+    ).toBe("/events");
+  });
+
+  it("前後の空白を落として、100文字で切る", () => {
+    expect(normalizeEventSearch("  沖縄  ")).toBe("沖縄");
+    expect(normalizeEventSearch(undefined)).toBe("");
+    expect(normalizeEventSearch("あ".repeat(120))).toHaveLength(100);
+  });
+
+  it("100文字の数え方をSQLのleft()に合わせる", () => {
+    // JavaScript の slice は UTF-16 単位なので、絵文字だとPostgresと切れる位置がずれる
+    expect(normalizeEventSearch("🎫".repeat(120))).toBe("🎫".repeat(100));
+  });
+
+  it("検索語を URL から読み取る", () => {
+    expect(normalizeEventListQuery({ search: " 沖縄 " }).search).toBe("沖縄");
+    expect(normalizeEventListQuery({}).search).toBe("");
+  });
+
+  it("下書きはタイトルと場所メモで引っかける", () => {
+    const draft = { title: "沖縄旅行", location_name: "那覇" };
+
+    expect(eventMatchesSearch(draft, "沖縄")).toBe(true);
+    expect(eventMatchesSearch(draft, "那覇")).toBe(true);
+    expect(eventMatchesSearch(draft, "北海道")).toBe(false);
+    // 検索していないときは全部通す
+    expect(eventMatchesSearch(draft, "")).toBe(true);
+  });
+
+  it("下書きの未入力項目でも落ちない", () => {
+    expect(eventMatchesSearch({ title: undefined, location_name: null }, "沖縄")).toBe(false);
+  });
+
+  it("英字は大小を区別しない", () => {
+    expect(eventMatchesSearch({ title: "Summer Live" }, "summer")).toBe(true);
   });
 });
 

@@ -57,7 +57,11 @@ export type EventListQuery = {
   sort: EventListSort;
   pageSize: EventListPageSize;
   page: number;
+  search: string;
 };
+
+/** 検索語の最大文字数。SQL側の left(..., 100) と揃える。 */
+export const EVENT_SEARCH_MAX_LENGTH = 100;
 
 export type EventListPagination = {
   page: number;
@@ -117,12 +121,36 @@ export function resolveEventCategoryFilter(
   return requestedCategory !== "all" && counts[requestedCategory] === 0 ? "all" : requestedCategory;
 }
 
+/**
+ * 検索語をURLとSQLで同じ形にそろえる。
+ * 文字数は SQL 側の left() に合わせて「文字」で数える。JavaScript の slice は
+ * UTF-16 の単位なので、絵文字が入ると Postgres と切れる位置がずれる。
+ */
+export function normalizeEventSearch(value: string | undefined): string {
+  return [...(value ?? "").trim()].slice(0, EVENT_SEARCH_MAX_LENGTH).join("");
+}
+
+/**
+ * 下書き（サーバーに無く、cookieだけにある）を検索にかけるための判定。
+ * 保存済みのイベントは SQL の ilike が担当するので、こちらは下書き専用。
+ */
+export function eventMatchesSearch(
+  event: { title?: string | null; location_name?: string | null },
+  search: string
+) {
+  if (!search) return true;
+
+  const needle = search.toLowerCase();
+  return [event.title, event.location_name].some((value) => (value ?? "").toLowerCase().includes(needle));
+}
+
 export function normalizeEventListQuery(query: {
   status?: string;
   category?: string;
   sort?: string;
   limit?: string;
   page?: string;
+  search?: string;
 }): EventListQuery {
   const pageSize = Number(query.limit);
   const page = Number(query.page);
@@ -136,7 +164,8 @@ export function normalizeEventListQuery(query: {
     pageSize: EVENT_LIST_PAGE_SIZES.includes(pageSize as EventListPageSize)
       ? (pageSize as EventListPageSize)
       : 10,
-    page: Number.isSafeInteger(page) && page > 0 ? page : 1
+    page: Number.isSafeInteger(page) && page > 0 ? page : 1,
+    search: normalizeEventSearch(query.search)
   };
 }
 
@@ -324,6 +353,9 @@ export function buildEventListHref(query: EventListQuery, page = query.page) {
   }
   if (query.pageSize !== 10) {
     params.set("limit", String(query.pageSize));
+  }
+  if (query.search) {
+    params.set("search", query.search);
   }
   if (page > 1) {
     params.set("page", String(page));
