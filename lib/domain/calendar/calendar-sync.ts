@@ -83,3 +83,97 @@ export function buildGoogleCalendarShareUrl({ title, location, start, end, detai
 
   return url.toString();
 }
+
+/** RFC 5545 は1行75オクテットまで。超えたぶんは継続行へ折り返す。 */
+const ICS_LINE_OCTET_LIMIT = 75;
+
+/**
+ * TEXT 値のエスケープ。`\` `;` `,` と改行が対象（`:` は不要）。
+ * ここを飛ばすと、題名に「、」ではなく「,」が入っただけで値が2つに割れて読まれる。
+ */
+function escapeIcsText(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r\n|\r|\n/g, "\\n");
+}
+
+/**
+ * 長い行を継続行へ折り返す。継続行は先頭に空白を1つ置く（その空白も75に数える）。
+ * 数えるのは文字数ではなくオクテット数。日本語は1文字3バイトなので、
+ * 文字数で数えると上限を軽く超える。かといってバイト列で切るとマルチバイトの
+ * 途中で割れて壊れるため、1文字ずつ足しながら見る。
+ */
+function foldIcsLine(line: string): string {
+  const encoder = new TextEncoder();
+  const chunks: string[] = [];
+  let current = "";
+  let currentOctets = 0;
+
+  for (const char of line) {
+    const charOctets = encoder.encode(char).length;
+    const limit = chunks.length === 0 ? ICS_LINE_OCTET_LIMIT : ICS_LINE_OCTET_LIMIT - 1;
+
+    if (currentOctets + charOctets > limit) {
+      chunks.push(current);
+      current = "";
+      currentOctets = 0;
+    }
+
+    current += char;
+    currentOctets += charOctets;
+  }
+
+  chunks.push(current);
+
+  return chunks.join("\r\n ");
+}
+
+/** 終日予定用。日付だけを YYYYMMDD で書く。 */
+function formatIcsDate(value: string): string {
+  return value.slice(0, 10).replace(/-/g, "");
+}
+
+/**
+ * 確定した予定を .ics（iCalendar）にする。
+ *
+ * Googleカレンダー連携は任意なので、Googleを使っていない人にも予定を渡せる出口が要る。
+ * Apple カレンダー、Outlook、Thunderbird などが読める。
+ *
+ * 終日予定は `DTSTART;VALUE=DATE` で書き、`DTEND` は「終わりの翌日」を指す（RFC 5545）。
+ * plans.confirmed_end_at は終日のときすでにその形で入っている
+ * （lib/shared/format.ts の formatAllDayRange が表示のために24時間引いている）。
+ * Googleへ送る側（lib/google-calendar/calendar-events.ts）も同じ値をそのまま使っており、
+ * ここだけ1日足すと2つの出口で日付がずれる。
+ *
+ * 改行は CRLF。LF だけだと読み込めないアプリがある。
+ */
+export function buildIcsCalendar({
+  uid,
+  event,
+  now = new Date()
+}: {
+  uid: string;
+  event: ConfirmedCalendarEvent;
+  now?: Date;
+}): string {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Madoi//Schedule//JA",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${formatGoogleCalendarDate(now.toISOString())}`,
+    ...(event.isAllDay
+      ? [`DTSTART;VALUE=DATE:${formatIcsDate(event.start)}`, `DTEND;VALUE=DATE:${formatIcsDate(event.end)}`]
+      : [`DTSTART:${formatGoogleCalendarDate(event.start)}`, `DTEND:${formatGoogleCalendarDate(event.end)}`]),
+    `SUMMARY:${escapeIcsText(event.title)}`,
+    ...(event.location ? [`LOCATION:${escapeIcsText(event.location)}`] : []),
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ];
+
+  return `${lines.map(foldIcsLine).join("\r\n")}\r\n`;
+}
