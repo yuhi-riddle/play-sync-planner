@@ -14,7 +14,7 @@ import {
   validateAvatarFile,
   type ProfileActionState
 } from "@/lib/domain/account/profile";
-import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 const PROFILE_MIGRATION_MESSAGE =
   "プロフィール機能の準備がまだ完了していません。管理者がmigration 019を適用してください。";
@@ -104,6 +104,29 @@ export async function updateProfileAction(
       profile_onboarding_completed_at: profileValues.onboarding_completed_at ?? null
     }
   });
+
+  /*
+   * 参加中のイベントに残っている表示名も揃える。
+   *
+   * event_members.display_name は参加した時点のコピーなので、ここで書き換えないと
+   * 古いイベントに前の名前が出続ける。退会処理（account.ts）は同じことをしていて、
+   * 改名のときだけ通っていなかった。
+   *
+   * admin を使う理由: event_members の書き込みポリシーはイベントのオーナー限定
+   * （015_fix_event_policy_recursion.sql）で、本人のクライアントでは自分の行も書けない。
+   *
+   * participants.display_name は触らない。清算の相手が分からなくなるのを避けるため
+   * 残す設計で、プライバシーポリシーにもそう書いている。
+   */
+  const { error: memberNameError } = await createSupabaseAdminClient()
+    .from("event_members")
+    .update({ display_name: parsed.data.nickname })
+    .eq("user_id", user.id);
+
+  if (memberNameError) {
+    // 表示名の追随は本筋ではない。保存そのものは成功しているので、失敗しても止めない。
+    console.error("event_members の表示名を更新できませんでした", memberNameError);
+  }
 
   const oldAvatarPath = currentProfile?.avatar_path ?? null;
   if (oldAvatarPath && oldAvatarPath !== avatarPath) {
