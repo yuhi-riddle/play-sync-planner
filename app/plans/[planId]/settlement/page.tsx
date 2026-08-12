@@ -579,7 +579,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
             <p className="mt-1 text-sm leading-6 text-muted">残額と支払い先をまとめてコピーできます。送信は普段使う連絡手段で行います。</p>
             {hasMissingPaymentInstructions ? (
               <p className="mt-3 rounded-control border border-honey/35 bg-honey/14 p-3 text-sm leading-6 text-muted">
-                受け取り方法が未設定の清算があります。必要なら「清算結果」で送金先を入力してから文面をコピーしてください。
+                受け取り方法が未設定の清算があります。送金先は受け取る本人しか設定できないので、文面に入っている清算リンクから入力してもらってください。
               </p>
             ) : null}
             <div className="mt-5">

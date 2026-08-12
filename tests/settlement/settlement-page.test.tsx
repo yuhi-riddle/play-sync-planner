@@ -208,6 +208,36 @@ describe("SettlementPage", () => {
     const message = screen.getByLabelText("支払い依頼文面") as HTMLTextAreaElement;
     expect(message.value).toContain("支払い方法: PayPay");
   });
+
+  /*
+   * 受け取り方法は本人しか設定できない（updatePublicParticipantSettlementPaymentMethodAction は
+   * 自分の行だけ）。この画面を見ている主催者に「送金先を入力してから」と促しても、その操作は無い。
+   */
+  it("受け取り方法が未設定のとき、設定できるのは本人だと案内する", async () => {
+    const plan = basePlan([
+      {
+        id: "settlement-1",
+        amount: 2000,
+        status: "unpaid",
+        payment_method: null,
+        payment_url: null,
+        memo: null,
+        paid_at: null,
+        confirmed_at: null,
+        from_participant: participant("p2", "鈴木", "user-2"),
+        to_participant: participant("p1", "田中", "user-1"),
+        settlement_payments: []
+      }
+    ]);
+    mockPlan(plan);
+
+    render(await SettlementPage({ params: Promise.resolve({ planId: "plan-1" }) }));
+
+    const banner = screen.getByText("受け取り方法が未設定の清算があります", { exact: false });
+    expect(banner).toHaveTextContent("受け取る本人しか設定できない");
+    expect(banner).not.toHaveTextContent("送金先を入力してから");
+  });
+
   describe("立替の編集フォームが開くときの割り方", () => {
     function planWithSplits(splits: Array<{ participantId: string; amount: number }>) {
       return basePlan(

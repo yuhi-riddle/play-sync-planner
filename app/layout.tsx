@@ -1,3 +1,4 @@
+import React from "react";
 import type { Metadata, Viewport } from "next";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
