@@ -222,6 +222,18 @@ begin
     raise exception 'Authentication required';
   end if;
 
+  -- レート制限は他の検証より先に消費する（post_event_message等、他の3関数と
+  -- 同じ並び）。shared-event判定を先にすると、その判定だけレート制限を
+  -- 消費せずに何度でも呼べてしまい、target_user_idを総当たりして
+  -- 「誰と共有イベントがあるか」を無制限に調べられてしまう。
+  retry_seconds := private.try_consume_authenticated_rate_limit_once('connection_update');
+  if retry_seconds > 0 then
+    raise exception using
+      errcode = 'PSP02',
+      message = 'Rate limit exceeded',
+      detail = retry_seconds::text;
+  end if;
+
   if target_user_id is null or target_user_id = current_user_id then
     raise exception 'Invalid block target';
   end if;
@@ -230,14 +242,6 @@ begin
     raise exception using
       errcode = 'PSP01',
       message = 'A shared event is required';
-  end if;
-
-  retry_seconds := private.try_consume_authenticated_rate_limit_once('connection_update');
-  if retry_seconds > 0 then
-    raise exception using
-      errcode = 'PSP02',
-      message = 'Rate limit exceeded',
-      detail = retry_seconds::text;
   end if;
 
   insert into public.user_blocks (blocker_user_id, blocked_user_id)

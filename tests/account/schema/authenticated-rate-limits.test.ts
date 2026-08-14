@@ -89,4 +89,15 @@ describe("authenticated rate limit and audit log foundation migration", () => {
 
     expect(sql).toContain("revoke all on function public.block_user_atomic(uuid) from anon");
   });
+
+  it("consumes the rate limit before the have_shared_event check, so probing shared events always costs a slot", () => {
+    const sql = migration();
+
+    const rateLimitIndex = sql.indexOf("retry_seconds := private.try_consume_authenticated_rate_limit_once('connection_update')");
+    const sharedEventIndex = sql.indexOf("if not public.have_shared_event(current_user_id, target_user_id) then");
+
+    expect(rateLimitIndex).toBeGreaterThan(-1);
+    expect(sharedEventIndex).toBeGreaterThan(-1);
+    expect(rateLimitIndex).toBeLessThan(sharedEventIndex);
+  });
 });
