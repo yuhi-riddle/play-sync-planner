@@ -92,13 +92,14 @@ export function SectionHeading({
   );
 }
 
-export type ButtonVariant = "primary" | "secondary";
+export type ButtonVariant = "primary" | "secondary" | "danger";
 export type ButtonSize = "default" | "sm";
 
 /** ButtonLink/SecondaryLink/Button/SubmitButton で共有する見た目の実体。 */
 export const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary: "bg-ink text-white shadow-soft hover:bg-pine",
-  secondary: "border border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
+  secondary: "border border-line-strong bg-surface text-ink hover:border-moss hover:text-pine",
+  danger: "border border-clay/45 bg-surface text-clay-ink hover:bg-clay hover:text-white"
 };
 
 export const buttonSizeClasses: Record<ButtonSize, string> = {
