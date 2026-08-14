@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { deviceClasses, pageTemplates } from "@/lib/domain/shared/web-vitals";
+import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
 
 const MAX_BODY_BYTES = 1024;
 
 const pageSchema = z.enum(pageTemplates);
 const deviceSchema = z.enum(deviceClasses);
+const rpcResultSchema = z.object({
+  accepted: z.boolean(),
+  retry_after_seconds: z.number().int().nonnegative().optional()
+});
 const webVitalSchema = z.discriminatedUnion("name", [
   z
     .object({
@@ -71,9 +76,18 @@ async function readLimitedBody(request: NextRequest): Promise<string> {
 }
 
 /**
- * まずは計測値を可視化するだけの最小構成。
- * 保存・レート制限付きの本格的な取り込みは、DBスキーマを伴う別途の作業として扱う。
+ * Supabase管理用envが無い環境（ローカル開発など）では console.info のみで保存しない。
+ * ある場合は record_web_vital RPC 経由で private.web_vital_samples に保存する
+ * （レート制限はDB関数側で行う。supabase/migrations/033_web_vital_samples.sql 参照）。
  */
+function clientIp(request: NextRequest): string | null {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (!forwardedFor) return null;
+  const [first] = forwardedFor.split(",");
+  const trimmed = first?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
 export async function POST(request: NextRequest) {
   let text: string;
   try {
@@ -97,6 +111,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  console.info("[web-vitals]", parsed.data);
+  const metric = parsed.data;
+
+  if (!hasSupabaseAdminEnv()) {
+    console.info("[web-vitals]", metric);
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.rpc("record_web_vital", {
+    p_page_template: metric.page,
+    p_metric_name: metric.name,
+    p_metric_value: metric.value,
+    p_device_class: metric.device,
+    p_client_ip: clientIp(request)
+  });
+
+  if (error) {
+    console.error("[web-vitals] failed to record", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+
+  const result = rpcResultSchema.safeParse(data);
+  if (!result.success) {
+    console.error("[web-vitals] unexpected rpc response", data);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+
+  if (!result.data.accepted) {
+    const retryAfter = result.data.retry_after_seconds ?? 60;
+    return NextResponse.json(
+      { error: "Too Many Requests" },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    );
+  }
+
   return new NextResponse(null, { status: 204 });
 }
