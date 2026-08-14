@@ -36,7 +36,12 @@ function clientReturningLink(link: Record<string, unknown> | null) {
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: viewerId } } }) },
     from: vi.fn(() => builder),
-    rpc: vi.fn().mockResolvedValue({ data: null, error: null })
+    // consume_authenticated_rate_limit は既定で許可（{ok:true}）を返す。
+    rpc: vi.fn((functionName: string) =>
+      functionName === "consume_authenticated_rate_limit"
+        ? Promise.resolve({ data: { ok: true }, error: null })
+        : Promise.resolve({ data: null, error: null })
+    )
   };
 }
 

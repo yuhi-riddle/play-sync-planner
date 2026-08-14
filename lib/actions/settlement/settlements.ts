@@ -23,6 +23,52 @@ import {
 } from "@/lib/shared/validators";
 import type { SettlementReminderKind } from "@/lib/domain/settlement/reminder-log";
 
+type SettlementSessionClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+type SettlementRateLimitResult = { ok: true } | { ok: false; message: string };
+
+/**
+ * 支払い記録・確認の冒頭で呼ぶレート制限ゲート（migration 038）。
+ * 決済ロジックそのものはTypeScript側のまま変えず、ここでは「多すぎる操作」だけ弾く。
+ */
+async function consumeSettlementRateLimit(supabase: SettlementSessionClient): Promise<SettlementRateLimitResult> {
+  const { data, error } = await supabase.rpc("consume_authenticated_rate_limit", {
+    p_operation: "settlement_update"
+  });
+
+  if (error) {
+    return { ok: false, message: "操作を確認できませんでした" };
+  }
+
+  const result = data as { ok: boolean; error?: string; retry_after_seconds?: number };
+  if (!result.ok) {
+    return { ok: false, message: "操作が多すぎます。しばらく待ってから再度お試しください。" };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * 支払いの記録・確認が成功したことを監査ログへ残す（migration 038）。
+ * ここが失敗しても支払い自体は既に確定しているので、投稿は失敗させない。
+ */
+async function recordSettlementAudit(
+  supabase: SettlementSessionClient,
+  operation: "settlement_payment_record" | "settlement_payment_confirm",
+  targetId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("record_authenticated_security_audit", {
+    p_operation: operation,
+    p_target_type: "payment",
+    p_target_id: targetId,
+    p_outcome: "success"
+  });
+
+  if (error) {
+    console.error("監査ログを記録できませんでした", error);
+  }
+}
+
 type ParticipantRow = {
   id: string;
   display_name: string;
@@ -468,6 +514,12 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
+
+  const rateLimit = await consumeSettlementRateLimit(supabase);
+  if (!rateLimit.ok) {
+    throw new Error(rateLimit.message);
+  }
+
   const { data: settlement, error } = await supabase
     .from("settlements")
     .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at), plans(owner_user_id)")
@@ -533,6 +585,7 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
   await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
   if (insertedPayment?.id) {
     await notifySettlementConfirmationDue({ settlementId, paymentId: insertedPayment.id });
+    await recordSettlementAudit(supabase, "settlement_payment_record", insertedPayment.id);
   }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
@@ -552,6 +605,12 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
    * RLSが行を返さず、払う本人でなければ insert も通らない。下のチェックと二重になる。
    */
   const supabase = await createSupabaseServerClient();
+
+  const rateLimit = await consumeSettlementRateLimit(supabase);
+  if (!rateLimit.ok) {
+    throw new Error(rateLimit.message);
+  }
+
   const { data: link, error: linkError } = await supabase
     .from("share_links")
     .select("plan_id, status")
@@ -655,6 +714,7 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
   await supabase.rpc("mark_plan_settling", { target_plan_id: settlement.plan_id });
   if (insertedPayment?.id) {
     await notifySettlementConfirmationDue({ settlementId: settlement.id, paymentId: insertedPayment.id });
+    await recordSettlementAudit(supabase, "settlement_payment_record", insertedPayment.id);
   }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
@@ -731,6 +791,17 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     redirect("/login");
   }
 
+  /*
+   * レート制限・監査ログのRPCは呼び出し元のセッション（auth.uid()）を見るので、
+   * service role の admin クライアントでは auth.uid() が取れず動かない。
+   * このゲートだけセッションクライアントで呼び、本体の処理は従来どおり admin で行う。
+   */
+  const sessionClient = await createSupabaseServerClient();
+  const rateLimit = await consumeSettlementRateLimit(sessionClient);
+  if (!rateLimit.ok) {
+    throw new Error(rateLimit.message);
+  }
+
   const supabase = createSupabaseAdminClient();
   const { data: payment, error } = await supabase
     .from("settlement_payments")
@@ -796,6 +867,8 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     .eq("user_id", userId)
     .eq("dedupe_key", `confirmation_due:${settlement.plan_id}:payment:${paymentId}`)
     .is("read_at", null);
+
+  await recordSettlementAudit(sessionClient, "settlement_payment_confirm", paymentId);
 
   revalidatePath(`/plans/${settlement.plan_id}`);
   revalidatePath(`/plans/${settlement.plan_id}/settlement`);

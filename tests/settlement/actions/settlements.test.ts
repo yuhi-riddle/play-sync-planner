@@ -24,6 +24,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import {
+  confirmSettlementPaymentAction,
   createExpenseAction,
   deleteExpenseAction,
   recordPublicSettlementPaymentAction,
@@ -67,8 +68,15 @@ function tableSequenceClient(responses: Record<string, Array<{ result: MockResul
     const entry = responses[table]?.[index] ?? { result: { data: null, error: null } };
     return chainable(entry.result, entry.calls);
   });
-  // plans.settlement_status は参加者に直接 update させず、RPC 越しに動かす。
-  const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+  // consume_authenticated_rate_limit は既定で許可（{ok:true}）を返す。個別のテストで
+  // レート制限そのものを検証したいときは、返り値のrpcモックを上書きする。
+  // mark_plan_settling / record_authenticated_security_audit は結果を読んでいないので null のままでよい。
+  const rpc = vi.fn((functionName: string): Promise<{ data: unknown; error: unknown }> => {
+    if (functionName === "consume_authenticated_rate_limit") {
+      return Promise.resolve({ data: { ok: true }, error: null });
+    }
+    return Promise.resolve({ data: null, error: null });
+  });
   return { from, rpc };
 }
 
@@ -354,6 +362,110 @@ describe("updateParticipantSettlementPaymentMethodAction", () => {
     await expect(
       updateParticipantSettlementPaymentMethodAction(otherParticipantId, formData)
     ).rejects.toThrow("本人だけが支払い方法を設定できます");
+  });
+});
+
+describe("confirmSettlementPaymentAction", () => {
+  const paymentId = "payment-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUserId.mockResolvedValue(userId);
+  });
+
+  function confirmableAdminClient() {
+    return tableSequenceClient({
+      settlement_payments: [
+        {
+          result: {
+            data: {
+              id: paymentId,
+              settlement_id: "settlement-1",
+              settlements: {
+                id: "settlement-1",
+                plan_id: planId,
+                amount: 1000,
+                to_participant: { user_id: userId },
+                settlement_payments: [{ id: paymentId, amount: 1000, confirmed_at: null }],
+                plans: { owner_user_id: otherParticipantId }
+              }
+            },
+            error: null
+          }
+        }
+      ]
+    });
+  }
+
+  it("consumes the rate limit via the session client before touching the admin client", async () => {
+    const sessionClient = tableSequenceClient({});
+    createSupabaseServerClient.mockResolvedValue(sessionClient);
+    const admin = confirmableAdminClient();
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    await confirmSettlementPaymentAction(paymentId);
+
+    expect(sessionClient.rpc).toHaveBeenCalledWith("consume_authenticated_rate_limit", {
+      p_operation: "settlement_update"
+    });
+    expect(admin.from).toHaveBeenCalledWith("settlement_payments");
+  });
+
+  it("rejects when the current user is not the receiving participant", async () => {
+    createSupabaseServerClient.mockResolvedValue(tableSequenceClient({}));
+    createSupabaseAdminClient.mockReturnValue(
+      tableSequenceClient({
+        settlement_payments: [
+          {
+            result: {
+              data: {
+                id: paymentId,
+                settlement_id: "settlement-1",
+                settlements: {
+                  id: "settlement-1",
+                  plan_id: planId,
+                  amount: 1000,
+                  to_participant: { user_id: "someone-else" },
+                  settlement_payments: [{ id: paymentId, amount: 1000, confirmed_at: null }],
+                  plans: { owner_user_id: otherParticipantId }
+                }
+              },
+              error: null
+            }
+          }
+        ]
+      })
+    );
+
+    await expect(confirmSettlementPaymentAction(paymentId)).rejects.toThrow("主催者だけが受け取り確認できます");
+  });
+
+  it("stops before the admin client when the rate limit is exceeded", async () => {
+    const sessionClient = tableSequenceClient({});
+    sessionClient.rpc.mockResolvedValue({ data: { ok: false, error: "rate_limited", retry_after_seconds: 12 }, error: null });
+    createSupabaseServerClient.mockResolvedValue(sessionClient);
+    const admin = confirmableAdminClient();
+    createSupabaseAdminClient.mockReturnValue(admin);
+
+    await expect(confirmSettlementPaymentAction(paymentId)).rejects.toThrow(
+      "操作が多すぎます。しばらく待ってから再度お試しください。"
+    );
+    expect(admin.from).not.toHaveBeenCalled();
+  });
+
+  it("records a success audit entry via the session client after confirming", async () => {
+    const sessionClient = tableSequenceClient({});
+    createSupabaseServerClient.mockResolvedValue(sessionClient);
+    createSupabaseAdminClient.mockReturnValue(confirmableAdminClient());
+
+    await confirmSettlementPaymentAction(paymentId);
+
+    expect(sessionClient.rpc).toHaveBeenCalledWith("record_authenticated_security_audit", {
+      p_operation: "settlement_payment_confirm",
+      p_target_type: "payment",
+      p_target_id: paymentId,
+      p_outcome: "success"
+    });
   });
 });
 
