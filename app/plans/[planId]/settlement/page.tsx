@@ -544,12 +544,9 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                       </div>
                     </details>
                     <form action={deleteExpenseAction.bind(null, expense.id)}>
-                      <button
-                        type="submit"
-                        className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-clay/45 bg-surface px-4 py-2 text-sm font-bold text-clay-ink transition-colors hover:bg-clay hover:text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
-                      >
+                      <SubmitButton variant="danger" className="w-full sm:w-auto">
                         この支払いを削除
-                      </button>
+                      </SubmitButton>
                     </form>
                   </div>
                 ) : null}
