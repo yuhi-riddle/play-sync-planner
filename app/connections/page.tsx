@@ -5,7 +5,7 @@ import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/compon
 import { SetupPanel } from "@/components/ui/state-panels";
 import { PageHeader } from "@/components/ui";
 import { mapConnectionCounts, mapConnectionPage, toBlockedUser, type ConnectionPage } from "@/lib/domain/account/connections";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,11 @@ export default async function ConnectionsPage() {
     redirect("/login?next=%2Fconnections");
   }
 
-  const [overview, invitations] = await Promise.all([loadConnectionsOverview(), loadReceivedEventInvitations(userId)]);
+  const supabase = await createSupabaseServerClient();
+  const [overview, invitations] = await Promise.all([
+    loadConnectionsOverview(supabase),
+    loadReceivedEventInvitations(supabase)
+  ]);
 
   return (
     <div className="space-y-6">
@@ -46,7 +50,7 @@ export default async function ConnectionsPage() {
   );
 }
 
-async function loadConnectionsOverview(): Promise<{
+async function loadConnectionsOverview(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>): Promise<{
   counts: ReturnType<typeof mapConnectionCounts>;
   favorites: ConnectionPage;
   mutual: ConnectionPage;
@@ -54,7 +58,6 @@ async function loadConnectionsOverview(): Promise<{
   shared: ConnectionPage;
   blocked: ConnectionPage;
 }> {
-  const supabase = await createSupabaseServerClient();
   const firstPage = { p_cursor_at: null, p_cursor_user_id: null, p_limit: 20 };
   const [countsResult, favoritesResult, mutualResult, followingResult, sharedResult, blockedResult] = await Promise.all([
     supabase.rpc("get_connection_counts"),
@@ -86,34 +89,26 @@ async function loadConnectionsOverview(): Promise<{
   };
 }
 
-async function loadReceivedEventInvitations(currentUserId: string): Promise<ReceivedEventInvitation[]> {
-  const admin = createSupabaseAdminClient();
-  const { data: invitations, error: invitationsError } = await admin
-    .from("event_user_invitations")
-    .select("id, event_id, created_at")
-    .eq("invitee_user_id", currentUserId)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
+type ReceivedEventInvitationRpcRow = {
+  invitation_id: string;
+  event_title: string;
+  organizer_name: string;
+  created_at: string;
+};
 
-  if (invitationsError || !invitations?.length) return [];
+async function loadReceivedEventInvitations(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<ReceivedEventInvitation[]> {
+  const { data, error } = await supabase.rpc("list_received_event_invitations", { p_limit: 20 });
 
-  const eventIds = invitations.map((invitation) => invitation.event_id);
-  const [eventsResult, organizersResult] = await Promise.all([
-    admin.from("events").select("id, title").in("id", eventIds),
-    admin.from("event_members").select("event_id, display_name").in("event_id", eventIds).eq("role", "organizer").eq("status", "joined")
-  ]);
-
-  if (eventsResult.error || organizersResult.error) {
+  if (error) {
     throw new Error("届いた招待を読み込めませんでした");
   }
 
-  const eventTitles = new Map((eventsResult.data ?? []).map((event) => [event.id, event.title]));
-  const organizerNames = new Map((organizersResult.data ?? []).map((organizer) => [organizer.event_id, organizer.display_name]));
-
-  return invitations.map((invitation) => ({
-    id: invitation.id,
-    eventTitle: eventTitles.get(invitation.event_id) ?? "イベント",
-    organizerName: organizerNames.get(invitation.event_id) ?? "主催者",
+  return ((data ?? []) as ReceivedEventInvitationRpcRow[]).map((invitation) => ({
+    id: invitation.invitation_id,
+    eventTitle: invitation.event_title,
+    organizerName: invitation.organizer_name,
     createdAt: invitation.created_at
   }));
 }

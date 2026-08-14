@@ -234,6 +234,31 @@ export async function loadMoreConnectionsAction(
   return mapConnectionPage(data ?? []);
 }
 
+export async function loadEventInviteCandidatesAction(
+  eventId: string,
+  cursor: ConnectionCursor
+): Promise<ConnectionPage> {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_event_invite_candidates", {
+    p_event_id: eventId,
+    p_query: null,
+    p_cursor_at: cursor?.at ?? null,
+    p_cursor_user_id: cursor?.userId ?? null,
+    p_limit: 20
+  });
+
+  if (error) {
+    throw new Error("招待候補を読み込めませんでした");
+  }
+
+  return mapConnectionPage(data ?? []);
+}
+
 async function requireInvitationOwner(eventId: string) {
   const user = await getCurrentUser();
   if (!user) {

@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 const migrationPath = resolve(process.cwd(), "supabase/migrations/034_connection_calendar_rpc.sql");
 
 describe("connection, invitation, and calendar RPC migration", () => {
-  const migration = () => readFileSync(migrationPath, "utf8");
+  // CRLFで改行されていても toContain の複数行アサーションが崩れないよう正規化する
+  // （core.autocrlf=true な環境ではチェックアウトのたびにCRLFへ戻る）。
+  const migration = () => readFileSync(migrationPath, "utf8").replace(/\r\n/g, "\n");
 
   it("adds the query-path indexes for connections, invitations, and the calendar", () => {
     const sql = migration();
