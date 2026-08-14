@@ -1,6 +1,7 @@
 import { CopyPlus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { EventMemberInviteCard } from "@/components/event/event-member-invite-card";
 import { EventInviteCandidates } from "@/components/event/event-invite-candidates";
@@ -8,7 +9,7 @@ import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventChat } from "@/components/event/event-chat";
 import { EventDetailTabs } from "@/components/event/event-detail-tabs";
 import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
-import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink } from "@/components/ui";
+import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, Skeleton } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event/event-members";
 import { createEventMessageAction } from "@/lib/actions/event/event-messages";
 import { createEventUserInvitationsAction, loadEventInviteCandidatesAction } from "@/lib/actions/account/connections";
@@ -23,13 +24,15 @@ import { cancelEventAction, duplicateEventAction } from "@/lib/actions/event/eve
 import type { EventTask } from "@/lib/domain/event/event-tasks";
 import { categoryLabels, planStatusLabels } from "@/lib/shared/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event/event-members";
-import { normalizeEventDetailTab, resolveEventDetailDataNeeds } from "@/lib/domain/event/event-tabs";
+import { normalizeEventDetailTab } from "@/lib/domain/event/event-tabs";
 import { resolveEventProgress } from "@/lib/domain/event/event-progress";
 import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event/event-adjustment";
 import type { EventMessage } from "@/lib/domain/event/event-chat";
 import { mapConnectionPage, type ConnectionPage } from "@/lib/domain/account/connections";
 import { formatDateTime } from "@/lib/shared/format";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 export const dynamic = "force-dynamic";
 
@@ -96,17 +99,6 @@ export default async function EventDetailPage({
   const typedInvite = invite as Invite | null;
   const isOwner = currentUserId === event.owner_user_id;
   const isJoined = currentUserId ? await loadEventMembership(eventId, currentUserId) : false;
-  const { needsInviteCandidates, needsChatMessages, needsTasks } = resolveEventDetailDataNeeds(tab, isOwner);
-
-  const emptyInviteCandidatesPage: ConnectionPage = { items: [], nextCursor: null };
-
-  // 開いているタブに必要なものだけを、互いに独立しているので並列で取る。
-  const [inviteCandidatesPage, chatMessages, eventTaskData] = await Promise.all([
-    needsInviteCandidates && currentUserId ? loadInviteCandidates(eventId, supabase) : Promise.resolve(emptyInviteCandidatesPage),
-    needsChatMessages && currentUserId ? loadEventChatMessages(eventId, currentUserId) : Promise.resolve([]),
-    needsTasks ? loadEventTasks(eventId) : Promise.resolve({ tasks: [], members: [] })
-  ]);
-  const { tasks: eventTasks, members: taskMembers } = eventTaskData;
   const canStartAdjustment = canStartDateAdjustment(event.status, typedInvite?.status);
   const isEventTerminal = isTerminalEventStatus(event.status);
   const inviteUrl = typedInvite ? buildEventInviteUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000", typedInvite.token) : null;
@@ -221,47 +213,133 @@ export default async function EventDetailPage({
           )}
 
           {isOwner ? (
-            <Card>
-              <EventInviteCandidates
-                candidates={inviteCandidatesPage.items}
-                nextCursor={inviteCandidatesPage.nextCursor}
-                action={createEventUserInvitationsAction.bind(null, eventId)}
-                loadMoreAction={loadEventInviteCandidatesAction.bind(null, eventId)}
-              />
-            </Card>
+            <Suspense fallback={<InviteCandidatesSkeleton />}>
+              <EventMembersInviteCandidates eventId={eventId} supabase={supabase} />
+            </Suspense>
           ) : null}
         </>
       ) : null}
 
       {tab === "chat" ? (
-        <Card>
-          <EventChat
-            messages={chatMessages}
-            action={createEventMessageAction.bind(null, eventId)}
-            canPost={isJoined && event.status !== "cancelled"}
-            unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
-          />
-        </Card>
+        currentUserId ? (
+          <Suspense fallback={<ChatSkeleton />}>
+            <EventChatSection
+              eventId={eventId}
+              currentUserId={currentUserId}
+              canPost={isJoined && event.status !== "cancelled"}
+              unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
+            />
+          </Suspense>
+        ) : (
+          <Card>
+            <EventChat
+              messages={[]}
+              action={createEventMessageAction.bind(null, eventId)}
+              canPost={false}
+              unavailableReason={event.status === "cancelled" ? "イベントが中止されたため、投稿できません。" : undefined}
+            />
+          </Card>
+        )
       ) : null}
 
       {tab === "tasks" ? (
-        <Card>
-          <EventTaskList
-            tasks={eventTasks}
-            members={taskMembers}
-            canEdit={isJoined && event.status !== "cancelled"}
-            createAction={createEventTaskAction.bind(null, eventId)}
-            toggleAction={(taskId) => toggleEventTaskDoneAction.bind(null, eventId, taskId)}
-            assignAction={(taskId) => updateEventTaskAssigneeAction.bind(null, eventId, taskId)}
-            deleteAction={(taskId) => deleteEventTaskAction.bind(null, eventId, taskId)}
-          />
-        </Card>
+        <Suspense fallback={<TasksSkeleton />}>
+          <EventTasksSection eventId={eventId} canEdit={isJoined && event.status !== "cancelled"} />
+        </Suspense>
       ) : null}
 
       <div className="flex flex-wrap gap-3">
         <SecondaryLink href="/events">イベント一覧へ</SecondaryLink>
       </div>
     </div>
+  );
+}
+
+async function EventMembersInviteCandidates({ eventId, supabase }: { eventId: string; supabase: SupabaseServerClient }) {
+  const page = await loadInviteCandidates(eventId, supabase);
+
+  return (
+    <Card>
+      <EventInviteCandidates
+        candidates={page.items}
+        nextCursor={page.nextCursor}
+        action={createEventUserInvitationsAction.bind(null, eventId)}
+        loadMoreAction={loadEventInviteCandidatesAction.bind(null, eventId)}
+      />
+    </Card>
+  );
+}
+
+async function EventChatSection({
+  eventId,
+  currentUserId,
+  canPost,
+  unavailableReason
+}: {
+  eventId: string;
+  currentUserId: string;
+  canPost: boolean;
+  unavailableReason: string | undefined;
+}) {
+  const messages = await loadEventChatMessages(eventId, currentUserId);
+
+  return (
+    <Card>
+      <EventChat
+        messages={messages}
+        action={createEventMessageAction.bind(null, eventId)}
+        canPost={canPost}
+        unavailableReason={unavailableReason}
+      />
+    </Card>
+  );
+}
+
+async function EventTasksSection({ eventId, canEdit }: { eventId: string; canEdit: boolean }) {
+  const { tasks, members } = await loadEventTasks(eventId);
+
+  return (
+    <Card>
+      <EventTaskList
+        tasks={tasks}
+        members={members}
+        canEdit={canEdit}
+        createAction={createEventTaskAction.bind(null, eventId)}
+        toggleAction={(taskId) => toggleEventTaskDoneAction.bind(null, eventId, taskId)}
+        assignAction={(taskId) => updateEventTaskAssigneeAction.bind(null, eventId, taskId)}
+        deleteAction={(taskId) => deleteEventTaskAction.bind(null, eventId, taskId)}
+      />
+    </Card>
+  );
+}
+
+function InviteCandidatesSkeleton() {
+  return (
+    <Card className="space-y-3" role="status" aria-label="招待候補を読み込み中">
+      <Skeleton className="h-5 w-1/3" />
+      <Skeleton className="h-11 w-full" />
+      <Skeleton className="h-11 w-full" />
+    </Card>
+  );
+}
+
+function ChatSkeleton() {
+  return (
+    <Card className="space-y-3" role="status" aria-label="チャットを読み込み中">
+      <Skeleton className="h-5 w-1/4" />
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-16 w-full" />
+    </Card>
+  );
+}
+
+function TasksSkeleton() {
+  return (
+    <Card className="space-y-3" role="status" aria-label="タスクを読み込み中">
+      <Skeleton className="h-5 w-1/4" />
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-10 w-full" />
+    </Card>
   );
 }
 
@@ -348,10 +426,7 @@ async function loadEventChatMessages(eventId: string, currentUserId: string): Pr
   }));
 }
 
-async function loadInviteCandidates(
-  eventId: string,
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-): Promise<ConnectionPage> {
+async function loadInviteCandidates(eventId: string, supabase: SupabaseServerClient): Promise<ConnectionPage> {
   const { data, error } = await supabase.rpc("list_event_invite_candidates", {
     p_event_id: eventId,
     p_query: null,

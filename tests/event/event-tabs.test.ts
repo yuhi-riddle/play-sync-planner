@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  EVENT_DETAIL_TABS,
-  EVENT_DETAIL_TAB_LABELS,
-  normalizeEventDetailTab,
-  resolveEventDetailDataNeeds
-} from "@/lib/domain/event/event-tabs";
+import { EVENT_DETAIL_TABS, EVENT_DETAIL_TAB_LABELS, normalizeEventDetailTab } from "@/lib/domain/event/event-tabs";
 
 describe("normalizeEventDetailTab", () => {
   it("未指定なら概要にする", () => {
@@ -36,37 +31,5 @@ describe("EVENT_DETAIL_TAB_LABELS", () => {
     for (const tab of EVENT_DETAIL_TABS) {
       expect(EVENT_DETAIL_TAB_LABELS[tab]).toBeTruthy();
     }
-  });
-});
-
-describe("resolveEventDetailDataNeeds", () => {
-  // 概要タブで重いデータを取りに行かないことが、今回の速度改善の核心。
-  it("概要タブでは追加のデータを取らない", () => {
-    expect(resolveEventDetailDataNeeds("overview", true)).toEqual({
-      needsInviteCandidates: false,
-      needsChatMessages: false,
-      needsTasks: false
-    });
-  });
-
-  it("チャットタブではメッセージだけ取る", () => {
-    expect(resolveEventDetailDataNeeds("chat", true)).toEqual({
-      needsInviteCandidates: false,
-      needsChatMessages: true,
-      needsTasks: false
-    });
-  });
-
-  it("タスクタブではタスクだけ取る", () => {
-    expect(resolveEventDetailDataNeeds("tasks", true)).toEqual({
-      needsInviteCandidates: false,
-      needsChatMessages: false,
-      needsTasks: true
-    });
-  });
-
-  it("参加者タブでは、オーナーのときだけ招待候補を取る", () => {
-    expect(resolveEventDetailDataNeeds("members", true).needsInviteCandidates).toBe(true);
-    expect(resolveEventDetailDataNeeds("members", false).needsInviteCandidates).toBe(false);
   });
 });
