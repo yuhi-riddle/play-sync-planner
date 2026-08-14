@@ -55,6 +55,14 @@ describe("connection, invitation, and calendar RPC migration", () => {
     expect(sql).toContain("and plan.confirmed_start_at is not null");
   });
 
+  it("returns the event's location_name so the home calendar can keep showing it", () => {
+    const sql = migration();
+
+    expect(sql).toContain("location_name text,");
+    expect(sql.match(/event_row\.location_name/g)).toHaveLength(2);
+    expect(sql).toContain("schedule.location_name");
+  });
+
   it("restricts list_event_invite_candidates to the event owner and excludes joined members and blocked pairs", () => {
     const sql = migration();
 
