@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { errorState, successState, type ActionState } from "@/lib/domain/shared/action-state";
-import { canInviteCandidate } from "@/lib/domain/account/connections";
+import {
+  canInviteCandidate,
+  mapConnectionPage,
+  type ConnectionCategory,
+  type ConnectionCursor,
+  type ConnectionPage
+} from "@/lib/domain/account/connections";
 import { getUserDisplayName } from "@/lib/domain/account/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -202,6 +208,30 @@ export async function unblockUserAction(userId: string): Promise<ActionState> {
     unstable_rethrow(cause);
     return errorState(cause instanceof Error ? cause.message : "ブロックを解除できませんでした");
   }
+}
+
+export async function loadMoreConnectionsAction(
+  category: ConnectionCategory,
+  cursor: ConnectionCursor
+): Promise<ConnectionPage> {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_connections", {
+    p_category: category,
+    p_cursor_at: cursor?.at ?? null,
+    p_cursor_user_id: cursor?.userId ?? null,
+    p_limit: 20
+  });
+
+  if (error) {
+    throw new Error("つながりを読み込めませんでした");
+  }
+
+  return mapConnectionPage(data ?? []);
 }
 
 async function requireInvitationOwner(eventId: string) {

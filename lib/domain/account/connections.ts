@@ -10,6 +10,78 @@ export type ConnectionCandidate = {
   isFavorite: boolean;
 };
 
+export type ConnectionCategory = "favorites" | "mutual" | "following" | "shared" | "blocked";
+
+export type ConnectionCursor = { at: string; userId: string } | null;
+
+export type ConnectionPage = {
+  items: ConnectionCandidate[];
+  nextCursor: ConnectionCursor;
+};
+
+const connectionPageSize = 20;
+
+type ConnectionRpcRow = {
+  user_id: string;
+  display_name: string;
+  shared_event_count: number | string;
+  latest_shared_at: string | null;
+  is_following: boolean;
+  is_followed_by: boolean;
+  is_favorite: boolean;
+  cursor_at: string;
+  cursor_user_id: string;
+};
+
+export function mapConnectionCandidateRow(row: ConnectionRpcRow): ConnectionCandidate {
+  return {
+    userId: row.user_id,
+    displayName: row.display_name,
+    sharedEventCount: Number(row.shared_event_count),
+    latestSharedAt: row.latest_shared_at ?? "",
+    isFollowing: row.is_following,
+    isFollowedBy: row.is_followed_by,
+    isFavorite: row.is_favorite
+  };
+}
+
+/**
+ * list_connections は常に最大20件で打ち切る（migration 034参照）ので、
+ * ちょうど20件返ってきたときだけ「まだ続きがあるかもしれない」とみなす。
+ */
+export function mapConnectionPage(rows: ConnectionRpcRow[]): ConnectionPage {
+  const items = rows.map(mapConnectionCandidateRow);
+  const lastRow = rows.at(-1);
+  const nextCursor: ConnectionCursor =
+    rows.length === connectionPageSize && lastRow ? { at: lastRow.cursor_at, userId: lastRow.cursor_user_id } : null;
+
+  return { items, nextCursor };
+}
+
+export function mapConnectionCounts(
+  rows: { category: string; item_count: number | string }[]
+): Record<ConnectionCategory, number> {
+  const counts: Record<ConnectionCategory, number> = {
+    favorites: 0,
+    mutual: 0,
+    following: 0,
+    shared: 0,
+    blocked: 0
+  };
+
+  for (const row of rows) {
+    if (row.category in counts) {
+      counts[row.category as ConnectionCategory] = Number(row.item_count);
+    }
+  }
+
+  return counts;
+}
+
+export function toBlockedUser(candidate: ConnectionCandidate): BlockedUser {
+  return { userId: candidate.userId, displayName: candidate.displayName };
+}
+
 type SharedInviteCandidate = {
   userId: string;
   displayName: string;
@@ -42,30 +114,6 @@ type ProfileErrorLike = {
   code?: string | null;
   message?: string | null;
 };
-
-export function resolveConnectionProfileNames(
-  rows: ProfileNameRow[] | null | undefined,
-  error: ProfileErrorLike | null | undefined
-): Map<string, string> {
-  if (error && !isProfileSchemaUnavailable(error)) {
-    throw new Error("つながりのプロフィールを読み込めませんでした");
-  }
-
-  return new Map((rows ?? []).map((profile) => [profile.user_id, profile.nickname]));
-}
-
-export function buildBlockedUsers({
-  blockedUserIds,
-  profileNames
-}: {
-  blockedUserIds: Iterable<string>;
-  profileNames: ReadonlyMap<string, string>;
-}): BlockedUser[] {
-  return [...blockedUserIds].map((userId) => ({
-    userId,
-    displayName: profileNames.get(userId) ?? "Madoiユーザー"
-  }));
-}
 
 export function isMutualFollow(candidate: ConnectionCandidate): boolean {
   return candidate.isFollowing && candidate.isFollowedBy;
