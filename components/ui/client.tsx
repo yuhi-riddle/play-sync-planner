@@ -6,7 +6,7 @@ import { useFormStatus } from "react-dom";
 import type { FormEvent, InvalidEvent, KeyboardEvent, ReactNode } from "react";
 import { clsx } from "clsx";
 
-import { Alert, buttonVariantClasses, type ButtonVariant } from "@/components/ui/server";
+import { Alert, buttonBaseClasses, buttonSizeClasses, buttonVariantClasses, type ButtonVariant } from "@/components/ui/server";
 
 /**
  * 操作を伴うプリミティブ（hooks・イベントハンドラを使う）。
@@ -473,8 +473,11 @@ export const SubmitButton = React.forwardRef<
       disabled={pending}
       aria-busy={pending}
       className={clsx(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-2 text-body font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+        buttonBaseClasses,
+        buttonSizeClasses.default,
+        "gap-2",
         buttonVariantClasses[variant],
+        "disabled:pointer-events-none disabled:opacity-40",
         className
       )}
     >
