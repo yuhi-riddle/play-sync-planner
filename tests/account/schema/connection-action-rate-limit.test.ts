@@ -8,59 +8,87 @@ const migrationPath = resolve(process.cwd(), "supabase/migrations/039_connection
 describe("connection action rate limit migration", () => {
   const migration = () => readFileSync(migrationPath, "utf8").replace(/\r\n/g, "\n");
 
-  it("gives follow_user_atomic the same rate-limit-first, shared-event, block checks as block_user_atomic", () => {
+  it("centralizes the rate-limit-first, shared-event, block precondition in one private helper", () => {
     const sql = migration();
 
-    expect(sql).toContain("create or replace function public.follow_user_atomic(target_user_id uuid)");
-    const rateLimitIndex = sql.indexOf(
-      "retry_seconds := private.try_consume_authenticated_rate_limit_once('connection_update');",
-      sql.indexOf("function public.follow_user_atomic")
+    expect(sql).toContain("create or replace function private.require_connection_action_target(");
+    const helperSection = sql.slice(
+      sql.indexOf("function private.require_connection_action_target"),
+      sql.indexOf("revoke all on function private.require_connection_action_target")
     );
-    const sharedEventIndex = sql.indexOf(
-      "if not public.have_shared_event(current_user_id, target_user_id) then",
-      sql.indexOf("function public.follow_user_atomic")
+
+    const rateLimitIndex = helperSection.indexOf(
+      "retry_seconds := private.try_consume_authenticated_rate_limit_once(p_operation);"
+    );
+    const sharedEventIndex = helperSection.indexOf(
+      "if not public.have_shared_event(current_user_id, p_target_user_id) then"
     );
     expect(rateLimitIndex).toBeGreaterThan(-1);
     expect(sharedEventIndex).toBeGreaterThan(-1);
     expect(rateLimitIndex).toBeLessThan(sharedEventIndex);
 
-    expect(sql).toContain("errcode = 'PSP03'");
-    expect(sql).toContain("message = 'Blocked relationship'");
-    expect(sql).toContain(
+    expect(helperSection).toContain("errcode = 'PSP02'");
+    expect(helperSection).toContain("errcode = 'PSP01'");
+    expect(helperSection).toContain("errcode = 'PSP03'");
+    expect(helperSection).toContain("message = 'Blocked relationship'");
+    expect(sql).toContain("revoke all on function private.require_connection_action_target(uuid, text) from public");
+  });
+
+  it("has follow_user_atomic delegate to the shared helper and only audit when a row actually changed", () => {
+    const sql = migration();
+
+    expect(sql).toContain("create or replace function public.follow_user_atomic(target_user_id uuid)");
+    const followSection = sql.slice(
+      sql.indexOf("function public.follow_user_atomic"),
+      sql.indexOf("function public.unfollow_user_atomic")
+    );
+
+    expect(followSection).toContain(
+      "current_user_id := private.require_connection_action_target(target_user_id, 'connection_update');"
+    );
+    expect(followSection).toContain(
       "insert into public.user_connections (follower_user_id, followed_user_id)\n  values (current_user_id, target_user_id)\n  on conflict (follower_user_id, followed_user_id) do nothing;"
     );
-    expect(sql).toContain("values (current_user_id, 'connection_follow', 'user', target_user_id, 'success')");
+    expect(followSection).toContain("get diagnostics affected_rows = row_count;");
+    expect(followSection).toContain("if affected_rows > 0 then");
+    expect(followSection).toContain("values (current_user_id, 'connection_follow', 'user', target_user_id, 'success')");
     expect(sql).toContain("revoke all on function public.follow_user_atomic(uuid) from public, anon");
     expect(sql).toContain("grant execute on function public.follow_user_atomic(uuid) to authenticated");
   });
 
-  it("keeps unfollow_user_atomic behind the same shared-event and block checks as before (no behavior loosening)", () => {
+  it("has unfollow_user_atomic delegate to the shared helper and only audit when a row actually changed", () => {
     const sql = migration();
 
-    expect(sql).toContain("create or replace function public.unfollow_user_atomic(target_user_id uuid)");
     const unfollowSection = sql.slice(
       sql.indexOf("function public.unfollow_user_atomic"),
       sql.indexOf("function public.toggle_favorite_atomic")
     );
-    expect(unfollowSection).toContain("if not public.have_shared_event(current_user_id, target_user_id) then");
-    expect(unfollowSection).toContain("if public.is_user_blocked(current_user_id, target_user_id) then");
+
+    expect(unfollowSection).toContain(
+      "current_user_id := private.require_connection_action_target(target_user_id, 'connection_update');"
+    );
     expect(unfollowSection).toContain(
       "delete from public.user_connections\n  where follower_user_id = current_user_id\n    and followed_user_id = target_user_id;"
     );
+    expect(unfollowSection).toContain("get diagnostics affected_rows = row_count;");
     expect(unfollowSection).toContain("values (current_user_id, 'connection_unfollow', 'user', target_user_id, 'success')");
     expect(sql).toContain("revoke all on function public.unfollow_user_atomic(uuid) from public, anon");
     expect(sql).toContain("grant execute on function public.unfollow_user_atomic(uuid) to authenticated");
   });
 
-  it("keeps the follow-required-for-favorite rule, using the existing is_following helper", () => {
+  it("guards toggle_favorite_atomic's insert with on conflict do nothing, avoiding a raw unique_violation on a double-click", () => {
     const sql = migration();
 
-    expect(sql).toContain("create or replace function public.toggle_favorite_atomic(target_user_id uuid)");
-    expect(sql).toContain("errcode = 'PSP04'");
-    expect(sql).toContain("message = 'Must be following to favorite'");
-    expect(sql).toContain("not already_favorite and not public.is_following(current_user_id, target_user_id)");
-    expect(sql).toContain("values (current_user_id, 'connection_favorite_add', 'user', target_user_id, 'success')");
-    expect(sql).toContain("values (current_user_id, 'connection_favorite_remove', 'user', target_user_id, 'success')");
+    const toggleSection = sql.slice(sql.indexOf("function public.toggle_favorite_atomic"));
+
+    expect(toggleSection).toContain(
+      "insert into public.user_favorites (user_id, favorite_user_id)\n    values (current_user_id, target_user_id)\n    on conflict (user_id, favorite_user_id) do nothing;"
+    );
+    expect(toggleSection).toContain("errcode = 'PSP04'");
+    expect(toggleSection).toContain("message = 'Must be following to favorite'");
+    expect(toggleSection).toContain("not already_favorite and not public.is_following(current_user_id, target_user_id)");
+    expect(toggleSection).toContain("values (current_user_id, 'connection_favorite_add', 'user', target_user_id, 'success')");
+    expect(toggleSection).toContain("values (current_user_id, 'connection_favorite_remove', 'user', target_user_id, 'success')");
     expect(sql).toContain("revoke all on function public.toggle_favorite_atomic(uuid) from public, anon");
     expect(sql).toContain("grant execute on function public.toggle_favorite_atomic(uuid) to authenticated");
   });
@@ -69,6 +97,6 @@ describe("connection action rate limit migration", () => {
     const sql = migration();
 
     expect(sql).not.toContain("create or replace function private.rate_limit_for");
-    expect(sql).toContain("try_consume_authenticated_rate_limit_once('connection_update')");
+    expect(sql).toContain("try_consume_authenticated_rate_limit_once(p_operation)");
   });
 });
