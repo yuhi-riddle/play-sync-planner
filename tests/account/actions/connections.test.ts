@@ -25,8 +25,11 @@ vi.mock("@/lib/supabase/server", () => ({
 import {
   blockUserAction,
   createEventUserInvitationsAction,
+  followUserAction,
   respondToEventUserInvitationAction,
-  unblockUserAction
+  toggleFavoriteAction,
+  unblockUserAction,
+  unfollowUserAction
 } from "@/lib/actions/account/connections";
 
 const currentUserId = "11111111-1111-4111-8111-111111111111";
@@ -34,6 +37,132 @@ const blockedUserId = "22222222-2222-4222-8222-222222222222";
 const eventId = "33333333-3333-4333-8333-333333333333";
 const inviteeUserId = "44444444-4444-4444-8444-444444444444";
 const invitationId = "55555555-5555-4555-8555-555555555555";
+
+describe("followUserAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUser.mockResolvedValue({ id: currentUserId });
+  });
+
+  it("delegates the whole follow operation to one atomic RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    createSupabaseServerClient.mockResolvedValue({ rpc });
+
+    const result = await followUserAction(blockedUserId);
+
+    expect(result.status).toBe("success");
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("follow_user_atomic", { target_user_id: blockedUserId });
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(revalidatePath).toHaveBeenCalledWith("/connections");
+  });
+
+  it("preserves the existing message when the target no longer shares an event", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "PSP01", message: "A shared event is required" } })
+    });
+
+    const result = await followUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "共通のイベントに参加しているユーザーだけを操作できます" });
+  });
+
+  it("preserves the existing message when the relationship is blocked", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "PSP03", message: "Blocked relationship" } })
+    });
+
+    const result = await followUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "ブロック中のユーザーにはこの操作を行えません" });
+  });
+
+  it("shows a rate limit message when the RPC reports PSP02", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "PSP02", message: "Rate limit exceeded" } })
+    });
+
+    const result = await followUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "操作が多すぎます。しばらく待ってから再度お試しください。" });
+  });
+
+  it("uses the general follow error for an unexpected database failure", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
+    });
+
+    const result = await followUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "フォローできませんでした" });
+  });
+});
+
+describe("unfollowUserAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUser.mockResolvedValue({ id: currentUserId });
+  });
+
+  it("delegates the whole unfollow operation to one atomic RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    createSupabaseServerClient.mockResolvedValue({ rpc });
+
+    const result = await unfollowUserAction(blockedUserId);
+
+    expect(result.status).toBe("success");
+    expect(rpc).toHaveBeenCalledWith("unfollow_user_atomic", { target_user_id: blockedUserId });
+    expect(revalidatePath).toHaveBeenCalledWith("/connections");
+  });
+
+  it("uses the general unfollow error for an unexpected database failure", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
+    });
+
+    const result = await unfollowUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "フォローを解除できませんでした" });
+  });
+});
+
+describe("toggleFavoriteAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getCurrentUser.mockResolvedValue({ id: currentUserId });
+  });
+
+  it("delegates the whole favorite toggle to one atomic RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    createSupabaseServerClient.mockResolvedValue({ rpc });
+
+    const result = await toggleFavoriteAction(blockedUserId);
+
+    expect(result.status).toBe("success");
+    expect(rpc).toHaveBeenCalledWith("toggle_favorite_atomic", { target_user_id: blockedUserId });
+    expect(revalidatePath).toHaveBeenCalledWith("/connections");
+  });
+
+  it("preserves the existing message when the target isn't followed or favorited yet", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "PSP04", message: "Must be following to favorite" } })
+    });
+
+    const result = await toggleFavoriteAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "フォローしている人だけをお気に入りにできます" });
+  });
+
+  it("uses the general favorite error for an unexpected database failure", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
+    });
+
+    const result = await toggleFavoriteAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "お気に入りを更新できませんでした" });
+  });
+});
 
 describe("blockUserAction", () => {
   beforeEach(() => {

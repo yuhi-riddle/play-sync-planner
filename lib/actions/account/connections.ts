@@ -15,6 +15,8 @@ import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser }
 const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sharedEventRequiredErrorCode = "PSP01";
 const rateLimitExceededErrorCode = "PSP02";
+const blockedRelationshipErrorCode = "PSP03";
+const followRequiredErrorCode = "PSP04";
 
 type ConnectionTarget = {
   currentUserId: string;
@@ -28,30 +30,6 @@ function requireTargetUserId(value: string): string {
   }
 
   return userId;
-}
-
-async function requireConnectionTarget(userId: string): Promise<ConnectionTarget> {
-  const target = await requireAuthenticatedTarget(userId);
-  const { currentUserId, targetUserId } = target;
-  const admin = createSupabaseAdminClient();
-  const [sharedEventResult, blockResult] = await Promise.all([
-    admin.rpc("have_shared_event", { first_user_id: currentUserId, second_user_id: targetUserId }),
-    admin.rpc("is_user_blocked", { first_user_id: currentUserId, second_user_id: targetUserId })
-  ]);
-
-  if (sharedEventResult.error || blockResult.error) {
-    throw new Error("接続の状態を確認できませんでした");
-  }
-
-  if (!sharedEventResult.data) {
-    throw new Error("共通のイベントに参加しているユーザーだけを操作できます");
-  }
-
-  if (blockResult.data) {
-    throw new Error("ブロック中のユーザーにはこの操作を行えません");
-  }
-
-  return target;
 }
 
 async function requireAuthenticatedTarget(userId: string): Promise<ConnectionTarget> {
@@ -77,17 +55,20 @@ function revalidateConnections(eventId?: string) {
 
 export async function followUserAction(userId: string): Promise<ActionState> {
   try {
-    const { currentUserId, targetUserId } = await requireConnectionTarget(userId);
+    const { targetUserId } = await requireAuthenticatedTarget(userId);
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.from("user_connections").upsert(
-      {
-        follower_user_id: currentUserId,
-        followed_user_id: targetUserId
-      },
-      { onConflict: "follower_user_id,followed_user_id" }
-    );
+    const { error } = await supabase.rpc("follow_user_atomic", { target_user_id: targetUserId });
 
     if (error) {
+      if (error.code === sharedEventRequiredErrorCode) {
+        return errorState("共通のイベントに参加しているユーザーだけを操作できます");
+      }
+      if (error.code === blockedRelationshipErrorCode) {
+        return errorState("ブロック中のユーザーにはこの操作を行えません");
+      }
+      if (error.code === rateLimitExceededErrorCode) {
+        return errorState("操作が多すぎます。しばらく待ってから再度お試しください。");
+      }
       return errorState("フォローできませんでした");
     }
 
@@ -101,15 +82,20 @@ export async function followUserAction(userId: string): Promise<ActionState> {
 
 export async function unfollowUserAction(userId: string): Promise<ActionState> {
   try {
-    const { currentUserId, targetUserId } = await requireConnectionTarget(userId);
+    const { targetUserId } = await requireAuthenticatedTarget(userId);
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase
-      .from("user_connections")
-      .delete()
-      .eq("follower_user_id", currentUserId)
-      .eq("followed_user_id", targetUserId);
+    const { error } = await supabase.rpc("unfollow_user_atomic", { target_user_id: targetUserId });
 
     if (error) {
+      if (error.code === sharedEventRequiredErrorCode) {
+        return errorState("共通のイベントに参加しているユーザーだけを操作できます");
+      }
+      if (error.code === blockedRelationshipErrorCode) {
+        return errorState("ブロック中のユーザーにはこの操作を行えません");
+      }
+      if (error.code === rateLimitExceededErrorCode) {
+        return errorState("操作が多すぎます。しばらく待ってから再度お試しください。");
+      }
       return errorState("フォローを解除できませんでした");
     }
 
@@ -123,37 +109,24 @@ export async function unfollowUserAction(userId: string): Promise<ActionState> {
 
 export async function toggleFavoriteAction(userId: string): Promise<ActionState> {
   try {
-    const { currentUserId, targetUserId } = await requireConnectionTarget(userId);
+    const { targetUserId } = await requireAuthenticatedTarget(userId);
     const supabase = await createSupabaseServerClient();
-    const [{ data: following, error: followingError }, { data: favorite, error: favoriteError }] = await Promise.all([
-      supabase
-        .from("user_connections")
-        .select("follower_user_id")
-        .eq("follower_user_id", currentUserId)
-        .eq("followed_user_id", targetUserId)
-        .maybeSingle(),
-      supabase
-        .from("user_favorites")
-        .select("user_id")
-        .eq("user_id", currentUserId)
-        .eq("favorite_user_id", targetUserId)
-        .maybeSingle()
-    ]);
-
-    if (followingError || favoriteError) {
-      return errorState("お気に入りの状態を確認できませんでした");
-    }
-
-    if (!favorite && !following) {
-      return errorState("フォローしている人だけをお気に入りにできます");
-    }
-
-    const { error } = favorite
-      ? await supabase.from("user_favorites").delete().eq("user_id", currentUserId).eq("favorite_user_id", targetUserId)
-      : await supabase.from("user_favorites").insert({ user_id: currentUserId, favorite_user_id: targetUserId });
+    const { error } = await supabase.rpc("toggle_favorite_atomic", { target_user_id: targetUserId });
 
     if (error) {
-      return errorState(favorite ? "お気に入りを解除できませんでした" : "お気に入りに追加できませんでした");
+      if (error.code === sharedEventRequiredErrorCode) {
+        return errorState("共通のイベントに参加しているユーザーだけを操作できます");
+      }
+      if (error.code === blockedRelationshipErrorCode) {
+        return errorState("ブロック中のユーザーにはこの操作を行えません");
+      }
+      if (error.code === followRequiredErrorCode) {
+        return errorState("フォローしている人だけをお気に入りにできます");
+      }
+      if (error.code === rateLimitExceededErrorCode) {
+        return errorState("操作が多すぎます。しばらく待ってから再度お試しください。");
+      }
+      return errorState("お気に入りを更新できませんでした");
     }
 
     revalidateConnections();
