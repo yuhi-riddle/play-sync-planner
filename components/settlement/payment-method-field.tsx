@@ -44,7 +44,7 @@ export function PaymentMethodField({
             className={clsx(
               "rounded-full border px-3 py-1 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
               value === option
-                ? "border-moss bg-mist/45 text-pine"
+                ? "border-moss bg-mist text-pine"
                 : "border-line bg-surface text-muted hover:border-moss hover:text-pine"
             )}
           >
