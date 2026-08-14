@@ -232,6 +232,6 @@ describe("ConnectionList", () => {
     fireEvent.click(screen.getByRole("button", { name: "もっと見る" }));
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("続きを読み込めませんでした。"));
-    expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument());
   });
 });
