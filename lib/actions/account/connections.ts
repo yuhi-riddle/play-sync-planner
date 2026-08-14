@@ -16,6 +16,7 @@ import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser }
 
 const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sharedEventRequiredErrorCode = "PSP01";
+const rateLimitExceededErrorCode = "PSP02";
 
 type ConnectionTarget = {
   currentUserId: string;
@@ -176,6 +177,9 @@ export async function blockUserAction(userId: string): Promise<ActionState> {
     if (error) {
       if (error.code === sharedEventRequiredErrorCode) {
         return errorState("共通のイベントに参加しているユーザーだけを操作できます");
+      }
+      if (error.code === rateLimitExceededErrorCode) {
+        return errorState("操作が多すぎます。しばらく待ってから再度お試しください。");
       }
       return errorState("ブロックできませんでした");
     }

@@ -59,6 +59,19 @@ describe("blockUserAction", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
+  it("shows a rate limit message when the RPC reports PSP02", async () => {
+    createSupabaseServerClient.mockResolvedValue({
+      rpc: vi.fn().mockResolvedValue({
+        error: { code: "PSP02", message: "Rate limit exceeded" }
+      })
+    });
+
+    const result = await blockUserAction(blockedUserId);
+
+    expect(result).toEqual({ status: "error", message: "操作が多すぎます。しばらく待ってから再度お試しください。" });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
   it("uses the general block error for an unexpected database failure", async () => {
     createSupabaseServerClient.mockResolvedValue({
       rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
