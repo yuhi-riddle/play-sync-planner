@@ -92,12 +92,26 @@ export function SectionHeading({
   );
 }
 
+export type ButtonVariant = "primary" | "secondary";
+export type ButtonSize = "default" | "sm";
+
+/** ButtonLink/SecondaryLink/Button/SubmitButton で共有する見た目の実体。 */
+export const buttonVariantClasses: Record<ButtonVariant, string> = {
+  primary: "bg-ink text-white shadow-soft hover:bg-pine",
+  secondary: "border border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
+};
+
+export const buttonSizeClasses: Record<ButtonSize, string> = {
+  default: "min-h-11 px-5 py-2 text-body",
+  sm: "min-h-9 px-3 py-1.5 text-sm"
+};
+
+export const buttonBaseClasses =
+  "inline-flex items-center justify-center rounded-full font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2";
+
 export function ButtonLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2"
-    >
+    <Link href={href} className={clsx(buttonBaseClasses, buttonSizeClasses.default, buttonVariantClasses.primary)}>
       {children}
     </Link>
   );
@@ -105,14 +119,42 @@ export function ButtonLink({ href, children }: { href: string; children: ReactNo
 
 export function SecondaryLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2"
-    >
+    <Link href={href} className={clsx(buttonBaseClasses, buttonSizeClasses.default, buttonVariantClasses.secondary)}>
       {children}
     </Link>
   );
 }
+
+/**
+ * <button>要素用の共通プリミティブ。ButtonLink/SecondaryLinkの<button>版。
+ * フォーム送信の待機状態（useFormStatus）が必要な場面は ./client の SubmitButton を使う。
+ */
+export const Button = React.forwardRef<
+  HTMLButtonElement,
+  {
+    children: ReactNode;
+    variant?: ButtonVariant;
+    size?: ButtonSize;
+    className?: string;
+  } & Omit<React.ComponentPropsWithoutRef<"button">, "className">
+>(function Button({ children, variant = "primary", size = "default", type = "button", className, ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={clsx(
+        buttonBaseClasses,
+        buttonSizeClasses[size],
+        buttonVariantClasses[variant],
+        "disabled:pointer-events-none disabled:opacity-40",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
 
 /** ページ読み込み中のプレースホルダー1本分。幅・高さは className で渡す。 */
 export function Skeleton({ className }: { className?: string }) {

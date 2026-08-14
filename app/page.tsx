@@ -13,6 +13,7 @@ import {
   PageHeader,
   SecondaryLink,
   SectionHeading,
+  SubmitButton,
   type BadgeTone
 } from "@/components/ui";
 import { SetupPanel } from "@/components/ui/state-panels";
@@ -242,12 +243,7 @@ export default async function HomePage({
               <div className="mt-3 flex flex-wrap gap-2">
                 <ButtonLink href={getEventDraftResumePath()}>続きから入力</ButtonLink>
                 <form action={discardEventDraftAction}>
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                  >
-                    下書きを破棄
-                  </button>
+                  <SubmitButton variant="secondary">下書きを破棄</SubmitButton>
                 </form>
               </div>
             </div>

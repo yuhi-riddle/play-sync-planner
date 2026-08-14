@@ -682,24 +682,38 @@ export function PlanForm({
         <input key={offsetMinutes} type="hidden" name="reminder_offsets_minutes" value={String(offsetMinutes)} />
       ))}
 
-      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {steps.map((step, index) => (
-          <li
-            key={step}
-            className={clsx(
-              "rounded-control border px-4 py-3 text-sm font-bold",
-              currentStep === index
-                ? "border-moss bg-mist/35 text-pine"
-                : index < currentStep
-                  ? "border-moss/20 bg-surface text-ink"
-                  : "border-line bg-surface text-muted"
-            )}
-          >
-            <span className="mr-2 text-xs tabular-nums">STEP {index + 1}</span>
-            {step}
-          </li>
-        ))}
-      </ol>
+      <div className="grid gap-3">
+        <ol aria-label="入力ステップ" className="flex items-center">
+          {steps.map((step, index) => {
+            const isCurrent = currentStep === index;
+            const isDone = index < currentStep;
+
+            return (
+              <li key={step} aria-current={isCurrent ? "step" : undefined} className="flex flex-1 items-center last:flex-none">
+                <span
+                  className={clsx(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums transition-colors",
+                    isCurrent ? "bg-ink text-white" : isDone ? "bg-mist text-pine" : "border border-line text-muted"
+                  )}
+                >
+                  <span aria-hidden="true">{index + 1}</span>
+                  <span className="sr-only">
+                    {step}
+                    {isCurrent ? "・現在のステップ" : isDone ? "・完了" : ""}
+                  </span>
+                </span>
+                {index < steps.length - 1 ? (
+                  <span aria-hidden="true" className={clsx("mx-2 h-px flex-1", isDone ? "bg-moss/40" : "bg-line")} />
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+        <p className="text-sm font-bold text-ink">
+          <span className="tabular-nums text-muted">STEP {currentStep + 1}</span>
+          <span className="ml-2">{steps[currentStep]}</span>
+        </p>
+      </div>
 
         {currentStep === 0 ? (
         <section className="grid gap-5">
