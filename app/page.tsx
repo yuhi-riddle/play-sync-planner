@@ -29,24 +29,16 @@ import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/li
 
 export const dynamic = "force-dynamic";
 
-type CandidateDateRow = {
-  id: string;
+type CalendarRpcRow = {
+  candidate_id: string | null;
+  plan_id: string;
+  event_title: string | null;
+  plan_title: string | null;
+  location_name: string | null;
   start_at: string;
   end_at: string | null;
-  is_all_day?: boolean | null;
-};
-
-type PlanRow = {
-  id: string;
-  title: string | null;
+  is_all_day: boolean | null;
   status: string;
-  settlement_status: string | null;
-  confirmed_start_at: string | null;
-  confirmed_end_at: string | null;
-  is_all_day?: boolean | null;
-  answer_deadline_at: string | null;
-  events: { title: string | null; location_name: string | null } | { title: string | null; location_name: string | null }[] | null;
-  candidate_dates?: CandidateDateRow[];
 };
 
 type NotificationRow = {
@@ -102,44 +94,21 @@ function homeFilterHref(date: string, filter: NotificationActionFilter) {
   return `/?${params.toString()}`;
 }
 
-function eventOf(plan: PlanRow) {
-  return Array.isArray(plan.events) ? plan.events[0] : plan.events;
-}
+function toCalendarItems(rows: CalendarRpcRow[]): HomeCalendarItem[] {
+  return rows.map((row) => {
+    const isConfirmed = row.status === "date_confirmed";
 
-function toCalendarItems(plans: PlanRow[]): HomeCalendarItem[] {
-  return plans.flatMap((plan) => {
-    const event = eventOf(plan);
-    const eventTitle = event?.title?.trim() || "イベント未設定";
-    const subtitle = plan.title?.trim() || "日程調整";
-    const location = event?.location_name?.trim() || null;
-
-    if (plan.status === "date_confirmed" && plan.confirmed_start_at) {
-      const item: HomeCalendarItem = {
-        id: `confirmed-${plan.id}`,
-        kind: "confirmed",
-        title: eventTitle,
-        subtitle,
-        location,
-        startAt: plan.confirmed_start_at,
-        endAt: plan.confirmed_end_at,
-        isAllDay: plan.is_all_day,
-        href: `/plans/${plan.id}`
-      };
-
-      return [item];
-    }
-
-    return (plan.candidate_dates ?? []).map<HomeCalendarItem>((candidate) => ({
-      id: `candidate-${candidate.id}`,
-      kind: "collecting",
-      title: eventTitle,
-      subtitle,
-      location,
-      startAt: candidate.start_at,
-      endAt: candidate.end_at,
-      isAllDay: candidate.is_all_day,
-      href: `/plans/${plan.id}`
-    }));
+    return {
+      id: isConfirmed ? `confirmed-${row.plan_id}` : `candidate-${row.candidate_id}`,
+      kind: isConfirmed ? "confirmed" : "collecting",
+      title: row.event_title?.trim() || "イベント未設定",
+      subtitle: row.plan_title?.trim() || "日程調整",
+      location: row.location_name?.trim() || null,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      isAllDay: row.is_all_day,
+      href: `/plans/${row.plan_id}`
+    };
   });
 }
 
@@ -173,15 +142,9 @@ export default async function HomePage({
     return <WelcomeHero />;
   }
 
-  const plansPromise = supabase
-    .from("plans")
-    .select(
-      "id, title, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at, events(title, location_name), candidate_dates(id, start_at, end_at, is_all_day)"
-    )
-    .eq("owner_user_id", user.id)
-    .in("status", ["draft", "collecting_answers", "date_confirmed"])
-    .order("created_at", { ascending: false })
-    .limit(30);
+  // list_calendar_items は表示月＋前後バッファ分だけを返す（migration 034参照）。
+  // 自分がオーナーのplanだけでなく、参加済み(joined)のイベントのplan全体が対象になる。
+  const calendarPromise = supabase.rpc("list_calendar_items", { p_month: `${baseDateKey.slice(0, 7)}-01` });
 
   const notificationsPromise = supabase
     .from("notifications")
@@ -201,19 +164,18 @@ export default async function HomePage({
     .select("nickname")
     .eq("user_id", user.id)
     .maybeSingle();
-  const [{ data: plans }, { data: notifications }, { data: eventDraft }, { data: profile }] = await Promise.all([
-    plansPromise,
-    notificationsPromise,
-    eventDraftPromise,
-    profilePromise
-  ]);
+  const [{ data: calendarRows, error: calendarError }, { data: notifications }, { data: eventDraft }, { data: profile }] =
+    await Promise.all([calendarPromise, notificationsPromise, eventDraftPromise, profilePromise]);
 
-  const planRows = (plans ?? []) as PlanRow[];
+  if (calendarError) {
+    throw new Error("カレンダーを読み込めませんでした。");
+  }
+
   const unreadNotifications = (notifications ?? []) as NotificationRow[];
   const notificationCounts = countNotificationsByActionFilter(unreadNotifications);
   const activeActionFilter = resolveNotificationActionFilter(requestedActionFilter, notificationCounts);
   const filteredNotifications = filterNotificationsByActionFilter(unreadNotifications, activeActionFilter).slice(0, 5);
-  const calendarItems = toCalendarItems(planRows);
+  const calendarItems = toCalendarItems((calendarRows ?? []) as CalendarRpcRow[]);
   const nextConfirmedItem = findNextConfirmedItem(calendarItems, new Date());
 
   const actionCount = notificationCounts.all;

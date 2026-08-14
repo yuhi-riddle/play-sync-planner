@@ -37,7 +37,6 @@ function createSingleQuery(data: unknown) {
 }
 
 function mockHomeData(nickname: string | null, email = "account@example.com") {
-  const plansQuery = createListQuery([]);
   const notificationsQuery = createListQuery([]);
   const eventDraftQuery = createSingleQuery(null);
   const profileQuery = createSingleQuery({ nickname });
@@ -45,11 +44,11 @@ function mockHomeData(nickname: string | null, email = "account@example.com") {
   getCurrentUser.mockResolvedValue({ id: "user-1", email });
   createSupabaseServerClient.mockResolvedValue({
     from: vi.fn((table: string) => {
-      if (table === "plans") return plansQuery;
       if (table === "notifications") return notificationsQuery;
       if (table === "event_drafts") return eventDraftQuery;
       return profileQuery;
-    })
+    }),
+    rpc: vi.fn().mockResolvedValue({ data: [], error: null })
   });
 }
 
