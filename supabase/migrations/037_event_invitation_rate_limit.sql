@@ -52,7 +52,17 @@ begin
     return jsonb_build_object('ok', false, 'error', 'rate_limited', 'retry_after_seconds', retry_seconds);
   end if;
 
-  if p_event_id is null or cardinality(p_invitee_user_ids) not between 1 and 20 then
+  -- 権限確認を入力内容の検証より先にする。非オーナーが自分自身を招待先に
+  -- 含めて叩いてきた場合、以前は requireInvitationOwner() が真っ先にオーナー
+  -- 確認をしていたため常に「権限がありません」だった。順序を入れ替えたままだと
+  -- 権限が無い呼び出し元にも「入力のどこが変か」という情報が先に漏れてしまう。
+  if not public.is_event_owner(p_event_id) then
+    insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
+    values (current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied');
+    return jsonb_build_object('ok', false, 'error', 'not_owner');
+  end if;
+
+  if cardinality(p_invitee_user_ids) not between 1 and 20 then
     insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
     values (current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied');
     return jsonb_build_object('ok', false, 'error', 'invalid_input');
@@ -73,12 +83,6 @@ begin
     insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
     values (current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied');
     return jsonb_build_object('ok', false, 'error', 'self_invite');
-  end if;
-
-  if not public.is_event_owner(p_event_id) then
-    insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
-    values (current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied');
-    return jsonb_build_object('ok', false, 'error', 'not_owner');
   end if;
 
   select public.events.title
@@ -208,12 +212,15 @@ begin
     return jsonb_build_object('ok', false, 'error', 'not_found');
   end if;
 
+  -- status を pending/accepted に絞らない: declined/revoked な招待も見つけた上で
+  -- 下のstatus判定に委ねる。絞ってしまうと、返答済みの招待にもう一度アクセス
+  -- したときに「見つからない(not_found)」になり、本来の「すでに返答済みです」
+  -- というメッセージが出せなくなる（現行TS実装は status を問わず取得していた）。
   select public.event_user_invitations.*
   into invitation_record
   from public.event_user_invitations
   where public.event_user_invitations.id = p_invitation_id
     and public.event_user_invitations.invitee_user_id = current_user_id
-    and public.event_user_invitations.status in ('pending', 'accepted')
   for update;
 
   if not found then

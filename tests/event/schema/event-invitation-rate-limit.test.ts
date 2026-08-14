@@ -80,4 +80,29 @@ describe("event invitation rate limit migration", () => {
     expect(sql).toContain("revoke all on function public.respond_event_user_invitation(uuid, text) from public, anon");
     expect(sql).toContain("grant execute on function public.respond_event_user_invitation(uuid, text) to authenticated");
   });
+
+  it("checks event ownership before validating the invitee list, so a non-owner always gets not_owner first", () => {
+    const sql = migration();
+
+    const notOwnerIndex = sql.indexOf("if not public.is_event_owner(p_event_id) then");
+    const invalidInputIndex = sql.indexOf("if cardinality(p_invitee_user_ids) not between 1 and 20 then");
+    const selfInviteIndex = sql.indexOf("if current_user_id = any(normalized_invitee_user_ids) then");
+
+    expect(notOwnerIndex).toBeGreaterThan(-1);
+    expect(invalidInputIndex).toBeGreaterThan(-1);
+    expect(selfInviteIndex).toBeGreaterThan(-1);
+    expect(notOwnerIndex).toBeLessThan(invalidInputIndex);
+    expect(notOwnerIndex).toBeLessThan(selfInviteIndex);
+  });
+
+  it("looks up the invitation regardless of status, so a declined/revoked invitation reports already_responded instead of not_found", () => {
+    const sql = migration();
+
+    expect(sql).not.toMatch(
+      /where public\.event_user_invitations\.id = p_invitation_id\s+and public\.event_user_invitations\.invitee_user_id = current_user_id\s+and public\.event_user_invitations\.status in \('pending', 'accepted'\)/
+    );
+    expect(sql).toMatch(
+      /where public\.event_user_invitations\.id = p_invitation_id\s+and public\.event_user_invitations\.invitee_user_id = current_user_id\s+for update;/
+    );
+  });
 });
