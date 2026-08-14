@@ -26,47 +26,62 @@ import type { SettlementReminderKind } from "@/lib/domain/settlement/reminder-lo
 type SettlementSessionClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 type SettlementRateLimitResult = { ok: true } | { ok: false; message: string };
+type SettlementAuditOperation = "settlement_payment_record" | "settlement_payment_confirm";
 
 /**
- * 支払い記録・確認の冒頭で呼ぶレート制限ゲート（migration 038）。
- * 決済ロジックそのものはTypeScript側のまま変えず、ここでは「多すぎる操作」だけ弾く。
- */
-async function consumeSettlementRateLimit(supabase: SettlementSessionClient): Promise<SettlementRateLimitResult> {
-  const { data, error } = await supabase.rpc("consume_authenticated_rate_limit", {
-    p_operation: "settlement_update"
-  });
-
-  if (error) {
-    return { ok: false, message: "操作を確認できませんでした" };
-  }
-
-  const result = data as { ok: boolean; error?: string; retry_after_seconds?: number };
-  if (!result.ok) {
-    return { ok: false, message: "操作が多すぎます。しばらく待ってから再度お試しください。" };
-  }
-
-  return { ok: true };
-}
-
-/**
- * 支払いの記録・確認が成功したことを監査ログへ残す（migration 038）。
- * ここが失敗しても支払い自体は既に確定しているので、投稿は失敗させない。
+ * 支払いの記録・確認・拒否結果を監査ログへ残す（migration 038）。
+ * ここが失敗しても支払い自体の成否には影響させない（投稿は失敗させない）。
+ * targetId は支払いレコードがまだ存在しない時点（記録前のレート制限判定など）では null になる。
  */
 async function recordSettlementAudit(
   supabase: SettlementSessionClient,
-  operation: "settlement_payment_record" | "settlement_payment_confirm",
-  targetId: string
+  operation: SettlementAuditOperation,
+  targetId: string | null,
+  outcome: "success" | "denied" = "success"
 ): Promise<void> {
   const { error } = await supabase.rpc("record_authenticated_security_audit", {
     p_operation: operation,
     p_target_type: "payment",
     p_target_id: targetId,
-    p_outcome: "success"
+    p_outcome: outcome
   });
 
   if (error) {
     console.error("監査ログを記録できませんでした", error);
   }
+}
+
+/**
+ * 支払い記録・確認の冒頭で呼ぶレート制限ゲート（migration 038）。
+ * 決済ロジックそのものはTypeScript側のまま変えず、ここでは「多すぎる操作」だけ弾く。
+ * 拒否（レート制限超過）は監査ログにも denied として残す。
+ */
+async function consumeSettlementRateLimit(
+  supabase: SettlementSessionClient,
+  operation: SettlementAuditOperation,
+  targetId: string | null
+): Promise<SettlementRateLimitResult> {
+  const { data, error } = await supabase.rpc("consume_authenticated_rate_limit", {
+    p_operation: "settlement_update"
+  });
+
+  if (error) {
+    console.error("レート制限の確認に失敗しました", error);
+    return { ok: false, message: "操作を確認できませんでした" };
+  }
+
+  const result = data as { ok?: boolean; error?: string; retry_after_seconds?: number } | null;
+  if (!result || typeof result.ok !== "boolean") {
+    console.error("レート制限の応答が不正です", data);
+    return { ok: false, message: "操作を確認できませんでした" };
+  }
+
+  if (!result.ok) {
+    await recordSettlementAudit(supabase, operation, targetId, "denied");
+    return { ok: false, message: "操作が多すぎます。しばらく待ってから再度お試しください。" };
+  }
+
+  return { ok: true };
 }
 
 type ParticipantRow = {
@@ -515,7 +530,7 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
   const supabase = await createSupabaseServerClient();
 
-  const rateLimit = await consumeSettlementRateLimit(supabase);
+  const rateLimit = await consumeSettlementRateLimit(supabase, "settlement_payment_record", null);
   if (!rateLimit.ok) {
     throw new Error(rateLimit.message);
   }
@@ -606,7 +621,7 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
    */
   const supabase = await createSupabaseServerClient();
 
-  const rateLimit = await consumeSettlementRateLimit(supabase);
+  const rateLimit = await consumeSettlementRateLimit(supabase, "settlement_payment_record", null);
   if (!rateLimit.ok) {
     throw new Error(rateLimit.message);
   }
@@ -797,7 +812,7 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
    * このゲートだけセッションクライアントで呼び、本体の処理は従来どおり admin で行う。
    */
   const sessionClient = await createSupabaseServerClient();
-  const rateLimit = await consumeSettlementRateLimit(sessionClient);
+  const rateLimit = await consumeSettlementRateLimit(sessionClient, "settlement_payment_confirm", paymentId);
   if (!rateLimit.ok) {
     throw new Error(rateLimit.message);
   }
