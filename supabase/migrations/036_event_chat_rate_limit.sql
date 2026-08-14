@@ -79,26 +79,34 @@ begin
   values (p_event_id, current_user_id, trim(p_body))
   returning id into created_message_id;
 
+  -- 通知作成の失敗で投稿自体を失敗させない。旧TS実装（createEventMessageAction）も
+  -- ここは console.error するだけで投稿は成功扱いにしていた。例外ブロックは
+  -- 暗黙のsavepointを作るので、ここで失敗してもevent_messagesへのinsertは残る。
   -- notifications.updated_at は before update トリガー（013）が自動で埋める。
-  insert into public.notifications (user_id, kind, title, body, href, dedupe_key, read_at)
-  select
-    public.event_members.user_id,
-    'event_message',
-    event_title || ' に新しいメッセージがあります',
-    'イベント参加者から新しいメッセージがあります。',
-    '/events/' || p_event_id::text || '#chat',
-    'event-message:' || p_event_id::text || ':' || public.event_members.user_id::text,
-    null
-  from public.event_members
-  where public.event_members.event_id = p_event_id
-    and public.event_members.status = 'joined'
-    and public.event_members.user_id <> current_user_id
-  on conflict (user_id, dedupe_key)
-  do update set
-    title = excluded.title,
-    body = excluded.body,
-    href = excluded.href,
-    read_at = null;
+  begin
+    insert into public.notifications (user_id, kind, title, body, href, dedupe_key, read_at)
+    select
+      public.event_members.user_id,
+      'event_message',
+      event_title || ' に新しいメッセージがあります',
+      'イベント参加者から新しいメッセージがあります。',
+      '/events/' || p_event_id::text || '#chat',
+      'event-message:' || p_event_id::text || ':' || public.event_members.user_id::text,
+      null
+    from public.event_members
+    where public.event_members.event_id = p_event_id
+      and public.event_members.status = 'joined'
+      and public.event_members.user_id <> current_user_id
+    on conflict (user_id, dedupe_key)
+    do update set
+      title = excluded.title,
+      body = excluded.body,
+      href = excluded.href,
+      read_at = null;
+  exception
+    when others then
+      null;
+  end;
 
   insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
   values (current_user_id, 'event_message_post', 'message', created_message_id, 'success');

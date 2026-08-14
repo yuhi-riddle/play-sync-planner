@@ -50,4 +50,16 @@ describe("event chat rate limit migration", () => {
     expect(sql).toContain("revoke all on function public.post_event_message(uuid, text) from public, anon");
     expect(sql).toContain("grant execute on function public.post_event_message(uuid, text) to authenticated");
   });
+
+  it("does not fail the whole post when only the notification insert fails, matching the old TS behavior", () => {
+    const sql = migration();
+
+    const notificationInsertIndex = sql.indexOf("insert into public.notifications");
+    const exceptionBlockIndex = sql.indexOf("exception\n    when others then\n      null;\n  end;");
+    const messageInsertIndex = sql.indexOf("insert into public.event_messages");
+
+    expect(messageInsertIndex).toBeGreaterThan(-1);
+    expect(notificationInsertIndex).toBeGreaterThan(messageInsertIndex);
+    expect(exceptionBlockIndex).toBeGreaterThan(notificationInsertIndex);
+  });
 });
