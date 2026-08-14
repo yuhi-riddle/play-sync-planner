@@ -82,7 +82,7 @@ danger: "border border-clay/45 bg-surface text-clay-ink hover:bg-clay hover:text
 
 置換対象:
 
-- `notifications/page.tsx`「既読にする」→ `SubmitButton variant="secondary"`（見た目は不変）
+- `notifications/page.tsx`「既読にする」→ `SubmitButton variant="secondary"`（共通secondaryの見た目に統一される。第1弾で導入済みの他のsecondaryボタンと同じ見た目になり、文字色・枠線・横paddingがわずかに変わるが、意図的な統一）
 - `settlement-confirmation-queue.tsx`「受け取り確認する」→ `SubmitButton`（`primary`、見た目は不変）
 - `settlement/page.tsx`「この支払いを削除」→ `SubmitButton variant="danger"`（見た目は不変）
 
@@ -124,6 +124,7 @@ Tailwindは生成後CSSの規則順でスタイルが決まり、`className` で
 
 - 清算画面の進捗表示が、plan-formのSTEP表示と同じ視覚言語（現在/完了/未来の3状態）で
   表示されること。**オーナー画面・共有リンクの参加者画面（`/s/[token]/settlement`）の両方**で確認する
-- 「受け取り確認する」「既読にする」「この支払いを削除」のボタンが、見た目・disabled/pending挙動とも
-  変更前と一致していること（削除ボタンは新variantでも同じ危険色に見えること）
+- 「受け取り確認する」「この支払いを削除」のボタンが、見た目・disabled/pending挙動とも
+  変更前と一致していること（削除ボタンは新variantでも同じ危険色に見えること）。「既読にする」は
+  共通secondaryの見た目（文字色・枠線・横paddingの変化）に統一されるのが意図通りであること
 - 半透明修正後もカード面と背景の区別が明瞭であること（意図せず濃くなりすぎていないか）
