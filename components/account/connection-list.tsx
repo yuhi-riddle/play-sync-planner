@@ -8,40 +8,136 @@ import type { KeyboardEvent } from "react";
 import {
   blockUserAction,
   followUserAction,
+  loadMoreConnectionsAction,
   toggleFavoriteAction,
   unfollowUserAction,
   unblockUserAction
 } from "@/lib/actions/account/connections";
 import type { ActionState } from "@/lib/domain/shared/action-state";
-import { isMutualFollow, type BlockedUser, type ConnectionCandidate } from "@/lib/domain/account/connections";
+import {
+  isMutualFollow,
+  toBlockedUser,
+  type BlockedUser,
+  type ConnectionCandidate,
+  type ConnectionCategory,
+  type ConnectionCursor
+} from "@/lib/domain/account/connections";
 
-type ConnectionListProps = {
-  favorites: ConnectionCandidate[];
-  mutualFollows?: ConnectionCandidate[];
-  following: ConnectionCandidate[];
-  candidates: ConnectionCandidate[];
-  blockedUsers?: BlockedUser[];
+type ConnectionTabId = ConnectionCategory;
+
+export type ConnectionTabData<T> = {
+  items: T[];
+  totalCount: number;
+  nextCursor: ConnectionCursor;
 };
 
-type ConnectionTabId = "favorites" | "mutual" | "following" | "shared" | "blocked";
+const emptyTabData: ConnectionTabData<never> = { items: [], totalCount: 0, nextCursor: null };
+
+type ConnectionListProps = {
+  favorites: ConnectionTabData<ConnectionCandidate>;
+  mutualFollows?: ConnectionTabData<ConnectionCandidate>;
+  following: ConnectionTabData<ConnectionCandidate>;
+  candidates: ConnectionTabData<ConnectionCandidate>;
+  blockedUsers?: ConnectionTabData<BlockedUser>;
+};
+
+type TabItems = {
+  favorites: ConnectionCandidate[];
+  mutual: ConnectionCandidate[];
+  following: ConnectionCandidate[];
+  shared: ConnectionCandidate[];
+  blocked: BlockedUser[];
+};
+
+type TabCursors = Record<ConnectionTabId, ConnectionCursor>;
 
 export function ConnectionList({
   favorites,
-  mutualFollows = [],
+  mutualFollows = emptyTabData,
   following,
   candidates,
-  blockedUsers = []
+  blockedUsers = emptyTabData
 }: ConnectionListProps) {
+  const [items, setItems] = useState<TabItems>(() => ({
+    favorites: favorites.items,
+    mutual: mutualFollows.items,
+    following: following.items,
+    shared: candidates.items,
+    blocked: blockedUsers.items
+  }));
+  const [cursors, setCursors] = useState<TabCursors>(() => ({
+    favorites: favorites.nextCursor,
+    mutual: mutualFollows.nextCursor,
+    following: following.nextCursor,
+    shared: candidates.nextCursor,
+    blocked: blockedUsers.nextCursor
+  }));
+  const [isLoadingMore, startLoadMoreTransition] = useTransition();
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
   const tabs = [
-    { id: "favorites", label: "お気に入り", people: favorites, emptyMessage: "お気に入りにした人はいません。" },
-    { id: "mutual", label: "相互フォロー", people: mutualFollows, emptyMessage: "相互フォローの人はいません。" },
-    { id: "following", label: "フォロー中", people: following, emptyMessage: "フォロー中の人はいません。" },
-    { id: "shared", label: "一緒に参加", people: candidates, emptyMessage: "一緒に参加している人がまだいません。" },
-    { id: "blocked", label: "ブロック中", people: blockedUsers, emptyMessage: "ブロック中の人はいません。" }
+    {
+      id: "favorites",
+      label: "お気に入り",
+      people: items.favorites,
+      totalCount: favorites.totalCount,
+      emptyMessage: "お気に入りにした人はいません。"
+    },
+    {
+      id: "mutual",
+      label: "相互フォロー",
+      people: items.mutual,
+      totalCount: mutualFollows.totalCount,
+      emptyMessage: "相互フォローの人はいません。"
+    },
+    {
+      id: "following",
+      label: "フォロー中",
+      people: items.following,
+      totalCount: following.totalCount,
+      emptyMessage: "フォロー中の人はいません。"
+    },
+    {
+      id: "shared",
+      label: "一緒に参加",
+      people: items.shared,
+      totalCount: candidates.totalCount,
+      emptyMessage: "一緒に参加している人がまだいません。"
+    },
+    {
+      id: "blocked",
+      label: "ブロック中",
+      people: items.blocked,
+      totalCount: blockedUsers.totalCount,
+      emptyMessage: "ブロック中の人はいません。"
+    }
   ] as const;
   const [activeTab, setActiveTab] = useState<ConnectionTabId>(() => tabs.find((tab) => tab.people.length > 0)?.id ?? "shared");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+
+  function loadMore(category: ConnectionTabId) {
+    const cursor = cursors[category];
+    if (!cursor) return;
+
+    setLoadMoreError(null);
+    startLoadMoreTransition(async () => {
+      try {
+        const page = await loadMoreConnectionsAction(category, cursor);
+        setItems((previous) => ({
+          ...previous,
+          [category]:
+            category === "blocked"
+              ? [...previous.blocked, ...page.items.map(toBlockedUser)]
+              : [...previous[category], ...page.items]
+        }));
+        setCursors((previous) => ({ ...previous, [category]: page.nextCursor }));
+      } catch (cause) {
+        unstable_rethrow(cause);
+        setLoadMoreError(cause instanceof Error ? cause.message : "続きを読み込めませんでした。");
+      }
+    });
+  }
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex = index;
@@ -87,7 +183,7 @@ export function ConnectionList({
           className="min-h-11 w-full rounded-control border border-line bg-surface px-3 py-2 text-base font-bold text-ink focus:border-moss focus:outline-none focus:ring-2 focus:ring-moss/20 sm:hidden"
         >
           {tabs.map((tab) => (
-            <option key={tab.id} value={tab.id}>{`${tab.label} (${tab.people.length}件)`}</option>
+            <option key={tab.id} value={tab.id}>{`${tab.label} (${tab.totalCount}件)`}</option>
           ))}
         </select>
       </label>
@@ -117,7 +213,7 @@ export function ConnectionList({
                 }
               >
                 <span>{tab.label}</span>
-                <span className={selected ? "text-white/80" : "text-ink/50"}>{tab.people.length}件</span>
+                <span className={selected ? "text-white/80" : "text-ink/50"}>{tab.totalCount}件</span>
               </button>
             );
           })}
@@ -140,6 +236,23 @@ export function ConnectionList({
         ) : (
           <p className="rounded-lg border border-ink/8 bg-white/55 p-5 text-sm text-ink/65">{active.emptyMessage}</p>
         )}
+        {cursors[active.id] ? (
+          <div className="pt-1">
+            <button
+              type="button"
+              disabled={isLoadingMore}
+              onClick={() => loadMore(active.id)}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-line bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              {isLoadingMore ? "読み込み中…" : "もっと見る"}
+            </button>
+            {loadMoreError ? (
+              <p className="mt-2 text-sm font-semibold text-clay-ink" role="alert">
+                {loadMoreError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </section>
     </div>
   );

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildBlockedUsers,
   buildInviteCandidates,
   canInviteCandidate,
   isMutualFollow,
-  resolveConnectionProfileNames,
+  mapConnectionCandidateRow,
+  mapConnectionCounts,
+  mapConnectionPage,
   resolveInviteProfileNames,
   sortInviteCandidates,
+  toBlockedUser,
   type ConnectionCandidate
 } from "@/lib/domain/account/connections";
 
@@ -152,31 +154,100 @@ describe("canInviteCandidate", () => {
   });
 });
 
-describe("blocked user display names", () => {
-  it("uses profile names and a stable default without authentication lookups", () => {
+describe("toBlockedUser", () => {
+  it("keeps only the fields the blocked list needs", () => {
+    expect(toBlockedUser({ ...baseCandidate, userId: "blocked", displayName: "ブロック済みさん" })).toEqual({
+      userId: "blocked",
+      displayName: "ブロック済みさん"
+    });
+  });
+});
+
+describe("mapConnectionCandidateRow", () => {
+  it("converts an RPC row into a ConnectionCandidate, coercing the bigint count", () => {
     expect(
-      buildBlockedUsers({
-        blockedUserIds: ["profile-user", "unknown-user"],
-        profileNames: new Map([["profile-user", "プロフィール名"]])
+      mapConnectionCandidateRow({
+        user_id: "row-user",
+        display_name: "行のユーザー",
+        shared_event_count: "3",
+        latest_shared_at: "2026-07-01T00:00:00.000Z",
+        is_following: true,
+        is_followed_by: false,
+        is_favorite: false,
+        cursor_at: "2026-07-01T00:00:00.000Z",
+        cursor_user_id: "row-user"
       })
-    ).toEqual([
-      { userId: "profile-user", displayName: "プロフィール名" },
-      { userId: "unknown-user", displayName: "Madoiユーザー" }
-    ]);
+    ).toEqual({
+      userId: "row-user",
+      displayName: "行のユーザー",
+      sharedEventCount: 3,
+      latestSharedAt: "2026-07-01T00:00:00.000Z",
+      isFollowing: true,
+      isFollowedBy: false,
+      isFavorite: false
+    });
   });
 
-  it("continues without profiles when migration 019 is not applied", () => {
+  it("falls back to an empty string when latest_shared_at is null", () => {
     expect(
-      resolveConnectionProfileNames(null, {
-        code: "PGRST205",
-        message: "Could not find the table 'public.profiles' in the schema cache"
-      })
-    ).toEqual(new Map());
+      mapConnectionCandidateRow({
+        user_id: "row-user",
+        display_name: "行のユーザー",
+        shared_event_count: 0,
+        latest_shared_at: null,
+        is_following: false,
+        is_followed_by: false,
+        is_favorite: false,
+        cursor_at: "2026-07-01T00:00:00.000Z",
+        cursor_user_id: "row-user"
+      }).latestSharedAt
+    ).toBe("");
+  });
+});
+
+describe("mapConnectionPage", () => {
+  const row = (userId: string) => ({
+    user_id: userId,
+    display_name: userId,
+    shared_event_count: 1,
+    latest_shared_at: "2026-07-01T00:00:00.000Z",
+    is_following: false,
+    is_followed_by: false,
+    is_favorite: false,
+    cursor_at: "2026-07-01T00:00:00.000Z",
+    cursor_user_id: userId
   });
 
-  it("keeps unexpected profile errors visible", () => {
-    expect(() => resolveConnectionProfileNames(null, { code: "42501", message: "permission denied" })).toThrow(
-      "つながりのプロフィールを読み込めませんでした"
-    );
+  it("returns no next cursor when fewer than a full page comes back", () => {
+    const page = mapConnectionPage([row("a"), row("b")]);
+    expect(page.items).toHaveLength(2);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("returns a next cursor from the last row when a full page (20) comes back", () => {
+    const rows = Array.from({ length: 20 }, (_, index) => row(`user-${index}`));
+    const page = mapConnectionPage(rows);
+    expect(page.nextCursor).toEqual({ at: "2026-07-01T00:00:00.000Z", userId: "user-19" });
+  });
+});
+
+describe("mapConnectionCounts", () => {
+  it("fills every category with 0 and coerces bigint counts that were returned", () => {
+    expect(
+      mapConnectionCounts([
+        { category: "favorites", item_count: "2" },
+        { category: "blocked", item_count: 1 }
+      ])
+    ).toEqual({ favorites: 2, mutual: 0, following: 0, shared: 0, blocked: 1 });
+  });
+
+  it("ignores unknown categories instead of throwing", () => {
+    expect(mapConnectionCounts([{ category: "unexpected", item_count: 5 }])).toEqual({
+      favorites: 0,
+      mutual: 0,
+      following: 0,
+      shared: 0,
+      blocked: 0
+    });
   });
 });

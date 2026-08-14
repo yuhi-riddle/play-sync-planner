@@ -4,23 +4,10 @@ import { ConnectionList } from "@/components/account/connection-list";
 import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/event/received-event-invitations";
 import { SetupPanel } from "@/components/ui/state-panels";
 import { PageHeader } from "@/components/ui";
-import {
-  buildBlockedUsers,
-  resolveConnectionProfileNames,
-  sortInviteCandidates,
-  type BlockedUser,
-  type ConnectionCandidate
-} from "@/lib/domain/account/connections";
-import { createSupabaseAdminClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
+import { mapConnectionCounts, mapConnectionPage, toBlockedUser, type ConnectionPage } from "@/lib/domain/account/connections";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-type EventMemberRow = {
-  event_id: string;
-  user_id: string;
-  display_name: string;
-  created_at: string;
-};
 
 export default async function ConnectionsPage() {
   if (!hasSupabaseEnv()) {
@@ -38,29 +25,65 @@ export default async function ConnectionsPage() {
     redirect("/login?next=%2Fconnections");
   }
 
-  const [candidates, invitations, blockedUsers] = await Promise.all([
-    loadConnectionCandidates(userId),
-    loadReceivedEventInvitations(userId),
-    loadBlockedUsers(userId)
-  ]);
-  const favorites = candidates.filter((candidate) => candidate.isFavorite);
-  const mutualFollows = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && candidate.isFollowedBy);
-  const following = candidates.filter((candidate) => !candidate.isFavorite && candidate.isFollowing && !candidate.isFollowedBy);
-  const recent = candidates.filter((candidate) => !candidate.isFavorite && !candidate.isFollowing);
+  const [overview, invitations] = await Promise.all([loadConnectionsOverview(), loadReceivedEventInvitations(userId)]);
 
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Connections" title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
       <ReceivedEventInvitations invitations={invitations} />
       <ConnectionList
-        favorites={favorites}
-        mutualFollows={mutualFollows}
-        following={following}
-        candidates={recent}
-        blockedUsers={blockedUsers}
+        favorites={{ ...overview.favorites, totalCount: overview.counts.favorites }}
+        mutualFollows={{ ...overview.mutual, totalCount: overview.counts.mutual }}
+        following={{ ...overview.following, totalCount: overview.counts.following }}
+        candidates={{ ...overview.shared, totalCount: overview.counts.shared }}
+        blockedUsers={{
+          items: overview.blocked.items.map(toBlockedUser),
+          nextCursor: overview.blocked.nextCursor,
+          totalCount: overview.counts.blocked
+        }}
       />
     </div>
   );
+}
+
+async function loadConnectionsOverview(): Promise<{
+  counts: ReturnType<typeof mapConnectionCounts>;
+  favorites: ConnectionPage;
+  mutual: ConnectionPage;
+  following: ConnectionPage;
+  shared: ConnectionPage;
+  blocked: ConnectionPage;
+}> {
+  const supabase = await createSupabaseServerClient();
+  const firstPage = { p_cursor_at: null, p_cursor_user_id: null, p_limit: 20 };
+  const [countsResult, favoritesResult, mutualResult, followingResult, sharedResult, blockedResult] = await Promise.all([
+    supabase.rpc("get_connection_counts"),
+    supabase.rpc("list_connections", { p_category: "favorites", ...firstPage }),
+    supabase.rpc("list_connections", { p_category: "mutual", ...firstPage }),
+    supabase.rpc("list_connections", { p_category: "following", ...firstPage }),
+    supabase.rpc("list_connections", { p_category: "shared", ...firstPage }),
+    supabase.rpc("list_connections", { p_category: "blocked", ...firstPage })
+  ]);
+
+  if (
+    countsResult.error ||
+    favoritesResult.error ||
+    mutualResult.error ||
+    followingResult.error ||
+    sharedResult.error ||
+    blockedResult.error
+  ) {
+    throw new Error("つながりを読み込めませんでした。");
+  }
+
+  return {
+    counts: mapConnectionCounts(countsResult.data ?? []),
+    favorites: mapConnectionPage(favoritesResult.data ?? []),
+    mutual: mapConnectionPage(mutualResult.data ?? []),
+    following: mapConnectionPage(followingResult.data ?? []),
+    shared: mapConnectionPage(sharedResult.data ?? []),
+    blocked: mapConnectionPage(blockedResult.data ?? [])
+  };
 }
 
 async function loadReceivedEventInvitations(currentUserId: string): Promise<ReceivedEventInvitation[]> {
@@ -93,95 +116,4 @@ async function loadReceivedEventInvitations(currentUserId: string): Promise<Rece
     organizerName: organizerNames.get(invitation.event_id) ?? "主催者",
     createdAt: invitation.created_at
   }));
-}
-
-async function loadBlockedUsers(currentUserId: string): Promise<BlockedUser[]> {
-  const admin = createSupabaseAdminClient();
-  const { data: blocks, error: blocksError } = await admin
-    .from("user_blocks")
-    .select("blocked_user_id, created_at")
-    .eq("blocker_user_id", currentUserId)
-    .order("created_at", { ascending: false });
-
-  if (blocksError) {
-    throw new Error("ブロック中のユーザーを読み込めませんでした");
-  }
-
-  const blockedUserIds = (blocks ?? []).map((block) => block.blocked_user_id);
-  if (blockedUserIds.length === 0) {
-    return [];
-  }
-
-  const profileResult = await admin.from("profiles").select("user_id, nickname").in("user_id", blockedUserIds);
-  const profileNames = resolveConnectionProfileNames(profileResult.data, profileResult.error);
-
-  return buildBlockedUsers({
-    blockedUserIds,
-    profileNames
-  });
-}
-
-async function loadConnectionCandidates(currentUserId: string): Promise<ConnectionCandidate[]> {
-  const admin = createSupabaseAdminClient();
-  const { data: currentMemberships, error: currentMembershipsError } = await admin
-    .from("event_members")
-    .select("event_id")
-    .eq("user_id", currentUserId)
-    .eq("status", "joined");
-
-  if (currentMembershipsError || !currentMemberships?.length) {
-    return [];
-  }
-
-  const eventIds = currentMemberships.map((membership) => membership.event_id);
-  const [membersResult, followingResult, followedByResult, favoritesResult, blocksResult] = await Promise.all([
-    admin.from("event_members").select("event_id, user_id, display_name, created_at").in("event_id", eventIds).eq("status", "joined"),
-    admin.from("user_connections").select("followed_user_id").eq("follower_user_id", currentUserId),
-    admin.from("user_connections").select("follower_user_id").eq("followed_user_id", currentUserId),
-    admin.from("user_favorites").select("favorite_user_id").eq("user_id", currentUserId),
-    admin
-      .from("user_blocks")
-      .select("blocker_user_id, blocked_user_id")
-      .or(`blocker_user_id.eq.${currentUserId},blocked_user_id.eq.${currentUserId}`)
-  ]);
-
-  if (membersResult.error || followingResult.error || followedByResult.error || favoritesResult.error || blocksResult.error) {
-    throw new Error("つながりを読み込めませんでした。");
-  }
-
-  const blockedUserIds = new Set(
-    (blocksResult.data ?? []).map((block) => (block.blocker_user_id === currentUserId ? block.blocked_user_id : block.blocker_user_id))
-  );
-  const followingUserIds = new Set((followingResult.data ?? []).map((connection) => connection.followed_user_id));
-  const followedByUserIds = new Set((followedByResult.data ?? []).map((connection) => connection.follower_user_id));
-  const favoriteUserIds = new Set((favoritesResult.data ?? []).map((favorite) => favorite.favorite_user_id));
-  const people = new Map<string, ConnectionCandidate>();
-
-  for (const member of (membersResult.data ?? []) as EventMemberRow[]) {
-    if (member.user_id === currentUserId || blockedUserIds.has(member.user_id)) {
-      continue;
-    }
-
-    const existing = people.get(member.user_id);
-    if (!existing) {
-      people.set(member.user_id, {
-        userId: member.user_id,
-        displayName: member.display_name,
-        sharedEventCount: 1,
-        latestSharedAt: member.created_at,
-        isFollowing: followingUserIds.has(member.user_id),
-        isFollowedBy: followedByUserIds.has(member.user_id),
-        isFavorite: favoriteUserIds.has(member.user_id)
-      });
-      continue;
-    }
-
-    existing.sharedEventCount += 1;
-    if (member.created_at > existing.latestSharedAt) {
-      existing.latestSharedAt = member.created_at;
-      existing.displayName = member.display_name;
-    }
-  }
-
-  return sortInviteCandidates([...people.values()]);
 }
