@@ -360,7 +360,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
             <p className="mt-1 text-sm leading-6 text-muted">支払い待ちと、受け取り確認待ちを分けて見ます。</p>
           </div>
           {settlementNextActions.isComplete ? (
-            <span className="inline-flex self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">清算完了</span>
+            <span className="inline-flex self-start rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">清算完了</span>
           ) : null}
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -499,7 +499,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                     {expense.payment_url ? <PaymentDestinationLink href={expense.payment_url} label="支払い・購入ページを開く" detail={paymentView.detail} className="mt-3" /> : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(expense.expense_splits ?? []).map((split) => (
-                        <span key={split.id} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
+                        <span key={split.id} className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
                           {participantName(split.participants)} {formatYenText(split.amount)}
                         </span>
                       ))}
@@ -700,7 +700,7 @@ function SettlementReminderLogItem({ log }: { log: SettlementReminderLogView }) 
   return (
     <div className="flex flex-col gap-2 rounded-control border border-line bg-surface p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">{log.label}</span>
+        <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">{log.label}</span>
         <span className="text-sm font-medium text-ink">
           {log.recipientNames.length > 0 ? log.recipientNames.join("、") : "宛先未記録"}
         </span>
@@ -728,7 +728,7 @@ function SettlementActions({
 
   return (
     <div className="grid w-full min-w-0 gap-3 md:min-w-72">
-      {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
+      {progress.status === "confirmed" ? <span className="justify-self-start rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">完了</span> : null}
 
       <div className="rounded-control border border-line bg-surface p-3">
         <p className="text-eyebrow uppercase text-pine">支払い先</p>

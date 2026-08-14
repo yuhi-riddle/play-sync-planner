@@ -133,7 +133,7 @@ export default async function NotificationsPage({
                     className="group min-w-0 flex-1 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
                   >
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-mist/55 text-pine">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-mist text-pine">
                         <Bell aria-hidden="true" className="h-4 w-4" />
                       </span>
                       <span className="rounded-full bg-surface px-3 py-1 text-xs font-bold text-pine">
