@@ -1,23 +1,46 @@
 "use client";
 
 import { unstable_rethrow } from "next/navigation";
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 
 import type { ActionState } from "@/lib/domain/shared/action-state";
-import { sortInviteCandidates, type ConnectionCandidate } from "@/lib/domain/account/connections";
+import type { ConnectionCandidate, ConnectionCursor, ConnectionPage } from "@/lib/domain/account/connections";
 
 export function EventInviteCandidates({
   candidates,
-  action
+  nextCursor,
+  action,
+  loadMoreAction
 }: {
   candidates: ConnectionCandidate[];
+  nextCursor: ConnectionCursor;
   action: (inviteeUserIds: string[]) => Promise<ActionState>;
+  loadMoreAction: (cursor: ConnectionCursor) => Promise<ConnectionPage>;
 }) {
-  const orderedCandidates = useMemo(() => sortInviteCandidates(candidates), [candidates]);
+  const [orderedCandidates, setOrderedCandidates] = useState(candidates);
+  const [cursor, setCursor] = useState(nextCursor);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
+  const [isLoadingMore, startLoadMoreTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+  function loadMore() {
+    if (!cursor) return;
+
+    setLoadMoreError(null);
+    startLoadMoreTransition(async () => {
+      try {
+        const page = await loadMoreAction(cursor);
+        setOrderedCandidates((current) => [...current, ...page.items]);
+        setCursor(page.nextCursor);
+      } catch (cause) {
+        unstable_rethrow(cause);
+        setLoadMoreError(cause instanceof Error ? cause.message : "続きを読み込めませんでした。");
+      }
+    });
+  }
 
   function toggle(userId: string) {
     setSelectedIds((current) => (current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]));
@@ -84,6 +107,23 @@ export function EventInviteCandidates({
           );
         })}
       </div>
+      {cursor ? (
+        <div>
+          <button
+            type="button"
+            disabled={isLoadingMore}
+            onClick={loadMore}
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-line bg-white px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoadingMore ? "読み込み中…" : "もっと見る"}
+          </button>
+          {loadMoreError ? (
+            <p className="mt-2 text-sm font-semibold text-clay-ink" role="alert">
+              {loadMoreError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <button
         type="button"
         disabled={isPending}
