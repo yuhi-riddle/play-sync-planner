@@ -423,44 +423,84 @@ begin
   v_range_start := (v_month_start - 6)::timestamp at time zone 'Asia/Tokyo';
   v_range_end := ((v_month_start + interval '1 month')::date + 7)::timestamp at time zone 'Asia/Tokyo';
 
+  -- draft/collecting_answers は候補日ごとに1行。date_confirmed は
+  -- plan.confirmed_start_at/confirmed_end_at（lib/actions/plan/confirm.ts が
+  -- 確定時に candidate_dates から複製する列）を使って1planにつき1行だけ返す。
+  -- candidate_dates を date_confirmed のままjoinすると、確定後も残っている
+  -- 他の候補日（落選分）まで別の予定として重複表示されてしまうため。
   return query
+  with schedule as (
+    select
+      candidate.id as candidate_id,
+      plan.id as plan_id,
+      event_row.title as event_title,
+      plan.title as plan_title,
+      candidate.start_at,
+      candidate.end_at,
+      candidate.is_all_day,
+      plan.status
+    from public.event_members as membership
+    join public.events as event_row
+      on event_row.id = membership.event_id
+    join public.plans as plan
+      on plan.event_id = event_row.id
+    join public.candidate_dates as candidate
+      on candidate.plan_id = plan.id
+    where membership.user_id = v_actor
+      and membership.status = 'joined'
+      and plan.status in ('draft', 'collecting_answers')
+      and candidate.start_at < v_range_end
+      and coalesce(candidate.end_at, candidate.start_at) >= v_range_start
+
+    union all
+
+    select
+      null::uuid as candidate_id,
+      plan.id as plan_id,
+      event_row.title as event_title,
+      plan.title as plan_title,
+      plan.confirmed_start_at as start_at,
+      plan.confirmed_end_at as end_at,
+      plan.is_all_day,
+      plan.status
+    from public.event_members as membership
+    join public.events as event_row
+      on event_row.id = membership.event_id
+    join public.plans as plan
+      on plan.event_id = event_row.id
+    where membership.user_id = v_actor
+      and membership.status = 'joined'
+      and plan.status = 'date_confirmed'
+      and plan.confirmed_start_at is not null
+      and plan.confirmed_start_at < v_range_end
+      and coalesce(plan.confirmed_end_at, plan.confirmed_start_at) >= v_range_start
+  )
   select
-    candidate.id as candidate_id,
-    plan.id as plan_id,
-    event_row.title as event_title,
-    plan.title as plan_title,
-    candidate.start_at,
-    candidate.end_at,
-    candidate.is_all_day,
-    plan.status,
+    schedule.candidate_id,
+    schedule.plan_id,
+    schedule.event_title,
+    schedule.plan_title,
+    schedule.start_at,
+    schedule.end_at,
+    schedule.is_all_day,
+    schedule.status,
     count(answer.id) filter (where answer.answer = 'yes') as yes_count,
     count(answer.id) filter (where answer.answer = 'maybe') as maybe_count,
     count(answer.id) filter (where answer.answer = 'no') as no_count,
     count(answer.id) filter (where answer.answer = 'unanswered') as unanswered_count
-  from public.event_members as membership
-  join public.events as event_row
-    on event_row.id = membership.event_id
-  join public.plans as plan
-    on plan.event_id = event_row.id
-  join public.candidate_dates as candidate
-    on candidate.plan_id = plan.id
+  from schedule
   left join public.availability_answers as answer
-    on answer.candidate_date_id = candidate.id
-  where membership.user_id = v_actor
-    and membership.status = 'joined'
-    and plan.status in ('draft', 'collecting_answers', 'date_confirmed')
-    and candidate.start_at < v_range_end
-    and coalesce(candidate.end_at, candidate.start_at) >= v_range_start
+    on answer.candidate_date_id = schedule.candidate_id
   group by
-    candidate.id,
-    plan.id,
-    event_row.title,
-    plan.title,
-    candidate.start_at,
-    candidate.end_at,
-    candidate.is_all_day,
-    plan.status
-  order by candidate.start_at asc, candidate.id asc;
+    schedule.candidate_id,
+    schedule.plan_id,
+    schedule.event_title,
+    schedule.plan_title,
+    schedule.start_at,
+    schedule.end_at,
+    schedule.is_all_day,
+    schedule.status
+  order by schedule.start_at asc, schedule.plan_id asc;
 end;
 $$;
 

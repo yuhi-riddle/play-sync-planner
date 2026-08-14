@@ -41,8 +41,18 @@ describe("connection, invitation, and calendar RPC migration", () => {
     expect(sql).toContain("create or replace function public.list_calendar_items(");
     expect(sql).toContain("v_range_start := (v_month_start - 6)::timestamp at time zone 'Asia/Tokyo'");
     expect(sql).toContain("v_range_end := ((v_month_start + interval '1 month')::date + 7)::timestamp at time zone 'Asia/Tokyo'");
-    expect(sql).toContain("and plan.status in ('draft', 'collecting_answers', 'date_confirmed')");
+    expect(sql).toContain("and plan.status in ('draft', 'collecting_answers')");
     expect(sql).toContain("count(answer.id) filter (where answer.answer = 'yes') as yes_count");
+  });
+
+  it("returns date_confirmed plans once via plan.confirmed_start_at instead of once per surviving candidate_date", () => {
+    const sql = migration();
+
+    expect(sql).toContain("null::uuid as candidate_id");
+    expect(sql).toContain("plan.confirmed_start_at as start_at");
+    expect(sql).toContain("plan.confirmed_end_at as end_at");
+    expect(sql).toContain("and plan.status = 'date_confirmed'");
+    expect(sql).toContain("and plan.confirmed_start_at is not null");
   });
 
   it("restricts list_event_invite_candidates to the event owner and excludes joined members and blocked pairs", () => {
