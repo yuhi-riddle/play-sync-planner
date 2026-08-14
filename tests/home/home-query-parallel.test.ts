@@ -8,7 +8,7 @@ describe("home data loading", () => {
     const page = readFileSync(resolve(process.cwd(), "app/page.tsx"), "utf8");
 
     expect(page).toContain("await Promise.all([");
-    expect(page).toContain('.from("plans")');
+    expect(page).toContain('.rpc("list_calendar_items"');
     expect(page).toContain('.from("notifications")');
     expect(page).toContain('.from("event_drafts")');
   });
