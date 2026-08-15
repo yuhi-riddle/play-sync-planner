@@ -9,6 +9,7 @@ import { clsx } from "clsx";
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home/home-agenda";
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
+import { weekdayClass } from "@/lib/shared/calendar-styles";
 import { Badge, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
 
 /** Google Calendarのステータス行(SectionHeadingのaction)が空文字になっても縮まないようにする最低高。 */
@@ -73,17 +74,6 @@ function shortDateLabel(dateKey: string) {
 
 function weekdayLabel(dateKey: string) {
   return new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(dateFromKey(dateKey));
-}
-
-function weekdayTone(dateKey: string) {
-  const day = dateFromKey(dateKey).getDay();
-  if (day === 0) {
-    return "text-clay-ink";
-  }
-  if (day === 6) {
-    return "text-pine";
-  }
-  return "text-muted";
 }
 
 function itemBadge(kind: HomeAgendaItem["kind"]): { label: string; tone: BadgeTone } {
@@ -285,7 +275,7 @@ export function HomeSelectedDateAgenda({
                     active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
                   )}
                 >
-                  <span className={clsx("truncate text-[0.7rem] font-bold sm:text-caption", active ? "text-white/75" : weekdayTone(dateKey))}>
+                  <span className={clsx("truncate text-[0.7rem] font-bold sm:text-caption", active ? "text-white/75" : weekdayClass(dateFromKey(dateKey).getDay()))}>
                     {weekdayLabel(dateKey)}
                   </span>
                   <span className="mt-1 truncate text-xs font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>

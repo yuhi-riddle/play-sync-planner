@@ -128,6 +128,21 @@ describe("HomeSelectedDateAgenda", () => {
     }
   });
 
+  it("colors Sunday and Saturday weekday labels using the shared calendar convention", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-22" todayDateKey="2026-07-22" initialItems={[]} />
+    );
+
+    const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
+    const dayButtons = Array.from(dateGrid?.querySelectorAll("button") ?? []);
+    const weekdayLabel = (index: number) => dayButtons[index]?.querySelector("span");
+
+    // 週は 7/19(日) 〜 7/25(土)。選択中は7/22(水)なのでactiveの上書きを受けない。
+    expect(weekdayLabel(0)).toHaveClass("text-clay-ink");
+    expect(weekdayLabel(6)).toHaveClass("text-sky-700");
+  });
+
   it("keeps the Google Calendar status row at the same minimum height while loading and once ready", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
