@@ -143,6 +143,21 @@ describe("HomeSelectedDateAgenda", () => {
     expect(weekdayLabel(6)).toHaveClass("text-sky-700");
   });
 
+  it("adds a ring offset to week navigation and day-cell buttons for focus visibility", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-19" todayDateKey="2026-07-19" initialItems={[]} />
+    );
+
+    expect(screen.getByRole("button", { name: "前の週" })).toHaveClass("focus:ring-offset-2");
+    expect(screen.getByRole("button", { name: "次の週" })).toHaveClass("focus:ring-offset-2");
+
+    const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
+    for (const button of Array.from(dateGrid?.querySelectorAll("button") ?? [])) {
+      expect(button).toHaveClass("focus:ring-offset-2");
+    }
+  });
+
   it("keeps the Google Calendar status row at the same minimum height while loading and once ready", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

@@ -253,10 +253,10 @@ export function HomeSelectedDateAgenda({
           <div className="flex items-center justify-between gap-2">
             <p className="text-body font-bold text-ink">日付を選ぶ</p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => selectDate(previousWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay" aria-label="前の週">
+              <button type="button" onClick={() => selectDate(previousWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2" aria-label="前の週">
                 <ChevronLeft aria-hidden="true" className="h-4 w-4" />
               </button>
-              <button type="button" onClick={() => selectDate(nextWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay" aria-label="次の週">
+              <button type="button" onClick={() => selectDate(nextWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2" aria-label="次の週">
                 <ChevronRight aria-hidden="true" className="h-4 w-4" />
               </button>
             </div>
@@ -271,7 +271,7 @@ export function HomeSelectedDateAgenda({
                   onClick={() => selectDate(dateKey)}
                   aria-current={active ? "date" : undefined}
                   className={clsx(
-                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1.5",
+                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:min-h-16 sm:px-1.5",
                     active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
                   )}
                 >
