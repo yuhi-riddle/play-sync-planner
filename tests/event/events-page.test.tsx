@@ -175,7 +175,9 @@ describe("EventsPage", () => {
     // ナビの状態チップにも「下書き」の文言があるため、下書きカードのリンク内に絞って取得する
     const draftCard = screen.getByRole("link", { name: /続きから入力/ });
     const draftBadge = within(draftCard).getByText("下書き");
-    expect(draftBadge).toHaveClass("bg-honey/18", "text-honey-ink");
+    // text-caption は共有Badge固有のクラス。旧・自前実装は text-xs だったため、これがないと
+    // Badge化が元に戻っても検知できない（最終レビューで指摘）。
+    expect(draftBadge).toHaveClass("bg-honey/18", "text-honey-ink", "text-caption");
 
     const categoryBadge = within(draftCard).getByText("旅行");
     expect(categoryBadge).toHaveClass("bg-mist", "text-pine", "border-moss/30");
