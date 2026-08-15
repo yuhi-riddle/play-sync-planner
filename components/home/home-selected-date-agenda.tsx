@@ -261,7 +261,7 @@ export function HomeSelectedDateAgenda({
               </button>
             </div>
           </div>
-          <div data-testid="home-week-grid" className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-0.5 sm:gap-1">
+          <div data-testid="home-week-grid" className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 sm:gap-1.5">
             {weekDays.map((dateKey) => {
               const active = dateKey === activeDateKey;
               return (
@@ -271,14 +271,14 @@ export function HomeSelectedDateAgenda({
                   onClick={() => selectDate(dateKey)}
                   aria-current={active ? "date" : undefined}
                   className={clsx(
-                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-0.5 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1",
+                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1.5",
                     active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
                   )}
                 >
-                  <span className={clsx("truncate text-[0.7rem] font-bold sm:text-caption", active ? "text-white/75" : weekdayClass(dateFromKey(dateKey).getDay()))}>
+                  <span className={clsx("truncate text-caption font-bold", active ? "text-white/75" : weekdayClass(dateFromKey(dateKey).getDay()))}>
                     {weekdayLabel(dateKey)}
                   </span>
-                  <span className="mt-1 truncate text-xs font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
+                  <span className="mt-1 truncate text-caption font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
                 </button>
               );
             })}

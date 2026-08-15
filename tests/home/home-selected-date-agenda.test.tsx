@@ -121,10 +121,10 @@ describe("HomeSelectedDateAgenda", () => {
     );
 
     const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
-    expect(dateGrid).toHaveClass("grid-cols-[repeat(7,minmax(0,1fr))]", "gap-0.5", "sm:gap-1");
+    expect(dateGrid).toHaveClass("grid-cols-[repeat(7,minmax(0,1fr))]", "gap-1", "sm:gap-1.5");
     expect(dateGrid?.querySelectorAll("button")).toHaveLength(7);
     for (const button of Array.from(dateGrid?.querySelectorAll("button") ?? [])) {
-      expect(button).toHaveClass("min-w-0", "px-0.5");
+      expect(button).toHaveClass("min-w-0", "px-1");
     }
   });
 
