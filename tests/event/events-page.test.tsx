@@ -116,6 +116,47 @@ describe("EventsPage", () => {
     expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
   });
 
+  it("colors settlement_waiting, completed, and cancelled with visibly different tones", async () => {
+    const pastPlan = {
+      id: "plan-1",
+      status: "date_confirmed",
+      settlement_status: "needed",
+      confirmed_start_at: "2020-01-01T00:00:00Z",
+      confirmed_end_at: "2020-01-01T00:00:00Z",
+      is_all_day: false
+    };
+    const eventQuery = createEventQuery([
+      { ...makeEvent("event-1", "清算待ちイベント"), plans: [pastPlan] },
+      { ...makeEvent("event-2", "完了イベント"), status: "done" },
+      { ...makeEvent("event-3", "中止イベント"), status: "cancelled" }
+    ]);
+    const rpc = createRpcResult(["event-1", "event-2", "event-3"], 3);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    // ナビの絞り込みリンクにも「完了」「中止」の文言があるため、各イベントカード内に絞って取得する
+    const settlementCard = screen.getByRole("link", { name: /清算待ちイベント/ });
+    const completedCard = screen.getByRole("link", { name: /完了イベント/ });
+    const cancelledCard = screen.getByRole("link", { name: /中止イベント/ });
+    const settlementBadge = within(settlementCard).getByText("清算待ち");
+    const completedBadge = within(completedCard).getByText("完了");
+    const cancelledBadge = within(cancelledCard).getByText("中止");
+
+    // settlement_waiting は neutral (border-line / bg-sunken / text-muted)
+    expect(settlementBadge).toHaveClass("bg-sunken", "text-muted");
+    // completed は done (bg-mist / text-pine、現状維持)
+    expect(completedBadge).toHaveClass("bg-mist", "text-pine");
+    // cancelled は warn (bg-clay/14 相当 / text-clay-ink) で、他の2つと明確に異なる
+    expect(cancelledBadge).toHaveClass("text-clay-ink");
+    expect(cancelledBadge.className).not.toBe(settlementBadge.className);
+    expect(cancelledBadge.className).not.toBe(completedBadge.className);
+  });
+
   it("omits the schedule and location rows when they are unset", async () => {
     const eventQuery = createEventQuery([{
       ...makeEvent("event-2", "まだ何も決まっていない会"),
