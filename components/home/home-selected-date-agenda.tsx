@@ -10,7 +10,7 @@ import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home/home-
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { weekdayClass } from "@/lib/shared/calendar-styles";
-import { Badge, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
 
 /** Google Calendarのステータス行(SectionHeadingのaction)が空文字になっても縮まないようにする最低高。 */
 export const GOOGLE_STATUS_MIN_HEIGHT_CLASS = "min-h-5";
@@ -111,7 +111,9 @@ function DateShortcut({
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" onClick={onSelect} aria-current={active ? "date" : undefined} className={clsx("inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2", active ? "bg-ink text-white shadow-soft" : "border border-line-strong bg-surface text-muted hover:border-moss hover:text-pine")}>{children}</button>
+    <Button variant={active ? "primary" : "secondary"} onClick={onSelect} aria-current={active ? "date" : undefined}>
+      {children}
+    </Button>
   );
 }
 
