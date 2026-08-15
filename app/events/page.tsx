@@ -187,8 +187,8 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           <Link href={getEventDraftResumePath()} className="block focus:outline-none focus:ring-2 focus:ring-clay">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="mb-3 inline-flex rounded-full border border-honey/45 bg-honey/18 px-3 py-1 text-xs font-bold text-honey-ink">
-                  下書き
+                <div className="mb-3">
+                  <Badge tone="info">下書き</Badge>
                 </div>
                 <h2 className="text-xl font-bold text-ink">
                   {typeof draftPayload.title === "string" && draftPayload.title.trim()
@@ -201,9 +201,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                     : "場所メモ未設定"}
                 </p>
               </div>
-              <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
-                {draftCategory === "all" ? "カテゴリ未設定" : categoryLabels[draftCategory]}
-              </span>
+              <Badge tone="done">{draftCategory === "all" ? "カテゴリ未設定" : categoryLabels[draftCategory]}</Badge>
             </div>
             <p className="mt-4 border-t border-line pt-4 text-sm font-bold text-pine">続きから入力</p>
           </Link>

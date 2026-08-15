@@ -157,6 +157,30 @@ describe("EventsPage", () => {
     expect(cancelledBadge.className).not.toBe(completedBadge.className);
   });
 
+  it("shows the draft card's status and category as shared Badge pills", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 0);
+    const draftQuery = createDraftQuery({
+      id: "draft-1",
+      payload: { title: "入力途中の旅行", category: "travel" },
+      updated_at: "2026-07-15T00:00:00Z"
+    });
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "draft" }) }));
+
+    // ナビの状態チップにも「下書き」の文言があるため、下書きカードのリンク内に絞って取得する
+    const draftCard = screen.getByRole("link", { name: /続きから入力/ });
+    const draftBadge = within(draftCard).getByText("下書き");
+    expect(draftBadge).toHaveClass("bg-honey/18", "text-honey-ink");
+
+    const categoryBadge = within(draftCard).getByText("旅行");
+    expect(categoryBadge).toHaveClass("bg-mist", "text-pine", "border-moss/30");
+  });
+
   it("omits the schedule and location rows when they are unset", async () => {
     const eventQuery = createEventQuery([{
       ...makeEvent("event-2", "まだ何も決まっていない会"),
