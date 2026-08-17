@@ -265,6 +265,8 @@ describe("EventDetailPage - 重複実装解消（Phase 5）", () => {
     const heading = screen.getByRole("heading", { name: "参加者" });
     expect(heading).toHaveClass("text-title");
     expect(screen.getByText("参加済み 4人")).toBeInTheDocument();
+    // action propに分配した募集状態spanが失われていないことの検証（構造変更の唯一の分岐）
+    expect(screen.getByText("参加者を募集中")).toBeInTheDocument();
   });
 
   it("付随情報欄（Info）の値は型スケール内のtext-bodyクラスを持つ", async () => {
