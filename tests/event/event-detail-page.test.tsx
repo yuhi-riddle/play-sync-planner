@@ -266,4 +266,22 @@ describe("EventDetailPage - 重複実装解消（Phase 5）", () => {
     expect(heading).toHaveClass("text-title");
     expect(screen.getByText("参加済み 4人")).toBeInTheDocument();
   });
+
+  it("付随情報欄（Info）の値は型スケール内のtext-bodyクラスを持つ", async () => {
+    const event = { ...eventWithPlan(), location_name: "市民ホール" };
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 1, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    const value = screen.getByText("市民ホール");
+    expect(value).toHaveClass("text-body", "font-bold");
+    expect(value).not.toHaveClass("text-base");
+  });
 });

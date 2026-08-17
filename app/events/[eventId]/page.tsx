@@ -442,7 +442,7 @@ function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-control bg-surface p-4">
       <dt className="text-eyebrow uppercase text-muted">{label}</dt>
-      <dd className="mt-2 break-words text-base font-semibold text-ink">{value}</dd>
+      <dd className="mt-2 break-words text-body font-bold text-ink">{value}</dd>
     </div>
   );
 }
