@@ -287,3 +287,69 @@ describe("EventDetailPage - 重複実装解消（Phase 5）", () => {
     expect(value).not.toHaveClass("text-base");
   });
 });
+
+describe("EventDetailPage - 状態span Badge化（Phase 6）", () => {
+  beforeEach(() => {
+    vi.stubGlobal("React", React);
+    vi.clearAllMocks();
+  });
+
+  function eventWithPlan() {
+    return {
+      id: "event-1",
+      title: "夏合宿",
+      status: "date_confirmed",
+      owner_user_id: "owner-1",
+      category: "other",
+      location_name: null,
+      url: null,
+      memo: null,
+      plans: [
+        {
+          id: "plan-1",
+          title: "候補A",
+          status: "date_confirmed",
+          confirmed_start_at: null,
+          answer_deadline_at: null
+        }
+      ]
+    };
+  }
+
+  it("「日程調整の準備中」はBadgeのdoneトーンで表示される", async () => {
+    const event = eventWithPlan();
+    // canStartDateAdjustmentはイベントが終了状態でなく、招待がclosedのときtrueになる
+    mockServerClient(event, { token: "invite-1", status: "closed" });
+    mockAdminClient({ memberCount: 4, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("member-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({ tab: "members" })
+      })
+    );
+
+    const badge = screen.getByText("日程調整の準備中");
+    // bg-mist/text-pineがdoneトーンのクラス。text-captionはBadge固有のクラスで、
+    // 生spanに戻ってしまった場合の検知に使う（events-page.test.tsxの既存パターンを踏襲）。
+    expect(badge).toHaveClass("bg-mist", "text-pine", "text-caption");
+  });
+
+  it("「参加者を募集中」はBadgeのneutralトーンで表示される", async () => {
+    const event = eventWithPlan();
+    mockServerClient(event, { token: "invite-1", status: "open" });
+    mockAdminClient({ memberCount: 2, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("member-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({ tab: "members" })
+      })
+    );
+
+    const badge = screen.getByText("参加者を募集中");
+    expect(badge).toHaveClass("bg-sunken", "text-muted", "text-caption");
+  });
+});

@@ -9,7 +9,7 @@ import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventChat } from "@/components/event/event-chat";
 import { EventDetailTabs } from "@/components/event/event-detail-tabs";
 import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
-import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, SectionHeading, Skeleton, SubmitButton } from "@/components/ui";
+import { Badge, ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, SectionHeading, Skeleton, SubmitButton } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event/event-members";
 import { createEventMessageAction } from "@/lib/actions/event/event-messages";
 import { createEventUserInvitationsAction, loadEventInviteCandidatesAction } from "@/lib/actions/account/connections";
@@ -199,9 +199,9 @@ export default async function EventDetailPage({
                 description={`参加済み ${memberCount ?? 0}人`}
                 action={
                   isEventTerminal ? null : canStartAdjustment ? (
-                    <span className="text-sm font-bold text-pine">日程調整の準備中</span>
+                    <Badge tone="done">日程調整の準備中</Badge>
                   ) : (
-                    <span className="text-sm font-bold text-muted">参加者を募集中</span>
+                    <Badge tone="neutral">参加者を募集中</Badge>
                   )
                 }
               />
