@@ -210,4 +210,24 @@ describe("EventDetailPage - 重複実装解消（Phase 5）", () => {
     expect(planCard).toHaveClass("bg-surface", "rounded-card", "shadow-raise");
     expect(planCard).not.toHaveClass("bg-white");
   });
+
+  it("「このメンバーでもう一度」ボタンはSubmitButton由来のクラスを持つ", async () => {
+    const event = eventWithPlan();
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 1, membershipRow: { user_id: "member-1" } });
+    getCurrentUserId.mockResolvedValue("member-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    const duplicateButton = screen.getByRole("button", { name: /このメンバーでもう一度/ });
+    // SubmitButtonはaria-busyを常に持つ（useFormStatusのpending状態を反映するため）。
+    // 独自実装のbuttonにはこの属性がなく、Badge化テスト同様の「実装が元に戻っても検知できる」観点。
+    expect(duplicateButton).toHaveAttribute("aria-busy", "false");
+    expect(duplicateButton).toHaveClass("border-line-strong");
+  });
 });

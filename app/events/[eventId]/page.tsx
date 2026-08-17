@@ -9,7 +9,7 @@ import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventChat } from "@/components/event/event-chat";
 import { EventDetailTabs } from "@/components/event/event-detail-tabs";
 import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
-import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, Skeleton } from "@/components/ui";
+import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, SectionHeading, Skeleton, SubmitButton } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event/event-members";
 import { createEventMessageAction } from "@/lib/actions/event/event-messages";
 import { createEventUserInvitationsAction, loadEventInviteCandidatesAction } from "@/lib/actions/account/connections";
@@ -170,13 +170,9 @@ export default async function EventDetailPage({
               ) : null}
               {isJoined ? (
                 <form action={duplicateEventAction.bind(null, event.id)}>
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                  >
-                    <CopyPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+                  <SubmitButton variant="secondary" icon={<CopyPlus aria-hidden="true" className="h-4 w-4" />}>
                     このメンバーでもう一度
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : null}
             </div>
