@@ -230,4 +230,40 @@ describe("EventDetailPage - 重複実装解消（Phase 5）", () => {
     expect(duplicateButton).toHaveAttribute("aria-busy", "false");
     expect(duplicateButton).toHaveClass("border-line-strong");
   });
+
+  it("「日程調整」見出しはSectionHeading由来のtext-titleクラスを持つ", async () => {
+    const event = eventWithPlan();
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 1, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    const heading = screen.getByRole("heading", { name: "日程調整" });
+    expect(heading).toHaveClass("text-title");
+    expect(heading).not.toHaveClass("text-xl");
+  });
+
+  it("「参加者」見出しはSectionHeading化されても、参加人数と募集状態の表示を保つ", async () => {
+    const event = { ...eventWithPlan(), status: "participants_open" };
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 4, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("member-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({ tab: "members" })
+      })
+    );
+
+    const heading = screen.getByRole("heading", { name: "参加者" });
+    expect(heading).toHaveClass("text-title");
+    expect(screen.getByText("参加済み 4人")).toBeInTheDocument();
+  });
 });

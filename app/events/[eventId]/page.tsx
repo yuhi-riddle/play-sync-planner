@@ -131,7 +131,7 @@ export default async function EventDetailPage({
         <>
           {hasPlans || !isEventTerminal ? (
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-ink">日程調整</h2>
+              <SectionHeading title="日程調整" />
               {hasPlans ? (
                 <div className="grid gap-3">
                   {((event.plans ?? []) as EventPlan[]).map((plan) => (
@@ -194,17 +194,17 @@ export default async function EventDetailPage({
             </Card>
           ) : (
             <Card>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-semibold text-ink">参加者</h2>
-                  <p className="mt-2 text-sm text-muted">参加済み {memberCount ?? 0}人</p>
-                </div>
-                {isEventTerminal ? null : canStartAdjustment ? (
-                  <span className="text-sm font-bold text-pine">日程調整の準備中</span>
-                ) : (
-                  <span className="text-sm font-bold text-muted">参加者を募集中</span>
-                )}
-              </div>
+              <SectionHeading
+                title="参加者"
+                description={`参加済み ${memberCount ?? 0}人`}
+                action={
+                  isEventTerminal ? null : canStartAdjustment ? (
+                    <span className="text-sm font-bold text-pine">日程調整の準備中</span>
+                  ) : (
+                    <span className="text-sm font-bold text-muted">参加者を募集中</span>
+                  )
+                }
+              />
             </Card>
           )}
 
