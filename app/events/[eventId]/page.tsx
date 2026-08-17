@@ -135,7 +135,7 @@ export default async function EventDetailPage({
               {hasPlans ? (
                 <div className="grid gap-3">
                   {((event.plans ?? []) as EventPlan[]).map((plan) => (
-                    <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-control border border-line bg-white p-4 shadow-soft hover:border-moss">
+                    <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-card border border-line bg-surface p-5 shadow-raise hover:border-moss">
                       <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
                       <span className="mt-1 block text-sm text-muted">
                         {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}

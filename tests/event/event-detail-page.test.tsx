@@ -164,3 +164,50 @@ describe("EventDetailPage - 終了状態のイベント", () => {
     expect(screen.getByRole("heading", { name: "日程調整" })).toBeInTheDocument();
   });
 });
+
+describe("EventDetailPage - 重複実装解消（Phase 5）", () => {
+  beforeEach(() => {
+    vi.stubGlobal("React", React);
+    vi.clearAllMocks();
+  });
+
+  function eventWithPlan() {
+    return {
+      id: "event-1",
+      title: "夏合宿",
+      status: "date_confirmed",
+      owner_user_id: "owner-1",
+      category: "other",
+      location_name: null,
+      url: null,
+      memo: null,
+      plans: [
+        {
+          id: "plan-1",
+          title: "候補A",
+          status: "date_confirmed",
+          confirmed_start_at: null,
+          answer_deadline_at: null
+        }
+      ]
+    };
+  }
+
+  it("プランカードは共有Cardと同じクラス構成（bg-surface / rounded-card / shadow-raise）を持つ", async () => {
+    const event = eventWithPlan();
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 1, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    const planCard = screen.getByRole("link", { name: /候補A/ });
+    expect(planCard).toHaveClass("bg-surface", "rounded-card", "shadow-raise");
+    expect(planCard).not.toHaveClass("bg-white");
+  });
+});
