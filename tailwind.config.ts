@@ -14,12 +14,12 @@ const config: Config = {
     extend: {
       colors: {
         // 面: 3段。カードは必ず不透明にする
-        canvas: "#efe7d8",
+        canvas: "#f7f3ef",
         surface: "#fffdf7",
         sunken: "#f6f0e4",
 
         // 旧名。canvas / surface のエイリアスとして残す
-        paper: "#efe7d8",
+        paper: "#f7f3ef",
         cream: "#fffdf7",
 
         // 線
@@ -29,13 +29,14 @@ const config: Config = {
         },
 
         // 文字: 暖色グレー3段。黒の透明度を重ねない
-        ink: "#262320", // 本文・見出し・主CTAの背景
+        ink: "#262320", // 本文・見出し。主CTAには使わない
         muted: "#6f665c", // 補足・ラベル
         subtle: "#948a7d", // 装飾専用。AA不足なので本文に使わない
 
         // アクセント: 値ではなく「使い道」を決めてある
         moss: "#5f7d65", // 線・アイコン・面
-        pine: "#344f43", // 強調文字・確定・hover
+        pine: "#344f43", // 強調文字・確定・hover・主CTAグラデーションの起点
+        "pine-deep": "#2c4638", // 主CTAグラデーションの終端
         clay: "#df7d69", // 期限・要対応（面/線）
         "clay-ink": "#a8492f", // 期限・要対応（文字）
         honey: "#d9aa4f", // 調整中（面/線）
@@ -70,8 +71,8 @@ const config: Config = {
         stat: ["1.625rem", { lineHeight: "1.25", letterSpacing: "-0.01em", fontWeight: "700" }]
       },
       borderRadius: {
-        card: "14px",
-        control: "10px"
+        card: "20px",
+        control: "14px"
       },
       boxShadow: {
         // 輪郭は border が担う。影は「浮き」の表現だけに使う

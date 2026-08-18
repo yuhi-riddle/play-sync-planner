@@ -12,7 +12,7 @@
    * 地 → カード → 沈んだ面。この段差が視覚的な構造をつくる。
    * カードは必ず不透明。半透明にすると背景装飾が透けて段差が消える。
    */
-  --madoi-canvas: #efe7d8; /* ページの地 */
+  --madoi-canvas: #f7f3ef; /* ページの地 */
   --madoi-surface: #fffdf7; /* カード面 */
   --madoi-sunken: #f6f0e4; /* カード内の一段沈んだ面（空状態・リスト行） */
 
@@ -31,9 +31,10 @@
   /* ---- ブランド / アクセント -------------------------------------------
    * 値は既存のまま。変えたのは「使い道」。
    */
-  --madoi-ink: #23262b; /* 主CTAの黒。ブランドの芯 */
+  --madoi-ink: #23262b; /* 見出し・本文の黒。主CTAには使わない */
   --madoi-moss: #5f7d65; /* 線・アイコン・面。文字には使わない（AA不足） */
-  --madoi-pine: #344f43; /* 強調文字・確定・hover */
+  --madoi-pine: #344f43; /* 強調文字・確定・hover・主CTAの起点色 */
+  --madoi-pine-deep: #2c4638; /* 主CTAグラデーションの終端色 */
   --madoi-clay: #df7d69; /* 期限・要対応（面/線） */
   --madoi-clay-ink: #a8492f; /* 期限・要対応（文字） */
   --madoi-honey: #d9aa4f; /* 調整中（面/線） */
@@ -42,8 +43,8 @@
   --madoi-mist: #eff3ee; /* 確定・完了の面 */
 
   /* ---- 角丸: 3値のみ ---- */
-  --madoi-radius-card: 14px;
-  --madoi-radius-control: 10px;
+  --madoi-radius-card: 20px;
+  --madoi-radius-control: 14px;
   /* pill は Tailwind の rounded-full を使う */
 
   /* ---- 影: 3段 ----------------------------------------------------------
