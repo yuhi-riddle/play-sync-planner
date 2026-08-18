@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata, Viewport } from "next";
+import { Zen_Maru_Gothic } from "next/font/google";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 
@@ -27,6 +28,13 @@ export const viewport: Viewport = {
   themeColor: "#344f43"
 };
 
+const zenMaruGothic = Zen_Maru_Gothic({
+  subsets: ["japanese"],
+  weight: ["400", "700"],
+  display: "swap",
+  variable: "--font-zen-maru-gothic"
+});
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let user: User | null = null;
 
@@ -36,7 +44,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const isSignedIn = Boolean(user);
 
   return (
-    <html lang="ja">
+    <html lang="ja" className={zenMaruGothic.variable}>
       <body>
         <a
           href="#main-content"

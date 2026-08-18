@@ -45,14 +45,14 @@ const config: Config = {
         mist: "#eff3ee"
       },
       /*
-       * Web フォントは使わない。
-       * Zen Kaku Gothic New を入れていたが、Google Fonts の latin サブセットには日本語グリフが
-       * 含まれず、画面の大半を占める日本語には一切効いていなかった（英数字だけに適用され、
-       * その代償に 30 ファイル / 268KB を読み込んでいた）。日本語グリフを含めると数 MB になる。
-       * OS 標準の日本語ゴシックで十分きれいに出るため、システムフォントで組む。
+       * Zen Maru Gothic を next/font/google 経由でセルフホスト。
+       * 2026-07-13 に Zen Kaku Gothic New を撤去した際の失敗は「日本語Webフォントが重いから」
+       * ではなく設定ミス（subsets が latin のみで日本語グリフ0件のまま268KBを読み込んでいた）
+       * だったため、再導入時は subsets: ["japanese"] を必ず指定し、有効になっているか目視確認する。
        */
       fontFamily: {
         sans: [
+          "var(--font-zen-maru-gothic)",
           "system-ui",
           "-apple-system",
           "Hiragino Kaku Gothic ProN",
