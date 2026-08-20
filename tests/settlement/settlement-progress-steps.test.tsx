@@ -44,6 +44,23 @@ describe("SettlementProgressSteps", () => {
     expect(items[1]).toHaveAttribute("aria-current", "step");
   });
 
+  it("keeps the payment step current when confirmation waiting also exists", () => {
+    render(
+      <SettlementProgressSteps
+        paymentWaitingCount={1}
+        confirmationWaitingCount={2}
+        isComplete={false}
+      />
+    );
+
+    expect(screen.getByText("STEP 1")).toBeInTheDocument();
+    expect(screen.getByText("支払い待ち")).toBeInTheDocument();
+
+    const items = screen.getAllByRole("listitem");
+    expect(items[0]).toHaveAttribute("aria-current", "step");
+    expect(items[1]).not.toHaveAttribute("aria-current");
+  });
+
   it("marks the flow complete when nothing remains", () => {
     render(
       <SettlementProgressSteps

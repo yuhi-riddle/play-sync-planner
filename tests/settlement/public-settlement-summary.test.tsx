@@ -48,8 +48,8 @@ describe("PublicSettlementSummary", () => {
     expect(screen.getByText("残り 2,600円")).toBeInTheDocument();
     const progressList = screen.getByRole("list", { name: "清算の進捗" });
     expect(progressList).toBeInTheDocument();
-    expect(screen.getByText("受け取り確認待ち")).toBeInTheDocument();
-    expect(within(progressList).getAllByRole("listitem")[1]).toHaveAttribute("aria-current", "step");
+    expect(screen.getByText("支払い待ち")).toBeInTheDocument();
+    expect(within(progressList).getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "step");
     expect(screen.getByText("外部決済ページを開いて支払えます")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "PayPayで支払う" })).toHaveAttribute("href", "https://example.com/pay/suzuki");
   });

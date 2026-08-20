@@ -19,7 +19,7 @@ export function SettlementProgressSteps({
   confirmationWaitingCount: number;
   isComplete: boolean;
 }) {
-  const currentStep = isComplete ? "complete" : confirmationWaitingCount > 0 ? "confirmation" : "payment";
+  const currentStep = isComplete ? "complete" : paymentWaitingCount > 0 ? "payment" : "confirmation";
   const steps: Step[] = [
     {
       label: "支払い待ち",
