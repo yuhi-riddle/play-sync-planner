@@ -3,6 +3,18 @@ import "@testing-library/jest-dom/vitest";
 import { afterAll, beforeAll, vi } from "vitest";
 
 /**
+ * next/font/google はビルド時専用のフォントローダーで、vitest(jsdom)環境では実体を持たない。
+ * app/layout.tsx が Zen_Maru_Gothic を呼ぶため、無害なオブジェクトを返すダミーに差し替える。
+ */
+vi.mock("next/font/google", () => ({
+  Zen_Maru_Gothic: () => ({
+    className: "font-mock",
+    style: { fontFamily: "font-mock" },
+    variable: "--font-mock"
+  })
+}));
+
+/**
  * テストの「現在時刻」を固定する。
  *
  * 候補日時などを未来の日付でハードコードしたテストは、時間が経って
