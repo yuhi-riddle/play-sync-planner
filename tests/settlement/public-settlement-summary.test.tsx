@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PublicSettlementSummary } from "@/components/settlement/public-settlement-summary";
@@ -46,8 +46,10 @@ describe("PublicSettlementSummary", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("矢印の左が支払う人、右が受け取る人です。自分の名前の行から支払ってください。")).toBeInTheDocument();
     expect(screen.getByText("残り 2,600円")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "清算の進捗" })).toBeInTheDocument();
-    expect(screen.getByText("受け取り確認待ち").closest("li")).toHaveAttribute("aria-current", "step");
+    const progressList = screen.getByRole("list", { name: "清算の進捗" });
+    expect(progressList).toBeInTheDocument();
+    expect(screen.getByText("支払い待ち")).toBeInTheDocument();
+    expect(within(progressList).getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "step");
     expect(screen.getByText("外部決済ページを開いて支払えます")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "PayPayで支払う" })).toHaveAttribute("href", "https://example.com/pay/suzuki");
   });

@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, Circle, Clock3 } from "lucide-react";
+import { clsx } from "clsx";
 
 type StepTone = "current" | "done" | "waiting";
 
@@ -19,7 +19,7 @@ export function SettlementProgressSteps({
   confirmationWaitingCount: number;
   isComplete: boolean;
 }) {
-  const currentStep = isComplete ? "complete" : confirmationWaitingCount > 0 ? "confirmation" : "payment";
+  const currentStep = isComplete ? "complete" : paymentWaitingCount > 0 ? "payment" : "confirmation";
   const steps: Step[] = [
     {
       label: "支払い待ち",
@@ -41,44 +41,53 @@ export function SettlementProgressSteps({
     }
   ];
 
+  const activeIndex = steps.findIndex((step) => step.tone === "current");
+  const activeStep = activeIndex >= 0 ? steps[activeIndex] : null;
+
   return (
-    <ol aria-label="清算の進捗" className="grid gap-3 md:grid-cols-3">
-      {steps.map((step) => (
-        <li
-          key={step.label}
-          aria-current={step.tone === "current" ? "step" : undefined}
-          className={`rounded-control border p-4 ${toneClassNames[step.tone]}`}
-        >
-          <div className="flex items-start gap-3">
-            <StepIcon tone={step.tone} />
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-bold text-ink">{step.label}</p>
-                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-bold text-muted">{step.countLabel}</span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-muted">{step.detail}</p>
-            </div>
-          </div>
-        </li>
-      ))}
-    </ol>
+    <div className="grid gap-3">
+      <ol aria-label="清算の進捗" className="flex items-center">
+        {steps.map((step, index) => (
+          <li
+            key={step.label}
+            aria-current={step.tone === "current" ? "step" : undefined}
+            className="flex flex-1 items-center last:flex-none"
+          >
+            <span
+              className={clsx(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums transition-colors",
+                step.tone === "current"
+                  ? "bg-ink text-white"
+                  : step.tone === "done"
+                    ? "bg-mist text-pine"
+                    : "border border-line text-muted"
+              )}
+            >
+              <span aria-hidden="true">{index + 1}</span>
+              <span className="sr-only">
+                {step.label}（{step.countLabel}）
+                {step.tone === "current" ? `・現在のステップ：${step.detail}` : step.tone === "done" ? "・完了" : ""}
+              </span>
+            </span>
+            {index < steps.length - 1 ? (
+              <span
+                aria-hidden="true"
+                className={clsx("mx-2 h-px flex-1", step.tone === "done" ? "bg-moss/40" : "bg-line")}
+              />
+            ) : null}
+          </li>
+        ))}
+      </ol>
+      {activeStep ? (
+        <div>
+          <p className="text-sm font-bold text-ink">
+            <span className="tabular-nums text-muted">STEP {activeIndex + 1}</span>
+            <span className="ml-2">{activeStep.label}</span>
+            <span className="ml-2 text-muted">（{activeStep.countLabel}）</span>
+          </p>
+          <p className="mt-1 text-sm leading-6 text-muted">{activeStep.detail}</p>
+        </div>
+      ) : null}
+    </div>
   );
-}
-
-const toneClassNames: Record<StepTone, string> = {
-  current: "border-moss/32 bg-mist/42",
-  done: "border-moss/20 bg-surface",
-  waiting: "border-line bg-surface"
-};
-
-function StepIcon({ tone }: { tone: StepTone }) {
-  if (tone === "done") {
-    return <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-pine" />;
-  }
-
-  if (tone === "current") {
-    return <Clock3 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-clay-ink" />;
-  }
-
-  return <Circle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-muted" />;
 }

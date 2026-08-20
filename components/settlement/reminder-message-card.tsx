@@ -42,7 +42,7 @@ export function ReminderMessageCard({
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {pendingNames.map((name) => (
-          <span key={name} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
+          <span key={name} className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
             {name}
           </span>
         ))}
@@ -68,7 +68,7 @@ export function ReminderMessageCard({
           <div className="rounded-control border border-line bg-surface p-3 text-sm text-muted">
             <div className="flex flex-wrap items-center gap-2">
               <span>{latestSentAt ? `前回: ${formatDateTime(latestSentAt)}` : "まだ送信記録はありません"}</span>
-              <span className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">記録済み {sentCount}回</span>
+              <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">記録済み {sentCount}回</span>
             </div>
             {markSentAction ? (
               <form action={markSentAction} className="mt-3">

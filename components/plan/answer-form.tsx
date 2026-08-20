@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { clsx } from "clsx";
 
 import { submitAvailabilityAnswersAction } from "@/lib/actions/plan/answers";
 import {
@@ -11,7 +12,7 @@ import {
 } from "@/lib/domain/plan/answer-calendar";
 import { type PreviousAnswer } from "@/lib/domain/plan/previous-answers";
 import { formatDateTimeRange } from "@/lib/shared/format";
-import { MadoiForm, Skeleton } from "@/components/ui";
+import { Button, MadoiForm, Skeleton } from "@/components/ui";
 
 /** CalendarNotice が空文字になっても縮まないようにする最低高。 */
 export const CALENDAR_NOTICE_MIN_HEIGHT_CLASS = "min-h-4";
@@ -31,6 +32,13 @@ const choices: Array<{ value: AnswerChoice; label: string; shortLabel: string; a
   { value: "maybe", label: "△ 調整できるかも", shortLabel: "△", ariaText: "調整できるかも" },
   { value: "no", label: "× 行けない", shortLabel: "×", ariaText: "行けない" }
 ];
+
+/** 選択中のセグメントの色分け。色の意味は design/rules.md に準拠。 */
+const choiceCheckedClasses: Record<AnswerChoice, string> = {
+  yes: "border-moss bg-mist text-pine",
+  maybe: "border-honey bg-honey/18 text-honey-ink",
+  no: "border-clay bg-clay/14 text-clay-ink"
+};
 
 function uniqueCalendarEvents(events: AnswerCalendarEvent[]) {
   const seen = new Set<string>();
@@ -207,14 +215,9 @@ export function AnswerForm({
           </div>
           <div className="flex flex-wrap gap-2">
             {choices.map((choice) => (
-              <button
-                key={choice.value}
-                type="button"
-                className="inline-flex min-h-9 items-center justify-center rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                onClick={() => applyAll(choice.value)}
-              >
+              <Button key={choice.value} variant="secondary" size="sm" onClick={() => applyAll(choice.value)}>
                 全部{choice.shortLabel}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -243,26 +246,39 @@ export function AnswerForm({
               <legend className="px-1 text-sm font-semibold text-ink">
                 候補{index + 1} {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
               </legend>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                {choices.map((choice) => (
-                  <label
-                    key={choice.value}
-                    className="flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-sm font-semibold"
-                  >
-                    <input
-                      type="radio"
-                      name={`answer:${candidate.id}`}
-                      value={choice.value}
-                      required
-                      data-field-label={`候補 ${index + 1}`}
-                      data-required-message={`候補 ${index + 1} の回答を選択してください`}
-                      checked={answers[candidate.id] === choice.value}
-                      onChange={() => setAnswer(candidate.id, choice.value)}
-                      aria-label={`候補${index + 1}に${choice.ariaText}と回答`}
-                    />
-                    <span>{choice.label}</span>
-                  </label>
-                ))}
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
+                {choices.map((choice) => {
+                  const checked = answers[candidate.id] === choice.value;
+
+                  return (
+                    <label
+                      key={choice.value}
+                      className={clsx(
+                        "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-control border px-2 py-2 text-center transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-clay focus-within:ring-offset-2",
+                        checked ? choiceCheckedClasses[choice.value] : "border-line bg-surface text-muted hover:border-line-strong"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name={`answer:${candidate.id}`}
+                        value={choice.value}
+                        required
+                        data-field-label={`候補 ${index + 1}`}
+                        data-required-message={`候補 ${index + 1} の回答を選択してください`}
+                        checked={checked}
+                        onChange={() => setAnswer(candidate.id, choice.value)}
+                        aria-label={`候補${index + 1}に${choice.ariaText}と回答`}
+                        className="sr-only"
+                      />
+                      <span aria-hidden="true" className="text-sm font-bold leading-none">
+                        {choice.shortLabel}
+                      </span>
+                      <span aria-hidden="true" className="text-xs font-semibold leading-none">
+                        {choice.ariaText}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
               <CandidateCalendarWarning events={conflictingEvents} loading={calendarState === "loading"} />
               <label className="mt-3 block text-sm font-medium text-ink">
@@ -285,13 +301,9 @@ export function AnswerForm({
         <p aria-live="polite" className="mb-2 text-sm text-clay-ink">
           {remainingCount > 0 ? `残り${remainingCount}件の候補に回答すると送信できます。` : ""}
         </p>
-        <button
-          type="submit"
-          disabled={!allAnswered}
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:text-white/78 disabled:shadow-none"
-        >
+        <Button type="submit" disabled={!allAnswered}>
           回答する
-        </button>
+        </Button>
       </div>
     </MadoiForm>
   );

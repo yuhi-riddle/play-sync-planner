@@ -116,6 +116,73 @@ describe("EventsPage", () => {
     expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
   });
 
+  it("colors settlement_waiting, completed, and cancelled with visibly different tones", async () => {
+    const pastPlan = {
+      id: "plan-1",
+      status: "date_confirmed",
+      settlement_status: "needed",
+      confirmed_start_at: "2020-01-01T00:00:00Z",
+      confirmed_end_at: "2020-01-01T00:00:00Z",
+      is_all_day: false
+    };
+    const eventQuery = createEventQuery([
+      { ...makeEvent("event-1", "清算待ちイベント"), plans: [pastPlan] },
+      { ...makeEvent("event-2", "完了イベント"), status: "done" },
+      { ...makeEvent("event-3", "中止イベント"), status: "cancelled" }
+    ]);
+    const rpc = createRpcResult(["event-1", "event-2", "event-3"], 3);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    // ナビの絞り込みリンクにも「完了」「中止」の文言があるため、各イベントカード内に絞って取得する
+    const settlementCard = screen.getByRole("link", { name: /清算待ちイベント/ });
+    const completedCard = screen.getByRole("link", { name: /完了イベント/ });
+    const cancelledCard = screen.getByRole("link", { name: /中止イベント/ });
+    const settlementBadge = within(settlementCard).getByText("清算待ち");
+    const completedBadge = within(completedCard).getByText("完了");
+    const cancelledBadge = within(cancelledCard).getByText("中止");
+
+    // settlement_waiting は neutral (border-line / bg-sunken / text-muted)
+    expect(settlementBadge).toHaveClass("bg-sunken", "text-muted");
+    // completed は done (bg-mist / text-pine、現状維持)
+    expect(completedBadge).toHaveClass("bg-mist", "text-pine");
+    // cancelled は warn (bg-clay/14 相当 / text-clay-ink) で、他の2つと明確に異なる
+    expect(cancelledBadge).toHaveClass("text-clay-ink");
+    expect(cancelledBadge.className).not.toBe(settlementBadge.className);
+    expect(cancelledBadge.className).not.toBe(completedBadge.className);
+  });
+
+  it("shows the draft card's status and category as shared Badge pills", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 0);
+    const draftQuery = createDraftQuery({
+      id: "draft-1",
+      payload: { title: "入力途中の旅行", category: "travel" },
+      updated_at: "2026-07-15T00:00:00Z"
+    });
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "draft" }) }));
+
+    // ナビの状態チップにも「下書き」の文言があるため、下書きカードのリンク内に絞って取得する
+    const draftCard = screen.getByRole("link", { name: /続きから入力/ });
+    const draftBadge = within(draftCard).getByText("下書き");
+    // text-caption は共有Badge固有のクラス。旧・自前実装は text-xs だったため、これがないと
+    // Badge化が元に戻っても検知できない（最終レビューで指摘）。
+    expect(draftBadge).toHaveClass("bg-honey/18", "text-honey-ink", "text-caption");
+
+    const categoryBadge = within(draftCard).getByText("旅行");
+    expect(categoryBadge).toHaveClass("bg-mist", "text-pine", "border-moss/30");
+  });
+
   it("omits the schedule and location rows when they are unset", async () => {
     const eventQuery = createEventQuery([{
       ...makeEvent("event-2", "まだ何も決まっていない会"),

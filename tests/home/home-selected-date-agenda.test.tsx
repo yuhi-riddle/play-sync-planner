@@ -121,10 +121,40 @@ describe("HomeSelectedDateAgenda", () => {
     );
 
     const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
-    expect(dateGrid).toHaveClass("grid-cols-[repeat(7,minmax(0,1fr))]", "gap-0.5", "sm:gap-1");
+    expect(dateGrid).toHaveClass("grid-cols-[repeat(7,minmax(0,1fr))]", "gap-1", "sm:gap-1.5");
     expect(dateGrid?.querySelectorAll("button")).toHaveLength(7);
     for (const button of Array.from(dateGrid?.querySelectorAll("button") ?? [])) {
-      expect(button).toHaveClass("min-w-0", "px-0.5");
+      expect(button).toHaveClass("min-w-0", "px-1");
+    }
+  });
+
+  it("colors Sunday and Saturday weekday labels using the shared calendar convention", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-22" todayDateKey="2026-07-22" initialItems={[]} />
+    );
+
+    const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
+    const dayButtons = Array.from(dateGrid?.querySelectorAll("button") ?? []);
+    const weekdayLabel = (index: number) => dayButtons[index]?.querySelector("span");
+
+    // 週は 7/19(日) 〜 7/25(土)。選択中は7/22(水)なのでactiveの上書きを受けない。
+    expect(weekdayLabel(0)).toHaveClass("text-clay-ink");
+    expect(weekdayLabel(6)).toHaveClass("text-sky-700");
+  });
+
+  it("adds a ring offset to week navigation and day-cell buttons for focus visibility", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-19" todayDateKey="2026-07-19" initialItems={[]} />
+    );
+
+    expect(screen.getByRole("button", { name: "前の週" })).toHaveClass("focus:ring-offset-2");
+    expect(screen.getByRole("button", { name: "次の週" })).toHaveClass("focus:ring-offset-2");
+
+    const dateGrid = container.querySelector('[data-testid="home-week-grid"]');
+    for (const button of Array.from(dateGrid?.querySelectorAll("button") ?? [])) {
+      expect(button).toHaveClass("focus:ring-offset-2");
     }
   });
 
@@ -163,5 +193,13 @@ describe("HomeSelectedDateAgenda", () => {
     );
     expect(placeholders.length).toBeGreaterThan(0);
     expect(screen.queryByText("この日の予定はまだありません。")).not.toBeInTheDocument();
+  });
+
+  it("renders date shortcuts using the shared Button primitive", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-19" todayDateKey="2026-07-19" initialItems={[]} />);
+
+    expect(screen.getByRole("button", { name: "今日" })).toHaveClass("bg-ink", "text-white");
+    expect(screen.getByRole("button", { name: "明日" })).toHaveClass("border-line-strong", "text-ink");
   });
 });

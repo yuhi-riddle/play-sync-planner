@@ -4,7 +4,7 @@ import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 
 import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventListControls } from "@/components/event/event-list-controls";
-import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, type BadgeTone, ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { cancelEventAction } from "@/lib/actions/event/events";
 import { categoryLabels } from "@/lib/shared/constants";
@@ -18,12 +18,23 @@ import {
   isEventLifecycleFinished,
   normalizeCategory,
   normalizeEventListQuery,
+  type EventDisplayState,
   type EventListItem
 } from "@/lib/domain/event/event-filter";
 import { formatDate, formatDateTimeRange } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const eventDisplayStateTones: Record<EventDisplayState, BadgeTone> = {
+  participant_waiting: "neutral",
+  schedule_creation_waiting: "info",
+  answer_waiting: "info",
+  event_waiting: "accent",
+  settlement_waiting: "neutral",
+  completed: "done",
+  cancelled: "warn"
+};
 
 type EventFilterQuery = {
   status?: string;
@@ -176,8 +187,8 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           <Link href={getEventDraftResumePath()} className="block focus:outline-none focus:ring-2 focus:ring-clay">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="mb-3 inline-flex rounded-full border border-honey/45 bg-honey/18 px-3 py-1 text-xs font-bold text-honey-ink">
-                  下書き
+                <div className="mb-3">
+                  <Badge tone="info">下書き</Badge>
                 </div>
                 <h2 className="text-xl font-bold text-ink">
                   {typeof draftPayload.title === "string" && draftPayload.title.trim()
@@ -190,9 +201,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                     : "場所メモ未設定"}
                 </p>
               </div>
-              <span className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
-                {draftCategory === "all" ? "カテゴリ未設定" : categoryLabels[draftCategory]}
-              </span>
+              <Badge tone="done">{draftCategory === "all" ? "カテゴリ未設定" : categoryLabels[draftCategory]}</Badge>
             </div>
             <p className="mt-4 border-t border-line pt-4 text-sm font-bold text-pine">続きから入力</p>
           </Link>
@@ -222,9 +231,7 @@ function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean
   return (
     <Card className="transition-colors hover:border-moss/45">
       <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
-        <span className="inline-flex rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
-          {eventDisplayStateLabels[summary.displayState]}
-        </span>
+        <Badge tone={eventDisplayStateTones[summary.displayState]}>{eventDisplayStateLabels[summary.displayState]}</Badge>
         <h2 className="mt-3 text-xl font-bold text-ink">{event.title}</h2>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
           {scheduleText ? <Meta icon={CalendarDays} text={scheduleText} strong={summary.schedule.isConfirmed} /> : null}

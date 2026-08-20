@@ -1,7 +1,7 @@
 import React from "react";
 
 import { PaymentDestinationLink } from "@/components/settlement/payment-destination-link";
-import { Card, EmptyState } from "@/components/ui";
+import { Card, EmptyState, SubmitButton } from "@/components/ui";
 import { formatYenText } from "@/lib/shared/format";
 
 export type SettlementConfirmationQueueItem = {
@@ -44,12 +44,7 @@ export function SettlementConfirmationQueue({
                 </div>
                 {item.canConfirm ?? true ? (
                 <form action={confirmPaymentAction.bind(null, item.id)}>
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 lg:w-auto"
-                  >
-                    受け取り確認する
-                  </button>
+                  <SubmitButton className="w-full lg:w-auto">受け取り確認する</SubmitButton>
                 </form>
                 ) : (
                   <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-muted">

@@ -9,7 +9,8 @@ import { clsx } from "clsx";
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home/home-agenda";
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
-import { Badge, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
+import { weekdayClass } from "@/lib/shared/calendar-styles";
+import { Badge, Button, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
 
 /** Google Calendarのステータス行(SectionHeadingのaction)が空文字になっても縮まないようにする最低高。 */
 export const GOOGLE_STATUS_MIN_HEIGHT_CLASS = "min-h-5";
@@ -75,17 +76,6 @@ function weekdayLabel(dateKey: string) {
   return new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(dateFromKey(dateKey));
 }
 
-function weekdayTone(dateKey: string) {
-  const day = dateFromKey(dateKey).getDay();
-  if (day === 0) {
-    return "text-clay-ink";
-  }
-  if (day === 6) {
-    return "text-pine";
-  }
-  return "text-muted";
-}
-
 function itemBadge(kind: HomeAgendaItem["kind"]): { label: string; tone: BadgeTone } {
   if (kind === "collecting") {
     return { label: "調整中", tone: "info" };
@@ -121,7 +111,9 @@ function DateShortcut({
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" onClick={onSelect} aria-current={active ? "date" : undefined} className={clsx("inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2", active ? "bg-ink text-white shadow-soft" : "border border-line-strong bg-surface text-muted hover:border-moss hover:text-pine")}>{children}</button>
+    <Button variant={active ? "primary" : "secondary"} onClick={onSelect} aria-current={active ? "date" : undefined}>
+      {children}
+    </Button>
   );
 }
 
@@ -263,15 +255,15 @@ export function HomeSelectedDateAgenda({
           <div className="flex items-center justify-between gap-2">
             <p className="text-body font-bold text-ink">日付を選ぶ</p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => selectDate(previousWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay" aria-label="前の週">
+              <button type="button" onClick={() => selectDate(previousWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2" aria-label="前の週">
                 <ChevronLeft aria-hidden="true" className="h-4 w-4" />
               </button>
-              <button type="button" onClick={() => selectDate(nextWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay" aria-label="次の週">
+              <button type="button" onClick={() => selectDate(nextWeekKey)} className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2" aria-label="次の週">
                 <ChevronRight aria-hidden="true" className="h-4 w-4" />
               </button>
             </div>
           </div>
-          <div data-testid="home-week-grid" className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-0.5 sm:gap-1">
+          <div data-testid="home-week-grid" className="mt-3 grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 sm:gap-1.5">
             {weekDays.map((dateKey) => {
               const active = dateKey === activeDateKey;
               return (
@@ -281,14 +273,14 @@ export function HomeSelectedDateAgenda({
                   onClick={() => selectDate(dateKey)}
                   aria-current={active ? "date" : undefined}
                   className={clsx(
-                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-0.5 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-16 sm:px-1",
+                    "grid min-h-14 min-w-0 place-items-center rounded-control border px-1 py-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:min-h-16 sm:px-1.5",
                     active ? "border-pine bg-ink text-white shadow-soft" : "border-line bg-surface text-ink hover:border-moss"
                   )}
                 >
-                  <span className={clsx("truncate text-[0.7rem] font-bold sm:text-caption", active ? "text-white/75" : weekdayTone(dateKey))}>
+                  <span className={clsx("truncate text-caption font-bold", active ? "text-white/75" : weekdayClass(dateFromKey(dateKey).getDay()))}>
                     {weekdayLabel(dateKey)}
                   </span>
-                  <span className="mt-1 truncate text-xs font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
+                  <span className="mt-1 truncate text-caption font-bold tabular-nums sm:text-body">{shortDateLabel(dateKey)}</span>
                 </button>
               );
             })}

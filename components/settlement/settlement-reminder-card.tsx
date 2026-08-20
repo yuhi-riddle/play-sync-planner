@@ -44,7 +44,7 @@ export function SettlementReminderCard({
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {recipientNames.map((name) => (
-          <span key={name} className="rounded-full bg-mist/45 px-3 py-1 text-xs font-bold text-pine">
+          <span key={name} className="rounded-full bg-mist px-3 py-1 text-xs font-bold text-pine">
             {name}
           </span>
         ))}

@@ -9,7 +9,7 @@ import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventChat } from "@/components/event/event-chat";
 import { EventDetailTabs } from "@/components/event/event-detail-tabs";
 import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
-import { ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, Skeleton } from "@/components/ui";
+import { Badge, ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, SectionHeading, Skeleton, SubmitButton } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event/event-members";
 import { createEventMessageAction } from "@/lib/actions/event/event-messages";
 import { createEventUserInvitationsAction, loadEventInviteCandidatesAction } from "@/lib/actions/account/connections";
@@ -131,11 +131,11 @@ export default async function EventDetailPage({
         <>
           {hasPlans || !isEventTerminal ? (
             <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-ink">日程調整</h2>
+              <SectionHeading title="日程調整" />
               {hasPlans ? (
                 <div className="grid gap-3">
                   {((event.plans ?? []) as EventPlan[]).map((plan) => (
-                    <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-control border border-line bg-white p-4 shadow-soft hover:border-moss">
+                    <Link key={plan.id} href={`/plans/${plan.id}`} className="rounded-card border border-line bg-surface p-5 shadow-raise hover:border-moss">
                       <span className="block font-semibold text-ink">{plan.title ?? "日程調整"}</span>
                       <span className="mt-1 block text-sm text-muted">
                         {planStatusLabels[plan.status as keyof typeof planStatusLabels]} / 回答期限 {formatDateTime(plan.answer_deadline_at)}
@@ -170,13 +170,9 @@ export default async function EventDetailPage({
               ) : null}
               {isJoined ? (
                 <form action={duplicateEventAction.bind(null, event.id)}>
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                  >
-                    <CopyPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+                  <SubmitButton variant="secondary" icon={<CopyPlus aria-hidden="true" className="h-4 w-4" />}>
                     このメンバーでもう一度
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : null}
             </div>
@@ -198,17 +194,17 @@ export default async function EventDetailPage({
             </Card>
           ) : (
             <Card>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-semibold text-ink">参加者</h2>
-                  <p className="mt-2 text-sm text-muted">参加済み {memberCount ?? 0}人</p>
-                </div>
-                {isEventTerminal ? null : canStartAdjustment ? (
-                  <span className="text-sm font-bold text-pine">日程調整の準備中</span>
-                ) : (
-                  <span className="text-sm font-bold text-muted">参加者を募集中</span>
-                )}
-              </div>
+              <SectionHeading
+                title="参加者"
+                description={`参加済み ${memberCount ?? 0}人`}
+                action={
+                  isEventTerminal ? null : canStartAdjustment ? (
+                    <Badge tone="done">日程調整の準備中</Badge>
+                  ) : (
+                    <Badge tone="neutral">参加者を募集中</Badge>
+                  )
+                }
+              />
             </Card>
           )}
 
@@ -446,7 +442,7 @@ function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-control bg-surface p-4">
       <dt className="text-eyebrow uppercase text-muted">{label}</dt>
-      <dd className="mt-2 break-words text-base font-semibold text-ink">{value}</dd>
+      <dd className="mt-2 break-words text-body font-bold text-ink">{value}</dd>
     </div>
   );
 }

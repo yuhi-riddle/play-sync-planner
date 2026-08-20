@@ -75,6 +75,14 @@ describe("SubmitButton", () => {
     expect(className).toContain("bg-ink");
   });
 
+  it("dangerバリアントは警告色のボタンクラスになる", () => {
+    render(<SubmitButton variant="danger">削除する</SubmitButton>);
+
+    const className = screen.getByRole("button").className;
+    expect(className).toContain("text-clay-ink");
+    expect(className).toContain("hover:bg-clay");
+  });
+
   it("refを転送できる(確認ステップでのフォーカス移動に使う)", () => {
     const ref = React.createRef<HTMLButtonElement>();
     render(<SubmitButton ref={ref}>確定する</SubmitButton>);

@@ -6,7 +6,7 @@ import { useFormStatus } from "react-dom";
 import type { FormEvent, InvalidEvent, KeyboardEvent, ReactNode } from "react";
 import { clsx } from "clsx";
 
-import { Alert } from "@/components/ui/server";
+import { Alert, buttonBaseClasses, buttonSizeClasses, buttonVariantClasses, type ButtonVariant } from "@/components/ui/server";
 
 /**
  * 操作を伴うプリミティブ（hooks・イベントハンドラを使う）。
@@ -448,13 +448,6 @@ export function SelectField({
   );
 }
 
-const submitButtonVariantClasses = {
-  primary:
-    "bg-ink text-white shadow-soft hover:bg-pine",
-  secondary:
-    "border border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
-} as const;
-
 /**
  * `useFormStatus` で送信中を検知し、連打による二重送信を防ぐ。
  * MadoiForm など `<form action={...}>` の内側に置いて使う。
@@ -465,7 +458,7 @@ export const SubmitButton = React.forwardRef<
     children: ReactNode;
     /** 送信中に表示する文言。省略時は元のラベルのまま。 */
     pendingChildren?: ReactNode;
-    variant?: keyof typeof submitButtonVariantClasses;
+    variant?: ButtonVariant;
     icon?: ReactNode;
     /** 幅などのレイアウト調整用。色・状態のクラスは上書きしない。 */
     className?: string;
@@ -480,8 +473,11 @@ export const SubmitButton = React.forwardRef<
       disabled={pending}
       aria-busy={pending}
       className={clsx(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-2 text-body font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
-        submitButtonVariantClasses[variant],
+        buttonBaseClasses,
+        buttonSizeClasses.default,
+        "gap-2",
+        buttonVariantClasses[variant],
+        "disabled:pointer-events-none disabled:opacity-40",
         className
       )}
     >
