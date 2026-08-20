@@ -7,7 +7,7 @@
 }
 
 html {
-  background: #efe7d8;
+  background: #f7f3ef;
 }
 
 body {
@@ -16,7 +16,7 @@ body {
     radial-gradient(circle at 8% 4%, rgba(166, 202, 205, 0.5) 0 54px, transparent 55px),
     radial-gradient(circle at 88% 10%, rgba(217, 170, 79, 0.14) 0 96px, transparent 97px),
     linear-gradient(180deg, rgba(239, 243, 238, 0.7), rgba(239, 231, 216, 0) 330px),
-    #efe7d8;
+    #f7f3ef;
   color: #262320;
   font-feature-settings: "palt";
 }

@@ -276,6 +276,41 @@ function actionFilterForKind(kind: string): NotificationActionFilter | null {
   }
 }
 
+const priorityFilterRank: Record<Exclude<NotificationActionFilter, "all">, number> = {
+  payment: 0,
+  deadline: 0,
+  settlement: 1,
+  confirmation: 1,
+  unanswered: 2
+};
+
+function priorityRankForKind(kind: string): number {
+  const filter = actionFilterForKind(kind);
+  if (!filter || filter === "all") {
+    return 99;
+  }
+
+  return priorityFilterRank[filter];
+}
+
+/** 「対応が必要なこと」カードに1件だけプレビュー表示するとき、支払い・期限を最優先にする。 */
+export function selectPriorityNotification<T extends { kind: string; created_at?: string }>(
+  notifications: T[]
+): T | null {
+  if (notifications.length === 0) {
+    return null;
+  }
+
+  return [...notifications].sort((a, b) => {
+    const rankDiff = priorityRankForKind(a.kind) - priorityRankForKind(b.kind);
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+
+    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+  })[0];
+}
+
 function planTitle(plan: PlanNotificationPlan) {
   const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
   return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";

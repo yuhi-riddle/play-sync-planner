@@ -48,9 +48,9 @@ AIがUIを書くときに参照するルール。値の定義は [tokens.css](./
 
 | 色 | 意味 | 使う場所 |
 |---|---|---|
-| `ink` | 主アクション | 主CTAボタンの背景 |
+| `ink` | 本文・見出し | 通常のテキスト色。主CTAの背景には使わない |
 | `moss` | 線・アイコン | 罫線、アイコン、`Badge` の done |
-| `pine` | 強調・確定 | 強調文字、hover、確定状態 |
+| `pine` / `pine-deep` | 主アクション・強調・確定 | 主CTAボタンの背景（`from-pine to-pine-deep` のグラデーション）、強調文字、hover、確定状態 |
 | `clay` / `clay-ink` | 期限・要対応 | 期限バッジ、未回答、警告 |
 | `honey` / `honey-ink` | 調整中 | 進行中バッジ |
 | `mist` / `skywash` | 情報・完了の面 | バッジの地、情報カード |
@@ -60,7 +60,7 @@ AIがUIを書くときに参照するルール。値の定義は [tokens.css](./
 ## 角丸
 
 **NG: `rounded-md`, `rounded-lg`, `rounded-xl`, `rounded-2xl` など任意の値**
-**代替: `rounded-card`(14px) / `rounded-control`(10px) / `rounded-full` の3値のみ**
+**代替: `rounded-card`(20px) / `rounded-control`(14px) / `rounded-full` の3値のみ**
 
 - `rounded-card` — カード・セクション
 - `rounded-control` — 入力欄、リスト行、沈んだ面
