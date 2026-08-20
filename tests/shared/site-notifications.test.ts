@@ -9,6 +9,7 @@ import {
   filterNotificationsByReadState,
   onlyUnreadNotifications,
   resolveNotificationActionFilter,
+  selectPriorityNotification,
   summarizeUnreadNotifications,
   type NotificationActionFilter,
   type NotificationCandidate
@@ -256,5 +257,44 @@ describe("resolveNotificationActionFilter", () => {
 
   it("keeps a requested filter that still has notifications", () => {
     expect(resolveNotificationActionFilter("deadline", counts)).toBe("deadline");
+  });
+});
+
+describe("selectPriorityNotification", () => {
+  it("returns null for an empty list", () => {
+    expect(selectPriorityNotification([])).toBeNull();
+  });
+
+  it("prioritizes payment_due over unanswered regardless of recency", () => {
+    const notifications = [
+      { kind: "unanswered", created_at: "2026-08-10T00:00:00Z" },
+      { kind: "payment_due", created_at: "2026-08-09T00:00:00Z" }
+    ];
+
+    expect(selectPriorityNotification(notifications)?.kind).toBe("payment_due");
+  });
+
+  it("treats answer_deadline and payment_due as the same top tier", () => {
+    const notifications = [
+      { kind: "answer_deadline", created_at: "2026-08-09T00:00:00Z" },
+      { kind: "payment_due", created_at: "2026-08-10T00:00:00Z" }
+    ];
+
+    expect(selectPriorityNotification(notifications)?.kind).toBe("payment_due");
+  });
+
+  it("falls back to newest created_at within the same tier", () => {
+    const notifications = [
+      { kind: "settlement_needed", created_at: "2026-08-08T00:00:00Z" },
+      { kind: "confirmation_due", created_at: "2026-08-11T00:00:00Z" }
+    ];
+
+    expect(selectPriorityNotification(notifications)?.kind).toBe("confirmation_due");
+  });
+
+  it("ranks kinds with no action filter last, but still returns them when they're the only one", () => {
+    const notifications = [{ kind: "event_message", created_at: "2026-08-11T00:00:00Z" }];
+
+    expect(selectPriorityNotification(notifications)?.kind).toBe("event_message");
   });
 });
