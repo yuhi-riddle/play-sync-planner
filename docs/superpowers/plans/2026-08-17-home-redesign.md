@@ -17,7 +17,7 @@
 - `moss` / `clay` / `honey` は面・線のみに使い、文字色には `text-pine` / `text-clay-ink` / `text-honey-ink` を使う
 - タップ領域は `min-h-11`(44px)以上
 - フォーカスは `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2`
-- Zen Maru Gothic 導入時は `subsets: ["japanese"]` を必ず指定する(2026-07-13 に `latin` のみ指定して日本語グリフ0件のまま268KB読み込んでいた失敗を再発させない)
+- Zen Maru Gothic 導入時は日本語グリフが実際に効いているか実装後に必ず目視確認する(2026-07-13 に `latin` のみ指定して日本語グリフ0件のまま268KB読み込んでいた失敗を再発させない)。**実装時訂正**: このフォントの `subsets` 型には `japanese` という選択肢が存在せず(`cyrillic`/`greek`/`latin`/`latin-ext` のみ)、日本語グリフはベースに常時含まれる。`subsets: ["latin"]` を指定する(Task 4 参照)
 - Vitest は `--reporter=dot` で実行する(170ファイル分の既定出力を避ける)
 
 ---
@@ -308,9 +308,11 @@ import { Zen_Maru_Gothic } from "next/font/google";
 
 `RootLayout` 関数の直前に追加する:
 
+**実装時訂正**: `next/font/google` の Zen Maru Gothic は `subsets` に `japanese` を受け付けない(型は `cyrillic`/`greek`/`latin`/`latin-ext` のみ。`node_modules/next/dist/compiled/@next/font/dist/google/font-data.json` で確認可能)。日本語グリフはベースに常時含まれるフォントのため、以下のコードのとおり `subsets: ["latin"]` を使う。
+
 ```tsx
 const zenMaruGothic = Zen_Maru_Gothic({
-  subsets: ["japanese"],
+  subsets: ["latin"],
   weight: ["400", "700"],
   display: "swap",
   variable: "--font-zen-maru-gothic"
@@ -332,7 +334,9 @@ const zenMaruGothic = Zen_Maru_Gothic({
        * Zen Maru Gothic を next/font/google 経由でセルフホスト。
        * 2026-07-13 に Zen Kaku Gothic New を撤去した際の失敗は「日本語Webフォントが重いから」
        * ではなく設定ミス（subsets が latin のみで日本語グリフ0件のまま268KBを読み込んでいた）
-       * だったため、再導入時は subsets: ["japanese"] を必ず指定し、有効になっているか目視確認する。
+       * だったが、Zen Maru Gothic には japanese という subsets 選択肢自体が無く(常時ベースに
+       * 含まれる)、latin を指定すれば日本語グリフも一緒に読み込まれる。有効になっているかは
+       * 実装後に必ず目視確認する。
        */
       fontFamily: {
         sans: [

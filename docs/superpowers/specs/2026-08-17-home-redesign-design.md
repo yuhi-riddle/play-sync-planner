@@ -30,7 +30,9 @@ Artifact でモバイル実寸モックアップを作成し、上記の意思�
 
 `surface` / `sunken` / `line` / `line-strong` / 暖色グレー3段 / `moss` `clay` `honey` `skywash` `mist` の値と用途対応は変更しない。`design/rules.md` の「色の意味」表と禁止パターン(半透明面禁止、`text-subtle` を本文に使わない、等)はそのまま踏襲する。パステル差し色(honey/clay/skywash、新規カテゴリ色は別 spec で検討)はカテゴリ・ステータス表示に限定し、全面パステル化はしない。
 
-**フォント**: `next/font/google` で Zen Maru Gothic を導入。`subsets: ['japanese']` 必須、`weight: ['400','700']`、`display: 'swap'`。2026-07-13 に撤去した `Zen Kaku Gothic New` は `subsets: ['latin']` のみ指定した設定ミスで日本語グリフを一つも含んでいなかった(256KB が無意味に読み込まれていた)失敗があるため、`japanese` サブセット指定を実装後に必ず目視確認する。
+**フォント**: `next/font/google` で Zen Maru Gothic を導入。`weight: ['400','700']`、`display: 'swap'`。
+
+実装時に判明した訂正: `next/font/google` の型定義上、Zen Maru Gothic の `subsets` は `cyrillic`/`greek`/`latin`/`latin-ext` のみで `japanese` という選択肢自体が存在しない(`node_modules/next/dist/compiled/@next/font/dist/google/font-data.json` で確認)。このフォントは日本語グリフをベースとして常時含んでおり、`subsets` は追加言語を含めるかどうかの選択でしかない。2026-07-13 に撤去した `Zen Kaku Gothic New` は `subsets: ['latin']` のみ指定した設定ミスで日本語グリフを一つも含んでいなかった(256KB が無意味に読み込まれていた)が、これは "latin と japanese が独立したサブセットとして存在するフォント" 特有の失敗であり、Zen Maru Gothic には同型の失敗は起こり得ない。実装では `subsets: ['latin']` を指定し、日本語グリフが効いているかは実装後に必ず目視確認する。
 
 **ロゴ**: `app/layout.tsx:50-56` の現行実装は `clip-path: polygon(...)` を4枚重ねた幾何学的三角形。これを、参考画像に沿った「山＋太陽」のイラスト表現に置き換える。**今回のスコープでは線画・単純な塗りレベルのSVGコンポーネント化までとし、写実的な質感の作り込みは別タスクとする**(インラインCSSのままだと保守性が低いため、`components/` 配下に独立した Logo コンポーネントとして切り出す)。
 
