@@ -292,7 +292,7 @@ describe("selectPriorityNotification", () => {
     expect(selectPriorityNotification(notifications)?.kind).toBe("confirmation_due");
   });
 
-  it("ignores kinds with no action filter", () => {
+  it("ranks kinds with no action filter last, but still returns them when they're the only one", () => {
     const notifications = [{ kind: "event_message", created_at: "2026-08-11T00:00:00Z" }];
 
     expect(selectPriorityNotification(notifications)?.kind).toBe("event_message");
