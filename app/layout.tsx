@@ -28,8 +28,16 @@ export const viewport: Viewport = {
   themeColor: "#344f43"
 };
 
+/*
+ * Zen Maru Gothic は Google Fonts 上、日本語グリフが独立したサブセットではなくベースに
+ * 常時含まれる（`subsets` は cyrillic/greek/latin/latin-ext の追加言語選択のみ）。
+ * 2026-07-13 の Zen Kaku Gothic New 撤去は「latin だけ指定して日本語グリフ0件のまま
+ * 268KB を読み込んでいた」設定ミスが原因だったが、そのフォントとは前提が異なるため
+ * ここでは japanese を指定しない（指定すると型エラーになる = 実在しない選択肢）。
+ * 日本語グリフが実際に効いているかは実装後に必ず目視確認する。
+ */
 const zenMaruGothic = Zen_Maru_Gothic({
-  subsets: ["japanese"],
+  subsets: ["latin"],
   weight: ["400", "700"],
   display: "swap",
   variable: "--font-zen-maru-gothic"
