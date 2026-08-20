@@ -26,7 +26,7 @@ Artifact でモバイル実寸モックアップを作成し、上記の意思�
 | `--madoi-canvas` | `#efe7d8` | `#f7f3ef` | より明るい生成りへ。参考画像に合わせる |
 | `--madoi-radius-card` | `14px` | `20px` | 丸みを拡大 |
 | `--madoi-radius-control` | `10px` | `14px` | 同上 |
-| CTA背景 | `ink`(黒) | `pine` ベースのグラデーション(`#3a5c4c → #2c4638`) | 黒はテキストのみに後退。ブランドの主張は緑で行う |
+| CTA背景 | `ink`(黒) | `pine` ベースのグラデーション(`#344f43 → #2c4638`、既存の `pine` トークンをそのまま起点にする) | 黒はテキストのみに後退。ブランドの主張は緑で行う |
 
 `surface` / `sunken` / `line` / `line-strong` / 暖色グレー3段 / `moss` `clay` `honey` `skywash` `mist` の値と用途対応は変更しない。`design/rules.md` の「色の意味」表と禁止パターン(半透明面禁止、`text-subtle` を本文に使わない、等)はそのまま踏襲する。パステル差し色(honey/clay/skywash、新規カテゴリ色は別 spec で検討)はカテゴリ・ステータス表示に限定し、全面パステル化はしない。
 
