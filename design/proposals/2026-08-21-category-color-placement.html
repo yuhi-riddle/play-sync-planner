@@ -1,0 +1,152 @@
+<title>カテゴリ差し色の置き場所</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<style>
+  :root {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+      --page-line: #3a352e; --page-panel: #24211d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+    --page-line: #3a352e; --page-panel: #24211d;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--page-fg);
+    font-family: "Zen Maru Gothic", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 64px; }
+  h1 { margin: 0 0 8px; font-size: 1.375rem; font-weight: 900; }
+  .lede { max-width: 680px; color: var(--page-muted); font-size: 0.9375rem; line-height: 1.75; margin-bottom: 8px; }
+  .note { max-width: 680px; color: var(--page-muted); font-size: 0.8125rem; line-height: 1.7; border-left: 3px solid #d9aa4f; padding-left: 12px; margin-bottom: 32px; }
+  .row { display: flex; flex-wrap: wrap; gap: 24px; }
+  .col { flex: 1 1 260px; min-width: 240px; }
+  .col-head { margin-bottom: 10px; }
+  .col-head .name { font-weight: 900; font-size: 0.9375rem; }
+  .col-head .aim { font-size: 0.8125rem; color: var(--page-muted); margin-top: 2px; }
+
+  /* Madoi実トークン */
+  .frame {
+    --canvas: #f7f3ef; --surface: #fffdf7; --line: #e4dac6; --line-strong: #cbbfa6;
+    --ink: #262320; --muted: #6f665c; --pine: #344f43; --pine-deep: #2c4638;
+    /* 仮の差し色: 旅行=teal / 謎解き=purple / 飲み会=amber。あくまで置き場所確認用の仮色 */
+    --c-travel: #4a7c8c; --c-nazotoki: #7d5aa6; --c-drinking: #c98a3e;
+
+    background: var(--canvas); border: 1px solid var(--page-line); border-radius: 14px;
+    padding: 20px; font-family: "Zen Maru Gothic", system-ui, sans-serif; color: var(--ink);
+  }
+  .card {
+    border-radius: 14px; border: 1px solid var(--line); background: var(--surface);
+    padding: 14px; margin-bottom: 10px; position: relative; overflow: hidden;
+  }
+  .card.accent-bar { padding-left: 18px; }
+  .card.accent-bar::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--c);
+  }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 3px 9px; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--c); }
+  .title { font-weight: 700; font-size: 0.875rem; margin: 6px 0 3px; }
+  .meta { font-size: 0.75rem; color: var(--muted); }
+
+  .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); padding: 6px 12px; font-size: 0.8125rem; font-weight: 700; color: var(--ink); margin: 3px 4px 3px 0; }
+  .chip .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--c); }
+
+  .detail-head { display: flex; align-items: center; gap: 10px; }
+  .detail-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--c); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; }
+  .detail-title { font-weight: 900; font-size: 1rem; }
+  .detail-sub { font-size: 0.75rem; color: var(--muted); }
+
+  .cal-cell { border: 1px solid var(--line); border-radius: 8px; padding: 6px; min-height: 56px; background: var(--surface); font-size: 0.6875rem; }
+  .cal-cell .d { color: var(--muted); }
+  .cal-dot { display: inline-flex; align-items: center; gap: 3px; font-size: 0.625rem; font-weight: 700; margin-top: 3px; }
+  .cal-dot .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--c); }
+</style>
+
+<div class="wrap">
+  <h1>カテゴリ差し色の置き場所</h1>
+  <p class="lede">実際に候補になりそうな4箇所に、仮の色(旅行=青緑・謎解き=紫・飲み会=琥珀)を当てて見た目を比較する。</p>
+  <p class="note">色そのものはまだ仮。まずは「どこに置くと機能するか」だけ見てほしい。</p>
+
+  <div class="row">
+    <div class="col">
+      <div class="col-head">
+        <div class="name">A. イベント一覧カード</div>
+        <div class="aim">左端に色帯 or バッジのドット</div>
+      </div>
+      <div class="frame">
+        <div class="card accent-bar" style="--c:var(--c-travel)">
+          <span class="badge" style="background:color-mix(in srgb, var(--c-travel) 14%, white); color:var(--c-travel)"><span class="dot"></span>旅行</span>
+          <div class="title">夏合宿 前泊なし案</div>
+          <div class="meta">8/23(日) 10:00〜 ・ 参加 6人</div>
+        </div>
+        <div class="card accent-bar" style="--c:var(--c-nazotoki)">
+          <span class="badge" style="background:color-mix(in srgb, var(--c-nazotoki) 14%, white); color:var(--c-nazotoki)"><span class="dot"></span>謎解き</span>
+          <div class="title">謎解きカフェ リベンジ</div>
+          <div class="meta">回答期限 8/25(火)</div>
+        </div>
+        <div class="card accent-bar" style="--c:var(--c-drinking)">
+          <span class="badge" style="background:color-mix(in srgb, var(--c-drinking) 14%, white); color:var(--c-drinking)"><span class="dot"></span>飲み会</span>
+          <div class="title">3丁目にて</div>
+          <div class="meta">9/2(水) 19:00〜 ・ 参加 4人</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <div class="name">B. カテゴリ絞り込みチップ</div>
+        <div class="aim">選択前からドットで色が見える</div>
+      </div>
+      <div class="frame">
+        <div class="chip" style="--c:var(--c-travel)"><span class="dot"></span>旅行</div>
+        <div class="chip" style="--c:var(--c-drinking)"><span class="dot"></span>飲み会</div>
+        <div class="chip" style="--c:var(--c-nazotoki)"><span class="dot"></span>謎解き</div>
+        <div class="chip" style="--c:#5f7d65"><span class="dot"></span>ボードゲーム</div>
+        <div class="chip" style="--c:#8a8f96"><span class="dot"></span>その他</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <div class="name">C. イベント詳細ヘッダー</div>
+        <div class="aim">アイコンの背景色でカテゴリを示す</div>
+      </div>
+      <div class="frame">
+        <div class="detail-head">
+          <div class="detail-icon" style="--c:var(--c-travel)">✈</div>
+          <div>
+            <div class="detail-title">夏合宿 前泊なし案</div>
+            <div class="detail-sub">旅行 ・ 参加者 6人</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <div class="name">D. カレンダーの月表示</div>
+        <div class="aim">日付セル内にドットで種類を示す</div>
+      </div>
+      <div class="frame">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
+          <div class="cal-cell"><span class="d">15</span><div class="cal-dot" style="--c:var(--c-travel)"><span class="dot"></span>旅行</div></div>
+          <div class="cal-cell"><span class="d">18</span></div>
+          <div class="cal-cell"><span class="d">22</span>
+            <div class="cal-dot" style="--c:var(--c-nazotoki)"><span class="dot"></span>謎解き</div>
+            <div class="cal-dot" style="--c:var(--c-drinking)"><span class="dot"></span>飲み会</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

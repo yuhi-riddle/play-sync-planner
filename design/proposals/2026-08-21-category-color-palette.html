@@ -1,0 +1,147 @@
+<title>カテゴリ8色パレット案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<style>
+  :root {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+      --page-line: #3a352e; --page-panel: #24211d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+    --page-line: #3a352e; --page-panel: #24211d;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--page-fg);
+    font-family: "Zen Maru Gothic", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 64px; }
+  h1 { margin: 0 0 8px; font-size: 1.375rem; font-weight: 900; }
+  h2 { font-size: 1rem; font-weight: 900; margin: 40px 0 4px; }
+  .lede { max-width: 700px; color: var(--page-muted); font-size: 0.9375rem; line-height: 1.75; }
+
+  /* 既存トークン(参照用、実値) */
+  .ref-row { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .ref-chip { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 700; }
+  .ref-swatch { width: 28px; height: 28px; border-radius: 8px; }
+
+  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 16px; }
+  @media (max-width: 780px) { .cat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .cat-card {
+    border-radius: 14px; border: 1px solid var(--page-line); background: var(--page-panel);
+    padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .cat-swatch { width: 100%; height: 44px; border-radius: 10px; }
+  .cat-name { font-weight: 900; font-size: 0.9375rem; }
+  .cat-hue { font-size: 0.6875rem; color: var(--page-muted); font-family: ui-monospace, monospace; }
+
+  /* --- Madoi実カード上での確認 --- */
+  .frame {
+    --canvas: #f7f3ef; --surface: #fffdf7; --line: #e4dac6; --line-strong: #cbbfa6;
+    --ink: #262320; --muted: #6f665c; --pine: #344f43; --pine-deep: #2c4638;
+    --clay: #df7d69; --honey: #d9aa4f;
+    background: var(--canvas); border: 1px solid var(--page-line); border-radius: 14px;
+    padding: 20px; margin-top: 16px; font-family: "Zen Maru Gothic", system-ui, sans-serif; color: var(--ink);
+    max-width: 460px;
+  }
+  .card { border-radius: 14px; border: 1px solid var(--line); background: var(--surface); padding: 12px 14px 12px 18px; margin-bottom: 10px; position: relative; }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 14px 0 0 14px; background: var(--c); }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 3px 9px; background: color-mix(in oklch, var(--c) 16%, white); color: color-mix(in oklch, var(--c) 78%, black); }
+  .badge .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--c); }
+  .status-badge { display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 3px 9px; margin-left: 6px; }
+  .status-badge.deadline { background: color-mix(in srgb, var(--clay) 14%, white); color: var(--clay); }
+  .status-badge.progress { background: color-mix(in srgb, var(--honey) 16%, white); color: color-mix(in srgb, var(--honey) 70%, black); }
+  .title { font-weight: 700; font-size: 0.875rem; margin: 6px 0 3px; }
+  .meta { font-size: 0.75rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <h1>カテゴリ8色パレット案</h1>
+  <p class="lede">
+    既存の clay(期限・要対応)/honey(調整中)と同じ oklch の明度・彩度(L≈72% C≈0.12)を保ちつつ、
+    色相だけを変えて8色つくった。ただし clay・honey とステータスバッジで意味が衝突しないよう、
+    その2色の色相帯(赤橙〜黄橙)は避けている。
+  </p>
+
+  <h2>既存トークン(参照)</h2>
+  <div class="ref-row">
+    <div class="ref-chip"><span class="ref-swatch" style="background:#df7d69"></span>clay(期限)</div>
+    <div class="ref-chip"><span class="ref-swatch" style="background:#d9aa4f"></span>honey(調整中)</div>
+    <div class="ref-chip"><span class="ref-swatch" style="background:#5f7d65"></span>moss</div>
+    <div class="ref-chip"><span class="ref-swatch" style="background:#344f43"></span>pine(主CTA)</div>
+  </div>
+
+  <h2>提案8色</h2>
+  <div class="cat-grid">
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(72% 0.12 175)"></div>
+      <div class="cat-name">ボードゲーム</div>
+      <div class="cat-hue">oklch(72% 0.12 175) ・ teal</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(72% 0.12 203)"></div>
+      <div class="cat-name">スノボ</div>
+      <div class="cat-hue">oklch(72% 0.12 203) ・ icy blue</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(72% 0.12 231)"></div>
+      <div class="cat-name">旅行</div>
+      <div class="cat-hue">oklch(72% 0.12 231) ・ sky blue</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(72% 0.12 259)"></div>
+      <div class="cat-name">映画・舞台</div>
+      <div class="cat-hue">oklch(72% 0.12 259) ・ indigo</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(72% 0.12 287)"></div>
+      <div class="cat-name">謎解き</div>
+      <div class="cat-hue">oklch(72% 0.12 287) ・ purple</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(72% 0.12 315)"></div>
+      <div class="cat-name">ライブ</div>
+      <div class="cat-hue">oklch(72% 0.12 315) ・ magenta</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:oklch(70% 0.13 343)"></div>
+      <div class="cat-name">飲み会</div>
+      <div class="cat-hue">oklch(70% 0.13 343) ・ wine red</div>
+    </div>
+    <div class="cat-card">
+      <div class="cat-swatch" style="background:#948a7d"></div>
+      <div class="cat-name">その他</div>
+      <div class="cat-hue">subtle(既存トークン) ・ 無彩色</div>
+    </div>
+  </div>
+
+  <h2>ステータスバッジとの同居確認</h2>
+  <p class="lede">同じカードにカテゴリ色(左帯+ドット)とステータス色(clay/honey)を並べても混同しないか。</p>
+  <div class="frame">
+    <div class="card" style="--c:oklch(72% 0.12 231)">
+      <span class="badge"><span class="dot"></span>旅行</span><span class="status-badge deadline">期限間近</span>
+      <div class="title">夏合宿 前泊なし案</div>
+      <div class="meta">8/23(日) 10:00〜 ・ 参加 6人</div>
+    </div>
+    <div class="card" style="--c:oklch(72% 0.12 287)">
+      <span class="badge"><span class="dot"></span>謎解き</span><span class="status-badge progress">調整中</span>
+      <div class="title">謎解きカフェ リベンジ</div>
+      <div class="meta">回答期限 8/25(火)</div>
+    </div>
+    <div class="card" style="--c:oklch(70% 0.13 343)">
+      <span class="badge"><span class="dot"></span>飲み会</span>
+      <div class="title">3丁目にて</div>
+      <div class="meta">9/2(水) 19:00〜 ・ 参加 4人</div>
+    </div>
+  </div>
+</div>
