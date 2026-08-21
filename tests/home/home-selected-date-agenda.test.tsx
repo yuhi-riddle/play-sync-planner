@@ -199,7 +199,7 @@ describe("HomeSelectedDateAgenda", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
     render(<HomeSelectedDateAgenda selectedDateKey="2026-07-19" todayDateKey="2026-07-19" initialItems={[]} />);
 
-    expect(screen.getByRole("button", { name: "今日" })).toHaveClass("bg-ink", "text-white");
+    expect(screen.getByRole("button", { name: "今日" })).toHaveClass("from-pine", "to-pine-deep", "text-white");
     expect(screen.getByRole("button", { name: "明日" })).toHaveClass("border-line-strong", "text-ink");
   });
 });

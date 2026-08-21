@@ -4,7 +4,7 @@ import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 
 import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventListControls } from "@/components/event/event-list-controls";
-import { Badge, type BadgeTone, ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, type BadgeTone, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { cancelEventAction } from "@/lib/actions/event/events";
 import { categoryLabels } from "@/lib/shared/constants";
@@ -169,18 +169,10 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
     <div className="space-y-6">
       {/*
         説明文は外した。一覧を見れば分かることに、375px で1行使う価値がない。
-        作成ボタンは、モバイルでは右下の FAB が同じ役割を持つので出さない
-        （FAB は sm:hidden なので、ここを消すだけだと PC に作成導線が無くなる）。
+        作成ボタンは常設FAB（MobileEventFab）がモバイル・デスクトップ両方で担うので、
+        ヘッダー側には置かない。
       */}
-      <PageHeader
-        eyebrow="Events"
-        title="イベント一覧"
-        action={
-          <div className="hidden sm:block">
-            <ButtonLink href="/events/new">イベント作成</ButtonLink>
-          </div>
-        }
-      />
+      <PageHeader eyebrow="Events" title="イベント一覧" />
       <EventListControls query={displayQuery} draftCount={draftCount} pagination={pagination} />
       {visibleDraft ? (
         <Card className="transition-colors hover:border-moss/45">

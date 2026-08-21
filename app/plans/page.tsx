@@ -1,7 +1,5 @@
-import { CalendarPlus } from "lucide-react";
-
 import { AdjustmentCalendarView } from "@/components/plan/adjustment-calendar-view";
-import { ButtonLink, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { defaultSelectedDateKey, type AdjustmentCandidate } from "@/lib/domain/plan/adjustment-calendar";
 import { monthRangeInTokyo } from "@/lib/domain/plan/group-availability";
@@ -139,18 +137,11 @@ export default async function PlansPage({
 
   return (
     <div className="space-y-7">
-      <PageHeader eyebrow="Calendar"
+      {/* 作成ボタンは常設FAB（MobileEventFab）がモバイル・デスクトップ両方で担うので、ヘッダー側には置かない。 */}
+      <PageHeader
+        eyebrow="Calendar"
         title="カレンダー"
         description="自分のGoogleカレンダーと、Madoiで調整中の候補日時を月ごとに見比べます。"
-        action={
-          // モバイルでは右下の FAB が同じ導線なので出さない（FAB は sm:hidden）。
-          <div className="hidden sm:block">
-            <ButtonLink href="/events/new">
-              <CalendarPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-              イベント作成
-            </ButtonLink>
-          </div>
-        }
       />
 
       <AdjustmentCalendarView month={currentMonth} selectedDateKey={selectedDateKey} candidates={candidates} />

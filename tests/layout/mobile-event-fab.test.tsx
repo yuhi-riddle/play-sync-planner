@@ -27,12 +27,29 @@ describe("MobileEventFab", () => {
 
     expect(screen.getByRole("link", { name: "イベント作成" })).toHaveClass(
       "transition-colors",
-      "hover:bg-pine",
+      "hover:from-pine-deep",
+      "hover:to-pine-deep",
       "focus:outline-none",
       "focus:ring-2",
       "focus:ring-clay",
       "focus:ring-offset-2"
     );
+  });
+
+  it("also stays fixed on desktop widths, styled as a bordered panel instead of a pill", () => {
+    vi.mocked(usePathname).mockReturnValue("/events");
+
+    render(<MobileEventFab isSignedIn />);
+
+    expect(screen.getByRole("link", { name: "イベント作成" })).toHaveClass("sm:rounded-control", "sm:border", "sm:bg-surface");
+  });
+
+  it("hides on the home screen (the CTA card already covers it there)", () => {
+    vi.mocked(usePathname).mockReturnValue("/");
+
+    render(<MobileEventFab isSignedIn />);
+
+    expect(screen.queryByRole("link", { name: "イベント作成" })).not.toBeInTheDocument();
   });
 
   it("hides on the event creation page", () => {

@@ -72,7 +72,7 @@ describe("SubmitButton", () => {
     const className = screen.getByRole("button").className;
     expect(className).toContain("w-full");
     expect(className).toContain("sm:w-auto");
-    expect(className).toContain("bg-ink");
+    expect(className).toContain("from-pine");
   });
 
   it("dangerバリアントは警告色のボタンクラスになる", () => {

@@ -1,0 +1,243 @@
+<title>モバイルFABの配色統一</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<style>
+  :root {
+    --page-bg: #f7f4ee;
+    --page-fg: #262320;
+    --page-muted: #6f665c;
+    --page-line: #ddd4c2;
+    --page-panel: #fffdf7;
+    --page-warn: #a8492f;
+    --page-warn-bg: rgba(223, 125, 105, 0.12);
+    --page-ok: #344f43;
+    --page-ok-bg: rgba(95, 125, 101, 0.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #1b1917;
+      --page-fg: #ece5d9;
+      --page-muted: #a2988a;
+      --page-line: #3a352e;
+      --page-panel: #24211d;
+      --page-warn: #e0917a;
+      --page-warn-bg: rgba(223, 125, 105, 0.16);
+      --page-ok: #8fae94;
+      --page-ok-bg: rgba(143, 174, 148, 0.16);
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1b1917;
+    --page-fg: #ece5d9;
+    --page-muted: #a2988a;
+    --page-line: #3a352e;
+    --page-panel: #24211d;
+    --page-warn: #e0917a;
+    --page-warn-bg: rgba(223, 125, 105, 0.16);
+    --page-ok: #8fae94;
+    --page-ok-bg: rgba(143, 174, 148, 0.16);
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f7f4ee;
+    --page-fg: #262320;
+    --page-muted: #6f665c;
+    --page-line: #ddd4c2;
+    --page-panel: #fffdf7;
+    --page-warn: #a8492f;
+    --page-warn-bg: rgba(223, 125, 105, 0.12);
+    --page-ok: #344f43;
+    --page-ok-bg: rgba(95, 125, 101, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: "Zen Maru Gothic", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 40px 24px 64px; }
+  .lede { max-width: 640px; }
+  h1 { margin: 0 0 8px; font-size: 1.375rem; font-weight: 900; letter-spacing: -0.01em; }
+  .lede p { margin: 0; color: var(--page-muted); font-size: 0.9375rem; line-height: 1.7; }
+  code {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    background: var(--page-panel);
+    border: 1px solid var(--page-line);
+    border-radius: 6px;
+    padding: 0.1em 0.4em;
+    font-size: 0.85em;
+  }
+
+  .compare {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-top: 32px;
+  }
+  .col { flex: 1 1 320px; min-width: 280px; }
+  .col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .col-head .tag {
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .tag.before { color: var(--page-warn); background: var(--page-warn-bg); }
+  .tag.after { color: var(--page-ok); background: var(--page-ok-bg); }
+  .col-head .aim { font-size: 0.8125rem; color: var(--page-muted); }
+
+  /* --- ここから実機の色（Madoiのトークンそのもの。ホストのテーマに関わらず固定） --- */
+  .phone {
+    --canvas: #f7f3ef;
+    --surface: #fffdf7;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --ink: #262320;
+    --muted: #6f665c;
+    --pine: #344f43;
+    --pine-deep: #2c4638;
+    --clay: #df7d69;
+
+    position: relative;
+    width: 100%;
+    aspect-ratio: 360 / 520;
+    background: var(--canvas);
+    border: 1px solid var(--page-line);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 26px rgba(38, 35, 32, 0.08);
+    font-family: "Zen Maru Gothic", system-ui, sans-serif;
+    color: var(--ink);
+  }
+  .phone-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 16px 18px 8px;
+    font-weight: 900; font-size: 1rem;
+  }
+  .phone-header .mark {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--pine);
+  }
+  .phone-body { padding: 6px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .phone-greet { font-size: 0.9375rem; font-weight: 700; }
+  .phone-sub { font-size: 0.6875rem; color: var(--muted); margin-top: -4px; }
+  .cta-card {
+    border-radius: 14px;
+    padding: 14px 16px;
+    background: linear-gradient(to bottom right, var(--pine), var(--pine-deep));
+    color: #fffdf7;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .cta-card .plus {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(255,255,255,0.16);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1rem; flex-shrink: 0;
+  }
+  .cta-card .label { font-weight: 700; font-size: 0.8125rem; }
+  .cta-card .hint { font-size: 0.6875rem; opacity: 0.82; margin-top: 2px; }
+
+  .fab {
+    position: absolute; right: 14px; bottom: 66px;
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 999px; padding: 9px 14px;
+    font-size: 0.75rem; font-weight: 700; color: #fffdf7;
+    box-shadow: 0 6px 16px rgba(38,35,32,0.22);
+  }
+  .fab.old { background: var(--ink); }
+  .fab.new { background: linear-gradient(to bottom right, var(--pine), var(--pine-deep)); }
+  .fab .x { font-weight: 900; }
+
+  .phone-tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: rgba(255,253,247,0.95);
+    border-top: 1px solid var(--line);
+    padding: 8px 6px 10px;
+  }
+  .phone-tabbar div {
+    font-size: 0.5625rem; color: var(--muted); text-align: center;
+  }
+  .phone-tabbar div:first-child { color: var(--pine); font-weight: 700; }
+
+  .verdict {
+    margin-top: 36px;
+    border: 1px solid var(--page-line);
+    background: var(--page-panel);
+    border-radius: 14px;
+    padding: 18px 20px;
+    font-size: 0.875rem;
+    line-height: 1.8;
+  }
+  .verdict b { font-weight: 700; }
+</style>
+
+<div class="wrap">
+  <div class="lede">
+    <h1>モバイルFABの配色統一</h1>
+    <p>
+      ホーム画面のリデザイン（PR #14）でCTAカードは <code>bg-ink</code> のグラデーションから
+      <code>pine → pine-deep</code> のグラデーションに変わったが、同じ「イベント作成」アクションを持つ
+      モバイル用FAB（<code>components/layout/mobile-event-fab.tsx</code>）は旧配色のまま残っている。
+    </p>
+  </div>
+
+  <div class="compare">
+    <div class="col">
+      <div class="col-head">
+        <span class="tag before">Before（現状）</span>
+        <span class="aim">FABだけ黒（旧ink）</span>
+      </div>
+      <div class="phone">
+        <div class="phone-header"><span class="mark"></span>Madoi</div>
+        <div class="phone-body">
+          <div class="phone-greet">こんにちは、ゆうひ さん</div>
+          <div class="phone-sub">予定の共有も、やりとりも、Madoiひとつで、もっとかんたんに。</div>
+          <div class="cta-card">
+            <span class="plus">＋</span>
+            <div>
+              <div class="label">イベントを作成する</div>
+              <div class="hint">新しい予定をみんなで調整しましょう</div>
+            </div>
+          </div>
+        </div>
+        <div class="fab old"><span class="x">＋</span>イベント作成</div>
+        <div class="phone-tabbar">
+          <div>ホーム</div><div>イベント</div><div>カレンダー</div><div>つながり</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-head">
+        <span class="tag after">After（提案）</span>
+        <span class="aim">CTAと同じpine系に統一</span>
+      </div>
+      <div class="phone">
+        <div class="phone-header"><span class="mark"></span>Madoi</div>
+        <div class="phone-body">
+          <div class="phone-greet">こんにちは、ゆうひ さん</div>
+          <div class="phone-sub">予定の共有も、やりとりも、Madoiひとつで、もっとかんたんに。</div>
+          <div class="cta-card">
+            <span class="plus">＋</span>
+            <div>
+              <div class="label">イベントを作成する</div>
+              <div class="hint">新しい予定をみんなで調整しましょう</div>
+            </div>
+          </div>
+        </div>
+        <div class="fab new"><span class="x">＋</span>イベント作成</div>
+        <div class="phone-tabbar">
+          <div>ホーム</div><div>イベント</div><div>カレンダー</div><div>つながり</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <b>推奨: After。</b>
+    「イベント作成」という同一アクションの表現が、CTAカードとFABとで色だけ食い違っている状態は
+    リデザインの意図（主CTAはpine系）に対する取りこぼしと見なせる。
+    <code>mobile-event-fab.tsx:28</code> の <code>bg-ink</code> を
+    <code>bg-gradient-to-br from-pine to-pine-deep</code> に置き換えるだけの一行修正で揃う。
+  </div>
+</div>
