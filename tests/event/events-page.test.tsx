@@ -109,11 +109,34 @@ describe("EventsPage", () => {
     expect(screen.getByText("新宿")).toBeInTheDocument();
     expect(screen.getByText("参加 1人")).toBeInTheDocument();
     const eventCardLink = screen.getByRole("link", { name: /週末の謎解き会/ });
-    expect(within(eventCardLink).queryByText("謎解き")).not.toBeInTheDocument();
+    expect(within(eventCardLink).getByText("謎解き")).toBeInTheDocument();
     expect(within(eventCardLink).queryByText("清算中")).not.toBeInTheDocument();
     expect(within(eventCardLink).queryByText("参加者を確認")).not.toBeInTheDocument();
     expect(within(eventCardLink).queryByText("気になる")).not.toBeInTheDocument();
     expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
+  });
+
+  it("colors each event card's left edge and badge by category", async () => {
+    const eventQuery = createEventQuery([
+      { ...makeEvent("event-1", "夏合宿"), category: "travel" },
+      { ...makeEvent("event-2", "3丁目にて"), category: "not-a-real-category" }
+    ]);
+    const rpc = createRpcResult(["event-1", "event-2"], 2);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    const travelCardLink = screen.getByRole("link", { name: /夏合宿/ });
+    expect(within(travelCardLink).getByText("旅行")).toBeInTheDocument();
+    expect(travelCardLink.closest("section")).toHaveClass("border-l-category-travel");
+
+    const otherCardLink = screen.getByRole("link", { name: /3丁目にて/ });
+    expect(within(otherCardLink).getByText("その他")).toBeInTheDocument();
+    expect(otherCardLink.closest("section")).toHaveClass("border-l-line-strong");
   });
 
   it("colors settlement_waiting, completed, and cancelled with visibly different tones", async () => {

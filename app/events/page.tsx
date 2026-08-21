@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDays, MapPin, UsersRound } from "lucide-react";
@@ -7,6 +8,7 @@ import { EventListControls } from "@/components/event/event-list-controls";
 import { Badge, type BadgeTone, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { cancelEventAction } from "@/lib/actions/event/events";
+import { categoryAccent } from "@/lib/domain/event/category-color";
 import { categoryLabels } from "@/lib/shared/constants";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import {
@@ -219,11 +221,26 @@ function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean
   const summary = getEventCardSummary(event);
   const scheduleText = formatSchedule(summary.schedule);
   const locationText = event.location_name?.trim() || null;
+  const normalizedCategory = normalizeCategory(event.category);
+  const category = normalizedCategory === "all" ? "other" : normalizedCategory;
+  const accent = categoryAccent(category);
 
   return (
-    <Card className="transition-colors hover:border-moss/45">
+    <Card className={clsx("border-l-4 transition-colors hover:border-moss/45", accent.bar)}>
       <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
-        <Badge tone={eventDisplayStateTones[summary.displayState]}>{eventDisplayStateLabels[summary.displayState]}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={eventDisplayStateTones[summary.displayState]}>{eventDisplayStateLabels[summary.displayState]}</Badge>
+          <span
+            className={clsx(
+              "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-caption font-bold",
+              accent.badgeBg,
+              accent.badgeText
+            )}
+          >
+            <span aria-hidden="true" className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", accent.dot)} />
+            {categoryLabels[category]}
+          </span>
+        </div>
         <h2 className="mt-3 text-xl font-bold text-ink">{event.title}</h2>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
           {scheduleText ? <Meta icon={CalendarDays} text={scheduleText} strong={summary.schedule.isConfirmed} /> : null}
