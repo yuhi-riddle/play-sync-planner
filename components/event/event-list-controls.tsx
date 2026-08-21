@@ -124,7 +124,7 @@ export function EventListControls({
                   aria-current={isCurrent ? "page" : undefined}
                   className={`inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 ${
                     isCurrent
-                      ? "border-ink bg-ink text-white"
+                      ? "border-pine-deep bg-gradient-to-br from-pine to-pine-deep text-white"
                       : "border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
                   }`}
                 >
@@ -199,7 +199,7 @@ export function EventListControls({
           <div className="flex flex-wrap gap-2 sm:col-span-3">
             <button
               type="submit"
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
             >
               表示する
             </button>

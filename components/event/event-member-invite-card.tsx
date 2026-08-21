@@ -72,7 +72,7 @@ export function EventMemberInviteCard({
             <form action={closeInviteAction}>
               <button
                 type="submit"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-4 py-2 text-sm font-bold text-white transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
               >
                 参加受付を終了して日程調整へ進む
               </button>

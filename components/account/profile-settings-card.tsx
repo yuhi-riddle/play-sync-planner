@@ -153,7 +153,7 @@ export function ProfileSettingsCard({
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
         >
           {isPending ? "保存中..." : isOnboarding ? "この内容で始める" : "プロフィールを保存"}
         </button>

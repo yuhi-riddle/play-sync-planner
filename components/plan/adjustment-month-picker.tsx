@@ -40,7 +40,7 @@ export function AdjustmentMonthPicker({ currentMonth, label }: { currentMonth: s
         </label>
         <button
           type="submit"
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-4 py-2 text-sm font-bold text-white transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
         >
           この月を見る
         </button>

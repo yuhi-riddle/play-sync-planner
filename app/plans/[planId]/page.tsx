@@ -264,7 +264,7 @@ export default async function PlanDetailPage({
               <form action={createCalendarEventAction}>
                 <button
                   type="submit"
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-ink px-4 py-2 text-body font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-4 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:w-auto"
                 >
                   カレンダーに作成して招待
                 </button>

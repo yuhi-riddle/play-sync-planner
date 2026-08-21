@@ -57,7 +57,7 @@ export function SettlementProgressSteps({
               className={clsx(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums transition-colors",
                 step.tone === "current"
-                  ? "bg-ink text-white"
+                  ? "bg-gradient-to-br from-pine to-pine-deep text-white"
                   : step.tone === "done"
                     ? "bg-mist text-pine"
                     : "border border-line text-muted"

@@ -402,12 +402,16 @@ function CalendarPicker({
               disabled={disabled}
               className={clsx(
                 "relative flex aspect-square min-h-10 items-center justify-center rounded-control text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                rangeEdge || selected ? "bg-ink text-white shadow-soft" : inRange ? "bg-mist/62 text-ink ring-1 ring-moss/18" : availabilityTone ?? "bg-surface text-ink hover:bg-mist/60",
+                rangeEdge || selected
+                  ? "bg-gradient-to-br from-pine to-pine-deep text-white shadow-soft"
+                  : inRange
+                    ? "bg-mist/62 text-ink ring-1 ring-moss/18"
+                    : (availabilityTone ?? "bg-surface text-ink hover:bg-mist/60"),
                 !selected && !rangeEdge && holidayColor && "text-red-700",
                 !selected && !rangeEdge && !holidayColor && saturdayColor && "text-blue-700",
                 !cell.isCurrentMonth && !selected && !rangeEdge && "text-muted",
                 cell.isToday && !selected && !rangeEdge && "ring-1 ring-moss/40",
-                disabled && "pointer-events-none bg-surface text-muted line-through"
+                disabled && "pointer-events-none bg-none bg-surface text-muted line-through"
               )}
               aria-pressed={selected}
               aria-label={`${formatDateLabel(cell.date)}を選択${availabilityLabel}${busyLabel}`}
@@ -693,7 +697,11 @@ export function PlanForm({
                 <span
                   className={clsx(
                     "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums transition-colors",
-                    isCurrent ? "bg-ink text-white" : isDone ? "bg-mist text-pine" : "border border-line text-muted"
+                    isCurrent
+                      ? "bg-gradient-to-br from-pine to-pine-deep text-white"
+                      : isDone
+                        ? "bg-mist text-pine"
+                        : "border border-line text-muted"
                   )}
                 >
                   <span aria-hidden="true">{index + 1}</span>
@@ -807,7 +815,7 @@ export function PlanForm({
             <button
               type="button"
               onClick={addCandidateDate}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
             >
               <Plus aria-hidden="true" className="h-4 w-4" />
               候補に追加
@@ -974,7 +982,7 @@ export function PlanForm({
             key="next"
             type="button"
             onClick={() => moveToStep(currentStep + 1)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-pine to-pine-deep px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
           >
             次へ
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
@@ -984,7 +992,7 @@ export function PlanForm({
             key="submit"
             type="submit"
             disabled={!canReview || isSubmitting}
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:bg-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-6 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
           >
             {isSubmitting ? "送信中…" : submitLabel}
           </button>
