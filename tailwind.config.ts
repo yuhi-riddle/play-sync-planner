@@ -42,7 +42,24 @@ const config: Config = {
         honey: "#d9aa4f", // 調整中（面/線）
         "honey-ink": "#7f5c19", // 調整中（文字）
         skywash: "#d9e8e7",
-        mist: "#eff3ee"
+        mist: "#eff3ee",
+        // カテゴリ差し色: clay/honeyと同じ明度・彩度(oklch L≈70-72% C≈0.12-0.13)で
+        // 色相のみ変えている。clay(H≈33°)・honeyの(H≈82°)の色相帯はステータスバッジと
+        // 同じカード上で意味が衝突するため避けている。*-ink はバッジ文字色用(L≈50%)。
+        "category-live": "#c18dd8",
+        "category-live-ink": "#7d4b92",
+        "category-travel": "#44b2e2",
+        "category-travel-ink": "#006e9a",
+        "category-drinking": "#d57cb4",
+        "category-drinking-ink": "#904475",
+        "category-nazotoki": "#a098ec",
+        "category-nazotoki-ink": "#6056a3",
+        "category-snowboard": "#15bac6",
+        "category-snowboard-ink": "#007681",
+        "category-boardgame": "#39bda0",
+        "category-boardgame-ink": "#00785f",
+        "category-movie-stage": "#76a5ef",
+        "category-movie-stage-ink": "#3662a7"
       },
       /*
        * Zen Maru Gothic を next/font/google 経由でセルフホスト。

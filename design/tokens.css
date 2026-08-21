@@ -42,6 +42,22 @@
   --madoi-skywash: #d9e8e7; /* 情報面 */
   --madoi-mist: #eff3ee; /* 確定・完了の面 */
 
+  /* カテゴリ差し色。値は tailwind.config.ts と同じにする（このファイルはビルド未使用のミラー） */
+  --madoi-category-live: #c18dd8;
+  --madoi-category-live-ink: #7d4b92;
+  --madoi-category-travel: #44b2e2;
+  --madoi-category-travel-ink: #006e9a;
+  --madoi-category-drinking: #d57cb4;
+  --madoi-category-drinking-ink: #904475;
+  --madoi-category-nazotoki: #a098ec;
+  --madoi-category-nazotoki-ink: #6056a3;
+  --madoi-category-snowboard: #15bac6;
+  --madoi-category-snowboard-ink: #007681;
+  --madoi-category-boardgame: #39bda0;
+  --madoi-category-boardgame-ink: #00785f;
+  --madoi-category-movie-stage: #76a5ef;
+  --madoi-category-movie-stage-ink: #3662a7;
+
   /* ---- 角丸: 3値のみ ---- */
   --madoi-radius-card: 20px;
   --madoi-radius-control: 14px;
