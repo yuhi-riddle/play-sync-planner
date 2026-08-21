@@ -226,7 +226,13 @@ function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean
   const accent = categoryAccent(category);
 
   return (
-    <Card className={clsx("border-l-4 transition-colors hover:border-moss/45", accent.bar)}>
+    <Card
+      className={clsx(
+        // hover:border-moss/45 は上下右のみ。border-l-4 のカテゴリ色をhoverで上書きしないため。
+        "border-l-4 transition-colors hover:border-t-moss/45 hover:border-r-moss/45 hover:border-b-moss/45",
+        accent.bar
+      )}
+    >
       <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={eventDisplayStateTones[summary.displayState]}>{eventDisplayStateLabels[summary.displayState]}</Badge>
