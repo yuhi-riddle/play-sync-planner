@@ -18,4 +18,10 @@ describe("categoryIcon", () => {
   it("falls back to Tag for an unknown value", () => {
     expect(categoryIcon("not-a-real-category")).toBe(Tag);
   });
+
+  it("falls back to Tag for inherited Object.prototype property names", () => {
+    expect(categoryIcon("toString")).toBe(Tag);
+    expect(categoryIcon("constructor")).toBe(Tag);
+    expect(categoryIcon("hasOwnProperty")).toBe(Tag);
+  });
 });
