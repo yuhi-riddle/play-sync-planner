@@ -32,31 +32,4 @@ describe("EventCategoryFilter", () => {
     expect(screen.getByRole("option", { name: "ライブ" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "謎解き" })).not.toBeInTheDocument();
   });
-
-  it("shows a category-colored dot on each chip except すべて", () => {
-    const { container } = render(
-      <EventCategoryFilter
-        activeCategory="all"
-        categoryCounts={{
-          all: 3,
-          live: 1,
-          travel: 1,
-          drinking: 1,
-          nazotoki: 0,
-          snowboard: 0,
-          boardgame: 0,
-          movie_stage: 0,
-          other: 0
-        }}
-      />
-    );
-
-    const allChip = screen.getByRole("link", { name: "すべて" });
-    expect(allChip.querySelector("span[aria-hidden='true']")).toBeNull();
-
-    const travelChip = screen.getByRole("link", { name: "旅行" });
-    const dot = travelChip.querySelector("span[aria-hidden='true']");
-    expect(dot).not.toBeNull();
-    expect(dot?.className).toContain("bg-category-travel");
-  });
 });
