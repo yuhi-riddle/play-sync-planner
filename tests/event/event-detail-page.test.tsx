@@ -46,7 +46,11 @@ function chain(result: unknown) {
   return handler;
 }
 
-function cancelledEvent() {
+function cancelledEvent(overrides: Partial<ReturnType<typeof baseEvent>> = {}) {
+  return { ...baseEvent(), ...overrides };
+}
+
+function baseEvent() {
   return {
     id: "event-1",
     title: "夏の花火大会",
@@ -351,5 +355,30 @@ describe("EventDetailPage - 状態span Badge化（Phase 6）", () => {
 
     const badge = screen.getByText("参加者を募集中");
     expect(badge).toHaveClass("bg-sunken", "text-muted", "text-caption");
+  });
+});
+
+describe("EventDetailPage - カテゴリアイコンバッジ", () => {
+  beforeEach(() => {
+    vi.stubGlobal("React", React);
+    vi.clearAllMocks();
+  });
+
+  it("見出しに、イベントのカテゴリ色を背景に持つアイコンバッジを出す", async () => {
+    const event = cancelledEvent({ category: "travel" });
+    mockServerClient(event, null);
+    mockAdminClient({ memberCount: 3, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    const { container } = render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    const badge = container.querySelector(".bg-category-travel");
+    expect(badge).not.toBeNull();
+    expect(badge?.querySelector("svg")).not.toBeNull();
   });
 });

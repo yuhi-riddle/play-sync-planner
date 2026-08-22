@@ -14,6 +14,7 @@ import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib
 import { createEventMessageAction } from "@/lib/actions/event/event-messages";
 import { createEventUserInvitationsAction, loadEventInviteCandidatesAction } from "@/lib/actions/account/connections";
 import { EventTaskList, type EventTaskMember } from "@/components/event/event-task-list";
+import { CategoryIconBadge } from "@/components/event/category-icon-badge";
 import {
   createEventTaskAction,
   deleteEventTaskAction,
@@ -27,6 +28,7 @@ import { buildEventInviteUrl } from "@/lib/domain/event/event-members";
 import { normalizeEventDetailTab } from "@/lib/domain/event/event-tabs";
 import { resolveEventProgress } from "@/lib/domain/event/event-progress";
 import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/event/event-adjustment";
+import { normalizeCategory } from "@/lib/domain/event/event-filter";
 import type { EventMessage } from "@/lib/domain/event/event-chat";
 import { mapConnectionPage, type ConnectionPage } from "@/lib/domain/account/connections";
 import { formatDateTime } from "@/lib/shared/format";
@@ -105,12 +107,15 @@ export default async function EventDetailPage({
 
   const progress = resolveEventProgress(event.status, (event.plans ?? []) as EventPlan[]);
   const hasPlans = ((event.plans as EventPlan[] | undefined)?.length ?? 0) > 0;
+  const normalizedCategory = normalizeCategory(event.category);
+  const category = normalizedCategory === "all" ? "other" : normalizedCategory;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Event"
         title={event.title}
+        icon={<CategoryIconBadge category={category} />}
         action={isOwner && canStartAdjustment ? <ButtonLink href={`/events/${event.id}/plans/new`}>日程調整を始める</ButtonLink> : null}
         summary={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
