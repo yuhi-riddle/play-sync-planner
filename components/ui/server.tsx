@@ -16,7 +16,8 @@ export function PageHeader({
   description,
   eyebrow,
   action,
-  summary
+  summary,
+  icon
 }: {
   title: string;
   description?: string;
@@ -25,14 +26,19 @@ export function PageHeader({
   action?: ReactNode;
   /** タイトルの下に出す状態の要約。バッジなどを渡す */
   summary?: ReactNode;
+  /** タイトル左に置く正方形のアイコン。省略時は何も出さない */
+  icon?: ReactNode;
 }) {
   return (
     <div className="relative flex flex-col gap-4 rounded-card border border-line bg-surface p-5 shadow-raise sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-eyebrow uppercase text-pine">{eyebrow ?? brand.shortName}</p>
-        <h1 className="mt-2 break-words text-display text-ink">{title}</h1>
-        {description ? <p className="mt-2 max-w-2xl text-body text-muted">{description}</p> : null}
-        {summary ? <div className="mt-3">{summary}</div> : null}
+      <div className="flex min-w-0 items-start gap-3">
+        {icon}
+        <div className="min-w-0">
+          <p className="text-eyebrow uppercase text-pine">{eyebrow ?? brand.shortName}</p>
+          <h1 className="mt-2 break-words text-display text-ink">{title}</h1>
+          {description ? <p className="mt-2 max-w-2xl text-body text-muted">{description}</p> : null}
+          {summary ? <div className="mt-3">{summary}</div> : null}
+        </div>
       </div>
       {action}
     </div>
