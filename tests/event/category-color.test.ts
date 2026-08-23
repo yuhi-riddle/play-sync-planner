@@ -8,7 +8,8 @@ describe("categoryAccent", () => {
       bar: "border-l-category-nazotoki",
       badgeBg: "bg-category-nazotoki/16",
       badgeText: "text-category-nazotoki-ink",
-      dot: "bg-category-nazotoki"
+      dot: "bg-category-nazotoki",
+      fieldBorder: "border-category-nazotoki"
     });
   });
 
@@ -23,7 +24,8 @@ describe("categoryAccent", () => {
       bar: "border-l-line-strong",
       badgeBg: "bg-sunken",
       badgeText: "text-muted",
-      dot: "bg-subtle"
+      dot: "bg-subtle",
+      fieldBorder: "border-line-strong"
     });
   });
 
