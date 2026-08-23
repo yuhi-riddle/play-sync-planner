@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import React from "react";
 
 import { categoryLabels, EVENT_CATEGORIES } from "@/lib/shared/constants";
+import { categoryAccent } from "@/lib/domain/event/category-color";
 import {
   buildEventListHref,
   EVENT_LIST_PAGE_SIZES,
@@ -13,8 +14,10 @@ import {
   type EventListSort
 } from "@/lib/domain/event/event-filter";
 
-const selectClassName =
-  "mt-2 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-base font-medium text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20";
+const selectBaseClassName =
+  "mt-2 min-h-11 w-full rounded-control border px-3 py-2 text-base font-medium text-ink outline-none transition-colors focus:border-moss focus:ring-2 focus:ring-moss/20";
+
+const selectClassName = `${selectBaseClassName} border-line-strong bg-surface`;
 
 const sortLabels: Record<EventListSort, string> = {
   newest: "新しく作成した順",
@@ -52,6 +55,11 @@ export function EventListControls({
     sortLabels[query.sort],
     `${query.pageSize}件`
   ].join(" · ");
+
+  const categoryAccentClasses = query.category === "all" ? null : categoryAccent(query.category);
+  const categorySelectClassName = categoryAccentClasses
+    ? `${selectBaseClassName} ${categoryAccentClasses.fieldBorder} ${categoryAccentClasses.badgeBg}`
+    : selectClassName;
 
   return (
     /*
@@ -163,8 +171,13 @@ export function EventListControls({
           <input type="hidden" name="search" value={query.search} />
 
           <label className="text-body font-medium text-muted">
-            カテゴリ
-            <select name="category" defaultValue={query.category} className={selectClassName}>
+            <span className="inline-flex items-center gap-1.5">
+              {categoryAccentClasses ? (
+                <span aria-hidden="true" className={`h-2 w-2 rounded-full ${categoryAccentClasses.dot}`} />
+              ) : null}
+              カテゴリ
+            </span>
+            <select name="category" defaultValue={query.category} className={categorySelectClassName}>
               <option value="all">すべて</option>
               {EVENT_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
