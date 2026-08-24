@@ -266,4 +266,33 @@ describe("EventListControls", () => {
       "/events?status=cancelled&category=live&sort=latest&limit=20&page=3"
     );
   });
+
+  it("カテゴリがすべてなら色ドットも枠色も出さない", () => {
+    render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const select = screen.getByRole("combobox", { name: "カテゴリ" });
+    expect(select).toHaveClass("border-line-strong", "bg-surface");
+    expect(select.closest("label")?.querySelector('span[aria-hidden="true"]')).toBeNull();
+  });
+
+  it("カテゴリを選んでいれば選択中カテゴリの色をラベルとselectに出す", () => {
+    render(
+      <EventListControls
+        query={{ status: "active", category: "nazotoki", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const select = screen.getByRole("combobox", { name: "カテゴリ" });
+    expect(select).toHaveClass("border-category-nazotoki", "bg-category-nazotoki/16");
+    const dot = select.closest("label")?.querySelector('span[aria-hidden="true"]');
+    expect(dot).toHaveClass("bg-category-nazotoki");
+  });
 });
