@@ -22,7 +22,8 @@ describe("GroupAvailabilityCalendar", () => {
           slots: [
             { start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 },
             { start: "2026-07-15T10:15:00+09:00", end: "2026-07-15T10:30:00+09:00", availableCount: 1 }
-          ]
+          ],
+          dailyBusySummaries: {}
         })
       }))
     );
@@ -35,14 +36,14 @@ describe("GroupAvailabilityCalendar", () => {
       />
     );
 
-    expect(await screen.findByText("参加者全体の空きやすさ")).toBeInTheDocument();
+    expect(await screen.findByText("参加者全体の空き状況")).toBeInTheDocument();
     expect(screen.getByText("参加者 2人中 2人分のカレンダー")).toBeInTheDocument();
     expect(screen.getByText("選択中: 空き 1/2人以上")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "空き状況を更新" })).toBeEnabled();
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/events/event-1/availability?month=2026-07", expect.anything()));
   });
 
-  it("returns daily availability summaries to the date picker", async () => {
+  it("returns daily busy summaries to the date picker", async () => {
     const onAvailabilityByDate = vi.fn();
     vi.stubGlobal(
       "fetch",
@@ -53,10 +54,10 @@ describe("GroupAvailabilityCalendar", () => {
           updatedAt: "2026-07-01T00:00:00Z",
           connectedCount: 2,
           memberCount: 2,
-          slots: [
-            { start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 },
-            { start: "2026-07-15T10:15:00+09:00", end: "2026-07-15T10:30:00+09:00", availableCount: 1 }
-          ]
+          slots: [],
+          dailyBusySummaries: {
+            "2026-07-15": { maxBusyCount: 1, allDayBusyCount: 0 }
+          }
         })
       }))
     );
@@ -65,7 +66,7 @@ describe("GroupAvailabilityCalendar", () => {
 
     await waitFor(() =>
       expect(onAvailabilityByDate).toHaveBeenLastCalledWith({
-        "2026-07-15": { averageAvailableCount: 1.5, participantCount: 2 }
+        "2026-07-15": { maxBusyCount: 1, allDayBusyCount: 0 }
       })
     );
   });
@@ -87,7 +88,8 @@ describe("GroupAvailabilityCalendar", () => {
           slots: [
             { start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 },
             { start: "2026-07-15T10:15:00+09:00", end: "2026-07-15T10:30:00+09:00", availableCount: 1 }
-          ]
+          ],
+          dailyBusySummaries: {}
         })
       }))
     );
@@ -116,7 +118,8 @@ describe("GroupAvailabilityCalendar", () => {
           updatedAt: "2026-07-01T00:00:00Z",
           connectedCount: 0,
           memberCount: 4,
-          slots: []
+          slots: [],
+          dailyBusySummaries: {}
         })
       }))
     );
@@ -153,7 +156,8 @@ describe("GroupAvailabilityCalendar", () => {
           updatedAt: "2026-07-01T00:00:00Z",
           connectedCount: 2,
           memberCount: 2,
-          slots: [{ start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 }]
+          slots: [{ start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 }],
+          dailyBusySummaries: {}
         })
       }))
     );

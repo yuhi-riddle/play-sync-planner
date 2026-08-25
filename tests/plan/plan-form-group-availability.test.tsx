@@ -22,7 +22,8 @@ describe("PlanForm group availability", () => {
           slots: [
             { start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T10:15:00+09:00", availableCount: 2 },
             { start: "2026-07-15T10:15:00+09:00", end: "2026-07-15T10:30:00+09:00", availableCount: 1 }
-          ]
+          ],
+          dailyBusySummaries: {}
         })
       }))
     );
