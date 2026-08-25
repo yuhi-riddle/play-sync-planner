@@ -36,6 +36,28 @@ vi.mock("next/font/google", () => ({
  * ここに置くことで、どちらの TZ で走らせても「今日は 7/1」になり、
  * かつ 7/1 当日の時刻を未来扱いにする余地を最大限残せる。
  */
+/**
+ * jsdom は PointerEvent を実装していない（jsdom/jsdom#2527、25系でも未解決）。
+ * fireEvent.pointerDown/Move/Up は window.PointerEvent を探しに行き、無ければ
+ * 素の Event にフォールバックする。素の Event コンストラクタは clientX/clientY
+ * のような未知の init プロパティを黙って捨てるため、ドラッグ系のテストで
+ * 座標が undefined になり NaN が出る。MouseEvent を継承した最小限のポリフィルで補う。
+ */
+if (typeof globalThis.MouseEvent !== "undefined" && typeof globalThis.PointerEvent === "undefined") {
+  class PointerEventPolyfill extends MouseEvent {
+    public pointerId?: number;
+    public pointerType?: string;
+
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId;
+      this.pointerType = params.pointerType;
+    }
+  }
+  // @ts-expect-error jsdom に無い PointerEvent を補うためのポリフィル
+  globalThis.PointerEvent = PointerEventPolyfill;
+}
+
 const FIXED_NOW = new Date("2026-07-01T09:00:00+09:00");
 
 beforeAll(() => {
