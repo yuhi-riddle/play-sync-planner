@@ -12,6 +12,7 @@ import {
   formatMinutesToTime,
   handPointForMinutes,
   parseTimeToMinutes,
+  TIME_DIAL_STEP_MINUTES,
   type TimeDialMode
 } from "@/lib/domain/plan/time-dial";
 
@@ -27,7 +28,7 @@ function chipClassName(active: boolean) {
 function segmentClassName(active: boolean) {
   return active
     ? "min-h-9 min-w-11 rounded-control bg-pine px-2 text-lg font-black text-white"
-    : "min-h-9 min-w-11 rounded-control bg-transparent px-2 text-lg font-black text-moss";
+    : "min-h-9 min-w-11 rounded-control bg-transparent px-2 text-lg font-black text-pine";
 }
 
 export function TimeDialPicker({
@@ -78,13 +79,16 @@ export function TimeDialPicker({
   }, []);
 
   useEffect(() => {
+    if (!expanded) {
+      return;
+    }
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [handlePointerMove, handlePointerUp]);
+  }, [expanded, handlePointerMove, handlePointerUp]);
 
   if (isUnset) {
     return (
@@ -94,7 +98,7 @@ export function TimeDialPicker({
           onTimeChange(formatMinutesToTime(DEFAULT_MINUTES_WHEN_ENABLING));
           setExpanded(true);
         }}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-dashed border-line-strong bg-surface px-4 text-sm font-bold text-subtle"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-dashed border-line-strong bg-surface px-4 text-sm font-bold text-muted"
       >
         + {label}を設定
       </button>
@@ -149,9 +153,9 @@ export function TimeDialPicker({
             height={160}
             style={{ touchAction: "none" }}
           >
-            <circle cx="90" cy="90" r="72" fill="none" stroke="var(--madoi-line)" strokeWidth={2} />
+            <circle cx="90" cy="90" r="72" fill="none" className="stroke-line" strokeWidth={2} />
             {ticks.map((tick, index) => (
-              <line key={index} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} stroke="var(--madoi-line-strong)" strokeWidth={1.5} />
+              <line key={index} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} className="stroke-line-strong" strokeWidth={1.5} />
             ))}
             {tickLabels.map((tickLabel) => (
               <text
@@ -162,27 +166,40 @@ export function TimeDialPicker({
                 dominantBaseline="middle"
                 fontSize={11}
                 fontWeight={700}
-                fill="var(--madoi-muted)"
+                className="fill-muted"
               >
                 {tickLabel.label}
               </text>
             ))}
-            <line x1={90} y1={90} x2={hand.x} y2={hand.y} stroke="var(--madoi-pine)" strokeWidth={4} strokeLinecap="round" />
-            <circle cx={90} cy={90} r={4} fill="var(--madoi-pine)" />
+            <line x1={90} y1={90} x2={hand.x} y2={hand.y} className="stroke-pine" strokeWidth={4} strokeLinecap="round" />
+            <circle cx={90} cy={90} r={4} className="fill-pine" />
             <circle
-              role="button"
-              aria-label={`${label}のつまみ`}
+              role="slider"
+              aria-label={`${fieldLabel}のつまみ`}
+              aria-valuemin={mode === "hour" ? 0 : 0}
+              aria-valuemax={mode === "hour" ? 23 : 55}
+              aria-valuenow={mode === "hour" ? Number(h) : Number(m)}
+              aria-valuetext={`${h}:${m}`}
               tabIndex={0}
               cx={hand.x}
               cy={hand.y}
               r={15}
-              fill="var(--madoi-surface)"
-              stroke="var(--madoi-pine)"
+              className="fill-surface stroke-pine"
               strokeWidth={5}
               style={{ cursor: "grab" }}
               onPointerDown={(event) => {
                 event.preventDefault();
                 draggingRef.current = true;
+              }}
+              onKeyDown={(event) => {
+                const step = mode === "hour" ? 60 : TIME_DIAL_STEP_MINUTES;
+                if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  onTimeChange(formatMinutesToTime((minutesRef.current + step + 24 * 60) % (24 * 60)));
+                } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
+                  event.preventDefault();
+                  onTimeChange(formatMinutesToTime((minutesRef.current - step + 24 * 60) % (24 * 60)));
+                }
               }}
             />
           </svg>

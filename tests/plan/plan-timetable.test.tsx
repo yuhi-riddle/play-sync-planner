@@ -150,7 +150,7 @@ describe("PlanTimetableForm", () => {
     vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
       x: 0, y: 0, width: 180, height: 180, top: 0, left: 0, right: 180, bottom: 180, toJSON: () => ({})
     } as DOMRect);
-    fireEvent.pointerDown(screen.getByRole("button", { name: "開始のつまみ" }));
+    fireEvent.pointerDown(screen.getByRole("slider", { name: "開始のつまみ" }));
     fireEvent.pointerMove(window, { clientX: 162, clientY: 90 });
     fireEvent.pointerUp(window);
 

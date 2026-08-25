@@ -54,7 +54,7 @@ describe("PlanForm group availability", () => {
 
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventId="event-1" />);
 
-    const dayButton = await screen.findByLabelText(/7月15日.*を選択/);
+    const dayButton = await screen.findByLabelText(/7月15日.*を選択.*終日予定のある参加者あり/);
     await waitFor(() => expect(dayButton.className).toContain("bg-subtle/28"));
   });
 
@@ -78,7 +78,7 @@ describe("PlanForm group availability", () => {
 
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventId="event-1" />);
 
-    const dayButton = await screen.findByLabelText(/7月15日.*を選択/);
+    const dayButton = await screen.findByLabelText(/7月15日.*を選択.*予定が重なっている参加者2人/);
     await waitFor(() => expect(dayButton.className).toContain("bg-skywash/85"));
   });
 });

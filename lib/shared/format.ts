@@ -60,7 +60,7 @@ export function formatTime(value: string | null | undefined): string {
  * 24時間表記・ゼロ埋めの時刻（"09:05"）。
  *
  * formatTime との違いは表記だけで、どちらも JST 固定。
- * 進行表は <input type="time"> の値と突き合わせるのでゼロ埋めが要る。
+ * 進行表・候補日時は TimeDialPicker が扱う "HH:MM" 形式の値と突き合わせるのでゼロ埋めが要る。
  */
 export function formatJstTime(value: string | null | undefined): string {
   if (!value) {

@@ -46,7 +46,7 @@ describe("TimeDialPicker", () => {
     vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
       x: 0, y: 0, width: 180, height: 180, top: 0, left: 0, right: 180, bottom: 180, toJSON: () => ({})
     } as DOMRect);
-    const handle = screen.getByRole("button", { name: "開始のつまみ" });
+    const handle = screen.getByRole("slider", { name: "開始のつまみ" });
 
     fireEvent.pointerDown(handle);
     // 90度（時計回りに6時方向）= 6時。ローカル座標 (90+72, 90) = (162, 90)
@@ -56,12 +56,36 @@ describe("TimeDialPicker", () => {
     expect(onTimeChange).toHaveBeenLastCalledWith("06:00");
   });
 
+  it("つまみにフォーカスして矢印キーで時刻を変えられる（時モード）", () => {
+    const onTimeChange = vi.fn();
+    render(<TimeDialPicker time="19:00" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
+
+    const handle = screen.getByRole("slider", { name: "開始のつまみ" });
+    fireEvent.keyDown(handle, { key: "ArrowUp" });
+    expect(onTimeChange).toHaveBeenLastCalledWith("20:00");
+  });
+
+  it("つまみにフォーカスして矢印キーで時刻を変えられる（分モード、5分刻み）", () => {
+    const onTimeChange = vi.fn();
+    render(<TimeDialPicker time="19:05" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:05" }));
+    fireEvent.click(screen.getByRole("button", { name: "05" }));
+
+    const handle = screen.getByRole("slider", { name: "開始のつまみ" });
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(onTimeChange).toHaveBeenLastCalledWith("19:10");
+
+    fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    expect(onTimeChange).toHaveBeenLastCalledWith("19:00");
+  });
+
   it("optional かつ未設定のとき「+ ○○を設定」ボタンを出し、押すと展開する", () => {
     const onTimeChange = vi.fn();
     render(<TimeDialPicker time="" onTimeChange={onTimeChange} label="終了" fieldLabel="終了" optional onClear={vi.fn()} />);
 
     const setButton = screen.getByRole("button", { name: "+ 終了を設定" });
-    expect(screen.queryByRole("button", { name: "終了のつまみ" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("slider", { name: "終了のつまみ" })).not.toBeInTheDocument();
 
     fireEvent.click(setButton);
     expect(onTimeChange).toHaveBeenCalledWith("20:00");

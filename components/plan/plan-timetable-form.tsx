@@ -92,7 +92,7 @@ export function PlanTimetableForm({
               label="開始"
               fieldLabel="開始"
             />
-            <input type="hidden" name="start_time" value={startTime} required />
+            <input type="hidden" name="start_time" value={startTime} />
           </div>
           <div>
             <TimeDialPicker

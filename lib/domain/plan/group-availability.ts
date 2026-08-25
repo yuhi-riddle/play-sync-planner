@@ -18,17 +18,20 @@ function toTime(value: string) {
   return new Date(value).getTime();
 }
 
+// 月内のスロット数だけ呼ばれるため、Intl.DateTimeFormat はモジュールスコープで使い回す。
+const tokyoIsoFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23"
+});
+
 function formatTokyoIso(time: number) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23"
-  }).formatToParts(new Date(time));
+  const parts = tokyoIsoFormatter.formatToParts(new Date(time));
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
 
   return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}+09:00`;
@@ -107,31 +110,30 @@ export function buildDailyBusySummaries({
   const endTime = toTime(range.end);
   const summaries: Record<string, DailyBusySummary> = {};
 
+  const slotsPerDay = DAY_MILLISECONDS / SLOT_MILLISECONDS;
+
   for (let dayStart = startTime; dayStart < endTime; dayStart += DAY_MILLISECONDS) {
     const dayEnd = dayStart + DAY_MILLISECONDS;
     const date = formatTokyoIso(dayStart).slice(0, 10);
 
+    // 参加者ごとのbusyスロット数を1回の走査で数える。全スロットでbusyだった
+    // 人数がそのまま「終日」で、走査ごとの合計の最大値が「最大同時busy人数」。
+    const busySlotCountByParticipant = new Array(busyByParticipant.length).fill(0);
     let maxBusyCount = 0;
+
     for (let slotStart = dayStart; slotStart < dayEnd; slotStart += SLOT_MILLISECONDS) {
       const slot = { start: formatTokyoIso(slotStart), end: formatTokyoIso(slotStart + SLOT_MILLISECONDS) };
-      const busyCount = busyByParticipant.filter((busyRanges) => busyRanges.some((busyRange) => overlaps(slot, busyRange))).length;
+      let busyCount = 0;
+      busyByParticipant.forEach((busyRanges, index) => {
+        if (busyRanges.some((busyRange) => overlaps(slot, busyRange))) {
+          busySlotCountByParticipant[index] += 1;
+          busyCount += 1;
+        }
+      });
       maxBusyCount = Math.max(maxBusyCount, busyCount);
     }
 
-    let allDayBusyCount = 0;
-    for (const busyRanges of busyByParticipant) {
-      let isBusyAllDay = true;
-      for (let slotStart = dayStart; slotStart < dayEnd; slotStart += SLOT_MILLISECONDS) {
-        const slot = { start: formatTokyoIso(slotStart), end: formatTokyoIso(slotStart + SLOT_MILLISECONDS) };
-        if (!busyRanges.some((busyRange) => overlaps(slot, busyRange))) {
-          isBusyAllDay = false;
-          break;
-        }
-      }
-      if (isBusyAllDay) {
-        allDayBusyCount += 1;
-      }
-    }
+    const allDayBusyCount = busySlotCountByParticipant.filter((count) => count === slotsPerDay).length;
 
     summaries[date] = { maxBusyCount, allDayBusyCount };
   }
