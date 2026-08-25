@@ -227,6 +227,23 @@ describe("PlanForm", () => {
     expect(screen.queryByLabelText("月を選択")).not.toBeInTheDocument();
   });
 
+  it("月選択パネルは、表示ボタンをもう一度押すと閉じる", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    const toggle = screen.getByRole("button", { name: /2026年7月/ });
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("月を選択")).toBeInTheDocument();
+
+    // 実ブラウザの実クリックは mousedown → mouseup → click の順で発火する。
+    // トグルボタンが外側クリック検知の対象に含まれていると、mousedown で一度
+    // 閉じた直後に click のトグル処理で再び開いてしまう回帰があった。
+    fireEvent.mouseDown(toggle);
+    fireEvent.mouseUp(toggle);
+    fireEvent.click(toggle);
+
+    expect(screen.queryByLabelText("月を選択")).not.toBeInTheDocument();
+  });
+
   it("謎解きテンプレートは時刻チップの直上に表示される", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventCategory="nazotoki" />);
 
