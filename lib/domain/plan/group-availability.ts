@@ -88,3 +88,53 @@ export function buildAvailabilitySlots({
 
   return slots;
 }
+
+const DAY_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+export type DailyBusySummary = {
+  maxBusyCount: number;
+  allDayBusyCount: number;
+};
+
+export function buildDailyBusySummaries({
+  busyByParticipant,
+  range
+}: {
+  busyByParticipant: BusyRange[][];
+  range: TimeRange;
+}): Record<string, DailyBusySummary> {
+  const startTime = toTime(range.start);
+  const endTime = toTime(range.end);
+  const summaries: Record<string, DailyBusySummary> = {};
+
+  for (let dayStart = startTime; dayStart < endTime; dayStart += DAY_MILLISECONDS) {
+    const dayEnd = dayStart + DAY_MILLISECONDS;
+    const date = formatTokyoIso(dayStart).slice(0, 10);
+
+    let maxBusyCount = 0;
+    for (let slotStart = dayStart; slotStart < dayEnd; slotStart += SLOT_MILLISECONDS) {
+      const slot = { start: formatTokyoIso(slotStart), end: formatTokyoIso(slotStart + SLOT_MILLISECONDS) };
+      const busyCount = busyByParticipant.filter((busyRanges) => busyRanges.some((busyRange) => overlaps(slot, busyRange))).length;
+      maxBusyCount = Math.max(maxBusyCount, busyCount);
+    }
+
+    let allDayBusyCount = 0;
+    for (const busyRanges of busyByParticipant) {
+      let isBusyAllDay = true;
+      for (let slotStart = dayStart; slotStart < dayEnd; slotStart += SLOT_MILLISECONDS) {
+        const slot = { start: formatTokyoIso(slotStart), end: formatTokyoIso(slotStart + SLOT_MILLISECONDS) };
+        if (!busyRanges.some((busyRange) => overlaps(slot, busyRange))) {
+          isBusyAllDay = false;
+          break;
+        }
+      }
+      if (isBusyAllDay) {
+        allDayBusyCount += 1;
+      }
+    }
+
+    summaries[date] = { maxBusyCount, allDayBusyCount };
+  }
+
+  return summaries;
+}
