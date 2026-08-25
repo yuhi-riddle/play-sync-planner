@@ -204,7 +204,7 @@ function CalendarPicker({
   onChangeMonth: (value: Date) => void;
   minDate?: string;
   busyCounts?: Record<string, number>;
-  availabilityByDate?: Record<string, { averageAvailableCount: number; participantCount: number }>;
+  availabilityByDate?: Record<string, { maxBusyCount: number; allDayBusyCount: number }>;
   rangeStartDate?: string;
   rangeEndDate?: string;
   onSelectRange?: (start: string, end: string) => void;
@@ -299,12 +299,22 @@ function CalendarPicker({
           const holidayColor = cell.isHoliday || cell.dayOfWeek === 0;
           const saturdayColor = cell.dayOfWeek === 6;
           const disabled = Boolean(minDate && cell.date < minDate);
-          const dailyAvailability = availabilityByDate[cell.date];
-          const availabilityRatio = dailyAvailability ? dailyAvailability.averageAvailableCount / dailyAvailability.participantCount : 0;
-          const availabilityTone =
-            availabilityRatio >= 0.8 ? "bg-moss/20" : availabilityRatio >= 0.5 ? "bg-skywash/72" : availabilityRatio > 0 ? "bg-clay/12" : null;
-          const availabilityLabel = dailyAvailability
-            ? `、平均 空き ${dailyAvailability.averageAvailableCount}/${dailyAvailability.participantCount}人`
+          const dailyBusy = availabilityByDate[cell.date];
+          const availabilityTone = dailyBusy
+            ? dailyBusy.allDayBusyCount > 0
+              ? "border border-subtle bg-subtle/28"
+              : dailyBusy.maxBusyCount >= 2
+                ? "bg-skywash/85"
+                : dailyBusy.maxBusyCount === 1
+                  ? "bg-skywash/45"
+                  : null
+            : null;
+          const availabilityLabel = dailyBusy
+            ? dailyBusy.allDayBusyCount > 0
+              ? "、終日予定のある参加者あり"
+              : dailyBusy.maxBusyCount > 0
+                ? `、予定が重なっている参加者${dailyBusy.maxBusyCount}人`
+                : ""
             : "";
           const busyCount = busyCounts[cell.date] ?? 0;
           const busyLabel = busyCount > 0 ? `、Googleカレンダーの予定${busyCount}件` : "";
@@ -449,7 +459,7 @@ export function PlanForm({
   const [busyLoading, setBusyLoading] = useState(false);
   const [busyError, setBusyError] = useState(false);
   const [groupAvailabilityByDate, setGroupAvailabilityByDate] = useState<
-    Record<string, { averageAvailableCount: number; participantCount: number }>
+    Record<string, { maxBusyCount: number; allDayBusyCount: number }>
   >({});
 
   const visibleMonthKey = `${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, "0")}`;
