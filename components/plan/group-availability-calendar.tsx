@@ -10,6 +10,11 @@ type AvailabilitySlot = {
   availableCount: number;
 };
 
+type DailyBusySummary = {
+  maxBusyCount: number;
+  allDayBusyCount: number;
+};
+
 type AvailabilityResponse = {
   month: string;
   updatedAt: string;
@@ -18,6 +23,7 @@ type AvailabilityResponse = {
   /** イベントの参加者総数。連携していない人もここには入る。 */
   memberCount: number;
   slots: AvailabilitySlot[];
+  dailyBusySummaries: Record<string, DailyBusySummary>;
 };
 
 type AvailabilityErrorResponse = { error?: string; code?: string };
@@ -25,6 +31,13 @@ const accessDeniedMessage = "日程調整中の主催者だけが空き状況を
 
 /** 取得中/取得後でaria-liveブロックの高さを揃えるための最低高。 */
 export const AVAILABILITY_STATUS_MIN_HEIGHT_CLASS = "min-h-5";
+
+/**
+ * availability がまだ無い間の既定値。`?? {}` を直接書くとレンダーのたびに
+ * 新しいオブジェクトができ、それを依存配列に持つ useEffect が毎回発火して
+ * 親の setState → 再レンダー → 新しい {} … と無限ループになる。
+ */
+const EMPTY_DAILY_BUSY_SUMMARIES: Record<string, DailyBusySummary> = {};
 
 function toTimestamp(value: string) {
   return new Date(value.length === 16 ? `${value}:00+09:00` : value).getTime();
@@ -45,23 +58,6 @@ function selectedAvailability(slots: AvailabilitySlot[], selectedRange: { start:
   return Math.min(...selectedSlots.map((slot) => slot.availableCount));
 }
 
-/** participantCount は連携している人数。ここに総数を渡すと、未連携の人まで空き扱いになる。 */
-function summarizeDailyAvailability(slots: AvailabilitySlot[], participantCount: number) {
-  const totals = slots.reduce<Record<string, { total: number; slotCount: number }>>((result, slot) => {
-    const date = slot.start.slice(0, 10);
-    const current = result[date] ?? { total: 0, slotCount: 0 };
-    result[date] = { total: current.total + slot.availableCount, slotCount: current.slotCount + 1 };
-    return result;
-  }, {});
-
-  return Object.fromEntries(
-    Object.entries(totals).map(([date, value]) => [
-      date,
-      { averageAvailableCount: Math.round((value.total / value.slotCount) * 10) / 10, participantCount }
-    ])
-  );
-}
-
 export function GroupAvailabilityCalendar({
   eventId,
   visibleMonth,
@@ -71,7 +67,7 @@ export function GroupAvailabilityCalendar({
   eventId: string;
   visibleMonth: string;
   selectedRange: { start: string; end: string } | null;
-  onAvailabilityByDate?: (availabilityByDate: Record<string, { averageAvailableCount: number; participantCount: number }>) => void;
+  onAvailabilityByDate?: (availabilityByDate: Record<string, DailyBusySummary>) => void;
 }) {
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,15 +111,12 @@ export function GroupAvailabilityCalendar({
     () => selectedAvailability(availability?.slots ?? [], selectedRange),
     [availability?.slots, selectedRange]
   );
-  const availabilityByDate = useMemo(
-    () => summarizeDailyAvailability(availability?.slots ?? [], availability?.connectedCount ?? 0),
-    [availability?.connectedCount, availability?.slots]
-  );
+  const dailyBusySummaries = availability?.dailyBusySummaries ?? EMPTY_DAILY_BUSY_SUMMARIES;
   const refresh = useCallback(() => setRefreshKey((current) => current + 1), []);
 
   useEffect(() => {
-    onAvailabilityByDate?.(availabilityByDate);
-  }, [availabilityByDate, onAvailabilityByDate]);
+    onAvailabilityByDate?.(dailyBusySummaries);
+  }, [dailyBusySummaries, onAvailabilityByDate]);
 
   return (
     <section className="rounded-control border border-moss/20 bg-mist/24 p-4" aria-labelledby="group-availability-heading">
@@ -132,7 +125,7 @@ export function GroupAvailabilityCalendar({
           <div className="flex items-center gap-2">
             <Users aria-hidden="true" className="h-5 w-5 text-pine" />
             <h3 id="group-availability-heading" className="text-base font-bold text-ink">
-              参加者全体の空きやすさ
+              参加者全体の空き状況
             </h3>
           </div>
           <p className="mt-1 text-sm leading-6 text-muted">予定の名前・場所・個別の空き時間は表示しません。</p>

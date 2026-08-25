@@ -245,12 +245,12 @@ describe("PlanTimetablePage", () => {
       );
       expect(dateOptions).toEqual(["2026-08-15", "2026-08-16"]);
 
-      // 一覧の各行にも編集フォーム（同じ name の入力欄）が並ぶので、name だけで引くと
-      // 先頭の行の編集フォームを拾ってしまう。追加フォームの idPrefix で絞る。
       const dateSelect = container.querySelector("#timetable-new-date") as HTMLSelectElement;
       expect(dateSelect.value).toBe("2026-08-15");
 
-      const startTimeInput = container.querySelector("#timetable-new-start-time") as HTMLInputElement;
+      const addForm = screen.getByText("＋ 進行を追加").closest("details")?.querySelector("form");
+      const startTimeInput = addForm?.querySelector('input[name="start_time"]') as HTMLInputElement;
+      expect(screen.getByRole("button", { name: "開始 13:00" })).toBeInTheDocument();
       expect(startTimeInput.value).toBe("13:00");
     });
 
@@ -283,8 +283,10 @@ describe("PlanTimetablePage", () => {
       const dateSelect = container.querySelector("#timetable-new-date") as HTMLSelectElement;
       expect(dateSelect.value).toBe("2026-08-16");
 
-      const startTimeInput = container.querySelector("#timetable-new-start-time") as HTMLInputElement;
+      const addForm = screen.getByText("＋ 進行を追加").closest("details")?.querySelector("form");
+      const startTimeInput = addForm?.querySelector('input[name="start_time"]') as HTMLInputElement;
       // 00:30 のままだと「日付は 08-16、時刻は 00:30」で既存行より前に入る。
+      expect(screen.getByRole("button", { name: "開始 23:59" })).toBeInTheDocument();
       expect(startTimeInput.value).toBe("23:59");
       expect(startTimeInput.value).not.toBe("00:30");
     });

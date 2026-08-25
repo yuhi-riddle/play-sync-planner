@@ -133,31 +133,53 @@ describe("PlanTimetableForm", () => {
     expect(screen.getByLabelText("日付")).toBeInTheDocument();
   });
 
-  it("時刻はネイティブの time 入力にする", () => {
-    render(<PlanTimetableForm {...baseProps} />);
+  it("時刻チップを開き、数字ボタンとダイヤルで開始時刻を変えて閉じられる", () => {
+    const { container } = render(<PlanTimetableForm {...baseProps} />);
 
-    expect(screen.getByLabelText("開始")).toHaveAttribute("type", "time");
-    expect(screen.getByLabelText("終了（任意）")).toHaveAttribute("type", "time");
+    expect(container.querySelector('input[type="time"]')).toBeNull();
+    expect(screen.getByRole("button", { name: "+ 終了を設定" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "開始 13:00" }));
+    expect(screen.getByRole("button", { name: "13" })).toHaveAttribute("aria-pressed", "true");
+
+    const minuteButton = screen.getByRole("button", { name: "00" });
+    fireEvent.click(minuteButton);
+    expect(minuteButton).toHaveAttribute("aria-pressed", "true");
+
+    const svg = screen.getByTestId("time-dial-svg");
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, width: 180, height: 180, top: 0, left: 0, right: 180, bottom: 180, toJSON: () => ({})
+    } as DOMRect);
+    fireEvent.pointerDown(screen.getByRole("slider", { name: "開始のつまみ" }));
+    fireEvent.pointerMove(window, { clientX: 162, clientY: 90 });
+    fireEvent.pointerUp(window);
+
+    expect(screen.getByRole("button", { name: "開始 13:15" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "完了" }));
+
+    expect(screen.queryByTestId("time-dial-svg")).not.toBeInTheDocument();
+    expect(container.querySelector('input[name="start_time"]')).toHaveValue("13:15");
   });
 
   it("defaultStartTime の値がそのまま開始欄の初期値になる", () => {
     // このコンポーネントは +1時間の計算をしない。渡された defaultStartTime を
     // そのまま流すだけであることを確かめる（呼び出し側が「最後の行の1時間後」を計算して渡す）。
-    render(<PlanTimetableForm {...baseProps} defaultStartTime="15:30" />);
+    const { container } = render(<PlanTimetableForm {...baseProps} defaultStartTime="15:30" />);
 
-    expect(screen.getByLabelText("開始")).toHaveValue("15:30");
+    expect(screen.getByRole("button", { name: "開始 15:30" })).toBeInTheDocument();
+    expect(container.querySelector('input[name="start_time"]')).toHaveValue("15:30");
   });
 
-  it("同じページに複数置いても入力の id が衝突しない", () => {
+  it("同じページに複数置いても各フォームに開始時刻が送信値として入る", () => {
     const { container } = render(
       <div>
         <PlanTimetableForm {...baseProps} />
-        <PlanTimetableForm {...baseProps} idPrefix="timetable-edit-a" summaryLabel="編集" submitLabel="保存" />
+        <PlanTimetableForm {...baseProps} defaultStartTime="14:00" idPrefix="timetable-edit-a" summaryLabel="編集" submitLabel="保存" />
       </div>
     );
 
-    const ids = [...container.querySelectorAll('input[name="start_time"]')].map((input) => input.id);
-    expect(new Set(ids).size).toBe(2);
+    const values = [...container.querySelectorAll('input[name="start_time"]')].map((input) => (input as HTMLInputElement).value);
+    expect(values).toEqual(["13:00", "14:00"]);
   });
 
   it("defaultValues と submitLabel を渡すと、編集フォームとして各欄の初期値と選択済みチップに反映される", () => {
@@ -179,9 +201,22 @@ describe("PlanTimetableForm", () => {
     expect(screen.getByLabelText("日付")).toHaveValue("2026-08-16");
     expect(screen.getByLabelText("進行の名前")).toHaveValue("海の家で集合");
     expect(screen.getByLabelText("メモ（任意）")).toHaveValue("日焼け止めを塗ってから");
-    expect(screen.getByLabelText("終了（任意）")).toHaveValue("16:00");
+    expect(screen.getByRole("button", { name: "終了 16:00" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "あかり" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
+  });
+
+  it("任意の終了時刻を未設定に戻すと end_time を送信しない", () => {
+    const { container } = render(<PlanTimetableForm {...baseProps} defaultValues={{ endTime: "16:00" }} />);
+
+    expect(container.querySelector('input[name="end_time"]')).toHaveValue("16:00");
+    fireEvent.click(screen.getByRole("button", { name: "終了 16:00" }));
+    expect(screen.getByRole("button", { name: "16" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "00" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "未設定に戻す" }));
+
+    expect(screen.getByRole("button", { name: "+ 終了を設定" })).toBeInTheDocument();
+    expect(container.querySelector('input[name="end_time"]')).toBeNull();
   });
 
   it("担当のチップはフォームの内側にあり、参加者IDが送信対象になる", () => {
@@ -579,16 +614,16 @@ describe("PlanTimetable", () => {
       />
     );
 
-    expect(screen.getByLabelText("開始")).toHaveValue("13:00");
-    expect(screen.getByLabelText("終了（任意）")).toHaveValue("14:30");
+    expect(screen.getByRole("button", { name: "開始 13:00" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "終了 14:30" })).toBeInTheDocument();
     expect(screen.getByLabelText("進行の名前")).toHaveValue("海で泳ぐ");
     expect(screen.getByLabelText("メモ（任意）")).toHaveValue("日焼け止め");
     // 担当は選択済みとしてチップが押された状態になっている。
     expect(screen.getByRole("button", { name: "あかり" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("行が2つあっても入力の id が衝突しない", () => {
-    const { container } = render(
+  it("行が2つあっても各編集フォームに元の開始時刻が出る", () => {
+    render(
       <PlanTimetable
         items={[
           timetableItem({ id: "a", startAt: "2026-08-15T13:00:00+09:00", title: "集合" }),
@@ -601,8 +636,8 @@ describe("PlanTimetable", () => {
       />
     );
 
-    const ids = [...container.querySelectorAll('input[name="start_time"]')].map((input) => input.id);
-    expect(new Set(ids).size).toBe(2);
+    expect(screen.getByRole("button", { name: "開始 13:00" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "開始 14:00" })).toBeInTheDocument();
   });
 
   it("編集フォームの日付にはその行の日付が入っている", () => {

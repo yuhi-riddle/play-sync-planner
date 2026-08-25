@@ -9,6 +9,7 @@ import { clsx } from "clsx";
 import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar/calendar-availability-panel";
 import { GroupAvailabilityCalendar } from "@/components/plan/group-availability-calendar";
 import { MadoiSelect, TextArea } from "@/components/ui";
+import { TimeDialPicker } from "@/components/plan/time-dial-picker";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/domain/calendar/calendar";
 import type { ActionState } from "@/lib/domain/shared/action-state";
 import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar/calendar-availability";
@@ -44,8 +45,6 @@ const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
 const defaultReminderOffset = "1440";
-const hourOptions = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
-const minuteOptions = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
 const reminderUnitOptions = [
   { value: "minutes", label: "分前" },
@@ -184,50 +183,6 @@ function formatDateLabel(value: string) {
   }).format(new Date(`${value}T00:00`));
 }
 
-function TimeSelect({
-  time,
-  onTimeChange,
-  hourRef,
-  labelPrefix
-}: {
-  time: string;
-  onTimeChange: (value: string) => void;
-  hourRef?: RefObject<HTMLButtonElement | null>;
-  labelPrefix: string;
-}) {
-  const [hour, minute] = time.split(":");
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-sm font-medium text-ink">
-        <span className="text-muted">時</span>
-        <div className="mt-2">
-          <MadoiSelect
-            value={hour}
-            onValueChange={(nextHour) => onTimeChange(`${nextHour}:${minute}`)}
-            options={hourOptions.map((option) => ({ value: option, label: option }))}
-            fieldLabel={`${labelPrefix}時`}
-            ariaLabel={`${labelPrefix}時`}
-            buttonRef={hourRef}
-          />
-        </div>
-      </label>
-      <label className="text-sm font-medium text-ink">
-        <span className="text-muted">分</span>
-        <div className="mt-2">
-          <MadoiSelect
-            value={minute}
-            onValueChange={(nextMinute) => onTimeChange(`${hour}:${nextMinute}`)}
-            options={minuteOptions.map((option) => ({ value: option, label: option }))}
-            fieldLabel={`${labelPrefix}分`}
-            ariaLabel={`${labelPrefix}分`}
-          />
-        </div>
-      </label>
-    </div>
-  );
-}
-
 function CalendarPicker({
   label = "日付を選択",
   selectedDate,
@@ -249,13 +204,35 @@ function CalendarPicker({
   onChangeMonth: (value: Date) => void;
   minDate?: string;
   busyCounts?: Record<string, number>;
-  availabilityByDate?: Record<string, { averageAvailableCount: number; participantCount: number }>;
+  availabilityByDate?: Record<string, { maxBusyCount: number; allDayBusyCount: number }>;
   rangeStartDate?: string;
   rangeEndDate?: string;
   onSelectRange?: (start: string, end: string) => void;
   onSelectComplete?: () => void;
 }) {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const monthPickerRef = useRef<HTMLDivElement | null>(null);
+  const monthPickerToggleRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!monthPickerOpen) {
+      return;
+    }
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node;
+      // トグルボタン自身のクリックはここで無視する。無視しないと mousedown で先に
+      // 閉じたあと、直後の click イベントでボタンの onClick が開閉をもう一度
+      // 反転させてしまい、パネルが閉じなくなる。
+      if (monthPickerToggleRef.current && monthPickerToggleRef.current.contains(target)) {
+        return;
+      }
+      if (monthPickerRef.current && !monthPickerRef.current.contains(target)) {
+        setMonthPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [monthPickerOpen]);
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const [dragEndDate, setDragEndDate] = useState<string | null>(null);
   const dragMovedRef = useRef(false);
@@ -281,6 +258,7 @@ function CalendarPicker({
           <ChevronLeft aria-hidden="true" className="h-5 w-5" />
         </button>
         <button
+          ref={monthPickerToggleRef}
           type="button"
           onClick={() => setMonthPickerOpen((open) => !open)}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-bold text-ink transition-colors hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay"
@@ -299,13 +277,16 @@ function CalendarPicker({
         </button>
       </div>
       {monthPickerOpen ? (
-        <div className="mb-3 grid gap-2 rounded-control border border-moss/18 bg-surface p-3 sm:grid-cols-2">
+        <div ref={monthPickerRef} className="mb-3 grid gap-2 rounded-control border border-moss/18 bg-surface p-3 sm:grid-cols-2">
           <label className="text-sm font-medium text-ink">
             <span className="text-muted">年</span>
             <div className="mt-2">
               <MadoiSelect
                 value={String(visibleMonth.getFullYear())}
-                onValueChange={(year) => onChangeMonth(new Date(Number(year), visibleMonth.getMonth(), 1))}
+                onValueChange={(year) => {
+                  onChangeMonth(new Date(Number(year), visibleMonth.getMonth(), 1));
+                  setMonthPickerOpen(false);
+                }}
                 options={yearOptions.map((year) => ({ value: String(year), label: `${year}年` }))}
                 fieldLabel="年"
                 ariaLabel="年を選択"
@@ -318,7 +299,10 @@ function CalendarPicker({
             <div className="mt-2">
               <MadoiSelect
                 value={String(visibleMonth.getMonth())}
-                onValueChange={(month) => onChangeMonth(new Date(visibleMonth.getFullYear(), Number(month), 1))}
+                onValueChange={(month) => {
+                  onChangeMonth(new Date(visibleMonth.getFullYear(), Number(month), 1));
+                  setMonthPickerOpen(false);
+                }}
                 options={Array.from({ length: 12 }, (_, month) => ({ value: String(month), label: `${month + 1}月` }))}
                 fieldLabel="月"
                 ariaLabel="月を選択"
@@ -344,12 +328,22 @@ function CalendarPicker({
           const holidayColor = cell.isHoliday || cell.dayOfWeek === 0;
           const saturdayColor = cell.dayOfWeek === 6;
           const disabled = Boolean(minDate && cell.date < minDate);
-          const dailyAvailability = availabilityByDate[cell.date];
-          const availabilityRatio = dailyAvailability ? dailyAvailability.averageAvailableCount / dailyAvailability.participantCount : 0;
-          const availabilityTone =
-            availabilityRatio >= 0.8 ? "bg-moss/20" : availabilityRatio >= 0.5 ? "bg-skywash/72" : availabilityRatio > 0 ? "bg-clay/12" : null;
-          const availabilityLabel = dailyAvailability
-            ? `、平均 空き ${dailyAvailability.averageAvailableCount}/${dailyAvailability.participantCount}人`
+          const dailyBusy = availabilityByDate[cell.date];
+          const availabilityTone = dailyBusy
+            ? dailyBusy.allDayBusyCount > 0
+              ? "border border-subtle bg-subtle/28"
+              : dailyBusy.maxBusyCount >= 2
+                ? "bg-skywash/85"
+                : dailyBusy.maxBusyCount === 1
+                  ? "bg-skywash/45"
+                  : null
+            : null;
+          const availabilityLabel = dailyBusy
+            ? dailyBusy.allDayBusyCount > 0
+              ? "、終日予定のある参加者あり"
+              : dailyBusy.maxBusyCount > 0
+                ? `、予定が重なっている参加者${dailyBusy.maxBusyCount}人`
+                : ""
             : "";
           const busyCount = busyCounts[cell.date] ?? 0;
           const busyLabel = busyCount > 0 ? `、Googleカレンダーの予定${busyCount}件` : "";
@@ -494,7 +488,7 @@ export function PlanForm({
   const [busyLoading, setBusyLoading] = useState(false);
   const [busyError, setBusyError] = useState(false);
   const [groupAvailabilityByDate, setGroupAvailabilityByDate] = useState<
-    Record<string, { averageAvailableCount: number; participantCount: number }>
+    Record<string, { maxBusyCount: number; allDayBusyCount: number }>
   >({});
 
   const visibleMonthKey = `${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, "0")}`;
@@ -730,23 +724,6 @@ export function PlanForm({
               候補日時を選ぶ
             </h2>
           </div>
-          {eventCategory === "nazotoki" ? (
-            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
-              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {nazotokiTemplateTimes.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => applyTemplateTime(time)}
-                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                  >
-                    {time}〜
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
           <CalendarPicker
             label="候補日を選択"
             selectedDate={candidateDate}
@@ -791,14 +768,31 @@ export function PlanForm({
             />
             終日
           </label>
+          {eventCategory === "nazotoki" ? (
+            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
+              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {nazotokiTemplateTimes.map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => applyTemplateTime(time)}
+                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                  >
+                    {time}〜
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm font-bold text-ink">開始時間</p>
-              <TimeSelect time={candidateStartTime} onTimeChange={setCandidateStartTime} hourRef={candidateHourRef} labelPrefix="開始" />
+              <TimeDialPicker time={candidateStartTime} onTimeChange={setCandidateStartTime} label="開始" fieldLabel="開始" buttonRef={candidateHourRef} />
             </div>
             <div>
               <p className="text-sm font-bold text-ink">終了時間</p>
-              <TimeSelect time={candidateEndTime} onTimeChange={setCandidateEndTime} labelPrefix="終了" />
+              <TimeDialPicker time={candidateEndTime} onTimeChange={setCandidateEndTime} label="終了" fieldLabel="終了" />
             </div>
           </div>
           {candidateIsPast ? (
@@ -844,7 +838,7 @@ export function PlanForm({
             onChangeMonth={setVisibleMonth}
             minDate={today}
           />
-          <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
+          <TimeDialPicker time={deadlineTime} onTimeChange={setDeadlineTime} label="回答期限" fieldLabel="回答期限" buttonRef={deadlineHourRef} />
           <p
             className={clsx(
               "rounded-control border p-3 text-sm",

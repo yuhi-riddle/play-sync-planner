@@ -15,6 +15,28 @@ vi.mock("next/font/google", () => ({
 }));
 
 /**
+ * jsdom は PointerEvent を実装していない（jsdom/jsdom#2527、25系でも未解決）。
+ * fireEvent.pointerDown/Move/Up は window.PointerEvent を探しに行き、無ければ
+ * 素の Event にフォールバックする。素の Event コンストラクタは clientX/clientY
+ * のような未知の init プロパティを黙って捨てるため、ドラッグ系のテストで
+ * 座標が undefined になり NaN が出る。MouseEvent を継承した最小限のポリフィルで補う。
+ */
+if (typeof globalThis.MouseEvent !== "undefined" && typeof globalThis.PointerEvent === "undefined") {
+  class PointerEventPolyfill extends MouseEvent {
+    public pointerId?: number;
+    public pointerType?: string;
+
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId;
+      this.pointerType = params.pointerType;
+    }
+  }
+  // @ts-expect-error jsdom に無い PointerEvent を補うためのポリフィル
+  globalThis.PointerEvent = PointerEventPolyfill;
+}
+
+/**
  * テストの「現在時刻」を固定する。
  *
  * 候補日時などを未来の日付でハードコードしたテストは、時間が経って
