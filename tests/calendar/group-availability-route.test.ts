@@ -101,6 +101,25 @@ describe("参加者の空き状況API", () => {
     expect(counts.has(5)).toBe(false);
   });
 
+  it("日別の最大予定重複数と終日予定数を返す", async () => {
+    createSupabaseAdminClient.mockReturnValue(
+      adminClient({ memberUserIds: ["u1", "u2"], connectedUserIds: ["u1", "u2"] })
+    );
+    fetchCalendarFreeBusy
+      .mockResolvedValueOnce([{ start: "2026-07-15T00:00:00+09:00", end: "2026-07-16T00:00:00+09:00" }])
+      .mockResolvedValueOnce([{ start: "2026-07-15T10:00:00+09:00", end: "2026-07-15T11:00:00+09:00" }]);
+
+    const response = await GET(request(), params);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toHaveProperty("dailyBusySummaries");
+    expect(body.dailyBusySummaries["2026-07-15"]).toEqual({
+      maxBusyCount: 2,
+      allDayBusyCount: 1
+    });
+  });
+
   it("誰も連携していなければ、集計せず空で返す", async () => {
     createSupabaseAdminClient.mockReturnValue(
       adminClient({ memberUserIds: ["u1", "u2", "u3", "u4"], connectedUserIds: [] })
@@ -113,6 +132,7 @@ describe("参加者の空き状況API", () => {
     expect(body.connectedCount).toBe(0);
     expect(body.memberCount).toBe(4);
     expect(body.slots).toEqual([]);
+    expect(body.dailyBusySummaries).toEqual({});
     expect(fetchCalendarFreeBusy).not.toHaveBeenCalled();
   });
 
