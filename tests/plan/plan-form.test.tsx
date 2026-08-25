@@ -203,4 +203,36 @@ describe("PlanForm", () => {
 
     expect(nextButtonNode).not.toBe(submitButtonNode);
   });
+
+  it("月選択パネルは、月を選ぶと自動で閉じる", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /2026年7月/ }));
+    expect(screen.getByLabelText("月を選択")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("月を選択"));
+    fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "8月" }));
+
+    expect(screen.queryByLabelText("月を選択")).not.toBeInTheDocument();
+  });
+
+  it("月選択パネルは、外側をクリックすると閉じる", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /2026年7月/ }));
+    expect(screen.getByLabelText("月を選択")).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByLabelText("月を選択")).not.toBeInTheDocument();
+  });
+
+  it("謎解きテンプレートは時刻チップの直上に表示される", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventCategory="nazotoki" />);
+
+    const template = screen.getByText("謎解きテンプレート");
+    const startChip = screen.getByRole("button", { name: /^開始 / });
+    // DOM順で謎解きテンプレートが開始チップより前にあることを確認する
+    expect(template.compareDocumentPosition(startChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

@@ -211,6 +211,28 @@ function CalendarPicker({
   onSelectComplete?: () => void;
 }) {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const monthPickerRef = useRef<HTMLDivElement | null>(null);
+  const monthPickerToggleRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!monthPickerOpen) {
+      return;
+    }
+    function handleClick(event: MouseEvent) {
+      const target = event.target as Node;
+      // トグルボタン自身のクリックはここで無視する。無視しないと mousedown で先に
+      // 閉じたあと、直後の click イベントでボタンの onClick が開閉をもう一度
+      // 反転させてしまい、パネルが閉じなくなる。
+      if (monthPickerToggleRef.current && monthPickerToggleRef.current.contains(target)) {
+        return;
+      }
+      if (monthPickerRef.current && !monthPickerRef.current.contains(target)) {
+        setMonthPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [monthPickerOpen]);
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const [dragEndDate, setDragEndDate] = useState<string | null>(null);
   const dragMovedRef = useRef(false);
@@ -236,6 +258,7 @@ function CalendarPicker({
           <ChevronLeft aria-hidden="true" className="h-5 w-5" />
         </button>
         <button
+          ref={monthPickerToggleRef}
           type="button"
           onClick={() => setMonthPickerOpen((open) => !open)}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-bold text-ink transition-colors hover:bg-mist/45 focus:outline-none focus:ring-2 focus:ring-clay"
@@ -254,13 +277,16 @@ function CalendarPicker({
         </button>
       </div>
       {monthPickerOpen ? (
-        <div className="mb-3 grid gap-2 rounded-control border border-moss/18 bg-surface p-3 sm:grid-cols-2">
+        <div ref={monthPickerRef} className="mb-3 grid gap-2 rounded-control border border-moss/18 bg-surface p-3 sm:grid-cols-2">
           <label className="text-sm font-medium text-ink">
             <span className="text-muted">年</span>
             <div className="mt-2">
               <MadoiSelect
                 value={String(visibleMonth.getFullYear())}
-                onValueChange={(year) => onChangeMonth(new Date(Number(year), visibleMonth.getMonth(), 1))}
+                onValueChange={(year) => {
+                  onChangeMonth(new Date(Number(year), visibleMonth.getMonth(), 1));
+                  setMonthPickerOpen(false);
+                }}
                 options={yearOptions.map((year) => ({ value: String(year), label: `${year}年` }))}
                 fieldLabel="年"
                 ariaLabel="年を選択"
@@ -273,7 +299,10 @@ function CalendarPicker({
             <div className="mt-2">
               <MadoiSelect
                 value={String(visibleMonth.getMonth())}
-                onValueChange={(month) => onChangeMonth(new Date(visibleMonth.getFullYear(), Number(month), 1))}
+                onValueChange={(month) => {
+                  onChangeMonth(new Date(visibleMonth.getFullYear(), Number(month), 1));
+                  setMonthPickerOpen(false);
+                }}
                 options={Array.from({ length: 12 }, (_, month) => ({ value: String(month), label: `${month + 1}月` }))}
                 fieldLabel="月"
                 ariaLabel="月を選択"
@@ -695,23 +724,6 @@ export function PlanForm({
               候補日時を選ぶ
             </h2>
           </div>
-          {eventCategory === "nazotoki" ? (
-            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
-              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {nazotokiTemplateTimes.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => applyTemplateTime(time)}
-                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                  >
-                    {time}〜
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
           <CalendarPicker
             label="候補日を選択"
             selectedDate={candidateDate}
@@ -756,6 +768,23 @@ export function PlanForm({
             />
             終日
           </label>
+          {eventCategory === "nazotoki" ? (
+            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
+              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {nazotokiTemplateTimes.map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => applyTemplateTime(time)}
+                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
+                  >
+                    {time}〜
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm font-bold text-ink">開始時間</p>
