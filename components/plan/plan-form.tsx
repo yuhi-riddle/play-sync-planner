@@ -9,6 +9,7 @@ import { clsx } from "clsx";
 import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar/calendar-availability-panel";
 import { GroupAvailabilityCalendar } from "@/components/plan/group-availability-calendar";
 import { MadoiSelect, TextArea } from "@/components/ui";
+import { TimeDialPicker } from "@/components/plan/time-dial-picker";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/domain/calendar/calendar";
 import type { ActionState } from "@/lib/domain/shared/action-state";
 import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar/calendar-availability";
@@ -44,8 +45,6 @@ const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
 const defaultReminderOffset = "1440";
-const hourOptions = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
-const minuteOptions = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
 const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
 const reminderUnitOptions = [
   { value: "minutes", label: "分前" },
@@ -182,50 +181,6 @@ function formatDateLabel(value: string) {
     day: "numeric",
     weekday: "short"
   }).format(new Date(`${value}T00:00`));
-}
-
-function TimeSelect({
-  time,
-  onTimeChange,
-  hourRef,
-  labelPrefix
-}: {
-  time: string;
-  onTimeChange: (value: string) => void;
-  hourRef?: RefObject<HTMLButtonElement | null>;
-  labelPrefix: string;
-}) {
-  const [hour, minute] = time.split(":");
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-sm font-medium text-ink">
-        <span className="text-muted">時</span>
-        <div className="mt-2">
-          <MadoiSelect
-            value={hour}
-            onValueChange={(nextHour) => onTimeChange(`${nextHour}:${minute}`)}
-            options={hourOptions.map((option) => ({ value: option, label: option }))}
-            fieldLabel={`${labelPrefix}時`}
-            ariaLabel={`${labelPrefix}時`}
-            buttonRef={hourRef}
-          />
-        </div>
-      </label>
-      <label className="text-sm font-medium text-ink">
-        <span className="text-muted">分</span>
-        <div className="mt-2">
-          <MadoiSelect
-            value={minute}
-            onValueChange={(nextMinute) => onTimeChange(`${hour}:${nextMinute}`)}
-            options={minuteOptions.map((option) => ({ value: option, label: option }))}
-            fieldLabel={`${labelPrefix}分`}
-            ariaLabel={`${labelPrefix}分`}
-          />
-        </div>
-      </label>
-    </div>
-  );
 }
 
 function CalendarPicker({
@@ -794,11 +749,11 @@ export function PlanForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm font-bold text-ink">開始時間</p>
-              <TimeSelect time={candidateStartTime} onTimeChange={setCandidateStartTime} hourRef={candidateHourRef} labelPrefix="開始" />
+              <TimeDialPicker time={candidateStartTime} onTimeChange={setCandidateStartTime} label="開始" fieldLabel="開始" buttonRef={candidateHourRef} />
             </div>
             <div>
               <p className="text-sm font-bold text-ink">終了時間</p>
-              <TimeSelect time={candidateEndTime} onTimeChange={setCandidateEndTime} labelPrefix="終了" />
+              <TimeDialPicker time={candidateEndTime} onTimeChange={setCandidateEndTime} label="終了" fieldLabel="終了" />
             </div>
           </div>
           {candidateIsPast ? (
@@ -844,7 +799,7 @@ export function PlanForm({
             onChangeMonth={setVisibleMonth}
             minDate={today}
           />
-          <TimeSelect time={deadlineTime} onTimeChange={setDeadlineTime} hourRef={deadlineHourRef} labelPrefix="回答期限" />
+          <TimeDialPicker time={deadlineTime} onTimeChange={setDeadlineTime} label="回答期限" fieldLabel="回答期限" buttonRef={deadlineHourRef} />
           <p
             className={clsx(
               "rounded-control border p-3 text-sm",

@@ -19,11 +19,7 @@ describe("PlanForm", () => {
     render(<PlanForm {...props} />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    await waitFor(() => expect(screen.getByLabelText("開始時")).toHaveFocus());
-    chooseOption("開始時", "10");
-    chooseOption("開始分", "07");
-    chooseOption("終了時", "12");
-    chooseOption("終了分", "07");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^開始 /  })).toHaveFocus());
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
 
     expect(screen.getByText("候補 1")).toBeInTheDocument();
@@ -32,9 +28,6 @@ describe("PlanForm", () => {
     expect(screen.getByRole("heading", { name: "回答期限を選ぶ" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText(/7月14日.*を選択/));
-    await waitFor(() => expect(screen.getByLabelText("回答期限時")).toHaveFocus());
-    chooseOption("回答期限時", "22");
-    chooseOption("回答期限分", "08");
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     expect(screen.getByRole("heading", { name: "リマインドを決める" })).toBeInTheDocument();
@@ -44,9 +37,9 @@ describe("PlanForm", () => {
     expect(screen.getByText("参加者 3人")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "候補 1 を削除" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "この内容で日程調整を始める" })).toBeEnabled();
-    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T10:07");
-    expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-15T12:07");
-    expect(document.querySelector('input[name="answer_deadline_at"]')).toHaveAttribute("value", "2026-07-14T22:08");
+    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T19:00");
+    expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-15T21:00");
+    expect(document.querySelector('input[name="answer_deadline_at"]')).toHaveAttribute("value", "2026-07-14T23:45");
   });
 
   it("サーバーからのエラーを表示し、入力し直した候補日時を消さない", async () => {
@@ -54,43 +47,30 @@ describe("PlanForm", () => {
     render(<PlanForm action={action} submitLabel="この内容で日程調整を始める" participantCount={3} />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    await waitFor(() => expect(screen.getByLabelText("開始時")).toHaveFocus());
-    chooseOption("開始時", "10");
-    chooseOption("開始分", "07");
-    chooseOption("終了時", "12");
-    chooseOption("終了分", "07");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     fireEvent.click(screen.getByLabelText(/7月14日.*を選択/));
-    await waitFor(() => expect(screen.getByLabelText("回答期限時")).toHaveFocus());
-    chooseOption("回答期限時", "22");
-    chooseOption("回答期限分", "08");
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     fireEvent.click(screen.getByRole("button", { name: "この内容で日程調整を始める" }));
 
     expect(await screen.findByText("回答期限は最初の候補日時より前にしてください。")).toBeInTheDocument();
-    // ページ全体がエラー画面に置き換わっていれば、この見出しも候補日時の入力値も消えているはず。
     expect(screen.getByRole("heading", { name: "内容を確認する" })).toBeInTheDocument();
-    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T10:07");
+    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T19:00");
   });
 
   it("blocks review when the answer deadline is after the first candidate", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    chooseOption("開始時", "10");
-    chooseOption("開始分", "00");
-    chooseOption("終了時", "12");
-    chooseOption("終了分", "00");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
+    // 候補日と同じ7月15日を回答期限に選ぶと、既定の回答期限時刻(23:45)は
+    // 候補日時の終了(21:00)より後になるため、常にエラーになる
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    chooseOption("回答期限時", "10");
-    chooseOption("回答期限分", "01");
     fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
 
     expect(screen.getByText("回答期限は最初の候補日時より前にしてください。")).toBeInTheDocument();
@@ -102,8 +82,8 @@ describe("PlanForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "13:00〜" }));
 
-    expect(screen.getByLabelText("開始時")).toHaveTextContent("13");
-    expect(screen.getByLabelText("終了時")).toHaveTextContent("15");
+    expect(screen.getByRole("button", { name: "開始 13:00" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "終了 15:00" })).toBeInTheDocument();
   });
 
   it("adds a multi-day candidate by dragging across dates", () => {
@@ -112,14 +92,10 @@ describe("PlanForm", () => {
     fireEvent.pointerDown(screen.getByLabelText(/7月15日.*を選択/));
     fireEvent.pointerEnter(screen.getByLabelText(/7月16日.*を選択/));
     fireEvent.pointerUp(screen.getByLabelText(/7月16日.*を選択/));
-    chooseOption("開始時", "23");
-    chooseOption("開始分", "00");
-    chooseOption("終了時", "01");
-    chooseOption("終了分", "30");
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
 
-    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T23:00");
-    expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-16T01:30");
+    expect(document.querySelector('input[name="candidateDates"]')).toHaveAttribute("value", "2026-07-15T19:00");
+    expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-16T21:00");
   });
 
   it("adds an all-day candidate with an all-day hidden flag", () => {
