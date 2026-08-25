@@ -35,8 +35,8 @@ describe("time-dial", () => {
 
   it("converts a drag angle to a minute, snapping to 5-minute steps and keeping the current hour", () => {
     expect(TIME_DIAL_STEP_MINUTES).toBe(5);
-    // 60分を360度とすると、1分=6度。120度は20分にマップされる
-    expect(angleToMinutes(120, "minute", 19 * 60 + 0)).toBe(19 * 60 + 20);
+    // 60分を360度とすると、1分=6度。23度は3.83分相当で、5分刻みで最も近い5分にスナップされる
+    expect(angleToMinutes(23, "minute", 19 * 60 + 0)).toBe(19 * 60 + 5);
     expect(angleToMinutes(0, "minute", 19 * 60 + 0)).toBe(19 * 60 + 0);
     expect(angleToMinutes(180, "minute", 19 * 60 + 0)).toBe(19 * 60 + 30);
   });
