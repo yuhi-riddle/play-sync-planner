@@ -1,10 +1,13 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 
 import { DetailsScrollIntoView } from "@/components/ui/details-scroll-into-view";
 import {
   ParticipantToggleChips,
   type TimetableParticipantOption
 } from "@/components/plan/participant-toggle-chips";
+import { TimeDialPicker } from "@/components/plan/time-dial-picker";
 import { SubmitButton } from "@/components/ui";
 
 const inputClass =
@@ -51,6 +54,8 @@ export function PlanTimetableForm({
   idPrefix?: string;
 }) {
   const isMultiDay = eventDates.length > 1;
+  const [startTime, setStartTime] = useState(defaultStartTime);
+  const [endTime, setEndTime] = useState(defaultValues?.endTime ?? "");
 
   return (
     <details className="rounded-control border border-line bg-surface">
@@ -81,29 +86,24 @@ export function PlanTimetableForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-caption text-muted" htmlFor={`${idPrefix}-start-time`}>
-              開始
-            </label>
-            <input
-              id={`${idPrefix}-start-time`}
-              name="start_time"
-              type="time"
-              required
-              defaultValue={defaultStartTime}
-              className={inputClass}
+            <TimeDialPicker
+              time={startTime}
+              onTimeChange={setStartTime}
+              label="開始"
+              fieldLabel="開始"
             />
+            <input type="hidden" name="start_time" value={startTime} required />
           </div>
           <div>
-            <label className="text-caption text-muted" htmlFor={`${idPrefix}-end-time`}>
-              終了（任意）
-            </label>
-            <input
-              id={`${idPrefix}-end-time`}
-              name="end_time"
-              type="time"
-              defaultValue={defaultValues?.endTime ?? ""}
-              className={inputClass}
+            <TimeDialPicker
+              time={endTime}
+              onTimeChange={setEndTime}
+              label="終了"
+              fieldLabel="終了"
+              optional
+              onClear={() => setEndTime("")}
             />
+            {endTime ? <input type="hidden" name="end_time" value={endTime} /> : null}
           </div>
         </div>
 
