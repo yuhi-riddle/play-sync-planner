@@ -152,4 +152,26 @@ describe("GroupAvailabilityCalendar", () => {
     expect(screen.queryByText(/選択中: 空き/)).not.toBeInTheDocument();
     expect(screen.queryByText(/日時を選ぶと、その候補で/)).not.toBeInTheDocument();
   });
+
+  it("一部しか連携していないとき、未連携の人数を警告文として出す", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          month: "2026-07",
+          updatedAt: "2026-07-01T00:00:00Z",
+          connectedCount: 2,
+          memberCount: 5,
+          slots: [],
+          dailyBusySummaries: {}
+        })
+      }))
+    );
+
+    render(<GroupAvailabilityCalendar eventId="event-1" visibleMonth="2026-07" />);
+
+    expect(await screen.findByText("参加者 5人中 2人分のカレンダー")).toBeInTheDocument();
+    expect(screen.getByText(/未連携の3人はこの集計に入っていません/)).toBeInTheDocument();
+  });
 });
