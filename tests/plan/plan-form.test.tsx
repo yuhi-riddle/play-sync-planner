@@ -79,14 +79,10 @@ describe("PlanForm", () => {
     expect(screen.queryByRole("heading", { name: "内容を確認する" })).not.toBeInTheDocument();
   });
 
-  it("shows nazotoki template times", () => {
+  it("謎解きカテゴリでも、謎解きテンプレートは表示されない", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventCategory="nazotoki" />);
 
-    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    fireEvent.click(screen.getByRole("button", { name: "13:00〜" }));
-
-    expect(screen.getByRole("button", { name: "開始 13:00" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "終了 15:00" })).toBeInTheDocument();
+    expect(screen.queryByText("謎解きテンプレート")).not.toBeInTheDocument();
   });
 
   it("adds a multi-day candidate by dragging across dates", () => {

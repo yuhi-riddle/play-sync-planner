@@ -46,7 +46,6 @@ const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
 const defaultReminderOffset = "1440";
-const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
 const reminderUnitOptions = [
   { value: "minutes", label: "分前" },
   { value: "hours", label: "時間前" },
@@ -693,16 +692,6 @@ export function PlanForm({
     );
   }
 
-  function applyTemplateTime(time: string) {
-    const start = toDateTimeLocalValueFromParts(candidateDate, time);
-    const end = splitDateTime(addMinutes(start, defaultDurationMinutes), "12:00");
-    setCandidateStartTime(time);
-    setCandidateEndDate(end.date);
-    setCandidateEndTime(end.time);
-    setCandidateIsAllDay(false);
-    focusWithSmoothScroll(candidateHourRef);
-  }
-
   function updateReminderDraft(id: string, values: Partial<Pick<ReminderDraft, "amount" | "unit">>) {
     setReminderDrafts((current) => current.map((draft) => (draft.id === id ? { ...draft, ...values } : draft)));
   }
@@ -835,23 +824,6 @@ export function PlanForm({
               busyRanges={selectedDayBusyRanges}
             />
           )}
-          {eventCategory === "nazotoki" ? (
-            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
-              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {nazotokiTemplateTimes.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => applyTemplateTime(time)}
-                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                  >
-                    {time}〜
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
         </section>
       ) : null}
