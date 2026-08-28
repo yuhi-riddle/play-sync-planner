@@ -157,4 +157,33 @@ describe("TimeDialPicker", () => {
 
     expect(onClear).toHaveBeenCalledTimes(1);
   });
+
+  /*
+   * SVGの<text>/強調用<circle>はデフォルトで pointer-events: visiblePainted のため、
+   * pointer-events-none を付け忘れるとタップ判定を持つリング(円)より手前でイベントを
+   * 奪ってしまい、数字ちょうどをタップしても何も起きない(実機でのみ再現する不具合だった。
+   * fireEvent は要素を直接指定してイベントを発火するため、実ブラウザのようなヒットテスト
+   * による奪い合いは再現できず、代わりにクラス名を直接検証する)。
+   */
+  it("時モードの数字・強調円・針が pointer-events-none で、タップ判定を奪わない", () => {
+    render(<TimeDialPicker time="19:00" onTimeChange={vi.fn()} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
+
+    const svg = screen.getByTestId("time-dial-svg");
+    const unselectedLabel = within(svg).getByText("3");
+    expect(unselectedLabel).toHaveClass("pointer-events-none");
+    // 19時は内側リング(13〜23・00)側の選択中の数字として表示される。
+    const selectedLabel = within(svg).getByText("19");
+    expect(selectedLabel).toHaveClass("pointer-events-none");
+  });
+
+  it("分モードの数字・強調円が pointer-events-none で、タップ判定を奪わない", () => {
+    render(<TimeDialPicker time="19:00" onTimeChange={vi.fn()} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
+    fireEvent.click(screen.getByRole("button", { name: "00" }));
+
+    const svg = screen.getByTestId("time-dial-svg");
+    const selectedLabel = within(svg).getByText("00");
+    expect(selectedLabel).toHaveClass("pointer-events-none");
+  });
 });

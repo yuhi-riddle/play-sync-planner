@@ -194,10 +194,24 @@ export function TimeDialPicker({
                 draggingRef.current = true;
               }}
             />
+            {/*
+              数字・強調円・針は見た目の装飾で、実際のタップ判定はこの下のリング(円)が担う。
+              pointer-events-none を付けないと、数字ちょうどをタップした時にその<text>要素が
+              クリックを奪ってしまい、リングの onPointerDown まで届かない(実機でのみ再現し、
+              フォーカス位置を指定できないため座標ベースのテストでは検出しづらい不具合だった)。
+            */}
             {mode === "minute" ? (
               <>
                 {ticks.map((tick, index) => (
-                  <line key={index} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} className="stroke-line-strong" strokeWidth={1.5} />
+                  <line
+                    key={index}
+                    x1={tick.x1}
+                    y1={tick.y1}
+                    x2={tick.x2}
+                    y2={tick.y2}
+                    className="stroke-line-strong pointer-events-none"
+                    strokeWidth={1.5}
+                  />
                 ))}
                 {tickLabels.map((tickLabel) => (
                   <text
@@ -208,7 +222,7 @@ export function TimeDialPicker({
                     dominantBaseline="middle"
                     fontSize={11}
                     fontWeight={700}
-                    className={tickLabel.label === m ? "fill-white transition-all" : "fill-muted transition-all"}
+                    className={tickLabel.label === m ? "fill-white transition-all pointer-events-none" : "fill-muted transition-all pointer-events-none"}
                   >
                     {tickLabel.label}
                   </text>
@@ -221,7 +235,7 @@ export function TimeDialPicker({
                       cx={tickLabel.x}
                       cy={tickLabel.y}
                       r={12}
-                      className="fill-pine transition-all"
+                      className="fill-pine transition-all pointer-events-none"
                     />
                   ))}
               </>
@@ -235,7 +249,7 @@ export function TimeDialPicker({
                 return (
                   <React.Fragment key={position.angleDeg}>
                     {outerSelected ? (
-                      <circle cx={outerPoint.x} cy={outerPoint.y} r={13} className="fill-pine transition-all" />
+                      <circle cx={outerPoint.x} cy={outerPoint.y} r={13} className="fill-pine transition-all pointer-events-none" />
                     ) : null}
                     <text
                       x={outerPoint.x}
@@ -244,14 +258,14 @@ export function TimeDialPicker({
                       dominantBaseline="middle"
                       fontSize={14}
                       fontWeight={700}
-                      className={outerSelected ? "fill-white transition-all" : "fill-ink transition-all"}
+                      className={outerSelected ? "fill-white transition-all pointer-events-none" : "fill-ink transition-all pointer-events-none"}
                     >
                       {position.outerValue}
                     </text>
                     {showInner ? (
                       <>
                         {innerSelected ? (
-                          <circle cx={innerPoint.x} cy={innerPoint.y} r={11} className="fill-pine transition-all" />
+                          <circle cx={innerPoint.x} cy={innerPoint.y} r={11} className="fill-pine transition-all pointer-events-none" />
                         ) : null}
                         <text
                           x={innerPoint.x}
@@ -260,7 +274,7 @@ export function TimeDialPicker({
                           dominantBaseline="middle"
                           fontSize={10}
                           fontWeight={500}
-                          className={innerSelected ? "fill-white transition-all" : "fill-subtle transition-all"}
+                          className={innerSelected ? "fill-white transition-all pointer-events-none" : "fill-subtle transition-all pointer-events-none"}
                         >
                           {String(position.innerValue).padStart(2, "0")}
                         </text>
@@ -270,8 +284,16 @@ export function TimeDialPicker({
                 );
               })
             )}
-            <line x1={90} y1={90} x2={hand.x} y2={hand.y} className="stroke-pine transition-all" strokeWidth={4} strokeLinecap="round" />
-            <circle cx={90} cy={90} r={4} className="fill-pine" />
+            <line
+              x1={90}
+              y1={90}
+              x2={hand.x}
+              y2={hand.y}
+              className="stroke-pine transition-all pointer-events-none"
+              strokeWidth={4}
+              strokeLinecap="round"
+            />
+            <circle cx={90} cy={90} r={4} className="fill-pine pointer-events-none" />
             <circle
               role="slider"
               aria-label={`${fieldLabel}のつまみ`}
