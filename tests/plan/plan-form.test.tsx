@@ -292,4 +292,16 @@ describe("PlanForm", () => {
     expect(screen.queryByRole("button", { name: "候補に追加" })).not.toBeInTheDocument();
     expect(screen.getByText(/を候補に追加しました。/)).toBeInTheDocument();
   });
+
+  it("追加済みの候補に、丸い番号バッジが付く", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.click(await screen.findByRole("button", { name: "候補に追加" }));
+
+    // ステップインジケーターにも "1" バッジがあるため、候補一覧側の
+    // バッジだけを testid で区別する。
+    const badge = await screen.findByTestId("candidate-badge-1");
+    expect(badge).toHaveTextContent("1");
+  });
 });

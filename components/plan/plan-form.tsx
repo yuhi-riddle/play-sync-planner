@@ -1014,8 +1014,15 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
   return (
     <div className="grid gap-2">
       {candidates.map((candidate, index) => (
-        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-control border border-moss/12 bg-surface px-4 py-3">
-          <div>
+        <div key={candidate.start} className="flex items-center gap-3 rounded-control border border-moss/12 bg-surface px-4 py-3">
+          <span
+            data-testid={`candidate-badge-${index + 1}`}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep text-xs font-bold tabular-nums text-white"
+            aria-hidden="true"
+          >
+            {index + 1}
+          </span>
+          <div className="flex-1">
             <p className="text-eyebrow uppercase text-pine">候補 {index + 1}</p>
             <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
           </div>
