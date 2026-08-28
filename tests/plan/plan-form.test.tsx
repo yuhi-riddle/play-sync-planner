@@ -19,7 +19,9 @@ describe("PlanForm", () => {
     render(<PlanForm {...props} />);
 
     fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
-    await waitFor(() => expect(screen.getByRole("button", { name: /^開始 /  })).toHaveFocus());
+    // タップした日のパネルがインラインで展開し、時刻チップが現れる
+    // (パネルが場所を示すため、以前あった自動フォーカスは今は行わない)。
+    expect(await screen.findByRole("button", { name: /^開始 / })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "候補に追加" }));
 
     expect(screen.getByText("候補 1")).toBeInTheDocument();
@@ -80,6 +82,7 @@ describe("PlanForm", () => {
   it("shows nazotoki template times", () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventCategory="nazotoki" />);
 
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
     fireEvent.click(screen.getByRole("button", { name: "13:00〜" }));
 
     expect(screen.getByRole("button", { name: "開始 13:00" })).toBeInTheDocument();
@@ -244,12 +247,53 @@ describe("PlanForm", () => {
     expect(screen.queryByLabelText("月を選択")).not.toBeInTheDocument();
   });
 
-  it("謎解きテンプレートは時刻チップの直上に表示される", () => {
-    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventCategory="nazotoki" />);
+  // 「謎解きテンプレートは時刻チップの直上に表示される」テストは、Task 6で時刻チップが
+  // (タップで開くインラインパネルの中に移り、パネルはカレンダー内・謎解きテンプレートより
+  // 前のDOM位置になった。この位置関係を保証する意味が無くなったため削除する。
+  // 謎解きテンプレート自体はTask 7で削除予定(brief参照)。
 
-    const template = screen.getByText("謎解きテンプレート");
-    const startChip = screen.getByRole("button", { name: /^開始 / });
-    // DOM順で謎解きテンプレートが開始チップより前にあることを確認する
-    expect(template.compareDocumentPosition(startChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it("候補日をタップすると、その日のパネルが展開する", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    const dayButton = screen.getByLabelText(/7月15日.*を選択/);
+    fireEvent.click(dayButton);
+
+    expect(await screen.findByRole("button", { name: "候補に追加" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^開始 /, hidden: false })).toBeInTheDocument();
+  });
+
+  it("別の候補日をタップすると、前のパネルが閉じて新しいパネルが開く", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    await screen.findByRole("button", { name: "候補に追加" });
+
+    fireEvent.click(screen.getByLabelText(/7月16日.*を選択/));
+
+    // パネルは1つだけ表示される(候補に追加ボタンが1つだけ)。
+    expect(screen.getAllByRole("button", { name: "候補に追加" })).toHaveLength(1);
+  });
+
+  it("同じ候補日をもう一度タップすると、パネルが閉じる", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    const dayButton = screen.getByLabelText(/7月15日.*を選択/);
+    fireEvent.click(dayButton);
+    await screen.findByRole("button", { name: "候補に追加" });
+
+    fireEvent.click(dayButton);
+
+    expect(screen.queryByRole("button", { name: "候補に追加" })).not.toBeInTheDocument();
+  });
+
+  it("パネル内の「候補に追加」で候補が追加され、パネルが閉じる", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    const addButton = await screen.findByRole("button", { name: "候補に追加" });
+    fireEvent.click(addButton);
+
+    expect(screen.queryByRole("button", { name: "候補に追加" })).not.toBeInTheDocument();
+    expect(screen.getByText(/を候補に追加しました。/)).toBeInTheDocument();
   });
 });
