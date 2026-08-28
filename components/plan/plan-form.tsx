@@ -429,6 +429,7 @@ function CalendarPicker({
                 disabled && "pointer-events-none bg-none bg-surface text-muted line-through"
               )}
               aria-pressed={selected}
+              aria-expanded={renderExpandedPanel && !disabled ? cell.date === expandedPanelDate : undefined}
               aria-label={`${formatDateLabel(cell.date)}を選択${availabilityLabel}${busyLabel}`}
             >
               {cell.day}
@@ -440,7 +441,9 @@ function CalendarPicker({
         })}
       </div>
       {expandedPanelDate && renderExpandedPanel ? (
-        <div className="mt-3 border-t border-dashed border-moss/20 pt-3">{renderExpandedPanel(expandedPanelDate)}</div>
+        <div aria-live="polite" className="mt-3 border-t border-dashed border-moss/20 pt-3">
+          {renderExpandedPanel(expandedPanelDate)}
+        </div>
       ) : null}
     </div>
   );
