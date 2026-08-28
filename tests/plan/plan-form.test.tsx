@@ -258,6 +258,23 @@ describe("PlanForm", () => {
     expect(screen.getByRole("button", { name: /^開始 /, hidden: false })).toBeInTheDocument();
   });
 
+  /*
+   * 実ブラウザでの単純なタップ(マウス/タッチ)は pointerdown→pointerup→click の順に
+   * 発火する。onPointerUp がパネルの開閉トグルを処理した直後に onClick も同じ処理を
+   * 呼ぶと、開いた直後に閉じてしまい実機では永久にパネルが開かない(fireEvent.click
+   * だけを送るテストではpointerイベントが発火しないため検出できない不具合だった)。
+   */
+  it("実ブラウザの pointerdown→pointerup→click の順でタップしても、パネルが開いたままになる", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    const dayButton = screen.getByLabelText(/7月15日.*を選択/);
+    fireEvent.pointerDown(dayButton);
+    fireEvent.pointerUp(dayButton);
+    fireEvent.click(dayButton);
+
+    expect(await screen.findByRole("button", { name: "候補に追加" })).toBeInTheDocument();
+  });
+
   it("別の候補日をタップすると、前のパネルが閉じて新しいパネルが開く", async () => {
     render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 

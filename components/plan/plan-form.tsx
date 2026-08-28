@@ -242,6 +242,14 @@ function CalendarPicker({
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const [dragEndDate, setDragEndDate] = useState<string | null>(null);
   const dragMovedRef = useRef(false);
+  /**
+   * マウス/タッチでの単純なタップは pointerdown→pointerup→click の順に発火する。
+   * onPointerUp が同じセルの選択完了を処理した直後に onClick も同じ処理を
+   * 呼んでしまうと、パネルの開閉トグルが2回走って開いた直後に閉じる
+   * (実機でのみ再現し、fireEvent.click だけを使うテストでは検出できない)。
+   * onPointerUp が処理済みであることをこの ref で伝え、onClick 側で1回に絞る。
+   */
+  const pointerHandledRef = useRef(false);
   const cells = useMemo(() => buildMonthCalendar(visibleMonth.getFullYear(), visibleMonth.getMonth()), [visibleMonth]);
   const monthLabel = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(visibleMonth);
   const yearOptions = Array.from({ length: 11 }, (_, index) => visibleMonth.getFullYear() - 5 + index);
@@ -362,6 +370,10 @@ function CalendarPicker({
                   return;
                 }
                 if (onSelectRange) {
+                  if (pointerHandledRef.current) {
+                    pointerHandledRef.current = false;
+                    return;
+                  }
                   if (dragMovedRef.current) {
                     dragMovedRef.current = false;
                     return;
@@ -376,6 +388,7 @@ function CalendarPicker({
                 if (!onSelectRange || disabled) {
                   return;
                 }
+                pointerHandledRef.current = false;
                 setDragStartDate(cell.date);
                 setDragEndDate(cell.date);
                 dragMovedRef.current = false;
@@ -398,6 +411,7 @@ function CalendarPicker({
                 const completedDate = dragEndDate ?? dragStartDate;
                 setDragStartDate(null);
                 setDragEndDate(null);
+                pointerHandledRef.current = true;
                 onSelectComplete?.(completedDate);
               }}
               disabled={disabled}
