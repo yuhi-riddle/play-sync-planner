@@ -2,17 +2,12 @@
 
 import { RefreshCw, Users } from "lucide-react";
 import React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-
-type AvailabilitySlot = {
-  start: string;
-  end: string;
-  availableCount: number;
-};
+import { useCallback, useEffect, useState } from "react";
 
 type DailyBusySummary = {
   maxBusyCount: number;
   allDayBusyCount: number;
+  segments: number[];
 };
 
 type AvailabilityResponse = {
@@ -22,7 +17,6 @@ type AvailabilityResponse = {
   connectedCount: number;
   /** イベントの参加者総数。連携していない人もここには入る。 */
   memberCount: number;
-  slots: AvailabilitySlot[];
   dailyBusySummaries: Record<string, DailyBusySummary>;
 };
 
@@ -39,35 +33,16 @@ export const AVAILABILITY_STATUS_MIN_HEIGHT_CLASS = "min-h-5";
  */
 const EMPTY_DAILY_BUSY_SUMMARIES: Record<string, DailyBusySummary> = {};
 
-function toTimestamp(value: string) {
-  return new Date(value.length === 16 ? `${value}:00+09:00` : value).getTime();
-}
-
-function selectedAvailability(slots: AvailabilitySlot[], selectedRange: { start: string; end: string } | null) {
-  if (!selectedRange) {
-    return null;
-  }
-
-  const start = toTimestamp(selectedRange.start);
-  const end = toTimestamp(selectedRange.end);
-  const selectedSlots = slots.filter((slot) => toTimestamp(slot.start) < end && start < toTimestamp(slot.end));
-  if (selectedSlots.length === 0) {
-    return null;
-  }
-
-  return Math.min(...selectedSlots.map((slot) => slot.availableCount));
-}
-
 export function GroupAvailabilityCalendar({
   eventId,
   visibleMonth,
-  selectedRange,
-  onAvailabilityByDate
+  onAvailabilityByDate,
+  onConnectionStatus
 }: {
   eventId: string;
   visibleMonth: string;
-  selectedRange: { start: string; end: string } | null;
   onAvailabilityByDate?: (availabilityByDate: Record<string, DailyBusySummary>) => void;
+  onConnectionStatus?: (status: { connectedCount: number; memberCount: number }) => void;
 }) {
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,16 +82,19 @@ export function GroupAvailabilityCalendar({
     return () => controller.abort();
   }, [eventId, refreshKey, visibleMonth]);
 
-  const selectedAvailableCount = useMemo(
-    () => selectedAvailability(availability?.slots ?? [], selectedRange),
-    [availability?.slots, selectedRange]
-  );
   const dailyBusySummaries = availability?.dailyBusySummaries ?? EMPTY_DAILY_BUSY_SUMMARIES;
   const refresh = useCallback(() => setRefreshKey((current) => current + 1), []);
 
   useEffect(() => {
     onAvailabilityByDate?.(dailyBusySummaries);
   }, [dailyBusySummaries, onAvailabilityByDate]);
+
+  useEffect(() => {
+    if (!availability) {
+      return;
+    }
+    onConnectionStatus?.({ connectedCount: availability.connectedCount, memberCount: availability.memberCount });
+  }, [availability, onConnectionStatus]);
 
   return (
     <section className="rounded-control border border-moss/20 bg-mist/24 p-4" aria-labelledby="group-availability-heading">
@@ -170,13 +148,6 @@ export function GroupAvailabilityCalendar({
               <span className="rounded-full bg-surface px-3 py-1.5 text-sm font-bold text-pine">
                 参加者 {availability.memberCount}人中 {availability.connectedCount}人分のカレンダー
               </span>
-              {selectedAvailableCount === null ? (
-                <span className="text-sm text-muted">日時を選ぶと、その候補で空いている人数を表示します。</span>
-              ) : (
-                <span className="rounded-full bg-moss/12 px-3 py-1.5 text-sm font-bold text-pine">
-                  選択中: 空き {selectedAvailableCount}/{availability.connectedCount}人以上
-                </span>
-              )}
               {availability.connectedCount < availability.memberCount ? (
                 <span className="w-full text-sm leading-6 text-muted">
                   未連携の{availability.memberCount - availability.connectedCount}人はこの集計に入っていません。空いているかどうかは回答で確かめてください。
