@@ -8,10 +8,14 @@ import {
   angleToMinutes,
   buildDialTickLabels,
   buildDialTicks,
+  buildHourDialPositions,
   clientPointToAngleDeg,
   formatMinutesToTime,
   handPointForMinutes,
   parseTimeToMinutes,
+  pointForAngleDeg,
+  TIME_DIAL_INNER_RADIUS,
+  TIME_DIAL_OUTER_RADIUS,
   TIME_DIAL_STEP_MINUTES,
   type TimeDialMode
 } from "@/lib/domain/plan/time-dial";
@@ -58,20 +62,37 @@ export function TimeDialPicker({
   const minutes = isUnset ? 0 : parseTimeToMinutes(time);
   minutesRef.current = minutes;
 
-  const handlePointerMove = useCallback(
-    (event: PointerEvent) => {
-      if (!draggingRef.current || !svgRef.current) {
-        return;
-      }
-      const rect = svgRef.current.getBoundingClientRect();
-      const scale = DIAL_VIEWBOX_SIZE / rect.width;
-      const localX = (event.clientX - rect.left) * scale;
-      const localY = (event.clientY - rect.top) * scale;
+  const localPointFromEvent = useCallback((clientX: number, clientY: number) => {
+    if (!svgRef.current) {
+      return null;
+    }
+    const rect = svgRef.current.getBoundingClientRect();
+    const scale = DIAL_VIEWBOX_SIZE / rect.width;
+    return { x: (clientX - rect.left) * scale, y: (clientY - rect.top) * scale };
+  }, []);
+
+  const applyPoint = useCallback(
+    (localX: number, localY: number) => {
       const angleDeg = clientPointToAngleDeg(localX, localY);
-      const nextMinutes = angleToMinutes(angleDeg, mode, minutesRef.current);
+      const radius = Math.hypot(localX - 90, localY - 90);
+      const nextMinutes = angleToMinutes(angleDeg, radius, mode, minutesRef.current);
       onTimeChange(formatMinutesToTime(nextMinutes));
     },
     [mode, onTimeChange]
+  );
+
+  const handlePointerMove = useCallback(
+    (event: PointerEvent) => {
+      if (!draggingRef.current) {
+        return;
+      }
+      const point = localPointFromEvent(event.clientX, event.clientY);
+      if (!point) {
+        return;
+      }
+      applyPoint(point.x, point.y);
+    },
+    [applyPoint, localPointFromEvent]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -106,9 +127,11 @@ export function TimeDialPicker({
   }
 
   const { h, m } = { h: String(Math.floor(minutes / 60)).padStart(2, "0"), m: String(minutes % 60).padStart(2, "0") };
+  const hour = Number(h);
   const hand = handPointForMinutes(minutes, mode);
   const ticks = buildDialTicks(mode);
   const tickLabels = buildDialTickLabels(mode);
+  const hourPositions = buildHourDialPositions();
 
   return (
     <div className="inline-flex flex-col items-start gap-2">
@@ -153,25 +176,101 @@ export function TimeDialPicker({
             height={160}
             style={{ touchAction: "none" }}
           >
-            <circle cx="90" cy="90" r="72" fill="none" className="stroke-line" strokeWidth={2} />
-            {ticks.map((tick, index) => (
-              <line key={index} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} className="stroke-line-strong" strokeWidth={1.5} />
-            ))}
-            {tickLabels.map((tickLabel) => (
-              <text
-                key={tickLabel.label}
-                x={tickLabel.x}
-                y={tickLabel.y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={11}
-                fontWeight={700}
-                className="fill-muted"
-              >
-                {tickLabel.label}
-              </text>
-            ))}
-            <line x1={90} y1={90} x2={hand.x} y2={hand.y} className="stroke-pine" strokeWidth={4} strokeLinecap="round" />
+            <circle
+              data-testid="time-dial-ring"
+              cx="90"
+              cy="90"
+              r="72"
+              fill="none"
+              className="stroke-line"
+              strokeWidth={2}
+              style={{ cursor: "pointer" }}
+              onPointerDown={(event) => {
+                const point = localPointFromEvent(event.clientX, event.clientY);
+                if (!point) {
+                  return;
+                }
+                applyPoint(point.x, point.y);
+                draggingRef.current = true;
+              }}
+            />
+            {mode === "minute" ? (
+              <>
+                {ticks.map((tick, index) => (
+                  <line key={index} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} className="stroke-line-strong" strokeWidth={1.5} />
+                ))}
+                {tickLabels.map((tickLabel) => (
+                  <text
+                    key={tickLabel.label}
+                    x={tickLabel.x}
+                    y={tickLabel.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={11}
+                    fontWeight={700}
+                    className={tickLabel.label === m ? "fill-white transition-all" : "fill-muted transition-all"}
+                  >
+                    {tickLabel.label}
+                  </text>
+                ))}
+                {tickLabels
+                  .filter((tickLabel) => tickLabel.label === m)
+                  .map((tickLabel) => (
+                    <circle
+                      key="selected-minute-bg"
+                      cx={tickLabel.x}
+                      cy={tickLabel.y}
+                      r={12}
+                      className="fill-pine transition-all"
+                    />
+                  ))}
+              </>
+            ) : (
+              hourPositions.map((position) => {
+                const outerSelected = hour === position.outerValue;
+                const innerSelected = hour === position.innerValue;
+                const showInner = position.innerAlwaysVisible || innerSelected;
+                const outerPoint = pointForAngleDeg(position.angleDeg, TIME_DIAL_OUTER_RADIUS);
+                const innerPoint = pointForAngleDeg(position.angleDeg, TIME_DIAL_INNER_RADIUS);
+                return (
+                  <React.Fragment key={position.angleDeg}>
+                    {outerSelected ? (
+                      <circle cx={outerPoint.x} cy={outerPoint.y} r={13} className="fill-pine transition-all" />
+                    ) : null}
+                    <text
+                      x={outerPoint.x}
+                      y={outerPoint.y}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize={14}
+                      fontWeight={700}
+                      className={outerSelected ? "fill-white transition-all" : "fill-ink transition-all"}
+                    >
+                      {position.outerValue}
+                    </text>
+                    {showInner ? (
+                      <>
+                        {innerSelected ? (
+                          <circle cx={innerPoint.x} cy={innerPoint.y} r={11} className="fill-pine transition-all" />
+                        ) : null}
+                        <text
+                          x={innerPoint.x}
+                          y={innerPoint.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize={10}
+                          fontWeight={500}
+                          className={innerSelected ? "fill-white transition-all" : "fill-subtle transition-all"}
+                        >
+                          {String(position.innerValue).padStart(2, "0")}
+                        </text>
+                      </>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })
+            )}
+            <line x1={90} y1={90} x2={hand.x} y2={hand.y} className="stroke-pine transition-all" strokeWidth={4} strokeLinecap="round" />
             <circle cx={90} cy={90} r={4} className="fill-pine" />
             <circle
               role="slider"
@@ -183,12 +282,13 @@ export function TimeDialPicker({
               tabIndex={0}
               cx={hand.x}
               cy={hand.y}
-              r={15}
-              className="fill-surface stroke-pine"
-              strokeWidth={5}
+              r={6}
+              className="fill-surface stroke-pine transition-all"
+              strokeWidth={3}
               style={{ cursor: "grab" }}
               onPointerDown={(event) => {
                 event.preventDefault();
+                event.stopPropagation();
                 draggingRef.current = true;
               }}
               onKeyDown={(event) => {

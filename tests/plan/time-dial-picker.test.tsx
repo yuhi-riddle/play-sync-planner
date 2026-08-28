@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TimeDialPicker } from "@/components/plan/time-dial-picker";
@@ -37,7 +37,7 @@ describe("TimeDialPicker", () => {
     expect(minuteButton).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("ハンドルをドラッグすると時刻が変わる（時モード）", () => {
+  it("輪をタップすると一発でその時刻にジャンプする（時モード・外側）", () => {
     const onTimeChange = vi.fn();
     render(<TimeDialPicker time="19:00" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
     fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
@@ -46,14 +46,52 @@ describe("TimeDialPicker", () => {
     vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
       x: 0, y: 0, width: 180, height: 180, top: 0, left: 0, right: 180, bottom: 180, toJSON: () => ({})
     } as DOMRect);
-    const handle = screen.getByRole("slider", { name: "開始のつまみ" });
+    const ring = screen.getByTestId("time-dial-ring");
 
-    fireEvent.pointerDown(handle);
-    // 90度（時計回りに6時方向）= 6時。ローカル座標 (90+72, 90) = (162, 90)
-    fireEvent.pointerMove(window, { clientX: 162, clientY: 90 });
-    fireEvent.pointerUp(window);
+    // 90度・外側リング半径(輪の縁寄り)をタップ = 3時。ドラッグ開始なしで即座に反映される。
+    fireEvent.pointerDown(ring, { clientX: 90 + 60, clientY: 90 });
 
-    expect(onTimeChange).toHaveBeenLastCalledWith("06:00");
+    expect(onTimeChange).toHaveBeenLastCalledWith("03:00");
+  });
+
+  it("輪の中心寄りをタップすると内側リング(13〜23・00)の時刻が選ばれる（時モード）", () => {
+    const onTimeChange = vi.fn();
+    render(<TimeDialPicker time="19:00" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
+
+    const svg = screen.getByTestId("time-dial-svg");
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, width: 180, height: 180, top: 0, left: 0, right: 180, bottom: 180, toJSON: () => ({})
+    } as DOMRect);
+    const ring = screen.getByTestId("time-dial-ring");
+
+    // 90度・内側リング半径(中心寄り)をタップ = 15時。
+    fireEvent.pointerDown(ring, { clientX: 90 + 34, clientY: 90 });
+
+    expect(onTimeChange).toHaveBeenLastCalledWith("15:00");
+  });
+
+  it("外側の1〜12と、内側の主要4つ(00・15・18・21)が常に数字として表示される（時モード）", () => {
+    render(<TimeDialPicker time="19:00" onTimeChange={vi.fn()} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
+
+    const svg = screen.getByTestId("time-dial-svg");
+    for (const outerValue of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      expect(within(svg).getByText(String(outerValue))).toBeInTheDocument();
+    }
+    for (const innerValue of ["00", "15", "18", "21"]) {
+      expect(within(svg).getByText(innerValue)).toBeInTheDocument();
+    }
+    // 主要でない内側の値(例: 14時)は選択されていない間は表示されない。
+    expect(within(svg).queryByText("14")).not.toBeInTheDocument();
+  });
+
+  it("選択中の時刻が、主要でない内側の位置でも数字として表示される（時モード）", () => {
+    render(<TimeDialPicker time="14:00" onTimeChange={vi.fn()} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 14:00" }));
+
+    const svg = screen.getByTestId("time-dial-svg");
+    expect(within(svg).getByText("14")).toBeInTheDocument();
   });
 
   it("つまみにフォーカスして矢印キーで時刻を変えられる（時モード）", () => {
