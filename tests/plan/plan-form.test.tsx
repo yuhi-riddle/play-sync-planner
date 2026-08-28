@@ -97,6 +97,16 @@ describe("PlanForm", () => {
     expect(document.querySelector('input[name="candidateEndDates"]')).toHaveAttribute("value", "2026-07-16T21:00");
   });
 
+  it("複数日をドラッグ選択すると、追加パネルの見出しに開始日と終了日を表示する", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.pointerDown(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.pointerEnter(screen.getByLabelText(/7月16日.*を選択/));
+    fireEvent.pointerUp(screen.getByLabelText(/7月16日.*を選択/));
+
+    expect(screen.getByText("7月15日(水)〜7月16日(木)")).toBeInTheDocument();
+  });
+
   it("adds an all-day candidate with an all-day hidden flag", () => {
     render(<PlanForm action={vi.fn()} submitLabel="蜈ｱ譛峨Μ繝ｳ繧ｯ繧剃ｽ懈・" />);
 

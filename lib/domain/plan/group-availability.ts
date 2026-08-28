@@ -1,11 +1,5 @@
 import type { BusyRange } from "@/lib/domain/calendar/calendar-availability";
 
-export type GroupAvailabilitySlot = {
-  start: string;
-  end: string;
-  availableCount: number;
-};
-
 type TimeRange = {
   start: string;
   end: string;
@@ -62,34 +56,6 @@ export function monthRangeInTokyo(month: string): TimeRange {
     start: `${year}-${formattedMonth}-01T00:00:00+09:00`,
     end: `${nextYear}-${formattedNextMonth}-01T00:00:00+09:00`
   };
-}
-
-export function buildAvailabilitySlots({
-  participantCount,
-  busyByParticipant,
-  range
-}: {
-  participantCount: number;
-  busyByParticipant: BusyRange[][];
-  range: TimeRange;
-}): GroupAvailabilitySlot[] {
-  const startTime = toTime(range.start);
-  const endTime = toTime(range.end);
-  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
-    throw new Error("range must contain valid start and end values");
-  }
-
-  const slots: GroupAvailabilitySlot[] = [];
-  for (let currentTime = startTime; currentTime < endTime; currentTime += SLOT_MILLISECONDS) {
-    const slot = {
-      start: formatTokyoIso(currentTime),
-      end: formatTokyoIso(currentTime + SLOT_MILLISECONDS)
-    };
-    const busyCount = busyByParticipant.filter((busyRanges) => busyRanges.some((busyRange) => overlaps(slot, busyRange))).length;
-    slots.push({ ...slot, availableCount: Math.max(0, participantCount - busyCount) });
-  }
-
-  return slots;
 }
 
 const DAY_MILLISECONDS = 24 * 60 * 60 * 1000;

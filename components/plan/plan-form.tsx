@@ -652,11 +652,15 @@ export function PlanForm({
   }
 
   function renderCandidateDatePanel(date: string) {
-    const dailyBusy = groupAvailabilityByDate[date];
+    const dailyBusy = groupAvailabilityByDate[candidateDate];
+    const dateLabel =
+      candidateDate === candidateEndDate
+        ? formatDateLabel(date)
+        : `${formatDateLabel(candidateDate)}〜${formatDateLabel(candidateEndDate)}`;
     return (
       <div className="grid gap-4">
         <div>
-          <p className="text-base font-bold text-ink">{formatDateLabel(date)}</p>
+          <p className="text-base font-bold text-ink">{dateLabel}</p>
           {groupConnectionStatus.memberCount > 0 ? (
             <p className="mt-1 text-sm text-muted">
               参加者 {groupConnectionStatus.memberCount}人中 {groupConnectionStatus.connectedCount}人分のカレンダー

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { monthRangeInTokyo, buildAvailabilitySlots, buildDailyBusySummaries } from "@/lib/domain/plan/group-availability";
+import { monthRangeInTokyo, buildDailyBusySummaries } from "@/lib/domain/plan/group-availability";
 import { canReadGroupAvailability } from "@/lib/domain/calendar/calendar-availability-access";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { CalendarFreeBusyError, fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
@@ -74,7 +74,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       updatedAt: new Date().toISOString(),
       connectedCount,
       memberCount,
-      slots: [],
       dailyBusySummaries: {}
     });
   }
@@ -95,11 +94,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
       })
     );
-    const slots = buildAvailabilitySlots({
-      participantCount: connectedCount,
-      busyByParticipant,
-      range
-    });
     const dailyBusySummaries = buildDailyBusySummaries({ busyByParticipant, range });
 
     return NextResponse.json({
@@ -107,7 +101,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       updatedAt: new Date().toISOString(),
       connectedCount,
       memberCount,
-      slots,
       dailyBusySummaries
     });
   } catch (error) {

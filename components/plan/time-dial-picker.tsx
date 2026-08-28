@@ -305,8 +305,9 @@ export function TimeDialPicker({
               cx={hand.x}
               cy={hand.y}
               r={6}
-              className="fill-surface stroke-pine transition-all"
+              className={mode === "hour" ? "fill-none stroke-none transition-all" : "fill-surface stroke-pine transition-all"}
               strokeWidth={3}
+              pointerEvents="all"
               style={{ cursor: "grab" }}
               onPointerDown={(event) => {
                 event.preventDefault();

@@ -37,6 +37,20 @@ describe("TimeDialPicker", () => {
     expect(minuteButton).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("時モードのつまみだけ透明で、分モードでは従来の見た目を保つ", () => {
+    render(<TimeDialPicker time="19:05" onTimeChange={vi.fn()} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:05" }));
+
+    const handle = screen.getByRole("slider", { name: "開始のつまみ" });
+    expect(handle).toHaveClass("fill-none", "stroke-none");
+    expect(handle).not.toHaveClass("fill-surface", "stroke-pine");
+    expect(handle).toHaveAttribute("pointer-events", "all");
+
+    fireEvent.click(screen.getByRole("button", { name: "05" }));
+    expect(handle).toHaveClass("fill-surface", "stroke-pine");
+    expect(handle).not.toHaveClass("fill-none", "stroke-none");
+  });
+
   it("輪をタップすると一発でその時刻にジャンプする（時モード・外側）", () => {
     const onTimeChange = vi.fn();
     render(<TimeDialPicker time="19:00" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
