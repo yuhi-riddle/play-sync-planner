@@ -84,23 +84,6 @@ describe("参加者の空き状況API", () => {
     expect(body.memberCount).toBe(5);
   });
 
-  /*
-   * ここが一番こわい。母数を参加者総数にすると、連携していない人は busy に現れないぶん
-   * そのまま「空いている」として数えられ、実際より空いて見える。
-   */
-  it("空きの母数は連携している人数で、未連携の人を空き扱いしない", async () => {
-    createSupabaseAdminClient.mockReturnValue(
-      adminClient({ memberUserIds: ["u1", "u2", "u3", "u4", "u5"], connectedUserIds: ["u1", "u2"] })
-    );
-
-    const response = await GET(request(), params);
-    const body = await response.json();
-
-    const counts = new Set(body.slots.map((slot: { availableCount: number }) => slot.availableCount));
-    expect(counts).toEqual(new Set([2]));
-    expect(counts.has(5)).toBe(false);
-  });
-
   it("日別の最大予定重複数と終日予定数を返す", async () => {
     createSupabaseAdminClient.mockReturnValue(
       adminClient({ memberUserIds: ["u1", "u2"], connectedUserIds: ["u1", "u2"] })
@@ -116,7 +99,8 @@ describe("参加者の空き状況API", () => {
     expect(body).toHaveProperty("dailyBusySummaries");
     expect(body.dailyBusySummaries["2026-07-15"]).toEqual({
       maxBusyCount: 2,
-      allDayBusyCount: 1
+      allDayBusyCount: 1,
+      segments: [1, 1, 2, 1, 1, 1]
     });
   });
 
@@ -131,7 +115,6 @@ describe("参加者の空き状況API", () => {
     expect(response.status).toBe(200);
     expect(body.connectedCount).toBe(0);
     expect(body.memberCount).toBe(4);
-    expect(body.slots).toEqual([]);
     expect(body.dailyBusySummaries).toEqual({});
     expect(fetchCalendarFreeBusy).not.toHaveBeenCalled();
   });

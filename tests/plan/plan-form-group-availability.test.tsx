@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PlanForm } from "@/components/plan/plan-form";
@@ -31,7 +31,36 @@ describe("PlanForm group availability", () => {
     render(<PlanForm action={vi.fn()} submitLabel="作成" eventId="event-1" calendarAvailability={{ enabled: true }} />);
 
     expect(await screen.findByText("参加者全体の空き状況")).toBeInTheDocument();
-    expect(await screen.findByText("参加者 2人中 2人分のカレンダー")).toBeInTheDocument();
+  });
+
+  it("候補日をタップすると、匿名の時間帯内訳と連携人数が見える", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          month: "2026-07",
+          updatedAt: "2026-07-01T00:00:00Z",
+          connectedCount: 2,
+          memberCount: 2,
+          dailyBusySummaries: {
+            "2026-07-15": { maxBusyCount: 2, allDayBusyCount: 0, segments: [0, 0, 1, 2, 0, 0] }
+          }
+        })
+      }))
+    );
+
+    render(<PlanForm action={vi.fn()} submitLabel="作成" eventId="event-1" calendarAvailability={{ enabled: true }} />);
+
+    const dayButton = await screen.findByLabelText(/7月15日.*を選択/);
+    fireEvent.click(dayButton);
+
+    // 同じ文言が GroupAvailabilityCalendar 自体の常時表示にも出るため、
+    // findByText(単数)は使えない。パネルはCalendarPickerの中、
+    // GroupAvailabilityCalendarより前のDOM順で描画されるため、先頭の要素がパネル側になる。
+    const connectionTexts = await screen.findAllByText("参加者 2人中 2人分のカレンダー");
+    expect(connectionTexts.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId("timeline-segment")[3].className).toContain("bg-skywash/85");
   });
 
   it("誰か1人でも終日予定があると、他の状態より優先してグレー表示になる", async () => {
@@ -46,7 +75,7 @@ describe("PlanForm group availability", () => {
           memberCount: 2,
           slots: [],
           dailyBusySummaries: {
-            "2026-07-15": { maxBusyCount: 2, allDayBusyCount: 1 }
+            "2026-07-15": { maxBusyCount: 2, allDayBusyCount: 1, segments: [0, 0, 0, 0, 0, 0] }
           }
         })
       }))
@@ -70,7 +99,7 @@ describe("PlanForm group availability", () => {
           memberCount: 3,
           slots: [],
           dailyBusySummaries: {
-            "2026-07-15": { maxBusyCount: 2, allDayBusyCount: 0 }
+            "2026-07-15": { maxBusyCount: 2, allDayBusyCount: 0, segments: [0, 0, 0, 0, 0, 0] }
           }
         })
       }))

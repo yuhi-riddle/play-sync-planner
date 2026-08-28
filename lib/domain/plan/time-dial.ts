@@ -1,6 +1,9 @@
 export const TIME_DIAL_STEP_MINUTES = 5;
 export const TIME_DIAL_CENTER = 90;
 export const TIME_DIAL_RADIUS = 72;
+export const TIME_DIAL_OUTER_RADIUS = 60;
+export const TIME_DIAL_INNER_RADIUS = 34;
+export const TIME_DIAL_HOUR_ZONE_BOUNDARY_RADIUS = (TIME_DIAL_OUTER_RADIUS + TIME_DIAL_INNER_RADIUS) / 2;
 
 export type TimeDialMode = "hour" | "minute";
 
@@ -18,16 +21,66 @@ export function formatMinutesToTime(totalMinutes: number): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-export function angleToMinutes(angleDeg: number, mode: TimeDialMode, currentMinutes: number): number {
+export function angleToMinutes(angleDeg: number, radius: number, mode: TimeDialMode, currentMinutes: number): number {
   const normalizedAngle = ((angleDeg % 360) + 360) % 360;
 
   if (mode === "hour") {
-    const hour = Math.round((normalizedAngle / 360) * 24) % 24;
+    const hour = angleAndRadiusToHour(normalizedAngle, radius);
     return hour * 60 + (currentMinutes % 60);
   }
 
   const minute = (Math.round((normalizedAngle / 360) * 60 / TIME_DIAL_STEP_MINUTES) * TIME_DIAL_STEP_MINUTES) % 60;
   return Math.floor(currentMinutes / 60) * 60 + minute;
+}
+
+/**
+ * 「時」モードの二重リング判定。12方向(30度刻み)のうちどこに一番近いかを角度から求め、
+ * 中心からの距離が境界半径より外なら外側の値(1〜12)、内なら内側の値(13〜23・00)を返す。
+ */
+export function angleAndRadiusToHour(angleDeg: number, radius: number): number {
+  const normalizedAngle = ((angleDeg % 360) + 360) % 360;
+  const i = Math.round(normalizedAngle / 30) % 12;
+  const base = i === 0 ? 12 : i;
+  const isOuter = radius > TIME_DIAL_HOUR_ZONE_BOUNDARY_RADIUS;
+  if (isOuter) {
+    return base;
+  }
+  return base === 12 ? 0 : base + 12;
+}
+
+/** ある時刻(0〜23時)が、外側リング(1〜12)と内側リング(13〜23・00)のどちらに属するか。 */
+export function hourIsOuterRing(hour: number): boolean {
+  return hour >= 1 && hour <= 12;
+}
+
+/** ある時刻(0〜23時)を、対応する12方向の角度(度)に変換する。1時と13時は同じ角度になる。 */
+export function hourAngleDeg(hour: number): number {
+  const i = hour % 12;
+  return (i / 12) * 360;
+}
+
+export type HourDialPosition = {
+  angleDeg: number;
+  outerValue: number;
+  innerValue: number;
+  /** false の位置は、選択されているときだけ内側の数字を表示する(常時表示すると窮屈になるため)。 */
+  innerAlwaysVisible: boolean;
+};
+
+const HOUR_DIAL_INNER_MAJOR_POSITIONS = new Set([0, 3, 6, 9]);
+
+/** 12方向ぶんの外側/内側の値のペアを返す。数字の配置・常時表示するかどうかの判定に使う。 */
+export function buildHourDialPositions(): HourDialPosition[] {
+  const positions: HourDialPosition[] = [];
+  for (let i = 0; i < 12; i++) {
+    positions.push({
+      angleDeg: (i / 12) * 360,
+      outerValue: i === 0 ? 12 : i,
+      innerValue: i === 0 ? 0 : i + 12,
+      innerAlwaysVisible: HOUR_DIAL_INNER_MAJOR_POSITIONS.has(i)
+    });
+  }
+  return positions;
 }
 
 export function pointForAngleDeg(angleDeg: number, radius: number): DialPoint {
@@ -48,7 +101,8 @@ export function clientPointToAngleDeg(localX: number, localY: number): number {
 export function handPointForMinutes(minutes: number, mode: TimeDialMode): DialPoint {
   if (mode === "hour") {
     const hour = Math.floor(minutes / 60);
-    return pointForAngleDeg((hour / 24) * 360, TIME_DIAL_RADIUS - 4);
+    const radius = hourIsOuterRing(hour) ? TIME_DIAL_OUTER_RADIUS : TIME_DIAL_INNER_RADIUS;
+    return pointForAngleDeg(hourAngleDeg(hour), radius);
   }
   const minute = minutes % 60;
   return pointForAngleDeg((minute / 60) * 360, TIME_DIAL_RADIUS - 4);

@@ -7,6 +7,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 
 import { CalendarAvailabilityPanel, type CalendarEventRange } from "@/components/calendar/calendar-availability-panel";
+import { DailyBusyTimelineBar } from "@/components/plan/daily-busy-timeline-bar";
 import { GroupAvailabilityCalendar } from "@/components/plan/group-availability-calendar";
 import { MadoiSelect, TextArea } from "@/components/ui";
 import { TimeDialPicker } from "@/components/plan/time-dial-picker";
@@ -45,7 +46,6 @@ const defaultCandidateTime = "19:00";
 const defaultDurationMinutes = 120;
 const defaultDeadlineTime = "23:45";
 const defaultReminderOffset = "1440";
-const nazotokiTemplateTimes = ["10:00", "13:00", "16:00", "19:00"];
 const reminderUnitOptions = [
   { value: "minutes", label: "分前" },
   { value: "hours", label: "時間前" },
@@ -195,7 +195,9 @@ function CalendarPicker({
   rangeStartDate,
   rangeEndDate,
   onSelectRange,
-  onSelectComplete
+  onSelectComplete,
+  expandedPanelDate,
+  renderExpandedPanel
 }: {
   label?: string;
   selectedDate: string;
@@ -204,11 +206,15 @@ function CalendarPicker({
   onChangeMonth: (value: Date) => void;
   minDate?: string;
   busyCounts?: Record<string, number>;
-  availabilityByDate?: Record<string, { maxBusyCount: number; allDayBusyCount: number }>;
+  availabilityByDate?: Record<string, { maxBusyCount: number; allDayBusyCount: number; segments: number[] }>;
   rangeStartDate?: string;
   rangeEndDate?: string;
   onSelectRange?: (start: string, end: string) => void;
-  onSelectComplete?: () => void;
+  onSelectComplete?: (date: string) => void;
+  /** タップした日付のパネルを開いた状態にするとき、その日付。 */
+  expandedPanelDate?: string | null;
+  /** `expandedPanelDate` があるとき、日付グリッドの直下に表示するパネルの中身。 */
+  renderExpandedPanel?: (date: string) => React.ReactNode;
 }) {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement | null>(null);
@@ -236,6 +242,14 @@ function CalendarPicker({
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const [dragEndDate, setDragEndDate] = useState<string | null>(null);
   const dragMovedRef = useRef(false);
+  /**
+   * マウス/タッチでの単純なタップは pointerdown→pointerup→click の順に発火する。
+   * onPointerUp が同じセルの選択完了を処理した直後に onClick も同じ処理を
+   * 呼んでしまうと、パネルの開閉トグルが2回走って開いた直後に閉じる
+   * (実機でのみ再現し、fireEvent.click だけを使うテストでは検出できない)。
+   * onPointerUp が処理済みであることをこの ref で伝え、onClick 側で1回に絞る。
+   */
+  const pointerHandledRef = useRef(false);
   const cells = useMemo(() => buildMonthCalendar(visibleMonth.getFullYear(), visibleMonth.getMonth()), [visibleMonth]);
   const monthLabel = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long" }).format(visibleMonth);
   const yearOptions = Array.from({ length: 11 }, (_, index) => visibleMonth.getFullYear() - 5 + index);
@@ -356,12 +370,16 @@ function CalendarPicker({
                   return;
                 }
                 if (onSelectRange) {
+                  if (pointerHandledRef.current) {
+                    pointerHandledRef.current = false;
+                    return;
+                  }
                   if (dragMovedRef.current) {
                     dragMovedRef.current = false;
                     return;
                   }
                   onSelectRange(cell.date, cell.date);
-                  onSelectComplete?.();
+                  onSelectComplete?.(cell.date);
                   return;
                 }
                 onSelectDate(cell.date);
@@ -370,6 +388,7 @@ function CalendarPicker({
                 if (!onSelectRange || disabled) {
                   return;
                 }
+                pointerHandledRef.current = false;
                 setDragStartDate(cell.date);
                 setDragEndDate(cell.date);
                 dragMovedRef.current = false;
@@ -389,9 +408,11 @@ function CalendarPicker({
                 if (!onSelectRange || !dragStartDate) {
                   return;
                 }
+                const completedDate = dragEndDate ?? dragStartDate;
                 setDragStartDate(null);
                 setDragEndDate(null);
-                onSelectComplete?.();
+                pointerHandledRef.current = true;
+                onSelectComplete?.(completedDate);
               }}
               disabled={disabled}
               className={clsx(
@@ -418,6 +439,9 @@ function CalendarPicker({
           );
         })}
       </div>
+      {expandedPanelDate && renderExpandedPanel ? (
+        <div className="mt-3 border-t border-dashed border-moss/20 pt-3">{renderExpandedPanel(expandedPanelDate)}</div>
+      ) : null}
     </div>
   );
 }
@@ -488,8 +512,10 @@ export function PlanForm({
   const [busyLoading, setBusyLoading] = useState(false);
   const [busyError, setBusyError] = useState(false);
   const [groupAvailabilityByDate, setGroupAvailabilityByDate] = useState<
-    Record<string, { maxBusyCount: number; allDayBusyCount: number }>
+    Record<string, { maxBusyCount: number; allDayBusyCount: number; segments: number[] }>
   >({});
+  const [groupConnectionStatus, setGroupConnectionStatus] = useState({ connectedCount: 0, memberCount: 0 });
+  const [expandedPanelDate, setExpandedPanelDate] = useState<string | null>(null);
 
   const visibleMonthKey = `${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, "0")}`;
   const calendarConnected = Boolean(calendarAvailability?.enabled);
@@ -572,7 +598,15 @@ export function PlanForm({
     setCandidateDate(value);
     setCandidateEndDate((currentEndDate) => (currentEndDate === candidateDate || currentEndDate < value ? value : currentEndDate));
     setVisibleMonth(toMonthDate(value));
-    focusWithSmoothScroll(candidateHourRef);
+  }
+
+  function toggleCandidateDatePanel(date: string) {
+    // ここで updateCandidateDate(date) は呼ばない。onSelectComplete は
+    // onSelectRange(range.start, range.end) の直後に呼ばれる(単発タップなら
+    // start===end、複数日ドラッグなら end)ため、date(ドラッグ完了時は末尾の日)を
+    // candidateDate(範囲の開始)に上書きすると、既に updateCandidateRange が
+    // セットした複数日レンジが1日につぶれてしまう。
+    setExpandedPanelDate((current) => (current === date ? null : date));
   }
 
   function updateCandidateRange(start: string, end: string) {
@@ -609,6 +643,7 @@ export function PlanForm({
       )
     );
     setMessage(`${formatDateTime(selectedCandidateStart)} を候補に追加しました。`);
+    setExpandedPanelDate(null);
   }
 
   function removeCandidateDate(value: string) {
@@ -616,14 +651,63 @@ export function PlanForm({
     setMessage("");
   }
 
-  function applyTemplateTime(time: string) {
-    const start = toDateTimeLocalValueFromParts(candidateDate, time);
-    const end = splitDateTime(addMinutes(start, defaultDurationMinutes), "12:00");
-    setCandidateStartTime(time);
-    setCandidateEndDate(end.date);
-    setCandidateEndTime(end.time);
-    setCandidateIsAllDay(false);
-    focusWithSmoothScroll(candidateHourRef);
+  function renderCandidateDatePanel(date: string) {
+    const dailyBusy = groupAvailabilityByDate[candidateDate];
+    const dateLabel =
+      candidateDate === candidateEndDate
+        ? formatDateLabel(date)
+        : `${formatDateLabel(candidateDate)}〜${formatDateLabel(candidateEndDate)}`;
+    return (
+      <div className="grid gap-4">
+        <div>
+          <p className="text-base font-bold text-ink">{dateLabel}</p>
+          {groupConnectionStatus.memberCount > 0 ? (
+            <p className="mt-1 text-sm text-muted">
+              参加者 {groupConnectionStatus.memberCount}人中 {groupConnectionStatus.connectedCount}人分のカレンダー
+            </p>
+          ) : null}
+        </div>
+        {dailyBusy ? <DailyBusyTimelineBar segments={dailyBusy.segments} /> : null}
+        <label className="flex items-center gap-3 rounded-control border border-moss/16 bg-surface px-4 py-3 text-sm font-bold text-ink">
+          <input
+            type="checkbox"
+            aria-label="終日"
+            checked={candidateIsAllDay}
+            onChange={(event) => setCandidateIsAllDay(event.target.checked)}
+            className="h-5 w-5 rounded border-line text-moss focus:ring-clay"
+          />
+          終日
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="text-sm font-bold text-ink">開始時間</p>
+            <TimeDialPicker time={candidateStartTime} onTimeChange={setCandidateStartTime} label="開始" fieldLabel="開始" buttonRef={candidateHourRef} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-ink">終了時間</p>
+            <TimeDialPicker time={candidateEndTime} onTimeChange={setCandidateEndTime} label="終了" fieldLabel="終了" />
+          </div>
+        </div>
+        {candidateIsPast ? (
+          <p className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+            過去の日時は候補にできません。
+          </p>
+        ) : null}
+        {candidateEndIsInvalid ? (
+          <p className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
+            終了時間は開始時間より後にしてください。
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={addCandidateDate}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          候補に追加
+        </button>
+      </div>
+    );
   }
 
   function updateReminderDraft(id: string, values: Partial<Pick<ReminderDraft, "amount" | "unit">>) {
@@ -736,14 +820,16 @@ export function PlanForm({
             rangeStartDate={candidateDate}
             rangeEndDate={candidateEndDate}
             onSelectRange={updateCandidateRange}
-            onSelectComplete={() => focusWithSmoothScroll(candidateHourRef)}
+            onSelectComplete={toggleCandidateDatePanel}
+            expandedPanelDate={expandedPanelDate}
+            renderExpandedPanel={renderCandidateDatePanel}
           />
           {eventId ? (
             <GroupAvailabilityCalendar
               eventId={eventId}
               visibleMonth={visibleMonthKey}
-              selectedRange={{ start: selectedCandidateStart, end: selectedCandidateEnd }}
               onAvailabilityByDate={setGroupAvailabilityByDate}
+              onConnectionStatus={setGroupConnectionStatus}
             />
           ) : (
             <CalendarAvailabilityPanel
@@ -756,68 +842,6 @@ export function PlanForm({
               busyRanges={selectedDayBusyRanges}
             />
           )}
-          <label className="flex items-center gap-3 rounded-control border border-moss/16 bg-surface px-4 py-3 text-sm font-bold text-ink">
-            <input
-              type="checkbox"
-              aria-label="終日"
-                checked={candidateIsAllDay}
-                onChange={(event) => {
-                  setCandidateIsAllDay(event.target.checked);
-                }}
-              className="h-5 w-5 rounded border-line text-moss focus:ring-clay"
-            />
-            終日
-          </label>
-          {eventCategory === "nazotoki" ? (
-            <div className="rounded-control border border-moss/20 bg-mist/24 p-3">
-              <p className="text-sm font-bold text-ink">謎解きテンプレート</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {nazotokiTemplateTimes.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => applyTemplateTime(time)}
-                    className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay"
-                  >
-                    {time}〜
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-bold text-ink">開始時間</p>
-              <TimeDialPicker time={candidateStartTime} onTimeChange={setCandidateStartTime} label="開始" fieldLabel="開始" buttonRef={candidateHourRef} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-ink">終了時間</p>
-              <TimeDialPicker time={candidateEndTime} onTimeChange={setCandidateEndTime} label="終了" fieldLabel="終了" />
-            </div>
-          </div>
-          {candidateIsPast ? (
-            <p className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
-              過去の日時は候補にできません。
-            </p>
-          ) : null}
-          {candidateEndIsInvalid ? (
-            <p className="rounded-control border border-clay/25 bg-clay/10 p-3 text-sm text-ink" aria-live="polite">
-              終了時間は開始時間より後にしてください。
-            </p>
-          ) : null}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={addCandidateDate}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-            >
-              <Plus aria-hidden="true" className="h-4 w-4" />
-              候補に追加
-            </button>
-            <p className="rounded-full bg-mist/38 px-3 py-2 text-sm font-bold text-pine">
-              選択中: {formatDateTimeRange(selectedCandidateStart, selectedCandidateEnd, candidateIsAllDay)}
-            </p>
-          </div>
           <SelectedCandidates candidates={candidateDates} onRemove={removeCandidateDate} />
         </section>
       ) : null}
@@ -1008,8 +1032,15 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
   return (
     <div className="grid gap-2">
       {candidates.map((candidate, index) => (
-        <div key={candidate.start} className="flex items-center justify-between gap-3 rounded-control border border-moss/12 bg-surface px-4 py-3">
-          <div>
+        <div key={candidate.start} className="flex items-center gap-3 rounded-control border border-moss/12 bg-surface px-4 py-3">
+          <span
+            data-testid={`candidate-badge-${index + 1}`}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep text-xs font-bold tabular-nums text-white"
+            aria-hidden="true"
+          >
+            {index + 1}
+          </span>
+          <div className="flex-1">
             <p className="text-eyebrow uppercase text-pine">候補 {index + 1}</p>
             <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
           </div>
