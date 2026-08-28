@@ -181,7 +181,7 @@ export function TimeDialPicker({
               cx="90"
               cy="90"
               r="72"
-              fill="none"
+              fill="transparent"
               className="stroke-line"
               strokeWidth={2}
               style={{ cursor: "pointer" }}

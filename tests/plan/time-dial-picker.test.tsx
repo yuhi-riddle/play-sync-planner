@@ -54,6 +54,25 @@ describe("TimeDialPicker", () => {
     expect(onTimeChange).toHaveBeenLastCalledWith("03:00");
   });
 
+  it("ハンドルをドラッグすると時刻が変わる（時モード）", () => {
+    const onTimeChange = vi.fn();
+    render(<TimeDialPicker time="19:00" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
+    fireEvent.click(screen.getByRole("button", { name: "開始 19:00" }));
+
+    const svg = screen.getByTestId("time-dial-svg");
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, width: 180, height: 180, top: 0, left: 0, right: 180, bottom: 180, toJSON: () => ({})
+    } as DOMRect);
+    const handle = screen.getByRole("slider", { name: "開始のつまみ" });
+
+    fireEvent.pointerDown(handle);
+    // 90度・外側リング半径60をドラッグ先に = 3時。
+    fireEvent.pointerMove(window, { clientX: 90 + 60, clientY: 90 });
+    fireEvent.pointerUp(window);
+
+    expect(onTimeChange).toHaveBeenLastCalledWith("03:00");
+  });
+
   it("輪の中心寄りをタップすると内側リング(13〜23・00)の時刻が選ばれる（時モード）", () => {
     const onTimeChange = vi.fn();
     render(<TimeDialPicker time="19:00" onTimeChange={onTimeChange} label="開始" fieldLabel="開始" />);
