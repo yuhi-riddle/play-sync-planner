@@ -116,7 +116,8 @@ describe("参加者の空き状況API", () => {
     expect(body).toHaveProperty("dailyBusySummaries");
     expect(body.dailyBusySummaries["2026-07-15"]).toEqual({
       maxBusyCount: 2,
-      allDayBusyCount: 1
+      allDayBusyCount: 1,
+      segments: [1, 1, 2, 1, 1, 1]
     });
   });
 
