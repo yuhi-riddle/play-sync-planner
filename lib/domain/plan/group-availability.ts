@@ -94,9 +94,14 @@ export function buildAvailabilitySlots({
 
 const DAY_MILLISECONDS = 24 * 60 * 60 * 1000;
 
+export const DAILY_BUSY_TIMELINE_SEGMENT_HOURS = 4;
+export const DAILY_BUSY_TIMELINE_SEGMENT_COUNT = 24 / DAILY_BUSY_TIMELINE_SEGMENT_HOURS;
+
 export type DailyBusySummary = {
   maxBusyCount: number;
   allDayBusyCount: number;
+  /** 4時間ごと・計6区分の、区分内での同時busy人数の最大値。 */
+  segments: number[];
 };
 
 export function buildDailyBusySummaries({
@@ -111,6 +116,7 @@ export function buildDailyBusySummaries({
   const summaries: Record<string, DailyBusySummary> = {};
 
   const slotsPerDay = DAY_MILLISECONDS / SLOT_MILLISECONDS;
+  const slotsPerSegment = slotsPerDay / DAILY_BUSY_TIMELINE_SEGMENT_COUNT;
 
   for (let dayStart = startTime; dayStart < endTime; dayStart += DAY_MILLISECONDS) {
     const dayEnd = dayStart + DAY_MILLISECONDS;
@@ -118,10 +124,13 @@ export function buildDailyBusySummaries({
 
     // 参加者ごとのbusyスロット数を1回の走査で数える。全スロットでbusyだった
     // 人数がそのまま「終日」で、走査ごとの合計の最大値が「最大同時busy人数」。
+    // 区分ごとの最大値も同じ走査の中でついでに記録する。
     const busySlotCountByParticipant = new Array(busyByParticipant.length).fill(0);
     let maxBusyCount = 0;
+    const segments = new Array(DAILY_BUSY_TIMELINE_SEGMENT_COUNT).fill(0);
 
-    for (let slotStart = dayStart; slotStart < dayEnd; slotStart += SLOT_MILLISECONDS) {
+    let slotIndex = 0;
+    for (let slotStart = dayStart; slotStart < dayEnd; slotStart += SLOT_MILLISECONDS, slotIndex++) {
       const slot = { start: formatTokyoIso(slotStart), end: formatTokyoIso(slotStart + SLOT_MILLISECONDS) };
       let busyCount = 0;
       busyByParticipant.forEach((busyRanges, index) => {
@@ -131,11 +140,13 @@ export function buildDailyBusySummaries({
         }
       });
       maxBusyCount = Math.max(maxBusyCount, busyCount);
+      const segmentIndex = Math.floor(slotIndex / slotsPerSegment);
+      segments[segmentIndex] = Math.max(segments[segmentIndex], busyCount);
     }
 
     const allDayBusyCount = busySlotCountByParticipant.filter((count) => count === slotsPerDay).length;
 
-    summaries[date] = { maxBusyCount, allDayBusyCount };
+    summaries[date] = { maxBusyCount, allDayBusyCount, segments };
   }
 
   return summaries;
