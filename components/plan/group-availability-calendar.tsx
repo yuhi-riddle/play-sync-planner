@@ -106,7 +106,9 @@ export function GroupAvailabilityCalendar({
               参加者全体の空き状況
             </h3>
           </div>
-          <p className="mt-1 text-sm leading-6 text-muted">予定の名前・場所・個別の空き時間は表示しません。</p>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            予定の名前・場所・誰が空いているかは表示しません。時間帯ごとの重なり人数（匿名）のみ表示します。
+          </p>
         </div>
         {error !== accessDeniedMessage ? (
           <button
