@@ -24,4 +24,19 @@ describe("DailyBusyTimelineBar", () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
+
+  it("4時間ごとの予定人数を読み上げられる要約にする", () => {
+    render(<DailyBusyTimelineBar segments={[0, 1, 2, 3, 0, 1]} />);
+
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "aria-label",
+      "0時〜4時は予定なし、4時〜8時は1人が予定あり、8時〜12時は2人が予定あり、12時〜16時は3人が予定あり、16時〜20時は予定なし、20時〜24時は1人が予定あり"
+    );
+  });
+
+  it("色の濃さが表す予定人数の凡例を表示する", () => {
+    render(<DailyBusyTimelineBar segments={[0, 0, 0, 0, 0, 0]} />);
+
+    expect(screen.getByText("薄い色＝1人、濃い色＝複数人が重なっている")).toBeInTheDocument();
+  });
 });

@@ -35,6 +35,8 @@ describe("GroupAvailabilityCalendar", () => {
         "2026-07-15": { maxBusyCount: 1, allDayBusyCount: 0, segments: [0, 0, 0, 0, 0, 0] }
       })
     );
+    expect(fetch).toHaveBeenCalledWith("/api/events/event-1/availability?month=2026-07", expect.anything());
+    expect(screen.getByRole("button", { name: "空き状況を更新" })).toBeEnabled();
   });
 
   it("誰も連携していないときは、空きゼロではなく集計できないと伝える", async () => {

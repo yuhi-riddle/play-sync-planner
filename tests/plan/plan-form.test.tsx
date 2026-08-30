@@ -268,6 +268,31 @@ describe("PlanForm", () => {
     expect(screen.getByRole("button", { name: /^開始 /, hidden: false })).toBeInTheDocument();
   });
 
+  it("候補日の展開状態とパネルの表示をスクリーンリーダーへ伝える", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    const dayButton = screen.getByLabelText(/7月15日.*を選択/);
+    fireEvent.click(dayButton);
+
+    const addButton = await screen.findByRole("button", { name: "候補に追加" });
+    expect(dayButton).toHaveAttribute("aria-expanded", "true");
+    expect(addButton.closest('[aria-live="polite"]')).toBeInTheDocument();
+
+    fireEvent.click(dayButton);
+
+    expect(dayButton).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("展開パネルのない回答期限の日付には展開状態を付けない", async () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
+
+    fireEvent.click(screen.getByLabelText(/7月15日.*を選択/));
+    fireEvent.click(await screen.findByRole("button", { name: "候補に追加" }));
+    fireEvent.click(screen.getByRole("button", { name: /次へ/ }));
+
+    expect(screen.getByLabelText(/7月14日.*を選択/)).not.toHaveAttribute("aria-expanded");
+  });
+
   /*
    * 実ブラウザでの単純なタップ(マウス/タッチ)は pointerdown→pointerup→click の順に
    * 発火する。onPointerUp がパネルの開閉トグルを処理した直後に onClick も同じ処理を
