@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function NewPlanPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: event } = await supabase.from("events").select("id, title, category").eq("id", eventId).single();
+  const { data: event } = await supabase.from("events").select("id, title").eq("id", eventId).single();
   const userId = await getCurrentUserId();
 
   if (!event) {
@@ -36,7 +36,6 @@ export default async function NewPlanPage({ params }: { params: Promise<{ eventI
           eventId={eventId}
           participantCount={participantCount ?? 0}
           submitLabel="この内容で日程調整を始める"
-          eventCategory={event.category}
           calendarAvailability={{ enabled: Boolean(calendarIntegration) }}
         />
       </Card>

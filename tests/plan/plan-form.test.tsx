@@ -79,8 +79,8 @@ describe("PlanForm", () => {
     expect(screen.queryByRole("heading", { name: "内容を確認する" })).not.toBeInTheDocument();
   });
 
-  it("謎解きカテゴリでも、謎解きテンプレートは表示されない", () => {
-    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" eventCategory="nazotoki" />);
+  it("謎解きテンプレートは表示されない（機能は廃止済み）", () => {
+    render(<PlanForm action={vi.fn()} submitLabel="共有リンクを作成" />);
 
     expect(screen.queryByText("謎解きテンプレート")).not.toBeInTheDocument();
   });

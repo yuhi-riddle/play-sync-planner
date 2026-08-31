@@ -461,7 +461,6 @@ export function PlanForm({
   action,
   plan,
   submitLabel,
-  eventCategory,
   eventId,
   participantCount,
   calendarAvailability
@@ -469,7 +468,6 @@ export function PlanForm({
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   plan?: PlanRecord;
   submitLabel: string;
-  eventCategory?: string | null;
   eventId?: string;
   participantCount?: number;
   calendarAvailability?: { enabled: boolean };
