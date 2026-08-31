@@ -14,11 +14,14 @@ vi.mock("@/lib/google-calendar/access-token", () => ({ resolveGoogleCalendarAcce
 vi.mock("@/lib/google-calendar/freebusy", () => ({
   fetchCalendarFreeBusy,
   CalendarFreeBusyError: class extends Error {
-    status = 500;
+    constructor(public readonly status: number) {
+      super(`CalendarFreeBusyError ${status}`);
+    }
   }
 }));
 
 import { GET } from "@/app/api/events/[eventId]/availability/route";
+import { CalendarFreeBusyError } from "@/lib/google-calendar/freebusy";
 
 const ownerId = "owner-1";
 
@@ -135,5 +138,48 @@ describe("参加者の空き状況API", () => {
 
     expect(response.status).toBe(401);
     expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+  });
+
+  it("1人の取得が失敗しても残りで集計し、failedCount を返す", async () => {
+    createSupabaseAdminClient.mockReturnValue(
+      adminClient({ memberUserIds: ["u1", "u2", "u3"], connectedUserIds: ["u1", "u2", "u3"] })
+    );
+    fetchCalendarFreeBusy
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce([]);
+
+    const response = await GET(request(), params);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.failedCount).toBe(1);
+    expect(body.succeededCount).toBe(2);
+    expect(body.code).toBeUndefined();
+  });
+
+  it("閲覧者本人の連携が切れているときだけ再連携コードを返す", async () => {
+    createSupabaseAdminClient.mockReturnValue(
+      adminClient({ memberUserIds: [ownerId, "u2"], connectedUserIds: [ownerId, "u2"] })
+    );
+    fetchCalendarFreeBusy.mockRejectedValueOnce(new CalendarFreeBusyError(401)).mockResolvedValueOnce([]);
+
+    const response = await GET(request(), params);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.failedCount).toBe(1);
+    expect(body.code).toBe("calendar_reconnect_required");
+  });
+
+  it("全員分の取得に失敗したら 502 を返す", async () => {
+    createSupabaseAdminClient.mockReturnValue(
+      adminClient({ memberUserIds: ["u1", "u2"], connectedUserIds: ["u1", "u2"] })
+    );
+    fetchCalendarFreeBusy.mockRejectedValue(new Error("down"));
+
+    const response = await GET(request(), params);
+
+    expect(response.status).toBe(502);
   });
 });
