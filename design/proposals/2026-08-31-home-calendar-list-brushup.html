@@ -1,0 +1,236 @@
+<title>ホーム・カレンダー・一覧の手直し</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<style>
+  :root {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7; --page-accent: #344f43;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+      --page-line: #3a352e; --page-panel: #24211d; --page-accent: #8fb59b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+    --page-line: #3a352e; --page-panel: #24211d; --page-accent: #8fb59b;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7; --page-accent: #344f43;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--page-fg);
+    font-family: "Zen Maru Gothic", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 24px 72px; }
+  header.top { margin-bottom: 28px; }
+  h1 { margin: 0 0 10px; font-size: 1.5rem; font-weight: 900; letter-spacing: 0.01em; }
+  .lede { max-width: 640px; color: var(--page-muted); font-size: 0.9375rem; margin: 0; }
+
+  .decided { border: 1px solid var(--page-line); border-radius: 14px; background: var(--page-panel); padding: 16px 18px; margin-bottom: 8px; }
+  .decided h3 { margin: 0 0 8px; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--page-muted); }
+  .decided ul { margin: 0; padding-left: 18px; font-size: 0.875rem; }
+  .decided li { margin: 3px 0; }
+  .decided li b { color: var(--page-accent); }
+
+  section.item { border-top: 1px solid var(--page-line); padding-top: 28px; margin-top: 40px; }
+  .kicker { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--page-muted); }
+  h2 { margin: 4px 0 6px; font-size: 1.125rem; font-weight: 900; }
+  .why { max-width: 660px; color: var(--page-muted); font-size: 0.875rem; margin: 0 0 6px; }
+  .rec { max-width: 660px; font-size: 0.8125rem; border-left: 3px solid #d9aa4f; padding-left: 12px; margin: 14px 0 22px; }
+  .rec b { color: var(--page-fg); }
+
+  .row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+  .col { flex: 1 1 300px; min-width: 260px; }
+  .col-head { margin-bottom: 10px; }
+  .col-head .name { font-weight: 900; font-size: 0.875rem; }
+  .col-head .name.now { color: var(--page-muted); }
+  .col-head .aim { font-size: 0.8125rem; color: var(--page-muted); margin-top: 2px; }
+
+  .frame {
+    --canvas: #f7f3ef; --surface: #fffdf7; --sunken: #f6f0e4;
+    --line: #e4dac6; --line-strong: #cbbfa6;
+    --ink: #262320; --muted: #6f665c; --subtle: #948a7d;
+    --pine: #344f43; --pine-deep: #2c4638; --moss: #5f7d65;
+    --clay: #df7d69; --clay-ink: #a8492f;
+    --honey: #d9aa4f; --honey-ink: #7f5c19; --honey-bg: #f8efd9;
+    --skywash: #d9e8e7; --sky-ink: #1f6f74; --mist: #eff3ee;
+    background: var(--canvas); border: 1px solid var(--page-line); border-radius: 16px;
+    padding: 16px; color: var(--ink); font-size: 14px;
+  }
+  .frame + .frame { margin-top: 12px; }
+  .frame .cap { font-size: 0.6875rem; color: var(--subtle); text-align: center; margin-top: 10px; }
+  .hint { font-size: 0.625rem; color: var(--subtle); text-align: center; margin-top: 4px; }
+
+  .icon-btn { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .search { display: flex; gap: 8px; }
+  .search input { flex: 1; min-width: 0; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--sunken); padding: 8px 12px; font: inherit; font-size: 0.8125rem; color: var(--muted); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-size: 0.8125rem; font-weight: 700; color: var(--ink); }
+  .chip.on { border-color: var(--pine-deep); background: linear-gradient(135deg, var(--pine), var(--pine-deep)); color: #fff; }
+  .box { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 14px; }
+  .summ { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 0.8125rem; color: var(--muted); }
+  .summ .lead { font-weight: 700; color: var(--ink); }
+  .summ b { color: var(--pine); font-weight: 700; white-space: nowrap; }
+  .subrow { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+
+  .mhead { display: flex; align-items: center; gap: 8px; }
+  .mhead .label { flex: 1; text-align: center; font-weight: 900; font-size: 1rem; }
+  .mhead .label.pick { border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; background: var(--surface); flex: 0 1 auto; }
+  .panel { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px; }
+  .mgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+  .mgrid button { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 8px 0; font: inherit; font-size: 0.8125rem; font-weight: 700; color: var(--ink); }
+  .mgrid button.on { background: linear-gradient(135deg, var(--pine), var(--pine-deep)); color: #fff; border-color: var(--pine-deep); }
+
+  /* 横スクロール年チップ */
+  .yscroll { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .yscroll::-webkit-scrollbar { height: 4px; }
+  .yscroll::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+  .yscroll button { flex: none; scroll-snap-align: center; min-width: 62px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 7px 0; font: inherit; font-size: 0.875rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .yscroll button.on { background: linear-gradient(135deg, var(--pine), var(--pine-deep)); color: #fff; border-color: var(--pine-deep); }
+
+  /* 縦スクロールホイール */
+  .wheel { position: relative; height: 132px; overflow: hidden; border-radius: 12px; background: var(--sunken); }
+  .wheel .track { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; padding: 44px 0; -webkit-overflow-scrolling: touch; }
+  .wheel .track::-webkit-scrollbar { display: none; }
+  .wheel .track div { height: 44px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--subtle); font-size: 0.875rem; }
+  .wheel .track div.on { color: var(--pine); font-size: 1.0625rem; font-weight: 900; }
+  .wheel::before, .wheel::after { content: ""; position: absolute; left: 0; right: 0; height: 44px; pointer-events: none; z-index: 2; }
+  .wheel::before { top: 0; background: linear-gradient(var(--sunken), transparent); }
+  .wheel::after { bottom: 0; background: linear-gradient(transparent, var(--sunken)); }
+  .wheel .bar { position: absolute; left: 8px; right: 8px; top: 44px; height: 44px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); pointer-events: none; z-index: 1; }
+
+  .wd { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.625rem; font-weight: 700; margin-bottom: 3px; }
+  .wd .sun { color: var(--clay-ink); } .wd .sat { color: var(--sky-ink); }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cell { min-height: 44px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 5px; font-size: 0.6875rem; font-weight: 700; position: relative; }
+  .cell .dots { display: flex; gap: 2px; margin-top: 4px; }
+  .cell .dots i { width: 5px; height: 5px; border-radius: 999px; display: block; }
+  .cell .dots .h { background: var(--honey); } .cell .dots .m { background: var(--moss); }
+  .cell.sun { color: var(--clay-ink); } .cell.sat { color: var(--sky-ink); }
+  .cell.sel { background: linear-gradient(135deg, var(--pine), var(--pine-deep)); color: #fff; border-color: var(--pine-deep); }
+  .cell.today { border: 2px solid var(--pine); }
+  .cell.today::after { content: "今日"; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 0.5rem; background: var(--pine); color: #fff; border-radius: 999px; padding: 0 5px; line-height: 1.4; }
+
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; background: color-mix(in srgb, var(--page-line) 40%, transparent); padding: 1px 5px; border-radius: 5px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>ホーム・カレンダー・一覧の手直し</h1>
+    <p class="lede">Batch A の全項目が確定。以下は決定内容の記録。年は縦スクロールホイール（案イ）で確定。</p>
+  </header>
+
+  <div class="decided">
+    <h3>確定した項目</h3>
+    <ul>
+      <li><b>1</b> ホーム「次の予定」— 確定が無ければ直近の調整中にフォールバック</li>
+      <li><b>2</b> 一覧フィルター = カードで囲う＋<b>案イ</b>（状態チップは表に残し、検索・並び順だけたたむ）</li>
+      <li><b>3</b> カレンダーに「今日」ボタン（当月表示中は非表示）</li>
+      <li><b>4</b> 直近予定バーは見送り。ホームの「次の予定」だけ</li>
+      <li><b>5A</b> 選択日 = pine 塗りつぶし ／ 今日 = 枠＋「今日」ラベル</li>
+      <li><b>6A</b> 土日祝の背景色は全廃。赤/青は文字のみ</li>
+      <li><b>7A</b> 月ピッカー = 12ヶ月グリッド（<code>&lt;input type="month"&gt;</code> 撤去）＋年は<b>縦スクロールホイール</b>（案イ）</li>
+    </ul>
+    <p style="font-size:0.8125rem;color:var(--page-muted);margin:10px 0 0">全項目確定。この内容で設計docに落とす。ホイールはキーボード操作（各年は実ボタン）と <code>prefers-reduced-motion</code>、ヘッダーの ‹ › も残す形で実装する。</p>
+  </div>
+
+  <section class="item">
+    <p class="kicker">補足 ／ 2 について</p>
+    <h2>「現状のほうが良い」部分もある</h2>
+    <p class="why">正直に言うと、2 の効き目のほとんどは<b>カードで囲うこと</b>。検索欄の開閉は effect が小さい（今も検索欄は「2ページ以上ある時だけ」出る条件付き表示）。案イでやるのは <b>①外側をカードで囲う ②状態チップの下に「検索・並び替え ▾」の1行を足して、検索と並び順をそこにたたむ</b> の2つ。現状の段階的開示のまま、境界だけ足すイメージ。ここは実装時にコードを見て、やり過ぎなら②は省く判断もあり。</p>
+  </section>
+
+  <section class="item">
+    <p class="kicker">確定形の確認 ／ 5A + 6A + 3</p>
+    <h2>手直し後の月グリッド</h2>
+    <div class="row">
+      <div class="col" style="flex:0 1 340px">
+        <div class="frame">
+          <div class="mhead"><span class="icon-btn">‹</span><span class="label">2026年9月</span><span class="icon-btn">›</span><button class="chip" style="padding:5px 12px;font-size:0.75rem">今日</button></div>
+          <div style="margin-top:12px" class="wd"><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span></div>
+          <div class="grid">
+            <div class="cell sun">6</div><div class="cell">7</div><div class="cell">8</div><div class="cell">9</div><div class="cell today">10</div><div class="cell">11</div><div class="cell sat">12<div class="dots"><i class="h"></i></div></div>
+            <div class="cell sun">13</div><div class="cell sel">14<div class="dots"><i class="h" style="background:#fff"></i></div></div><div class="cell">15</div><div class="cell">16</div><div class="cell">17<div class="dots"><i class="m"></i></div></div><div class="cell">18</div><div class="cell sat">19</div>
+          </div>
+          <div class="cap">10日=今日／14日=選択中。背景色は状態だけ、曜日は文字色</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="item">
+    <p class="kicker">Calendar ／ 決めたい</p>
+    <h2>7A「年」の選び方 — スクロール系3案</h2>
+    <p class="why">ステッパー（1年ずつポチポチ）はやめ。年をスワイプで流せる形。ラベルの「2026年9月 ▾」をタップするとパネルが開く前提。</p>
+    <div class="row">
+      <div class="col">
+        <div class="col-head"><div class="name">案ア ／ 横スクロールの年チップ</div><div class="aim">年を横にグワーッと流す。既存の「横スクロール帯」と同じ作法</div></div>
+        <div class="frame">
+          <div class="mhead"><span class="icon-btn">‹</span><span class="label pick">2026年9月 ▾</span><span class="icon-btn">›</span></div>
+          <div class="panel">
+            <div class="yscroll">
+              <button>2022</button><button>2023</button><button>2024</button><button>2025</button><button class="on">2026</button><button>2027</button><button>2028</button><button>2029</button>
+            </div>
+            <div class="mgrid">
+              <button>1月</button><button>2月</button><button>3月</button><button>4月</button>
+              <button>5月</button><button>6月</button><button>7月</button><button>8月</button>
+              <button class="on">9月</button><button>10月</button><button>11月</button><button>12月</button>
+            </div>
+          </div>
+          <div class="hint">← 年を横スワイプ ／ 下で月をタップ →</div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="col-head"><div class="name">案イ ／ 縦スクロールホイール ★採用</div><div class="aim">iOS のピッカー風。年だけくるくる回す</div></div>
+        <div class="frame">
+          <div class="mhead"><span class="icon-btn">‹</span><span class="label pick">2026年9月 ▾</span><span class="icon-btn">›</span></div>
+          <div class="panel">
+            <div class="wheel">
+              <div class="bar"></div>
+              <div class="track">
+                <div>2023</div><div>2024</div><div>2025</div><div class="on">2026</div><div>2027</div><div>2028</div><div>2029</div>
+              </div>
+            </div>
+            <div class="mgrid">
+              <button>1月</button><button>2月</button><button>3月</button><button>4月</button>
+              <button>5月</button><button>6月</button><button>7月</button><button>8月</button>
+              <button class="on">9月</button><button>10月</button><button>11月</button><button>12月</button>
+            </div>
+          </div>
+          <div class="hint">年を縦にフリック。中央のバーが選択中</div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="col-head"><div class="name">案ウ ／ 年月を1本の縦スクロール</div><div class="aim">年の見出し付きで、全部つなげてスクロール</div></div>
+        <div class="frame">
+          <div class="mhead"><span class="icon-btn">‹</span><span class="label pick">2026年9月 ▾</span><span class="icon-btn">›</span></div>
+          <div class="panel" style="max-height:200px;overflow-y:auto">
+            <div style="font-size:0.75rem;font-weight:900;color:var(--muted);margin:2px 0 6px">2025年</div>
+            <div class="mgrid" style="margin-top:0">
+              <button>1月</button><button>2月</button><button>3月</button><button>4月</button>
+              <button>5月</button><button>6月</button><button>7月</button><button>8月</button>
+              <button>9月</button><button>10月</button><button>11月</button><button>12月</button>
+            </div>
+            <div style="font-size:0.75rem;font-weight:900;color:var(--pine);margin:12px 0 6px">2026年</div>
+            <div class="mgrid" style="margin-top:0">
+              <button>1月</button><button>2月</button><button>3月</button><button>4月</button>
+              <button>5月</button><button>6月</button><button>7月</button><button>8月</button>
+              <button class="on">9月</button><button>10月</button><button>11月</button><button>12月</button>
+            </div>
+            <div style="font-size:0.75rem;font-weight:900;color:var(--muted);margin:12px 0 6px">2027年</div>
+            <div class="mgrid" style="margin-top:0">
+              <button>1月</button><button>2月</button><button>3月</button><button>4月</button>
+            </div>
+          </div>
+          <div class="hint">年をまたいでグワーッと縦スクロール。年の切替という概念がなくなる</div>
+        </div>
+      </div>
+    </div>
+    <p class="rec">推奨は<b>案ア</b>。月グリッドと同じ「タップで選ぶ」操作で、年だけ横に流せる。Madoi は既にイベント一覧の状態帯などで横スクロールを使っていて、作法がそろう。案イ（ホイール）は気持ちいいが Madoi に前例がなく、実装とアクセシビリティの手間が増える。案ウは自由度が高い反面、パネルが大きくなる。</p>
+  </section>
+</div>
