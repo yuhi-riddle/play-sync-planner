@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  CalendarEventDuplicateError,
   fetchCalendarEvents,
   insertCalendarEvent,
   monthTimeRange,
@@ -106,6 +107,43 @@ describe("calendar event helpers", () => {
     );
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("singleEvents=true"), expect.anything());
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("summary%2Clocation"), expect.anything());
+  });
+
+  it("sends a fixed id when externalId is given (idempotent insert)", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ id: "madoiplandeadbeef" }) }));
+
+    await insertCalendarEvent({
+      accessToken: "t",
+      event: {
+        title: "T",
+        location: null,
+        start: "2026-07-01T10:00:00+09:00",
+        end: "2026-07-01T12:00:00+09:00",
+        externalId: "madoiplandeadbeef"
+      },
+      fetchImpl: fetchImpl as unknown as typeof fetch
+    });
+
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string }];
+    expect(JSON.parse(init.body)).toMatchObject({ id: "madoiplandeadbeef" });
+  });
+
+  it("throws CalendarEventDuplicateError on a 409", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 409, json: async () => ({}) })) as unknown as typeof fetch;
+
+    await expect(
+      insertCalendarEvent({
+        accessToken: "t",
+        event: {
+          title: "T",
+          location: null,
+          start: "2026-07-01T10:00:00+09:00",
+          end: "2026-07-01T12:00:00+09:00",
+          externalId: "madoiplandeadbeef"
+        },
+        fetchImpl
+      })
+    ).rejects.toBeInstanceOf(CalendarEventDuplicateError);
   });
 
   it("inserts a confirmed calendar event", async () => {
