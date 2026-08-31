@@ -36,6 +36,14 @@ jobs:
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
+      - name: Bootstrap storage schema stub
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: psql -v ON_ERROR_STOP=1 --no-psqlrc -q -f scripts/ci-bootstrap-db.sql
       - name: Apply migrations in order
         env:
           PGHOST: localhost
