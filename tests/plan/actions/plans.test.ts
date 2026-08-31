@@ -47,6 +47,7 @@ function noopSupabaseClient() {
  */
 function recordingSupabaseClient() {
   const inserted: Record<string, unknown[]> = {};
+  const rpc = vi.fn(async () => ({ data: planId, error: null }));
   const from = vi.fn((table: string) => {
     const builder: Record<string, unknown> = {};
     builder.select = vi.fn(() => builder);
@@ -67,7 +68,7 @@ function recordingSupabaseClient() {
     return builder;
   });
 
-  return { client: { from }, inserted };
+  return { client: { from, rpc }, inserted, rpc };
 }
 
 /**
@@ -77,6 +78,7 @@ function recordingSupabaseClient() {
 function updateRecordingClient() {
   const inserted: Record<string, unknown[]> = {};
   const deleted: string[] = [];
+  const rpc = vi.fn(async () => ({ data: eventId, error: null }));
   const from = vi.fn((table: string) => {
     const builder: Record<string, unknown> = {};
     builder.select = vi.fn(() => builder);
@@ -98,7 +100,7 @@ function updateRecordingClient() {
     return builder;
   });
 
-  return { client: { from }, inserted, deleted };
+  return { client: { from, rpc }, inserted, deleted, rpc };
 }
 
 function planFormData(overrides: Record<string, string> = {}) {
@@ -153,21 +155,23 @@ describe("createPlanAction", () => {
     process.env.TZ = "UTC";
 
     try {
-      const { client, inserted } = recordingSupabaseClient();
+      const { client, rpc } = recordingSupabaseClient();
       createSupabaseServerClient.mockResolvedValue(client);
 
-      // 成功時は redirect() で抜けるので戻り値は無い。insert された中身で確かめる。
+      // 成功時は redirect() で抜けるので戻り値は無い。RPC に渡した中身で確かめる。
       await createPlanAction(eventId, { status: "idle" }, planFormData());
       expect(redirect).toHaveBeenCalled();
 
-      const candidates = inserted["candidate_dates"]?.[0] as { start_at: string; end_at: string | null }[];
+      const calls = rpc.mock.calls as unknown as Array<[string, Record<string, unknown>]>;
+      const params = calls.find(([name]) => name === "create_plan_with_children")?.[1] as {
+        p_answer_deadline_at: string;
+        p_candidate_dates: { start_at: string; end_at: string | null }[];
+      };
       // JST 2026-07-15 10:00 = 2026-07-15T01:00:00.000Z
-      expect(candidates[0].start_at).toBe("2026-07-15T01:00:00.000Z");
-      expect(candidates[0].end_at).toBe("2026-07-15T03:00:00.000Z");
-
-      const plans = inserted["plans"]?.[0] as { answer_deadline_at: string };
+      expect(params.p_candidate_dates[0].start_at).toBe("2026-07-15T01:00:00.000Z");
+      expect(params.p_candidate_dates[0].end_at).toBe("2026-07-15T03:00:00.000Z");
       // JST 2026-07-10 23:00 = 2026-07-10T14:00:00.000Z
-      expect(plans.answer_deadline_at).toBe("2026-07-10T14:00:00.000Z");
+      expect(params.p_answer_deadline_at).toBe("2026-07-10T14:00:00.000Z");
     } finally {
       process.env.TZ = original;
     }
@@ -198,13 +202,15 @@ describe("updatePlanAction", () => {
    * イベントメンバーと紐付いた参加者が全部消えて、user_id の無いゲスト行に置き換わる。
    */
   it("participantNames を送ってもゲスト参加者を作り直さない", async () => {
-    const { client, inserted, deleted } = updateRecordingClient();
+    const { client, rpc } = updateRecordingClient();
     createSupabaseServerClient.mockResolvedValue(client);
 
     await updatePlanAction(planId, { status: "idle" }, planFormData({ participantNames: "たろう\nはなこ" }));
 
     expect(redirect).toHaveBeenCalled();
-    expect(deleted).not.toContain("participants");
-    expect(inserted["participants"]).toBeUndefined();
+    const calls = rpc.mock.calls as unknown as Array<[string, Record<string, unknown>]>;
+    const params = calls.find(([name]) => name === "replace_plan_schedule")?.[1] ?? {};
+    // 日程編集 RPC は参加者に関する引数を一切受け取らない（＝作り直しようがない）。
+    expect(Object.keys(params).some((key) => key.includes("participant"))).toBe(false);
   });
 });

@@ -71,60 +71,46 @@ export async function createPlanAction(
     return errorState("主催者を含む参加者を集めてから日程調整を作成してください。");
   }
 
-  const { data: plan, error: planError } = await supabase
-    .from("plans")
-    .insert({
-      event_id: eventId,
-      owner_user_id: userId,
-      title: values.title,
-      answer_deadline_at: toIsoDateTime(values.answer_deadline_at),
-      memo: values.memo,
-      status: "collecting_answers",
-      settlement_status: "not_started",
-      ticket_status: "not_purchased"
-    })
-    .select("id")
-    .single();
-
-  if (planError) {
-    return failWith("日程調整を作成できませんでした。", planError);
-  }
-
-  const participants = buildPlanParticipantsFromMembers(members, plan.id);
+  // plan 本体は RPC 内で作るので、buildPlanParticipantsFromMembers / buildAnswerShareLink には
+  // 仮の plan_id を渡し、RPC 側で本物の plan_id を埋め直す。
+  const participants = buildPlanParticipantsFromMembers(members, "");
+  const shareLink = buildAnswerShareLink("", toIsoDateTime(values.answer_deadline_at));
+  const reminderOffsets = normalizeReminderOffsets(values);
 
   const candidateDates = values.candidateDates.map((candidateDate, index) => ({
-    plan_id: plan.id,
     start_at: toIsoDateTime(candidateDate),
     end_at: values.candidateEndDates[index] ? toIsoDateTime(values.candidateEndDates[index]) : null,
     is_all_day: values.candidateAllDays[index] ?? false,
     sort_order: index
   }));
 
-  const shareLink = buildAnswerShareLink(plan.id, toIsoDateTime(values.answer_deadline_at));
-  const reminderOffsets = normalizeReminderOffsets(values);
-  const reminderSetting = {
-    plan_id: plan.id,
-    reminder_offset_minutes: reminderOffsets[0] ?? null,
-    reminder_offsets_minutes: reminderOffsets
-  };
+  // plan・参加者・候補日・共有リンク・リマインド設定の作成を 1 トランザクションで行う。
+  const { data: planId, error: writeError } = await supabase.rpc("create_plan_with_children", {
+    p_event_id: eventId,
+    p_title: values.title,
+    p_answer_deadline_at: toIsoDateTime(values.answer_deadline_at),
+    p_memo: values.memo ?? null,
+    p_participants: participants.map((participant) => ({
+      user_id: participant.user_id,
+      display_name: participant.display_name,
+      participant_type: participant.participant_type,
+      status: participant.status,
+      is_organizer: participant.is_organizer
+    })),
+    p_candidate_dates: candidateDates,
+    p_share_token: shareLink.token,
+    p_share_expires_at: shareLink.expires_at,
+    p_reminder_offset_minutes: reminderOffsets[0] ?? null,
+    p_reminder_offsets_minutes: reminderOffsets
+  });
 
-  const [{ error: participantsError }, { error: datesError }, { error: linkError }, { error: reminderError }] = await Promise.all([
-    participants.length > 0 ? supabase.from("participants").insert(participants) : Promise.resolve({ error: null }),
-    supabase.from("candidate_dates").insert(candidateDates),
-    supabase.from("share_links").insert(shareLink),
-    supabase.from("plan_reminder_settings").insert(reminderSetting)
-  ]);
-
-  if (participantsError || datesError || linkError || reminderError) {
-    return failWith(
-      "日程調整を作成できませんでした。",
-      participantsError ?? datesError ?? linkError ?? reminderError
-    );
+  if (writeError || !planId) {
+    return failWith("日程調整を作成できませんでした。", writeError);
   }
 
   revalidatePath("/");
   revalidatePath(`/events/${eventId}`);
-  redirect(`/plans/${plan.id}`);
+  redirect(`/plans/${planId}`);
 }
 
 export async function updatePlanAction(
@@ -144,58 +130,35 @@ export async function updatePlanAction(
   const values = parsed.data;
 
   const supabase = await createSupabaseServerClient();
-  const { data: plan, error: planError } = await supabase
-    .from("plans")
-    .update({
-      title: values.title,
-      answer_deadline_at: toIsoDateTime(values.answer_deadline_at),
-      memo: values.memo
-    })
-    .eq("id", planId)
-    .eq("owner_user_id", userId)
-    .select("event_id")
-    .single();
-
-  if (planError) {
-    return failWith("日程調整を更新できませんでした。", planError);
-  }
-
-  await supabase.from("availability_answers").delete().in(
-    "candidate_date_id",
-    await supabase
-      .from("candidate_dates")
-      .select("id")
-      .eq("plan_id", planId)
-      .then(({ data }) => (data ?? []).map((row) => row.id))
-  );
-  // 参加者は触らない。イベントメンバーから作られていて、編集画面にも入力欄が無い。
-  await supabase.from("candidate_dates").delete().eq("plan_id", planId);
 
   const candidateDates = values.candidateDates.map((candidateDate, index) => ({
-    plan_id: planId,
     start_at: toIsoDateTime(candidateDate),
     end_at: values.candidateEndDates[index] ? toIsoDateTime(values.candidateEndDates[index]) : null,
     is_all_day: values.candidateAllDays[index] ?? false,
     sort_order: index
   }));
   const reminderOffsets = normalizeReminderOffsets(values);
-  const reminderSetting = {
-    plan_id: planId,
-    reminder_offset_minutes: reminderOffsets[0] ?? null,
-    reminder_offsets_minutes: reminderOffsets
-  };
 
-  const [{ error: datesError }, { error: reminderError }] = await Promise.all([
-    supabase.from("candidate_dates").insert(candidateDates),
-    supabase.from("plan_reminder_settings").upsert(reminderSetting, { onConflict: "plan_id" })
-  ]);
+  // plan 更新・回答と候補日の入れ替え・リマインド設定の upsert を 1 トランザクション
+  // （plan 行ロック下）で行う。参加者は触らない（編集画面に入力欄が無い）。
+  const { data: eventId, error: writeError } = await supabase.rpc("replace_plan_schedule", {
+    target_plan_id: planId,
+    p_title: values.title,
+    p_answer_deadline_at: toIsoDateTime(values.answer_deadline_at),
+    p_memo: values.memo ?? null,
+    p_candidate_dates: candidateDates,
+    p_reminder_offset_minutes: reminderOffsets[0] ?? null,
+    p_reminder_offsets_minutes: reminderOffsets
+  });
 
-  if (datesError || reminderError) {
-    return failWith("日程調整を更新できませんでした。", datesError ?? reminderError);
+  if (writeError) {
+    return failWith("日程調整を更新できませんでした。", writeError);
   }
 
   revalidatePath("/");
-  revalidatePath(`/events/${plan.event_id}`);
+  if (eventId) {
+    revalidatePath(`/events/${eventId}`);
+  }
   revalidatePath(`/plans/${planId}`);
   redirect(`/plans/${planId}`);
 }
