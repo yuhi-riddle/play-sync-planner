@@ -1,15 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const { createSupabaseAdminClient, getCurrentUser, resolveGoogleCalendarAccessToken, fetchCalendarFreeBusy } = vi.hoisted(
+const { createSupabaseAdminClient, getCurrentActiveUser, resolveGoogleCalendarAccessToken, fetchCalendarFreeBusy } = vi.hoisted(
   () => ({
     createSupabaseAdminClient: vi.fn(),
-    getCurrentUser: vi.fn(),
+    getCurrentActiveUser: vi.fn(),
     resolveGoogleCalendarAccessToken: vi.fn(),
     fetchCalendarFreeBusy: vi.fn()
   })
 );
 
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient, getCurrentActiveUser }));
 vi.mock("@/lib/google-calendar/access-token", () => ({ resolveGoogleCalendarAccessToken }));
 vi.mock("@/lib/google-calendar/freebusy", () => ({
   fetchCalendarFreeBusy,
@@ -62,7 +62,7 @@ const params = { params: Promise.resolve({ eventId: "event-1" }) };
 describe("参加者の空き状況API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: ownerId });
+    getCurrentActiveUser.mockResolvedValue({ id: ownerId });
     resolveGoogleCalendarAccessToken.mockResolvedValue("token");
     fetchCalendarFreeBusy.mockResolvedValue([]);
   });
@@ -120,11 +120,20 @@ describe("参加者の空き状況API", () => {
   });
 
   it("主催者以外は集計できない", async () => {
-    getCurrentUser.mockResolvedValue({ id: "someone-else" });
+    getCurrentActiveUser.mockResolvedValue({ id: "someone-else" });
     createSupabaseAdminClient.mockReturnValue(adminClient({ memberUserIds: ["u1"], connectedUserIds: ["u1"] }));
 
     const response = await GET(request(), params);
 
     expect(response.status).toBe(403);
+  });
+
+  it("退会済みとしてactive userがnullなら401を返す", async () => {
+    getCurrentActiveUser.mockResolvedValue(null);
+
+    const response = await GET(request(), params);
+
+    expect(response.status).toBe(401);
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
   });
 });

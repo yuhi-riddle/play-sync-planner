@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { buildConfirmedCalendarEvent } from "@/lib/domain/calendar/calendar-sync";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { insertCalendarEvent } from "@/lib/google-calendar/calendar-events";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 
 type PlanCalendarRow = {
   id: string;
@@ -21,7 +21,7 @@ type PlanCalendarRow = {
 };
 
 export async function createGoogleCalendarEventForPlanAction(planId: string) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

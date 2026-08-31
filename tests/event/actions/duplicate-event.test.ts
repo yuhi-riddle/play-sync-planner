@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUser, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseServerClient, getCurrentActiveUser, redirect, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentActiveUser: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentActiveUser }));
 
 import { duplicateEventAction } from "@/lib/actions/event/events";
 
@@ -75,7 +75,7 @@ function createSupabaseMock({
 describe("duplicateEventAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId, user_metadata: { nickname: "あかり" } });
+    getCurrentActiveUser.mockResolvedValue({ id: userId, user_metadata: { nickname: "あかり" } });
   });
 
   it("参加していないイベントは複製できない", async () => {

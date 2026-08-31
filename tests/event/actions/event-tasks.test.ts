@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUser, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseServerClient, getCurrentActiveUser, redirect, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentActiveUser: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentActiveUser }));
 
 import {
   createEventTaskAction,
@@ -84,7 +84,7 @@ function taskFormData(fields: Record<string, string>) {
 describe("createEventTaskAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("参加していないイベントには追加できない", async () => {
@@ -137,7 +137,7 @@ describe("createEventTaskAction", () => {
 describe("toggleEventTaskDoneAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("未完了なら完了日時を入れる", async () => {
@@ -167,7 +167,7 @@ describe("toggleEventTaskDoneAction", () => {
 describe("updateEventTaskAssigneeAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("担当者を外せる", async () => {
@@ -183,7 +183,7 @@ describe("updateEventTaskAssigneeAction", () => {
 describe("deleteEventTaskAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("参加していないイベントからは削除できない", async () => {

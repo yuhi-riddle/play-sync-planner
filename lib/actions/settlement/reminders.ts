@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 
 function namesFromFormData(value: FormDataEntryValue | null): string[] {
   if (typeof value !== "string") {
@@ -17,7 +17,7 @@ function namesFromFormData(value: FormDataEntryValue | null): string[] {
 }
 
 export async function markReminderSentAction(planId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUser, markLegalConsentAccepted, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseServerClient, getCurrentActiveUser, markLegalConsentAccepted, redirect, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentActiveUser: vi.fn(),
   markLegalConsentAccepted: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/auth/legal-consent-mark", () => ({ markLegalConsentAccepted }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
-  getCurrentUser
+  getCurrentActiveUser
 }));
 
 import { acceptLegalDocumentsAction } from "@/lib/actions/account/legal";
@@ -30,7 +30,7 @@ function legalFormData() {
 describe("acceptLegalDocumentsAction: user_consents書き込みと同意印の順序", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("upsertが成功したあとに、書き込んだ同意日時と同じ文字列でmarkLegalConsentAcceptedを呼ぶ", async () => {

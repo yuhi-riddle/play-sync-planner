@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId, revalidatePath } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
   createSupabaseServerClient: vi.fn(),
-  getCurrentUserId: vi.fn(),
+  getCurrentActiveUserId: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   createSupabaseServerClient,
   getCurrentUser: vi.fn().mockResolvedValue(null),
-  getCurrentUserId
+  getCurrentActiveUserId
 }));
 
 import { submitAvailabilityAnswersAction } from "@/lib/actions/plan/answers";
@@ -57,7 +57,7 @@ describe("無効化された共有リンク", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // ログイン済みで確かめる。未ログインだと手前のログイン確認で止まり、無効化の判定まで届かない。
-    getCurrentUserId.mockResolvedValue(viewerId);
+    getCurrentActiveUserId.mockResolvedValue(viewerId);
     createSupabaseAdminClient.mockReturnValue({ from: vi.fn(() => ({ upsert: vi.fn() })) });
   });
 

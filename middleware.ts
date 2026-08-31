@@ -1,9 +1,9 @@
 import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isWithdrawnUserMetadata } from "@/lib/domain/account/account";
 import { hasLegalConsentMark } from "@/lib/domain/account/legal-consent";
 import { getProfileOnboardingRedirect } from "@/lib/domain/account/profile";
+import { isWithdrawn } from "@/lib/domain/account/withdrawal";
 
 const publicPaths = new Set(["/login", "/terms", "/privacy", "/consent"]);
 
@@ -135,8 +135,8 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // 退会済みのアカウントは、Googleで再ログインできてしまうのでここで止める。
-  // 追加のDB問い合わせを増やさないよう、退会印は user_metadata に持たせている。
-  if (user && isWithdrawnUserMetadata(user.user_metadata) && request.nextUrl.pathname !== "/login") {
+  // 追加のDB問い合わせを増やさず、本人が書き換えられない app_metadata の印で判定する。
+  if (user && isWithdrawn(user.app_metadata) && request.nextUrl.pathname !== "/login") {
     await supabase.auth.signOut();
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { redirect, revalidatePath, rpc, createSupabaseServerClient, getCurrentUser } = vi.hoisted(() => {
+const { redirect, revalidatePath, rpc, createSupabaseServerClient, getCurrentActiveUser } = vi.hoisted(() => {
   const rpc = vi.fn();
   return {
     redirect: vi.fn(),
     revalidatePath: vi.fn(),
     rpc,
     createSupabaseServerClient: vi.fn().mockResolvedValue({ rpc }),
-    getCurrentUser: vi.fn().mockResolvedValue({ id: "user-1" })
+    getCurrentActiveUser: vi.fn().mockResolvedValue({ id: "user-1" })
   };
 });
 
@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
-  getCurrentUser
+  getCurrentActiveUser
 }));
 
 import { createEventMessageAction } from "@/lib/actions/event/event-messages";
@@ -32,7 +32,7 @@ describe("createEventMessageAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createSupabaseServerClient.mockResolvedValue({ rpc });
-    getCurrentUser.mockResolvedValue({ id: "user-1" });
+    getCurrentActiveUser.mockResolvedValue({ id: "user-1" });
   });
 
   it("posts the trimmed body through the post_event_message RPC and revalidates on success", async () => {
@@ -86,7 +86,7 @@ describe("createEventMessageAction", () => {
   });
 
   it("redirects to login when there is no current user", async () => {
-    getCurrentUser.mockResolvedValue(null);
+    getCurrentActiveUser.mockResolvedValue(null);
     redirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { normalizeEventMessageBody } from "@/lib/domain/event/event-chat";
-import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 type PostEventMessageResult =
   | { ok: true; message_id: string }
@@ -23,7 +23,7 @@ const postEventMessageErrorMessages: Record<Exclude<PostEventMessageResult, { ok
 };
 
 export async function createEventMessageAction(eventId: string, formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(`/events/${eventId}`)}`);
   }

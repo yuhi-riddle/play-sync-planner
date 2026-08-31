@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { toJstDateKey } from "@/lib/domain/plan/plan-timetable";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_NOTE_LENGTH = 500;
@@ -17,7 +17,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
  * 未確定 plan の進行表は閲覧だけできる（設計docの決定）。
  */
 async function requireTimetableEditor(planId: string) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }

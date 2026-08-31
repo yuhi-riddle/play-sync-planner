@@ -5,10 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getUserDisplayName } from "@/lib/domain/account/profile";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 async function requireEventOwner(eventId: string) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -104,7 +104,7 @@ export async function revokeAndCreateEventInviteAction(eventId: string) {
 }
 
 export async function joinEventFromInviteAction(token: string) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   const invitePath = `/invites/${token}`;
 
   if (!user) {

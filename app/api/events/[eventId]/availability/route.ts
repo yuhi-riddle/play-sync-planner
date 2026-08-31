@@ -4,13 +4,13 @@ import { monthRangeInTokyo, buildDailyBusySummaries } from "@/lib/domain/plan/gr
 import { canReadGroupAvailability } from "@/lib/domain/calendar/calendar-availability-access";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
 import { CalendarFreeBusyError, fetchCalendarFreeBusy } from "@/lib/google-calendar/freebusy";
-import { createSupabaseAdminClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     return NextResponse.json({ error: "ログインが必要です。" }, { status: 401 });
   }

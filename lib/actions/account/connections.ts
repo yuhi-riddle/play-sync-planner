@@ -10,7 +10,7 @@ import {
   type ConnectionCursor,
   type ConnectionPage
 } from "@/lib/domain/account/connections";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sharedEventRequiredErrorCode = "PSP01";
@@ -34,7 +34,7 @@ function requireTargetUserId(value: string): string {
 
 async function requireAuthenticatedTarget(userId: string): Promise<ConnectionTarget> {
   const targetUserId = requireTargetUserId(userId);
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -189,7 +189,7 @@ export async function loadMoreConnectionsAction(
   category: ConnectionCategory,
   cursor: ConnectionCursor
 ): Promise<ConnectionPage> {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -213,7 +213,7 @@ export async function loadEventInviteCandidatesAction(
   eventId: string,
   cursor: ConnectionCursor
 ): Promise<ConnectionPage> {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -268,7 +268,7 @@ export async function createEventUserInvitationsAction(
   inviteeUserIds: string[]
 ): Promise<ActionState> {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentActiveUser();
     if (!user) {
       redirect("/login");
     }
@@ -326,7 +326,7 @@ export async function respondToEventUserInvitationAction(
     return errorState("招待への返答が正しくありません。");
   }
 
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
