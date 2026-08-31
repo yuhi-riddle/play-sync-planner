@@ -28,7 +28,7 @@ async function seed(): Promise<Fixture> {
   ]);
   await client.query("insert into public.profiles (user_id, nickname, avatar_path) values ($1,'あかり',$2),($3,'ぴあ',null)", [
     userId,
-    `${userId}\\avatar.png`,
+    `${userId}/avatar.png`,
     peerId
   ]);
 
