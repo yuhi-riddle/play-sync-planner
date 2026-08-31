@@ -176,7 +176,12 @@ export async function middleware(request: NextRequest) {
   if (needsConsentCheck) {
     const consent = consentResult?.data;
     const consentError = consentResult?.error;
-    if (!consentError && !consent) {
+    // 同意は fail closed。DBエラーで同意を確認できないときは、通常画面へ通さず /consent へ送る。
+    // /consent は publicPaths なのでループしない。既に同意済みの人には再同意を求めるだけで実害は無い。
+    if (consentError || !consent) {
+      if (consentError) {
+        console.error("同意状態を確認できませんでした（fail closed で /consent へ）", consentError);
+      }
       const consentUrl = request.nextUrl.clone();
       consentUrl.pathname = "/consent";
       consentUrl.search = "";
@@ -192,7 +197,11 @@ export async function middleware(request: NextRequest) {
   const profile = profileResult?.data;
   const profileError = profileResult?.error;
 
-  if (!profileError) {
+  // プロフィール（オンボーディング）は fail open。未設定で一時的に入れても実害は小さく、
+  // DB障害中もアプリを使えるほうを優先する。ただしエラーは監視できるよう残す。
+  if (profileError) {
+    console.warn("オンボーディング状態を確認できませんでした（fail open で通過）", profileError);
+  } else {
     const onboardingPath = getProfileOnboardingRedirect(
       request.nextUrl.pathname,
       request.nextUrl.search,
