@@ -440,7 +440,7 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 
   const { data: settlement, error } = await supabase
     .from("settlements")
-    .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at), plans(owner_user_id)")
+    .select("id, plan_id, plans(owner_user_id)")
     .eq("id", settlementId)
     .single();
 
@@ -449,61 +449,21 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
     throw new Error("主催者だけが支払い記録を追加できます");
   }
 
-  const currentProgress = summarizeSettlementPaymentProgress(
-    settlement.amount,
-    ((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    }))
-  );
+  // 支払いの記録・清算ステータスの更新を 1 トランザクション（settlement 行ロック下）で行う。
+  const { data: paymentId, error: writeError } = await supabase.rpc("record_settlement_payment", {
+    target_settlement_id: settlementId,
+    p_amount: values.amount,
+    p_payment_url: values.payment_url ?? null,
+    p_memo: values.memo ?? null
+  });
 
-  if (values.amount > currentProgress.remainingAmount) {
-    throw new Error("支払い金額が残額を超えています");
+  if (writeError) {
+    throw new Error(writeError.message);
   }
 
-  const { data: payer } = await supabase
-    .from("participants")
-    .select("settlement_payment_method")
-    .eq("id", settlement.from_participant_id)
-    .single();
-
-  const { data: insertedPayment, error: insertError } = await supabase
-    .from("settlement_payments")
-    .insert({
-      settlement_id: settlementId,
-      paid_by_participant_id: settlement.from_participant_id,
-      amount: values.amount,
-      payment_method: payer?.settlement_payment_method ?? null,
-      payment_url: values.payment_url,
-      memo: values.memo
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  const nextProgress = summarizeSettlementPaymentProgress(settlement.amount, [
-    ...((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    })),
-    { amount: values.amount, confirmedAt: null }
-  ]);
-
-  await supabase
-    .from("settlements")
-    .update({
-      status: nextProgress.status === "paid" || nextProgress.status === "confirmed" ? nextProgress.status : "unpaid",
-      paid_at: nextProgress.paidAmount > 0 ? new Date().toISOString() : null
-    })
-    .eq("id", settlementId);
-
-  await supabase.from("plans").update({ settlement_status: "settling" }).eq("id", settlement.plan_id);
-  if (insertedPayment?.id) {
-    await notifySettlementConfirmationDue({ settlementId, paymentId: insertedPayment.id });
-    await recordSettlementAudit(supabase, "settlement_payment_record", insertedPayment.id);
+  if (paymentId) {
+    await notifySettlementConfirmationDue({ settlementId, paymentId });
+    await recordSettlementAudit(supabase, "settlement_payment_record", paymentId);
   }
 
   revalidatePath(`/plans/${settlement.plan_id}`);
@@ -546,7 +506,7 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
 
   const { data: settlement, error } = await supabase
     .from("settlements")
-    .select("id, plan_id, from_participant_id, amount, settlement_payments(amount, confirmed_at)")
+    .select("id, plan_id, from_participant_id")
     .eq("id", settlementId)
     .eq("plan_id", link.plan_id)
     .single();
@@ -574,65 +534,26 @@ export async function recordPublicSettlementPaymentAction(token: string, settlem
     throw new Error("支払う本人だけが記録できます");
   }
 
-  const currentProgress = summarizeSettlementPaymentProgress(
-    settlement.amount,
-    ((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    }))
-  );
-
-  if (values.amount > currentProgress.remainingAmount) {
-    throw new Error("支払い金額が残額を超えています");
-  }
-
-  const { data: payer } = await supabase
-    .from("participants")
-    .select("settlement_payment_method")
-    .eq("id", settlement.from_participant_id)
-    .single();
-
-  const { data: insertedPayment, error: insertError } = await supabase
-    .from("settlement_payments")
-    .insert({
-      settlement_id: settlement.id,
-      paid_by_participant_id: settlement.from_participant_id,
-      amount: values.amount,
-      payment_method: payer?.settlement_payment_method ?? null,
-      payment_url: values.payment_url,
-      memo: values.memo
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  const nextProgress = summarizeSettlementPaymentProgress(settlement.amount, [
-    ...((settlement.settlement_payments ?? []) as SettlementPaymentRow[]).map((payment) => ({
-      amount: payment.amount,
-      confirmedAt: payment.confirmed_at
-    })),
-    { amount: values.amount, confirmedAt: null }
-  ]);
-
-  await supabase
-    .from("settlements")
-    .update({
-      status: nextProgress.status === "paid" || nextProgress.status === "confirmed" ? nextProgress.status : "unpaid",
-      paid_at: nextProgress.paidAmount > 0 ? new Date().toISOString() : null
-    })
-    .eq("id", settlement.id);
-
   /*
-   * plans は参加者に update させない。RLSでは列を絞れないので、開くと他の項目まで
-   * 書き換えられてしまう。settlement_status だけを動かす関数を呼ぶ。
+   * 支払いの記録・清算ステータス・plans.settlement_status の更新を 1 トランザクション
+   * （settlement 行ロック下）で行う。RPC 内で「払う本人か主催者か」を再判定するので、
+   * 上の caller チェックと二重になる。plans も RPC 内で settling にするだけで、
+   * 参加者に plans を直接 update させない方針は変わらない。
    */
-  await supabase.rpc("mark_plan_settling", { target_plan_id: settlement.plan_id });
-  if (insertedPayment?.id) {
-    await notifySettlementConfirmationDue({ settlementId: settlement.id, paymentId: insertedPayment.id });
-    await recordSettlementAudit(supabase, "settlement_payment_record", insertedPayment.id);
+  const { data: paymentId, error: writeError } = await supabase.rpc("record_settlement_payment", {
+    target_settlement_id: settlement.id,
+    p_amount: values.amount,
+    p_payment_url: values.payment_url ?? null,
+    p_memo: values.memo ?? null
+  });
+
+  if (writeError) {
+    throw new Error(writeError.message);
+  }
+
+  if (paymentId) {
+    await notifySettlementConfirmationDue({ settlementId: settlement.id, paymentId });
+    await recordSettlementAudit(supabase, "settlement_payment_record", paymentId);
   }
 
   revalidatePath(`/plans/${settlement.plan_id}`);

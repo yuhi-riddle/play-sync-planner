@@ -556,29 +556,23 @@ describe("recordSettlementPaymentAction", () => {
     getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
-  it("支払った人(from_participant)のsettlement_payment_methodをsettlement_paymentsに複写する", async () => {
-    const settlementPaymentsInsertCalls: RecordedCall[] = [];
+  it("主催者チェックを通ったら record_settlement_payment RPC に委ねる（記録とステータス更新は1トランザクション）", async () => {
+    const rpc = vi.fn(async (fn: string) =>
+      fn === "consume_authenticated_rate_limit"
+        ? { data: { ok: true }, error: null }
+        : { data: "payment-1", error: null }
+    );
     const server = tableSequenceClient({
       settlements: [
         {
           result: {
-            data: {
-              id: "settlement-1",
-              plan_id: planId,
-              from_participant_id: otherParticipantId,
-              amount: 1000,
-              settlement_payments: [],
-              plans: { owner_user_id: userId }
-            },
+            data: { id: "settlement-1", plan_id: planId, plans: { owner_user_id: userId } },
             error: null
           }
-        },
-        { result: { data: null, error: null } }
-      ],
-      participants: [{ result: { data: { settlement_payment_method: "PayPay" }, error: null } }],
-      settlement_payments: [{ result: { data: { id: "payment-1" }, error: null }, calls: settlementPaymentsInsertCalls }]
+        }
+      ]
     });
-    createSupabaseServerClient.mockResolvedValue(server);
+    createSupabaseServerClient.mockResolvedValue({ ...server, rpc });
     createSupabaseAdminClient.mockReturnValue(tableSequenceClient({}));
 
     const formData = new FormData();
@@ -586,7 +580,11 @@ describe("recordSettlementPaymentAction", () => {
 
     await recordSettlementPaymentAction("settlement-1", formData);
 
-    const insertCall = settlementPaymentsInsertCalls.find((call) => call.method === "insert");
-    expect(insertCall?.args[0]).toMatchObject({ payment_method: "PayPay" });
+    expect(rpc).toHaveBeenCalledWith("record_settlement_payment", {
+      target_settlement_id: "settlement-1",
+      p_amount: 1000,
+      p_payment_url: null,
+      p_memo: null
+    });
   });
 });
