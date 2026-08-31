@@ -319,10 +319,11 @@ describe("recompute_plan_settlements", () => {
           fixture.planId
         ]);
       } else {
-        await client.query("update public.expense_splits set participant_id = $1 where expense_id = $2", [
-          outsiderId,
-          fixture.expenses[0].id
-        ]);
+        // 1 行だけ差し替える。全行を同じ id にすると expense_splits_unique に当たる。
+        await client.query(
+          "update public.expense_splits set participant_id = $1 where expense_id = $2 and participant_id = $3",
+          [outsiderId, fixture.expenses[0].id, fixture.participants[1].id]
+        );
       }
 
       await expect(
