@@ -167,4 +167,29 @@ describe("middleware: 同意ゲートとオンボーディング導線の並列�
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/onboarding/profile");
   });
+
+  it("同意チェックがDBエラーなら fail closed で /consent へ送る", async () => {
+    const { client } = supabaseClientForUser(
+      { id: userId, user_metadata: {} },
+      { consent: { data: null, error: { message: "db down" } } }
+    );
+    createServerClient.mockReturnValue(client);
+
+    const response = await middleware(new NextRequest("https://example.com/events"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/consent?next=");
+  });
+
+  it("オンボーディングチェックがDBエラーでも fail open で通過する", async () => {
+    const { client } = supabaseClientForUser(
+      { id: userId, user_metadata: {} },
+      { profile: { data: null, error: { message: "db down" } } }
+    );
+    createServerClient.mockReturnValue(client);
+
+    const response = await middleware(new NextRequest("https://example.com/events"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
 });
