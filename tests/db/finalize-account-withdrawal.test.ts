@@ -26,11 +26,12 @@ async function seed(): Promise<Fixture> {
     peerId,
     `${peerId}@e.test`
   ]);
-  await client.query("insert into public.profiles (user_id, nickname, avatar_path) values ($1,'あかり',$2),($3,'ぴあ',null)", [
-    userId,
-    `${userId}/avatar.png`,
-    peerId
-  ]);
+  // auth.users への insert が profiles 作成トリガーを発火させる環境があるので upsert する。
+  await client.query(
+    `insert into public.profiles (user_id, nickname, avatar_path) values ($1,'あかり',$2),($3,'ぴあ',null)
+     on conflict (user_id) do update set nickname = excluded.nickname, avatar_path = excluded.avatar_path`,
+    [userId, `${userId}/avatar.png`, peerId]
+  );
 
   await client.query("insert into public.user_connections (follower_user_id, followed_user_id) values ($1,$2),($2,$1)", [userId, peerId]);
   await client.query("insert into public.user_favorites (user_id, favorite_user_id) values ($1,$2)", [userId, peerId]);
