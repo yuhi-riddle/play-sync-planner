@@ -54,6 +54,16 @@ function splitsJson(entries: Array<[participantId: string, amount: number]>) {
   return JSON.stringify(entries.map(([participant_id, amount]) => ({ participant_id, amount })));
 }
 
+/**
+ * RPC が raise する想定のクエリを、savepoint で囲んで実行する。
+ * raise でトランザクションが中断されるので、savepoint まで戻してから後続の検証を続ける。
+ */
+async function expectRpcRejects(sql: string, params: unknown[], matcher: RegExp) {
+  await client.query("savepoint sp");
+  await expect(client.query(sql, params)).rejects.toThrow(matcher);
+  await client.query("rollback to savepoint sp");
+}
+
 async function readExpenses(planId: string) {
   const { rows } = await client.query<{ id: string; amount: number; payer_participant_id: string; title: string }>(
     "select id, amount, payer_participant_id, title from public.expenses where plan_id = $1 order by created_at, id",
@@ -145,18 +155,11 @@ describe("create_expense", () => {
     const plan = await makePlan(2);
     const [a, b] = plan.participantIds;
 
-    await expect(
-      client.query("select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb)", [
-        plan.planId,
-        a,
-        "ずれ",
-        1000,
-        null,
-        null,
-        false,
-        splitsJson([[a, 400], [b, 500]])
-      ])
-    ).rejects.toThrow(/sum to the expense amount/i);
+    await expectRpcRejects(
+      "select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb)",
+      [plan.planId, a, "ずれ", 1000, null, null, false, splitsJson([[a, 400], [b, 500]])],
+      /sum to the expense amount/i
+    );
 
     expect(await readExpenses(plan.planId)).toEqual([]);
   });
@@ -176,18 +179,11 @@ describe("create_expense", () => {
       [settlementId, b, 100]
     );
 
-    await expect(
-      client.query("select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb)", [
-        plan.planId,
-        a,
-        "遅れて追加",
-        1000,
-        null,
-        null,
-        false,
-        splitsJson([[a, 500], [b, 500]])
-      ])
-    ).rejects.toThrow(/清算支払いが始まっている/);
+    await expectRpcRejects(
+      "select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb)",
+      [plan.planId, a, "遅れて追加", 1000, null, null, false, splitsJson([[a, 500], [b, 500]])],
+      /清算支払いが始まっている/
+    );
 
     expect(await readExpenses(plan.planId)).toEqual([]);
   });
@@ -197,18 +193,11 @@ describe("create_expense", () => {
     const [a, b] = plan.participantIds;
     await client.query("select set_config('request.jwt.claim.sub', $1, true)", [randomUUID()]);
 
-    await expect(
-      client.query("select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb)", [
-        plan.planId,
-        a,
-        "他人",
-        1000,
-        null,
-        null,
-        false,
-        splitsJson([[a, 500], [b, 500]])
-      ])
-    ).rejects.toThrow(/主催者だけ/);
+    await expectRpcRejects(
+      "select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb)",
+      [plan.planId, a, "他人", 1000, null, null, false, splitsJson([[a, 500], [b, 500]])],
+      /主催者だけ/
+    );
 
     expect(await readExpenses(plan.planId)).toEqual([]);
   });
@@ -257,7 +246,7 @@ describe("update_expense", () => {
 });
 
 describe("delete_expense", () => {
-  it("費用と分担を消し（FK cascade）、精算を再計算する。paid の清算は残す", async () => {
+  it("費用と分担を消し（FK cascade）、精算を再計算する", async () => {
     const plan = await makePlan(3);
     const [a, b, c] = plan.participantIds;
 
@@ -266,21 +255,35 @@ describe("delete_expense", () => {
       [plan.planId, a, "消す対象", 3000, null, null, false, splitsJson([[a, 1000], [b, 1000], [c, 1000]])]
     );
     const expenseId = created.rows[0].create_expense;
-
-    // recompute で作られた unpaid のうち 1 本を paid にしておく
-    await client.query(
-      "update public.settlements set status = 'paid' where plan_id = $1 and from_participant_id = $2",
-      [plan.planId, b]
-    );
+    expect(await readSettlements(plan.planId)).not.toHaveLength(0);
 
     await client.query("select public.delete_expense($1)", [expenseId]);
 
     expect(await readExpenses(plan.planId)).toEqual([]);
     const { rows: splitRows } = await client.query("select 1 from public.expense_splits where expense_id = $1", [expenseId]);
     expect(splitRows).toHaveLength(0);
+    // 費用が無くなったので精算も無くなり、plan は not_needed に戻る
+    expect(await readSettlements(plan.planId)).toEqual([]);
+    const status = await client.query<{ settlement_status: string }>(
+      "select settlement_status from public.plans where id = $1",
+      [plan.planId]
+    );
+    expect(status.rows[0].settlement_status).toBe("not_needed");
+  });
 
-    // paid の清算は削除されず残る
-    const settlements = await readSettlements(plan.planId);
-    expect(settlements.filter((s) => s.status === "paid")).toHaveLength(1);
+  it("清算が paid になっている plan では削除を拒否する", async () => {
+    const plan = await makePlan(2);
+    const [a, b] = plan.participantIds;
+
+    const created = await client.query<{ create_expense: string }>(
+      "select public.create_expense($1,$2,$3,$4,$5,$6,$7,$8::jsonb) as create_expense",
+      [plan.planId, a, "対象", 1000, null, null, false, splitsJson([[a, 500], [b, 500]])]
+    );
+    const expenseId = created.rows[0].create_expense;
+    await client.query("update public.settlements set status = 'paid' where plan_id = $1", [plan.planId]);
+
+    await expectRpcRejects("select public.delete_expense($1)", [expenseId], /支払い済みの清算がある/);
+
+    expect(await readExpenses(plan.planId)).toHaveLength(1);
   });
 });
