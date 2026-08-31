@@ -179,6 +179,24 @@ describe("createExpenseAction", () => {
     expect(result).toEqual({ status: "error", message: "支払った人はこのイベントの参加者から選んでください" });
     expect(insertCalls).toEqual([]);
   });
+
+  it("検証を通ったら create_expense RPC に費用・分担・再計算を委ねる", async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const { client } = planOwnerClient();
+    createSupabaseServerClient.mockResolvedValue({ ...client, rpc });
+
+    await createExpenseAction(planId, { status: "idle" }, expenseFormData());
+
+    expect(rpc).toHaveBeenCalledWith(
+      "create_expense",
+      expect.objectContaining({
+        target_plan_id: planId,
+        p_payer_participant_id: otherParticipantId,
+        p_amount: 1000,
+        p_splits: [{ participant_id: otherParticipantId, amount: 1000 }]
+      })
+    );
+  });
 });
 
 describe("updateExpenseAction", () => {
@@ -200,40 +218,30 @@ describe("updateExpenseAction", () => {
   });
 });
 
-describe("recomputeSettlements(deleteExpenseAction経由)", () => {
+describe("deleteExpenseAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
-  it("支払い済み・確認済みのsettlementsは消さず、未払い分だけをdeleteの対象にする", async () => {
-    const settlementsDeleteCalls: RecordedCall[] = [];
+  it("変更可否チェックを通ったら delete_expense RPC に委ねる（削除と精算再計算は1トランザクション）", async () => {
     const client = tableSequenceClient({
       expenses: [
         {
           result: {
-            data: {
-              id: expenseId,
-              plan_id: planId,
-              plans: { owner_user_id: userId, participants: [{ id: otherParticipantId, display_name: "参加者A" }] }
-            },
+            data: { id: expenseId, plan_id: planId, plans: { owner_user_id: userId } },
             error: null
           }
-        },
-        { result: { error: null } },
-        { result: { data: [], error: null } }
+        }
       ],
       settlement_payments: [{ result: { data: [], error: null } }],
-      settlements: [{ result: { data: [], error: null } }, { result: { data: null, error: null }, calls: settlementsDeleteCalls }],
-      plans: [{ result: { data: null, error: null } }]
+      settlements: [{ result: { data: [], error: null } }]
     });
     createSupabaseServerClient.mockResolvedValue(client);
 
     await deleteExpenseAction(expenseId);
 
-    expect(settlementsDeleteCalls).toContainEqual({ method: "delete", args: [] });
-    expect(settlementsDeleteCalls).toContainEqual({ method: "eq", args: ["plan_id", planId] });
-    expect(settlementsDeleteCalls).toContainEqual({ method: "eq", args: ["status", "unpaid"] });
+    expect(client.rpc).toHaveBeenCalledWith("delete_expense", { target_expense_id: expenseId });
   });
 });
 
