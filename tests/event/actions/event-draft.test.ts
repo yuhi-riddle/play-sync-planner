@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { redirect, revalidatePath, upsert, from, createSupabaseServerClient, getCurrentUser } = vi.hoisted(() => {
+const { redirect, revalidatePath, upsert, from, createSupabaseServerClient, getCurrentActiveUser } = vi.hoisted(() => {
   const upsert = vi.fn().mockResolvedValue({ error: null });
   const from = vi.fn(() => ({ upsert }));
   return {
@@ -9,7 +9,7 @@ const { redirect, revalidatePath, upsert, from, createSupabaseServerClient, getC
     upsert,
     from,
     createSupabaseServerClient: vi.fn().mockResolvedValue({ from }),
-    getCurrentUser: vi.fn().mockResolvedValue({ id: "user-1" })
+    getCurrentActiveUser: vi.fn().mockResolvedValue({ id: "user-1" })
   };
 });
 
@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
-  getCurrentUser
+  getCurrentActiveUser
 }));
 
 import { saveEventDraftAction } from "@/lib/actions/event/events";
@@ -35,7 +35,7 @@ describe("saveEventDraftAction", () => {
     vi.clearAllMocks();
     upsert.mockResolvedValue({ error: null });
     createSupabaseServerClient.mockResolvedValue({ from });
-    getCurrentUser.mockResolvedValue({ id: "user-1" });
+    getCurrentActiveUser.mockResolvedValue({ id: "user-1" });
   });
 
   it("saves a partially filled draft without requiring a title or category", async () => {

@@ -39,10 +39,11 @@ describe("middleware: 退会済みユーザー", () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   });
 
-  it("退会済みならサインアウトしてログイン画面へ送る", async () => {
+  it("user_metadataの退会印を消してもapp_metadataに印があればログイン画面へ送る", async () => {
     const { client, signOut } = supabaseClientForUser({
       id: userId,
-      user_metadata: { withdrawn_at: "2026-07-27T00:00:00.000Z" }
+      app_metadata: { withdrawn_at: "2026-07-27T00:00:00.000Z" },
+      user_metadata: {}
     });
     createServerClient.mockReturnValue(client);
 
@@ -57,7 +58,8 @@ describe("middleware: 退会済みユーザー", () => {
   it("ログイン画面自体はリダイレクトの対象にしない", async () => {
     const { client } = supabaseClientForUser({
       id: userId,
-      user_metadata: { withdrawn_at: "2026-07-27T00:00:00.000Z" }
+      app_metadata: { withdrawn_at: "2026-07-27T00:00:00.000Z" },
+      user_metadata: {}
     });
     createServerClient.mockReturnValue(client);
 
@@ -70,6 +72,23 @@ describe("middleware: 退会済みユーザー", () => {
     const { client, signOut } = supabaseClientForUser({
       id: userId,
       user_metadata: { profile_onboarding_completed_at: "2026-07-01T00:00:00.000Z" }
+    });
+    createServerClient.mockReturnValue(client);
+
+    const response = await middleware(new NextRequest("https://example.com/events"));
+
+    expect(signOut).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("user_metadataだけに退会印があっても無視する", async () => {
+    const { client, signOut } = supabaseClientForUser({
+      id: userId,
+      app_metadata: {},
+      user_metadata: {
+        profile_onboarding_completed_at: "2026-07-01T00:00:00.000Z",
+        withdrawn_at: "2026-07-27T00:00:00.000Z"
+      }
     });
     createServerClient.mockReturnValue(client);
 

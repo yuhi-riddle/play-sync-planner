@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId, redirect, revalidatePath } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
   createSupabaseServerClient: vi.fn(),
-  getCurrentUserId: vi.fn(),
+  getCurrentActiveUserId: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   createSupabaseServerClient,
-  getCurrentUserId
+  getCurrentActiveUserId
 }));
 
 import {
@@ -151,7 +151,7 @@ function expenseFormData(overrides: Record<string, string> = {}) {
 describe("createExpenseAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("不正な入力はDBに触れずエラーを返す(例外を投げない)", async () => {
@@ -184,7 +184,7 @@ describe("createExpenseAction", () => {
 describe("updateExpenseAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("不正な入力はDBに触れずエラーを返す(例外を投げない)", async () => {
@@ -203,7 +203,7 @@ describe("updateExpenseAction", () => {
 describe("recomputeSettlements(deleteExpenseAction経由)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("支払い済み・確認済みのsettlementsは消さず、未払い分だけをdeleteの対象にする", async () => {
@@ -240,7 +240,7 @@ describe("recomputeSettlements(deleteExpenseAction経由)", () => {
 describe("assertExpenseCanChange(deleteExpenseAction経由)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("清算支払いが始まっている場合は立替の削除を拒否する", async () => {
@@ -266,7 +266,7 @@ describe("assertExpenseCanChange(deleteExpenseAction経由)", () => {
 describe("recordPublicSettlementPaymentAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   function paymentFormData() {
@@ -311,7 +311,7 @@ describe("recordPublicSettlementPaymentAction", () => {
 
   // トークンは対象を探すためだけ。持っているだけで支払い記録を作れてはいけない。
   it("未ログインならDBに触れずに拒否する", async () => {
-    getCurrentUserId.mockResolvedValue(null);
+    getCurrentActiveUserId.mockResolvedValue(null);
     const admin = publicPaymentClient({ id: otherParticipantId });
     createSupabaseServerClient.mockResolvedValue(admin);
 
@@ -345,7 +345,7 @@ describe("recordPublicSettlementPaymentAction", () => {
 describe("updateParticipantSettlementPaymentMethodAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("呼び出し者本人ではない参加者への設定を拒否する", async () => {
@@ -370,7 +370,7 @@ describe("confirmSettlementPaymentAction", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   function confirmableAdminClient() {
@@ -472,7 +472,7 @@ describe("confirmSettlementPaymentAction", () => {
 describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   /*
@@ -497,7 +497,7 @@ describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
   });
 
   it("未ログインならDBに触れずに拒否する", async () => {
-    getCurrentUserId.mockResolvedValue(null);
+    getCurrentActiveUserId.mockResolvedValue(null);
     const admin = tableSequenceClient({
       share_links: [{ result: { data: { plan_id: planId, status: "open" }, error: null } }]
     });
@@ -545,7 +545,7 @@ describe("updatePublicParticipantSettlementPaymentMethodAction", () => {
 describe("recordSettlementPaymentAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("支払った人(from_participant)のsettlement_payment_methodをsettlement_paymentsに複写する", async () => {

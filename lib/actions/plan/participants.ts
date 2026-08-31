@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { errorState, failWith, successState, type ActionState } from "@/lib/domain/shared/action-state";
 import { participantDeletionRefusal } from "@/lib/domain/plan/participant-deletion";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 
 type ExpenseTitleRow = { title: string | null };
 type SplitRow = { expenses: ExpenseTitleRow | ExpenseTitleRow[] | null };
@@ -34,7 +34,7 @@ export async function deletePlanParticipantAction(
   planId: string,
   participantId: string
 ): Promise<ActionState> {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser, revalidatePath } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
   createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentActiveUser: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   createSupabaseServerClient,
-  getCurrentUser
+  getCurrentActiveUser
 }));
 
 import {
@@ -41,7 +41,7 @@ const invitationId = "55555555-5555-4555-8555-555555555555";
 describe("followUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("delegates the whole follow operation to one atomic RPC", async () => {
@@ -101,7 +101,7 @@ describe("followUserAction", () => {
 describe("unfollowUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("delegates the whole unfollow operation to one atomic RPC", async () => {
@@ -129,7 +129,7 @@ describe("unfollowUserAction", () => {
 describe("toggleFavoriteAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("delegates the whole favorite toggle to one atomic RPC", async () => {
@@ -167,7 +167,7 @@ describe("toggleFavoriteAction", () => {
 describe("blockUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("delegates the whole block operation to one atomic RPC", async () => {
@@ -224,7 +224,7 @@ describe("blockUserAction", () => {
 describe("unblockUserAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("removes only the current user's block and does not restore follows or favorites", async () => {
@@ -252,7 +252,7 @@ describe("unblockUserAction", () => {
 describe("createEventUserInvitationsAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("returns early without calling the RPC when no invitees are given", async () => {
@@ -309,7 +309,7 @@ describe("createEventUserInvitationsAction", () => {
 describe("respondToEventUserInvitationAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: currentUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
   });
 
   it("rejects an invalid response value without calling the RPC", async () => {

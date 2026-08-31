@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUserId, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseServerClient, getCurrentActiveUserId, redirect, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  getCurrentUserId: vi.fn(),
+  getCurrentActiveUserId: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient: vi.fn(),
   createSupabaseServerClient,
-  getCurrentUserId
+  getCurrentActiveUserId
 }));
 
 import { createPlanAction, updatePlanAction } from "@/lib/actions/plan/plans";
@@ -117,7 +117,16 @@ function planFormData(overrides: Record<string, string> = {}) {
 describe("createPlanAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
+  });
+
+  it("退会済みとしてactive user idがnullならログインへ送る", async () => {
+    getCurrentActiveUserId.mockResolvedValue(null);
+
+    await createPlanAction(eventId, { status: "idle" }, new FormData());
+
+    expect(redirect).toHaveBeenCalledWith("/login");
+    expect(createSupabaseServerClient).not.toHaveBeenCalled();
   });
 
   it("不正な入力はDBに触れずエラーを返す(例外を投げない)", async () => {
@@ -168,7 +177,7 @@ describe("createPlanAction", () => {
 describe("updatePlanAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(userId);
+    getCurrentActiveUserId.mockResolvedValue(userId);
   });
 
   it("不正な入力はDBに触れずエラーを返す(例外を投げない)", async () => {

@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { buildGoogleCalendarAuthUrl } from "@/lib/google-calendar/oauth";
+import { isWithdrawn } from "@/lib/domain/account/withdrawal";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 function calendarConnectPath(nextPath: string) {
@@ -17,6 +18,11 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(calendarConnectPath(nextPath))}`, request.url));
+  }
+
+  // /api/* は middleware を通らないので、退会済みはここで止める。
+  if (isWithdrawn(user.app_metadata)) {
+    return NextResponse.redirect(new URL("/login?withdrawn=1", request.url));
   }
 
   const state = randomUUID();

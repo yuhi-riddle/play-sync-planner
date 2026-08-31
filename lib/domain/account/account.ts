@@ -24,13 +24,3 @@ export function isWithdrawalConfirmed(input: string | null, nickname: string): b
 
   return typed === expected;
 }
-
-/** 退会済みのユーザーはログインさせない。 */
-export function isWithdrawnUserMetadata(metadata: unknown): boolean {
-  if (!metadata || typeof metadata !== "object") {
-    return false;
-  }
-
-  const withdrawnAt = (metadata as { withdrawn_at?: unknown }).withdrawn_at;
-  return typeof withdrawnAt === "string" && withdrawnAt.length > 0;
-}

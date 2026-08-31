@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, createSupabaseAdminClient, getCurrentUser, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseServerClient, createSupabaseAdminClient, getCurrentActiveUser, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
   createSupabaseAdminClient: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentActiveUser: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, createSupabaseAdminClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, createSupabaseAdminClient, getCurrentActiveUser }));
 
 import { updateProfileAction } from "@/lib/actions/account/profile";
 import { PROFILE_ACTION_INITIAL_STATE } from "@/lib/domain/account/profile";
@@ -26,7 +26,7 @@ function adminClient({ error = null }: { error?: { message: string } | null } = 
 describe("updateProfileAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com", user_metadata: {} });
+    getCurrentActiveUser.mockResolvedValue({ id: "user-1", email: "user@example.com", user_metadata: {} });
     createSupabaseAdminClient.mockReturnValue(adminClient().client);
   });
 

@@ -14,7 +14,7 @@ import {
   validateAvatarFile,
   type ProfileActionState
 } from "@/lib/domain/account/profile";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 const PROFILE_MIGRATION_MESSAGE =
   "プロフィール機能の準備がまだ完了していません。管理者がmigration 019を適用してください。";
@@ -23,7 +23,7 @@ export async function updateProfileAction(
   _previousState: ProfileActionState,
   formData: FormData
 ): Promise<ProfileActionState> {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }

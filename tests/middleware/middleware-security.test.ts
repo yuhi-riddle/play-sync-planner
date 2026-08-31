@@ -132,7 +132,7 @@ describe("middleware security headers", () => {
 
   it("still signs out and redirects a withdrawn user, with security headers attached", async () => {
     authGetUser.mockResolvedValue({
-      data: { user: { id: "user-1", user_metadata: { withdrawn_at: "2026-07-01T00:00:00Z" } } }
+      data: { user: { id: "user-1", app_metadata: { withdrawn_at: "2026-07-01T00:00:00Z" }, user_metadata: {} } }
     });
 
     const response = await middleware(new NextRequest("http://localhost/events"));

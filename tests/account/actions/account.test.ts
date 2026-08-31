@@ -1,17 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, hasSupabaseAdminEnv, redirect, revalidatePath } =
+const {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  getCurrentUser,
+  hasSupabaseAdminEnv,
+  markAccountWithdrawn,
+  redirect,
+  revalidatePath
+} =
   vi.hoisted(() => ({
     createSupabaseAdminClient: vi.fn(),
     createSupabaseServerClient: vi.fn(),
     getCurrentUser: vi.fn(),
     hasSupabaseAdminEnv: vi.fn().mockReturnValue(true),
+    markAccountWithdrawn: vi.fn(),
     redirect: vi.fn(),
     revalidatePath: vi.fn()
   }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("@/lib/auth/withdrawal-mark", () => ({ markAccountWithdrawn }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -152,23 +162,21 @@ describe("withdrawAccountAction", () => {
     expect(admin.removedAvatars).toEqual([[`${userId}/avatar.png`]]);
   });
 
-  it("再ログインを止めるため、認証側にも退会印を付けてサインアウトする", async () => {
+  it("profilesと同じ退会日時をapp_metadataの印に使い、user_metadataには退会印を書かない", async () => {
     const admin = createAdminMock();
     const server = createServerMock({ nickname: "あかり", avatar_path: null });
     createSupabaseAdminClient.mockReturnValue(admin.client);
     createSupabaseServerClient.mockResolvedValue(server.client);
+    getCurrentUser.mockResolvedValue({ id: userId, user_metadata: { locale: "ja" } });
 
     await withdrawAccountAction({ status: "idle" }, confirmationFormData("あかり"));
 
-    expect(admin.updateUserById).toHaveBeenCalledWith(
-      userId,
-      expect.objectContaining({
-        user_metadata: expect.objectContaining({
-          nickname: WITHDRAWN_DISPLAY_NAME,
-          withdrawn_at: expect.any(String)
-        })
-      })
-    );
+    const profileUpdate = admin.recorded.updates.find(({ table }) => table === "profiles");
+    expect(markAccountWithdrawn).toHaveBeenCalledWith(userId, profileUpdate?.values.deleted_at);
+    expect(admin.updateUserById).toHaveBeenCalledWith(userId, {
+      user_metadata: { locale: "ja", nickname: WITHDRAWN_DISPLAY_NAME }
+    });
+    expect(admin.updateUserById.mock.calls[0][1].user_metadata).not.toHaveProperty("withdrawn_at");
     expect(server.signOut).toHaveBeenCalled();
     expect(redirect).toHaveBeenCalledWith("/login?withdrawn=1");
   });

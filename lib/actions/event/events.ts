@@ -7,11 +7,11 @@ import { formDataToObject } from "@/lib/shared/form-data";
 import { buildDuplicatedEvent } from "@/lib/domain/event/event-duplication";
 import { getAfterEventCreatePath } from "@/lib/domain/event/event-flow";
 import { getUserDisplayName } from "@/lib/domain/account/profile";
-import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 import { eventDraftSchema, eventSchema } from "@/lib/shared/validators";
 
 export async function createEventAction(formData: FormData) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -64,7 +64,7 @@ export async function createEventAction(formData: FormData) {
  * 参加していれば主催者でなくても複製でき、複製した人が新しいイベントの主催者になる。
  */
 export async function duplicateEventAction(eventId: string) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -148,7 +148,7 @@ export async function duplicateEventAction(eventId: string) {
 }
 
 export async function saveEventDraftAction(formData: FormData) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -166,7 +166,7 @@ export async function saveEventDraftAction(formData: FormData) {
 }
 
 export async function discardEventDraftAction() {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -182,7 +182,7 @@ export async function discardEventDraftAction() {
 }
 
 export async function cancelEventAction(eventId: string) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }
@@ -205,7 +205,7 @@ export async function cancelEventAction(eventId: string) {
 }
 
 export async function updateEventAction(eventId: string, formData: FormData) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }

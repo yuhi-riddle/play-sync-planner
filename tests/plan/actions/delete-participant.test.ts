@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   createSupabaseServerClient,
   createSupabaseAdminClient,
-  getCurrentUserId,
+  getCurrentActiveUserId,
   redirect,
   revalidatePath
 } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
   createSupabaseAdminClient: vi.fn(),
-  getCurrentUserId: vi.fn(),
+  getCurrentActiveUserId: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   createSupabaseAdminClient,
-  getCurrentUserId
+  getCurrentActiveUserId
 }));
 
 import { deletePlanParticipantAction } from "@/lib/actions/plan/participants";
@@ -104,7 +104,7 @@ function createAdminClient({
 describe("deletePlanParticipantAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(ownerUserId);
+    getCurrentActiveUserId.mockResolvedValue(ownerUserId);
   });
 
   it("お金が絡んでいない参加者は消せる", async () => {

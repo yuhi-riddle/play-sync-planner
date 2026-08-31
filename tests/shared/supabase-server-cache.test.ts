@@ -65,4 +65,41 @@ describe("lib/supabase/server", () => {
 
     await expect(getCurrentUserId()).resolves.toBeNull();
   });
+
+  it("getCurrentActiveUserはapp_metadataに退会印がある場合nullを返す", async () => {
+    createServerClientMock.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: "user-1", app_metadata: { withdrawn_at: "2026-08-30T00:00:00.000Z" } } }
+        })
+      }
+    });
+
+    const { getCurrentActiveUser } = await import("@/lib/supabase/server");
+
+    await expect(getCurrentActiveUser()).resolves.toBeNull();
+  });
+
+  it("getCurrentActiveUserは退会印がないユーザーを返す", async () => {
+    const user = { id: "user-1", app_metadata: {} };
+    createServerClientMock.mockReturnValue({ auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) } });
+
+    const { getCurrentActiveUser } = await import("@/lib/supabase/server");
+
+    await expect(getCurrentActiveUser()).resolves.toBe(user);
+  });
+
+  it("getCurrentActiveUserIdは退会済みの場合nullを返す", async () => {
+    createServerClientMock.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: "user-1", app_metadata: { withdrawn_at: "2026-08-30T00:00:00.000Z" } } }
+        })
+      }
+    });
+
+    const { getCurrentActiveUserId } = await import("@/lib/supabase/server");
+
+    await expect(getCurrentActiveUserId()).resolves.toBeNull();
+  });
 });

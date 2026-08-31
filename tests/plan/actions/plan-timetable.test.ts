@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser, redirect, revalidatePath } =
+const { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser, redirect, revalidatePath } =
   vi.hoisted(() => ({
     createSupabaseAdminClient: vi.fn(),
     createSupabaseServerClient: vi.fn(),
-    getCurrentUser: vi.fn(),
+    getCurrentActiveUser: vi.fn(),
     redirect: vi.fn(),
     revalidatePath: vi.fn()
   }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient, createSupabaseServerClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser }));
 
 import {
   createPlanTimetableItemAction,
@@ -151,7 +151,7 @@ function timetableFormData(fields: Record<string, string>, participantIds: strin
 describe("createPlanTimetableItemAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("参加していないイベントの進行表には追加できない", async () => {
@@ -413,7 +413,7 @@ describe("createPlanTimetableItemAction", () => {
 describe("updatePlanTimetableItemAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("担当を入れ替える（いったん全部消してから入れ直す）", async () => {
@@ -493,7 +493,7 @@ describe("updatePlanTimetableItemAction", () => {
 describe("deletePlanTimetableItemAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: userId });
+    getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
   it("メンバーなら削除できる", async () => {

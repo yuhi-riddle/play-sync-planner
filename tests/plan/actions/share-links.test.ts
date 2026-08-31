@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSupabaseServerClient, getCurrentUser, redirect, revalidatePath } = vi.hoisted(() => ({
+const { createSupabaseServerClient, getCurrentActiveUser, redirect, revalidatePath } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentActiveUser: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUser }));
+vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentActiveUser }));
 
 import { reissueShareLinkAction, revokeShareLinkAction } from "@/lib/actions/plan/share-links";
 
@@ -59,7 +59,7 @@ function createSupabaseMock({ plan }: { plan: { id: string; answer_deadline_at: 
 describe("revokeShareLinkAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: ownerUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: ownerUserId });
   });
 
   it("marks the open link as revoked", async () => {
@@ -89,7 +89,7 @@ describe("revokeShareLinkAction", () => {
 describe("reissueShareLinkAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUser.mockResolvedValue({ id: ownerUserId });
+    getCurrentActiveUser.mockResolvedValue({ id: ownerUserId });
   });
 
   it("revokes the current link before issuing a new one", async () => {

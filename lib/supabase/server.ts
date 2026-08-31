@@ -3,6 +3,8 @@ import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
+import { isWithdrawn } from "@/lib/domain/account/withdrawal";
+
 type CookieToSet = {
   name: string;
   value: string;
@@ -71,4 +73,16 @@ export const getCurrentUser = cache(async () => {
   } = await supabase.auth.getUser();
 
   return user;
+});
+
+export const getCurrentActiveUser = cache(async () => {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  if (isWithdrawn(user.app_metadata)) return null;
+  return user;
+});
+
+export const getCurrentActiveUserId = cache(async () => {
+  const user = await getCurrentActiveUser();
+  return user?.id ?? null;
 });

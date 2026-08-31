@@ -13,7 +13,7 @@ import {
 import { buildNotificationCandidate } from "@/lib/domain/shared/site-notifications";
 import { canConfirmSettlementPayment } from "@/lib/domain/plan/participant-identity";
 import { formDataToObject } from "@/lib/shared/form-data";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 import {
   expenseSchema,
   participantSettlementPaymentMethodSchema,
@@ -338,7 +338,7 @@ export async function createExpenseAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -409,7 +409,7 @@ export async function updateExpenseAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -487,7 +487,7 @@ export async function updateExpenseAction(
 }
 
 export async function deleteExpenseAction(expenseId: string) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -522,7 +522,7 @@ export async function deleteExpenseAction(expenseId: string) {
 }
 
 export async function recordSettlementPaymentAction(settlementId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -610,7 +610,7 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
 export async function recordPublicSettlementPaymentAction(token: string, settlementId: string, formData: FormData) {
   const values = settlementPaymentSchema.parse(formDataToObject(formData));
   // 共有リンクは対象を探すための入口。誰が払ったかはログインしているアカウントで決める。
-  const currentUserId = await getCurrentUserId();
+  const currentUserId = await getCurrentActiveUserId();
   if (!currentUserId) {
     throw new Error("ログインが必要です");
   }
@@ -744,7 +744,7 @@ export async function updatePublicParticipantSettlementPaymentMethodAction(
   formData: FormData
 ) {
   const values = participantSettlementPaymentMethodSchema.parse(formDataToObject(formData));
-  const currentUserId = await getCurrentUserId();
+  const currentUserId = await getCurrentActiveUserId();
   if (!currentUserId) {
     throw new Error("ログインが必要です");
   }
@@ -801,7 +801,7 @@ export async function updatePublicParticipantSettlementPaymentMethodAction(
 }
 
 export async function confirmSettlementPaymentAction(paymentId: string) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -890,7 +890,7 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
 }
 
 export async function updateSettlementPaymentInstructionAction(settlementId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -925,7 +925,7 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
 }
 
 export async function updateParticipantSettlementPaymentMethodAction(participantId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -957,7 +957,7 @@ export async function updateParticipantSettlementPaymentMethodAction(participant
 }
 
 export async function markSettlementReminderSentAction(planId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

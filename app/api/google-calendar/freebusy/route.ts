@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchCalendarEvents } from "@/lib/google-calendar/calendar-events";
 import { refreshGoogleCalendarAccessToken } from "@/lib/google-calendar/oauth";
 import { decryptToken, encryptToken } from "@/lib/google-calendar/token-crypto";
+import { isWithdrawn } from "@/lib/domain/account/withdrawal";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 function isExpired(value: string | null) {
@@ -13,6 +14,11 @@ export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ connected: false, busy: [] });
+  }
+
+  // /api/* は middleware を通らないので、退会済みはここで止める。
+  if (isWithdrawn(user.app_metadata)) {
+    return NextResponse.json({ error: "ログインが必要です。" }, { status: 401 });
   }
 
   const month = request.nextUrl.searchParams.get("month") ?? "";

@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 
 export async function markNotificationReadAction(notificationId: string) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -28,7 +28,7 @@ export async function markNotificationReadAction(notificationId: string) {
 }
 
 export async function markAllNotificationsReadAction() {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

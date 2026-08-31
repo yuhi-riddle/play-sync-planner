@@ -10,7 +10,7 @@ import { extendedAnswerDeadline, parseAnswerDeadlineExtensionDays } from "@/lib/
 import { buildPlanParticipantsFromMembers, canStartPlanFromMembers, type EventMember } from "@/lib/domain/event/event-members";
 import { buildAnswerShareLink } from "@/lib/domain/plan/plans";
 import { buildNotificationCandidate } from "@/lib/domain/shared/site-notifications";
-import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 import { planSchema } from "@/lib/shared/validators";
 
 /**
@@ -38,7 +38,7 @@ export async function createPlanAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -132,7 +132,7 @@ export async function updatePlanAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -211,7 +211,7 @@ export async function updatePlanAction(
  * 回答の受付は両方を見ているため（lib/actions/answers.ts）。
  */
 export async function extendPlanAnswerDeadlineAction(planId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }
@@ -256,7 +256,7 @@ export async function extendPlanAnswerDeadlineAction(planId: string, formData: F
 }
 
 export async function restartPlanAdjustmentAction(planId: string) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

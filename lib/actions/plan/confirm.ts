@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { buildConfirmationUpdates, pickRecommendedCandidate } from "@/lib/domain/plan/confirmation";
 import { requireString } from "@/lib/shared/form-data";
-import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 
 type AnswerRow = {
   answer: "yes" | "maybe" | "no" | "unanswered";
@@ -20,7 +20,7 @@ type CandidatePlan = {
 };
 
 export async function confirmPlanAction(planId: string, formData: FormData) {
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentActiveUserId();
   if (!userId) {
     redirect("/login");
   }

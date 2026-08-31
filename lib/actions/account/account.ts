@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { markAccountWithdrawn } from "@/lib/auth/withdrawal-mark";
 import { errorState } from "@/lib/domain/shared/action-state";
 import {
   WITHDRAWN_DISPLAY_NAME,
@@ -78,6 +79,8 @@ export async function withdrawAccountAction(
     .update({ nickname: WITHDRAWN_DISPLAY_NAME, avatar_path: null, deleted_at: withdrawnAt })
     .eq("user_id", user.id);
 
+  await markAccountWithdrawn(user.id, withdrawnAt);
+
   await admin.from("event_members").update({ display_name: WITHDRAWN_DISPLAY_NAME }).eq("user_id", user.id);
 
   // participants.display_name は残す。清算の相手が誰か分からなくなるため。
@@ -86,8 +89,7 @@ export async function withdrawAccountAction(
   await admin.auth.admin.updateUserById(user.id, {
     user_metadata: {
       ...(user.user_metadata ?? {}),
-      nickname: WITHDRAWN_DISPLAY_NAME,
-      withdrawn_at: withdrawnAt
+      nickname: WITHDRAWN_DISPLAY_NAME
     }
   });
 

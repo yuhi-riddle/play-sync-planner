@@ -4,10 +4,10 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
 
 async function requirePlanOwner(planId: string) {
-  const user = await getCurrentUser();
+  const user = await getCurrentActiveUser();
   if (!user) {
     redirect("/login");
   }

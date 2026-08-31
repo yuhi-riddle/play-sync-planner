@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   createSupabaseServerClient,
   createSupabaseAdminClient,
-  getCurrentUserId,
+  getCurrentActiveUserId,
   redirect,
   revalidatePath
 } = vi.hoisted(() => ({
   createSupabaseServerClient: vi.fn(),
   createSupabaseAdminClient: vi.fn(),
-  getCurrentUserId: vi.fn(),
+  getCurrentActiveUserId: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn()
 }));
@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   createSupabaseAdminClient,
-  getCurrentUserId
+  getCurrentActiveUserId
 }));
 
 import { extendPlanAnswerDeadlineAction } from "@/lib/actions/plan/plans";
@@ -79,7 +79,7 @@ function formOf(days: string) {
 describe("extendPlanAnswerDeadlineAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrentUserId.mockResolvedValue(ownerUserId);
+    getCurrentActiveUserId.mockResolvedValue(ownerUserId);
   });
 
   it("プランと共有リンクの両方の期限を、同じ値まで延ばす", async () => {
