@@ -51,47 +51,59 @@ export async function withdrawAccountAction(
   }
 
   const admin = createSupabaseAdminClient();
-
-  // つながり・通知・下書き・外部連携は本人だけのデータなので物理削除する。
-  // events / plans / expenses / settlements / participants / user_consents は残す。
-  await Promise.all([
-    admin.from("user_connections").delete().eq("follower_user_id", user.id),
-    admin.from("user_connections").delete().eq("followed_user_id", user.id),
-    admin.from("user_favorites").delete().eq("user_id", user.id),
-    admin.from("user_favorites").delete().eq("favorite_user_id", user.id),
-    admin.from("user_blocks").delete().eq("blocker_user_id", user.id),
-    admin.from("user_blocks").delete().eq("blocked_user_id", user.id),
-    admin.from("event_user_invitations").delete().eq("inviter_user_id", user.id),
-    admin.from("event_user_invitations").delete().eq("invitee_user_id", user.id),
-    admin.from("notifications").delete().eq("user_id", user.id),
-    admin.from("event_drafts").delete().eq("owner_user_id", user.id),
-    admin.from("calendar_integrations").delete().eq("user_id", user.id)
-  ]);
-
-  if (profile?.avatar_path) {
-    await admin.storage.from(PROFILE_AVATAR_BUCKET).remove([profile.avatar_path]);
-  }
-
   const withdrawnAt = new Date().toISOString();
 
-  await admin
+  // 1. 退会開始の印を、破壊的な処理より先に立てる。
+  //    deletion_state=pending は「処理中／途中で失敗したかもしれない」印（監視・再実行用）。
+  //    退会ゲートの正本は app_metadata.withdrawn_at で、これも destructive step の前に書く。
+  //    ここまでで失敗して return しても、データはまだ何も消えていない。
+  const { error: markError } = await admin
     .from("profiles")
-    .update({ nickname: WITHDRAWN_DISPLAY_NAME, avatar_path: null, deleted_at: withdrawnAt })
+    .update({ deletion_state: "pending", deleted_at: withdrawnAt })
     .eq("user_id", user.id);
 
-  await markAccountWithdrawn(user.id, withdrawnAt);
+  if (markError) {
+    return errorState("退会処理を開始できませんでした。時間をおいて再度お試しください。");
+  }
 
-  await admin.from("event_members").update({ display_name: WITHDRAWN_DISPLAY_NAME }).eq("user_id", user.id);
+  try {
+    await markAccountWithdrawn(user.id, withdrawnAt);
+  } catch {
+    return errorState("退会処理を開始できませんでした。時間をおいて再度お試しください。");
+  }
+
+  // 2. 本人だけのデータの物理削除・匿名化を 1 トランザクションで（migration 045）。
+  //    途中失敗しても deletion_state は pending のまま。もう一度退会すれば冪等に再実行される。
+  const { error: finalizeError } = await admin.rpc("finalize_account_withdrawal", {
+    target_user_id: user.id
+  });
+
+  if (finalizeError) {
+    return errorState("退会処理の途中でエラーが発生しました。もう一度退会をお試しください。");
+  }
 
   // participants.display_name は残す。清算の相手が誰か分からなくなるため。
   // 残ることはプライバシーポリシーに明記している。
 
-  await admin.auth.admin.updateUserById(user.id, {
+  // 3. 外部（storage・Auth の user_metadata）。ここが失敗しても退会自体は成立している。
+  if (profile?.avatar_path) {
+    const { error: storageError } = await admin.storage
+      .from(PROFILE_AVATAR_BUCKET)
+      .remove([profile.avatar_path]);
+    if (storageError) {
+      console.error("退会時のアバター削除に失敗しました", storageError);
+    }
+  }
+
+  const { error: metadataError } = await admin.auth.admin.updateUserById(user.id, {
     user_metadata: {
       ...(user.user_metadata ?? {}),
       nickname: WITHDRAWN_DISPLAY_NAME
     }
   });
+  if (metadataError) {
+    console.error("退会時の user_metadata 更新に失敗しました", metadataError);
+  }
 
   await supabase.auth.signOut();
 

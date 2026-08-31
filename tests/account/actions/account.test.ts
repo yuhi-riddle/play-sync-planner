@@ -34,10 +34,14 @@ import { WITHDRAWN_DISPLAY_NAME } from "@/lib/domain/account/account";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 
-type Recorded = { deletes: string[]; updates: { table: string; values: Record<string, unknown> }[] };
+type Recorded = {
+  deletes: string[];
+  updates: { table: string; values: Record<string, unknown> }[];
+  rpcCalls: { name: string; args: unknown }[];
+};
 
-function createAdminMock() {
-  const recorded: Recorded = { deletes: [], updates: [] };
+function createAdminMock(overrides: { rpcError?: unknown; profileUpdateError?: unknown } = {}) {
+  const recorded: Recorded = { deletes: [], updates: [], rpcCalls: [] };
   const removedAvatars: string[][] = [];
   const updateUserById = vi.fn().mockResolvedValue({ error: null });
 
@@ -52,8 +56,14 @@ function createAdminMock() {
       return builder;
     });
     builder.eq = vi.fn(() => builder);
-    builder.then = (resolve: (value: { error: null }) => unknown) => Promise.resolve({ error: null }).then(resolve);
+    builder.then = (resolve: (value: { error: unknown }) => unknown) =>
+      Promise.resolve({ error: table === "profiles" ? overrides.profileUpdateError ?? null : null }).then(resolve);
     return builder;
+  });
+
+  const rpc = vi.fn(async (name: string, args: unknown) => {
+    recorded.rpcCalls.push({ name, args });
+    return { data: null, error: overrides.rpcError ?? null };
   });
 
   const storage = {
@@ -65,7 +75,12 @@ function createAdminMock() {
     }))
   };
 
-  return { client: { from, storage, auth: { admin: { updateUserById } } }, recorded, removedAvatars, updateUserById };
+  return {
+    client: { from, rpc, storage, auth: { admin: { updateUserById } } },
+    recorded,
+    removedAvatars,
+    updateUserById
+  };
 }
 
 function createServerMock(profile: { nickname: string; avatar_path: string | null } | null) {
@@ -100,12 +115,12 @@ describe("withdrawAccountAction", () => {
     const result = await withdrawAccountAction({ status: "idle" }, confirmationFormData("ちがう名前"));
 
     expect(result.status).toBe("error");
-    expect(admin.recorded.deletes).toEqual([]);
+    expect(admin.recorded.rpcCalls).toEqual([]);
     expect(admin.recorded.updates).toEqual([]);
     expect(server.signOut).not.toHaveBeenCalled();
   });
 
-  it("つながり・通知・連携などの個人データを物理削除する", async () => {
+  it("破壊的な処理の前に deletion_state=pending と app_metadata の印を立てる", async () => {
     const admin = createAdminMock();
     const server = createServerMock({ nickname: "あかり", avatar_path: null });
     createSupabaseAdminClient.mockReturnValue(admin.client);
@@ -113,33 +128,12 @@ describe("withdrawAccountAction", () => {
 
     await withdrawAccountAction({ status: "idle" }, confirmationFormData("あかり"));
 
-    for (const table of [
-      "user_connections",
-      "user_favorites",
-      "user_blocks",
-      "event_user_invitations",
-      "notifications",
-      "event_drafts",
-      "calendar_integrations"
-    ]) {
-      expect(admin.recorded.deletes).toContain(table);
-    }
+    const pendingUpdate = admin.recorded.updates.find(({ table }) => table === "profiles");
+    expect(pendingUpdate?.values).toMatchObject({ deletion_state: "pending", deleted_at: expect.any(String) });
+    expect(markAccountWithdrawn).toHaveBeenCalledWith(userId, pendingUpdate?.values.deleted_at);
   });
 
-  it("イベントと清算の記録は消さない", async () => {
-    const admin = createAdminMock();
-    const server = createServerMock({ nickname: "あかり", avatar_path: null });
-    createSupabaseAdminClient.mockReturnValue(admin.client);
-    createSupabaseServerClient.mockResolvedValue(server.client);
-
-    await withdrawAccountAction({ status: "idle" }, confirmationFormData("あかり"));
-
-    for (const table of ["events", "plans", "expenses", "settlements", "participants", "user_consents"]) {
-      expect(admin.recorded.deletes).not.toContain(table);
-    }
-  });
-
-  it("プロフィールとイベントメンバーの表示名を匿名化する", async () => {
+  it("個人データの物理削除・匿名化は finalize_account_withdrawal RPC に委ねる", async () => {
     const admin = createAdminMock();
     const server = createServerMock({ nickname: "あかり", avatar_path: `${userId}/avatar.png` });
     createSupabaseAdminClient.mockReturnValue(admin.client);
@@ -147,22 +141,30 @@ describe("withdrawAccountAction", () => {
 
     await withdrawAccountAction({ status: "idle" }, confirmationFormData("あかり"));
 
-    expect(admin.recorded.updates).toContainEqual({
-      table: "profiles",
-      values: expect.objectContaining({
-        nickname: WITHDRAWN_DISPLAY_NAME,
-        avatar_path: null,
-        deleted_at: expect.any(String)
-      })
+    expect(admin.recorded.rpcCalls).toContainEqual({
+      name: "finalize_account_withdrawal",
+      args: { target_user_id: userId }
     });
-    expect(admin.recorded.updates).toContainEqual({
-      table: "event_members",
-      values: { display_name: WITHDRAWN_DISPLAY_NAME }
-    });
+    // 個々のテーブルを TS から delete することはもう無い
+    expect(admin.recorded.deletes).toEqual([]);
+    // アバターの storage 削除は RPC の外
     expect(admin.removedAvatars).toEqual([[`${userId}/avatar.png`]]);
   });
 
-  it("profilesと同じ退会日時をapp_metadataの印に使い、user_metadataには退会印を書かない", async () => {
+  it("RPC が失敗したら pending のままエラーを返し、signOut しない", async () => {
+    const admin = createAdminMock({ rpcError: new Error("boom") });
+    const server = createServerMock({ nickname: "あかり", avatar_path: null });
+    createSupabaseAdminClient.mockReturnValue(admin.client);
+    createSupabaseServerClient.mockResolvedValue(server.client);
+
+    const result = await withdrawAccountAction({ status: "idle" }, confirmationFormData("あかり"));
+
+    expect(result.status).toBe("error");
+    expect(server.signOut).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("app_metadata の印には profiles と同じ退会日時を使い、user_metadata には退会印を書かない", async () => {
     const admin = createAdminMock();
     const server = createServerMock({ nickname: "あかり", avatar_path: null });
     createSupabaseAdminClient.mockReturnValue(admin.client);
@@ -171,8 +173,6 @@ describe("withdrawAccountAction", () => {
 
     await withdrawAccountAction({ status: "idle" }, confirmationFormData("あかり"));
 
-    const profileUpdate = admin.recorded.updates.find(({ table }) => table === "profiles");
-    expect(markAccountWithdrawn).toHaveBeenCalledWith(userId, profileUpdate?.values.deleted_at);
     expect(admin.updateUserById).toHaveBeenCalledWith(userId, {
       user_metadata: { locale: "ja", nickname: WITHDRAWN_DISPLAY_NAME }
     });
