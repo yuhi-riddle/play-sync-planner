@@ -1,12 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 
 import { buildConfirmedCalendarEvent } from "@/lib/domain/calendar/calendar-sync";
 import { resolveGoogleCalendarAccessToken, type CalendarIntegrationRow } from "@/lib/google-calendar/access-token";
-import { insertCalendarEvent } from "@/lib/google-calendar/calendar-events";
+import { CalendarEventDuplicateError, insertCalendarEvent } from "@/lib/google-calendar/calendar-events";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
+
+/** Google イベントの id を planId から決めて冪等にする。id は [a-v0-9] のみ。uuid の hex はこの範囲。 */
+function calendarEventExternalId(planId: string) {
+  return `madoiplan${planId.replace(/-/g, "")}`;
+}
 
 type PlanCalendarRow = {
   id: string;
@@ -49,6 +54,35 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
     redirect(`/plans/${planId}?calendar=already-created`);
   }
 
+  // idle → creating を条件付きで奪う。奪えた実行だけが Google を叩く。
+  // 二重クリック・複数タブの2つ目はここで弾かれる。
+  const { data: claimed } = await supabase
+    .from("plans")
+    .update({ google_calendar_sync_state: "creating" })
+    .eq("id", planId)
+    .eq("owner_user_id", userId)
+    .eq("google_calendar_sync_state", "idle")
+    .select("id")
+    .maybeSingle();
+
+  if (!claimed) {
+    redirect(`/plans/${planId}?calendar=already-created`);
+  }
+
+  const externalId = calendarEventExternalId(planId);
+  const resetSyncState = () =>
+    supabase
+      .from("plans")
+      .update({ google_calendar_sync_state: "idle" })
+      .eq("id", planId)
+      .eq("owner_user_id", userId);
+  const markCreated = (eventId: string) =>
+    supabase
+      .from("plans")
+      .update({ google_calendar_event_id: eventId, google_calendar_sync_state: "created" })
+      .eq("id", planId)
+      .eq("owner_user_id", userId);
+
   const { data: integration } = await supabase
     .from("calendar_integrations")
     .select("calendar_id, encrypted_access_token, encrypted_refresh_token, token_expires_at")
@@ -57,6 +91,7 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
     .maybeSingle();
 
   if (!integration) {
+    await resetSyncState();
     redirect("/settings?calendar=required");
   }
 
@@ -70,28 +105,38 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
       : { data: [] };
   const attendeeEmails = [...new Set((attendeeIntegrations ?? []).flatMap((integration) => (integration.account_email ? [integration.account_email] : [])))];
   const event = Array.isArray(planRow.events) ? planRow.events[0] : planRow.events;
-  const accessToken = await resolveGoogleCalendarAccessToken({ supabase, userId, integration: integration as CalendarIntegrationRow });
-  const inserted = await insertCalendarEvent({
-    accessToken,
-    calendarId: (integration as CalendarIntegrationRow).calendar_id ?? "primary",
-    event: {
-      ...buildConfirmedCalendarEvent({
-        planTitle: planRow.title,
-        eventTitle: event?.title,
-        locationName: event?.location_name,
-        startAt: planRow.confirmed_start_at,
-        endAt: planRow.confirmed_end_at,
-        isAllDay: Boolean(planRow.is_all_day)
-      }),
-      attendeeEmails
-    }
-  });
 
-  await supabase
-    .from("plans")
-    .update({ google_calendar_event_id: inserted.id ?? "created" })
-    .eq("id", planId)
-    .eq("owner_user_id", userId);
+  try {
+    const accessToken = await resolveGoogleCalendarAccessToken({ supabase, userId, integration: integration as CalendarIntegrationRow });
+    const inserted = await insertCalendarEvent({
+      accessToken,
+      calendarId: (integration as CalendarIntegrationRow).calendar_id ?? "primary",
+      event: {
+        ...buildConfirmedCalendarEvent({
+          planTitle: planRow.title,
+          eventTitle: event?.title,
+          locationName: event?.location_name,
+          startAt: planRow.confirmed_start_at,
+          endAt: planRow.confirmed_end_at,
+          isAllDay: Boolean(planRow.is_all_day)
+        }),
+        attendeeEmails,
+        externalId
+      }
+    });
+
+    await markCreated(inserted.id ?? externalId);
+  } catch (cause) {
+    unstable_rethrow(cause);
+    if (cause instanceof CalendarEventDuplicateError) {
+      // Google 側には既にこの予定がある。二重作成せず、DB を created にそろえて終わる。
+      await markCreated(externalId);
+      redirect(`/plans/${planId}?calendar=already-created`);
+    }
+    // 失敗したので次の再試行が claim できるよう idle に戻す。
+    await resetSyncState();
+    throw cause instanceof Error ? cause : new Error("Google カレンダーへの作成に失敗しました");
+  }
 
   revalidatePath("/");
   revalidatePath(`/plans/${planId}`);

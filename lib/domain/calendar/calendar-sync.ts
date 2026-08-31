@@ -5,6 +5,11 @@ export type ConfirmedCalendarEvent = {
   end: string;
   isAllDay?: boolean;
   attendeeEmails?: string[];
+  /**
+   * Google イベントの id を固定して冪等にする。同じ id で2回 insert すると Google が 409 を返す。
+   * Google の id は [a-v0-9] のみ。planId(uuid のhex)はこの範囲に収まる。
+   */
+  externalId?: string;
 };
 
 type GoogleCalendarShareInput = {

@@ -119,6 +119,14 @@ export type GoogleCalendarInsertResponse = {
   htmlLink?: string;
 };
 
+/** 同じ id の予定が既に存在するときに Google が返す 409。二重作成の防止に使う。 */
+export class CalendarEventDuplicateError extends Error {
+  constructor() {
+    super("Google Calendar event already exists for this id");
+    this.name = "CalendarEventDuplicateError";
+  }
+}
+
 export async function insertCalendarEvent({
   accessToken,
   calendarId = "primary",
@@ -132,8 +140,10 @@ export async function insertCalendarEvent({
 }): Promise<GoogleCalendarInsertResponse> {
   const attendeeEmails = [...new Set(event.attendeeEmails ?? [])].filter((email) => email.trim().length > 0);
   const attendees = attendeeEmails.length > 0 ? { attendees: attendeeEmails.map((email) => ({ email })) } : {};
+  const externalId = event.externalId ? { id: event.externalId } : {};
   const eventBody = event.isAllDay
     ? {
+        ...externalId,
         summary: event.title,
         ...(event.location ? { location: event.location } : {}),
         start: { date: event.start.slice(0, 10) },
@@ -141,6 +151,7 @@ export async function insertCalendarEvent({
         ...attendees
       }
     : {
+        ...externalId,
         summary: event.title,
         ...(event.location ? { location: event.location } : {}),
         start: { dateTime: event.start },
@@ -160,6 +171,10 @@ export async function insertCalendarEvent({
     },
     body: JSON.stringify(eventBody)
   });
+
+  if (response.status === 409) {
+    throw new CalendarEventDuplicateError();
+  }
 
   if (!response.ok) {
     throw new Error("Failed to insert Google Calendar event");
