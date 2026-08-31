@@ -58,16 +58,23 @@
 
 ### PostgreSQL コンテナ
 
-`services:` に **`supabase/postgres`** イメージを使う。ロール（`anon` / `authenticated` / `service_role` /
-`supabase_admin` ほか）、`auth` / `storage` スキーマ、`auth.uid()` / `auth.role()`、`storage.foldername()`、
-拡張が最初から入っている。Supabase CLI は不要。
+`services:` に **素の `postgres:16`** を使い、マイグレーションが前提とする Supabase 提供オブジェクト
+（`anon` / `authenticated` / `service_role` ロール、`auth` スキーマ + `auth.users` + `auth.uid()` /
+`auth.role()` / `auth.jwt()`、`storage` スキーマのスタブ、`pgcrypto`）を
+`scripts/ci-bootstrap-db.sql` で用意する。Supabase CLI は不要。
+
+※ 当初 `supabase/postgres` イメージを試したが、このイメージでは接続ユーザー `postgres` が
+superuser ではなく、`storage` スキーマ（`supabase_storage_admin` 所有）にテーブルを作れず
+`permission denied for schema storage` で止まった。素の postgres なら接続ユーザーが superuser
+なので、必要なものを全部自前で用意できる。CI の目的は「SQL が順番に適用できるか」の検証で、
+RLS の実挙動までは見ないため、スタブで十分。
 
 ```yaml
   migrations:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: supabase/postgres:15.8.1.060   # 実装時に現行の安定タグを確認して固定
+        image: postgres:16
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -79,13 +86,11 @@
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
+      - name: Bootstrap Supabase-provided objects (CI only)
+        env: { PGHOST: localhost, PGPORT: "5432", PGUSER: postgres, PGPASSWORD: postgres, PGDATABASE: postgres }
+        run: psql -v ON_ERROR_STOP=1 --no-psqlrc -q -f scripts/ci-bootstrap-db.sql
       - name: Apply migrations in order
-        env:
-          PGHOST: localhost
-          PGPORT: "5432"
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          PGDATABASE: postgres
+        env: { PGHOST: localhost, PGPORT: "5432", PGUSER: postgres, PGPASSWORD: postgres, PGDATABASE: postgres }
         run: bash scripts/apply-migrations.sh
 ```
 
