@@ -1,6 +1,13 @@
 export const CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 export const CALENDAR_FREE_BUSY_SCOPE = "https://www.googleapis.com/auth/calendar.freebusy";
-export const CALENDAR_SCOPES = [CALENDAR_EVENTS_SCOPE, CALENDAR_FREE_BUSY_SCOPE] as const;
+// email / openid は、どの Google アカウントで連携したか（account_email）を
+// トークン交換のレスポンス（id_token）から取るために付ける。
+export const CALENDAR_ACCOUNT_SCOPES = ["openid", "email"];
+export const CALENDAR_SCOPES = [
+  CALENDAR_EVENTS_SCOPE,
+  CALENDAR_FREE_BUSY_SCOPE,
+  ...CALENDAR_ACCOUNT_SCOPES
+] as const;
 
 export type GoogleTokenResponse = {
   access_token: string;
@@ -8,7 +15,30 @@ export type GoogleTokenResponse = {
   expires_in?: number;
   scope?: string;
   token_type?: string;
+  id_token?: string;
 };
+
+/**
+ * Google のトークンエンドポイントから直接受け取った id_token の email クレームを読む。
+ * TLS で Google から直接届いた値なので、ここでは署名検証まではしない
+ * （OAuth のトークン交換フローでの標準的な扱い）。
+ */
+export function emailFromIdToken(idToken: string | undefined): string | null {
+  if (!idToken) {
+    return null;
+  }
+  const payload = idToken.split(".")[1];
+  if (!payload) {
+    return null;
+  }
+  try {
+    const json = Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const claims = JSON.parse(json) as { email?: unknown; email_verified?: unknown };
+    return typeof claims.email === "string" && claims.email.length > 0 ? claims.email : null;
+  } catch {
+    return null;
+  }
+}
 
 function requireEnv(name: string) {
   const value = process.env[name];

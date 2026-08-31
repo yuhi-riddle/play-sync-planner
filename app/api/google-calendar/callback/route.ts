@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { exchangeGoogleCalendarCode } from "@/lib/google-calendar/oauth";
+import { emailFromIdToken, exchangeGoogleCalendarCode } from "@/lib/google-calendar/oauth";
 import { encryptToken } from "@/lib/google-calendar/token-crypto";
 import { isWithdrawn } from "@/lib/domain/account/withdrawal";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -48,12 +48,15 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     const expiresAt = token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null;
+    // 連携したのは Calendar OAuth で選んだ Google アカウント。アプリのログイン用アドレスとは
+    // 別のことがある。id_token から実際に連携したアカウントのメールを取り、無ければログイン用にフォールバック。
+    const accountEmail = emailFromIdToken(token.id_token) ?? user.email;
     const { error } = await supabase.from("calendar_integrations").upsert(
       {
         user_id: user.id,
         provider: "google",
         calendar_id: "primary",
-        account_email: user.email,
+        account_email: accountEmail,
         encrypted_access_token: encryptToken(token.access_token),
         encrypted_refresh_token: encryptToken(token.refresh_token),
         token_expires_at: expiresAt,
