@@ -57,6 +57,11 @@ export function normalizeCalendarEventsResponse(response: GoogleCalendarEventsRe
   });
 }
 
+// このアプリの月表示は JST 固定（lib/shared/format.ts）。UTC の月初を渡すと
+// 月初 0:00〜9:00(JST) が抜け、翌月初 0:00〜9:00(JST) が混入する。
+// JST の月境界（= 前月末 15:00 UTC）を渡す。DST の無い +09:00 固定でよい。
+const JST_OFFSET_HOURS = 9;
+
 export function monthTimeRange(month: string) {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
   if (!match) {
@@ -66,9 +71,12 @@ export function monthTimeRange(month: string) {
   const year = Number(match[1]);
   const monthIndex = Number(match[2]) - 1;
 
+  const startOfMonthJst = (y: number, m0: number) =>
+    new Date(Date.UTC(y, m0, 1, -JST_OFFSET_HOURS)).toISOString();
+
   return {
-    timeMin: new Date(Date.UTC(year, monthIndex, 1)).toISOString(),
-    timeMax: new Date(Date.UTC(year, monthIndex + 1, 1)).toISOString()
+    timeMin: startOfMonthJst(year, monthIndex),
+    timeMax: startOfMonthJst(year, monthIndex + 1)
   };
 }
 

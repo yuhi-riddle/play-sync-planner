@@ -56,10 +56,18 @@ describe("calendar event helpers", () => {
     expect(normalizeCalendarEventsResponse({ items: [] })).toEqual([]);
   });
 
-  it("builds an inclusive month query range", () => {
+  it("builds the month range on JST boundaries, not UTC", () => {
+    // JST 2026-07-01 00:00 = 2026-06-30 15:00Z, JST 2026-08-01 00:00 = 2026-07-31 15:00Z
     expect(monthTimeRange("2026-07")).toEqual({
-      timeMin: "2026-07-01T00:00:00.000Z",
-      timeMax: "2026-08-01T00:00:00.000Z"
+      timeMin: "2026-06-30T15:00:00.000Z",
+      timeMax: "2026-07-31T15:00:00.000Z"
+    });
+  });
+
+  it("handles a year boundary in JST", () => {
+    expect(monthTimeRange("2026-01")).toEqual({
+      timeMin: "2025-12-31T15:00:00.000Z",
+      timeMax: "2026-01-31T15:00:00.000Z"
     });
   });
 
