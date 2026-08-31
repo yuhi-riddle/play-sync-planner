@@ -61,12 +61,17 @@ https://esheopszeqggftmawdmu.supabase.co/auth/v1/callback
 
 ```text
 https://www.googleapis.com/auth/calendar.events
+https://www.googleapis.com/auth/calendar.freebusy
+openid
+email
 ```
 
-以前追加していた次のスコープは、今回の実装では不要です。可能なら削除してください。
+`openid` / `email` は、どの Google アカウントで連携したかを保存・表示するために使います
+（連携先メールアドレスを id_token から取得）。予定の中身は取得しません。
+
+以前追加していた次のスコープは不要です。可能なら削除してください。
 
 ```text
-https://www.googleapis.com/auth/calendar.freebusy
 https://www.googleapis.com/auth/calendar.events.readonly
 ```
 

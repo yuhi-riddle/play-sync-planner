@@ -86,7 +86,14 @@ OAuth スコープ:
 
 ```text
 https://www.googleapis.com/auth/calendar.events
+https://www.googleapis.com/auth/calendar.freebusy
+openid
+email
 ```
+
+`openid` / `email` は、どの Google アカウントで連携したか（連携先メールアドレス）を
+トークン交換時の id_token から取るために使う。アプリのログイン用アカウントと
+Calendar 連携で選んだアカウントが違っても、正しい連携先を保存・表示できるようにする。
 
 ## 7. Phase 2 でまだ実装しないもの
 
