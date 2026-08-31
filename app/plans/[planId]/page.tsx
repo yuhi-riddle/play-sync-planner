@@ -408,7 +408,9 @@ export default async function PlanDetailPage({
               <div>
                 <p className="text-eyebrow uppercase text-pine">いま一番効くこと</p>
                 <h2 className="mt-1 text-title text-ink">リンクを配る</h2>
-                <p className="mt-1 text-caption text-muted">未ログインの人もそのまま回答できます。</p>
+                <p className="mt-1 text-caption text-muted">
+                  回答にはログインが必要です。相手を先に参加者として招待しておいてください。
+                </p>
               </div>
             )}
             <div className="mt-4">
