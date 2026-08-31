@@ -90,6 +90,14 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: postgres
         run: bash scripts/apply-migrations.sh
+      - name: Grant table access to Supabase roles
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: psql -v ON_ERROR_STOP=1 --no-psqlrc -q -f scripts/ci-grant-supabase-roles.sql
       - name: Run DB integration tests
         env:
           PGHOST: localhost
