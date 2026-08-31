@@ -6,7 +6,6 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { errorState, failWith, type ActionState } from "@/lib/domain/shared/action-state";
 import {
   buildEqualExpenseSplits,
-  calculateSettlementTransfers,
   summarizeSettlementPaymentProgress,
   validateIndividualSplits
 } from "@/lib/domain/settlement/settlement";
@@ -87,16 +86,6 @@ async function consumeSettlementRateLimit(
 type ParticipantRow = {
   id: string;
   display_name: string;
-};
-
-type ExpenseRow = {
-  id: string;
-  payer_participant_id: string;
-  amount: number;
-  expense_splits: Array<{
-    participant_id: string;
-    amount: number;
-  }>;
 };
 
 type SettlementPaymentRow = {
@@ -223,57 +212,6 @@ async function assertPlanOwner(planId: string, userId: string) {
   };
 }
 
-async function recomputeSettlements(planId: string, participants: ParticipantRow[]) {
-  const supabase = await createSupabaseServerClient();
-  const { data: expenses, error } = await supabase
-    .from("expenses")
-    .select("id, payer_participant_id, amount, expense_splits(participant_id, amount)")
-    .eq("plan_id", planId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const transfers = calculateSettlementTransfers({
-    participants: participants.map((participant) => ({
-      id: participant.id,
-      displayName: participant.display_name
-    })),
-    expenses: ((expenses ?? []) as ExpenseRow[]).map((expense) => ({
-      id: expense.id,
-      payerParticipantId: expense.payer_participant_id,
-      amount: expense.amount,
-      splits: (expense.expense_splits ?? []).map((split) => ({
-        participantId: split.participant_id,
-        amount: split.amount
-      }))
-    }))
-  });
-
-  await supabase.from("settlements").delete().eq("plan_id", planId).eq("status", "unpaid");
-
-  if (transfers.length > 0) {
-    const { error: insertError } = await supabase.from("settlements").insert(
-      transfers.map((transfer) => ({
-        plan_id: planId,
-        from_participant_id: transfer.fromParticipantId,
-        to_participant_id: transfer.toParticipantId,
-        amount: transfer.amount,
-        status: "unpaid"
-      }))
-    );
-
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-  }
-
-  await supabase
-    .from("plans")
-    .update({ settlement_status: transfers.length > 0 ? "needed" : "not_needed" })
-    .eq("id", planId);
-}
-
 async function hasSettlementPayments({
   supabase,
   planId
@@ -363,37 +301,21 @@ export async function createExpenseAction(
 
     assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 
-    const { data: expense, error: expenseError } = await supabase
-      .from("expenses")
-      .insert({
-        plan_id: planId,
-        payer_participant_id: values.payer_participant_id,
-        title: values.title,
-        amount: values.amount,
-        memo: values.memo,
-        payment_url: values.payment_url,
-        is_important: values.is_important
-      })
-      .select("id")
-      .single();
+    // 費用の挿入・分担の挿入・精算の再計算を 1 トランザクション（plan 行ロック下）で行う。
+    const { error: writeError } = await supabase.rpc("create_expense", {
+      target_plan_id: planId,
+      p_payer_participant_id: values.payer_participant_id,
+      p_title: values.title,
+      p_amount: values.amount,
+      p_memo: values.memo ?? null,
+      p_payment_url: values.payment_url ?? null,
+      p_is_important: values.is_important,
+      p_splits: splits.map((split) => ({ participant_id: split.participantId, amount: split.amount }))
+    });
 
-    if (expenseError) {
-      return failWith("立替を登録できませんでした。", expenseError);
+    if (writeError) {
+      return failWith("立替を登録できませんでした。", writeError);
     }
-
-    const { error: splitsError } = await supabase.from("expense_splits").insert(
-      splits.map((split) => ({
-        expense_id: expense.id,
-        participant_id: split.participantId,
-        amount: split.amount
-      }))
-    );
-
-    if (splitsError) {
-      return failWith("立替を登録できませんでした。", splitsError);
-    }
-
-    await recomputeSettlements(planId, participants);
 
     revalidatePath(`/plans/${planId}`);
     revalidatePath(`/plans/${planId}/settlement`);
@@ -446,36 +368,21 @@ export async function updateExpenseAction(
     }
     assertParticipantIds(participantIds, splits.map((split) => split.participantId));
 
-    const { error: updateError } = await supabase
-      .from("expenses")
-      .update({
-        payer_participant_id: values.payer_participant_id,
-        title: values.title,
-        amount: values.amount,
-        memo: values.memo,
-        payment_url: values.payment_url,
-        is_important: values.is_important
-      })
-      .eq("id", expenseId);
+    // 費用の更新・分担の入れ替え・精算の再計算を 1 トランザクション（plan 行ロック下）で行う。
+    const { error: writeError } = await supabase.rpc("update_expense", {
+      target_expense_id: expenseId,
+      p_payer_participant_id: values.payer_participant_id,
+      p_title: values.title,
+      p_amount: values.amount,
+      p_memo: values.memo ?? null,
+      p_payment_url: values.payment_url ?? null,
+      p_is_important: values.is_important,
+      p_splits: splits.map((split) => ({ participant_id: split.participantId, amount: split.amount }))
+    });
 
-    if (updateError) {
-      return failWith("立替を更新できませんでした。", updateError);
+    if (writeError) {
+      return failWith("立替を更新できませんでした。", writeError);
     }
-
-    await supabase.from("expense_splits").delete().eq("expense_id", expenseId);
-    const { error: splitsError } = await supabase.from("expense_splits").insert(
-      splits.map((split) => ({
-        expense_id: expenseId,
-        participant_id: split.participantId,
-        amount: split.amount
-      }))
-    );
-
-    if (splitsError) {
-      return failWith("立替を更新できませんでした。", splitsError);
-    }
-
-    await recomputeSettlements(expense.plan_id, participants);
 
     revalidatePath(`/plans/${expense.plan_id}`);
     revalidatePath(`/plans/${expense.plan_id}/settlement`);
@@ -495,7 +402,7 @@ export async function deleteExpenseAction(expenseId: string) {
   const supabase = await createSupabaseServerClient();
   const { data: expense, error } = await supabase
     .from("expenses")
-    .select("id, plan_id, plans(owner_user_id, participants(id, display_name))")
+    .select("id, plan_id, plans(owner_user_id)")
     .eq("id", expenseId)
     .single();
 
@@ -506,15 +413,11 @@ export async function deleteExpenseAction(expenseId: string) {
 
   await assertExpenseCanChange({ supabase, planId: expense.plan_id });
 
-  const { error: deleteError } = await supabase.from("expenses").delete().eq("id", expenseId);
+  // 費用の削除（分担は FK cascade）と精算の再計算を 1 トランザクション（plan 行ロック下）で行う。
+  const { error: deleteError } = await supabase.rpc("delete_expense", { target_expense_id: expenseId });
   if (deleteError) {
     throw new Error(deleteError.message);
   }
-
-  const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
-    a.display_name.localeCompare(b.display_name, "ja")
-  );
-  await recomputeSettlements(expense.plan_id, participants);
 
   revalidatePath(`/plans/${expense.plan_id}`);
   revalidatePath(`/plans/${expense.plan_id}/settlement`);
