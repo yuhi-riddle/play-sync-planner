@@ -17,6 +17,12 @@ type AvailabilityResponse = {
   connectedCount: number;
   /** イベントの参加者総数。連携していない人もここには入る。 */
   memberCount: number;
+  /** 今回取得できた人数。 */
+  succeededCount?: number;
+  /** 今回取得に失敗した人数（部分成功時）。 */
+  failedCount?: number;
+  /** 閲覧者本人の連携が切れているときだけ立つ。 */
+  code?: string;
   dailyBusySummaries: Record<string, DailyBusySummary>;
 };
 
@@ -153,6 +159,19 @@ export function GroupAvailabilityCalendar({
               {availability.connectedCount < availability.memberCount ? (
                 <span className="w-full text-sm leading-6 text-muted">
                   未連携の{availability.memberCount - availability.connectedCount}人はこの集計に入っていません。空いているかどうかは回答で確かめてください。
+                </span>
+              ) : null}
+              {availability.failedCount && availability.failedCount > 0 ? (
+                <span className="w-full text-sm leading-6 text-clay">
+                  {availability.failedCount}人分のカレンダーを取得できませんでした。取得できた{availability.succeededCount ?? availability.connectedCount - availability.failedCount}人分で集計しています。
+                  {availability.code === "calendar_reconnect_required" ? (
+                    <a
+                      href={`/api/google-calendar/connect?next=${encodeURIComponent(`/events/${eventId}/plans/new`)}`}
+                      className="ml-1 inline-flex font-bold text-pine underline underline-offset-4"
+                    >
+                      あなたのGoogle Calendarを再連携
+                    </a>
+                  ) : null}
                 </span>
               ) : null}
             </div>

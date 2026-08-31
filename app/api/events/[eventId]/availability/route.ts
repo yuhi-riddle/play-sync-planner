@@ -78,35 +78,63 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   }
 
-  try {
-    const busyByParticipant = await Promise.all(
-      connectedIntegrations.map(async (integration) => {
-        const accessToken = await resolveGoogleCalendarAccessToken({
-          supabase: admin,
-          userId: integration.user_id,
-          integration: integration as CalendarIntegrationRow
-        });
-        return fetchCalendarFreeBusy({
-          accessToken,
-          calendarId: integration.calendar_id ?? "primary",
-          timeMin: range.start,
-          timeMax: range.end
-        });
-      })
-    );
-    const dailyBusySummaries = buildDailyBusySummaries({ busyByParticipant, range });
+  // 1人のトークン失効やAPI障害で全員分を落とさないよう、allSettled で部分成功を許可する。
+  const results = await Promise.allSettled(
+    connectedIntegrations.map(async (integration) => {
+      const accessToken = await resolveGoogleCalendarAccessToken({
+        supabase: admin,
+        userId: integration.user_id,
+        integration: integration as CalendarIntegrationRow
+      });
+      return fetchCalendarFreeBusy({
+        accessToken,
+        calendarId: integration.calendar_id ?? "primary",
+        timeMin: range.start,
+        timeMax: range.end
+      });
+    })
+  );
 
-    return NextResponse.json({
-      month,
-      updatedAt: new Date().toISOString(),
-      connectedCount,
-      memberCount,
-      dailyBusySummaries
-    });
-  } catch (error) {
-    if (error instanceof CalendarFreeBusyError && (error.status === 401 || error.status === 403)) {
-      return NextResponse.json({ error: "Google Calendar の再連携が必要です。", code: "calendar_reconnect_required" }, { status: 409 });
+  const busyByParticipant: Awaited<ReturnType<typeof fetchCalendarFreeBusy>>[] = [];
+  let failedCount = 0;
+  // 再連携を促してよいのは「閲覧している本人」の連携が切れているときだけ。
+  // 他の参加者の連携状態は本人にしか案内できない。
+  let viewerReconnectRequired = false;
+
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      busyByParticipant.push(result.value);
+      return;
     }
-    return NextResponse.json({ error: "空き状況を取得できませんでした。時間をおいて再試行してください。" }, { status: 502 });
+    failedCount += 1;
+    if (connectedIntegrations[index].user_id === user.id) {
+      const reason = result.reason;
+      if (reason instanceof CalendarFreeBusyError && (reason.status === 401 || reason.status === 403)) {
+        viewerReconnectRequired = true;
+      }
+    }
+  });
+
+  if (busyByParticipant.length === 0) {
+    return NextResponse.json(
+      {
+        error: "空き状況を取得できませんでした。時間をおいて再試行してください。",
+        ...(viewerReconnectRequired ? { code: "calendar_reconnect_required" } : {})
+      },
+      { status: 502 }
+    );
   }
+
+  const dailyBusySummaries = buildDailyBusySummaries({ busyByParticipant, range });
+
+  return NextResponse.json({
+    month,
+    updatedAt: new Date().toISOString(),
+    connectedCount,
+    memberCount,
+    succeededCount: busyByParticipant.length,
+    failedCount,
+    ...(viewerReconnectRequired ? { code: "calendar_reconnect_required" } : {}),
+    dailyBusySummaries
+  });
 }
