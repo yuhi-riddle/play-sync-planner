@@ -158,10 +158,18 @@ High 3 のマージ後に着手（実 DB テストの土台が要る）。
 
 各マイグレーション（`041_` 以降）の SQL は、その PR の設計メモに載せて個別承認を取ってから追加する。
 
-## この設計docで決めてほしいこと
+## 決定（2026-08-31）
 
-1. **精算アルゴリズムの SQL 移植を認めるか**（上記「重要な設計判断」）。
-   代替案は「TS 計算のまま、費用書き込みと精算適用を 2 つの RPC に分け、完全な原子性は諦める」。
-   移植を推奨（同時編集で精算がズレる穴を残さないため）。
-2. RPC 粒度は「ユーザー操作 1 つ = RPC 1 つ」でよいか。
-3. `profiles` への `deletion_state` 列追加を認めるか（マイグレーション、承認事項）。
+1. **精算アルゴリズムを PL/pgSQL に移植する。** `recompute_plan_settlements(plan_id)` を SQL 化し、
+   費用の書き込みと精算再計算を同一トランザクション・同一ロック下に置く。
+   TS の `calculateSettlementTransfers` はプレビュー表示用に残し、SQL 版との一致をテストで担保する。
+2. **RPC 粒度は「ユーザー操作 1 つ = RPC 1 つ」。** 上の RPC 一覧のとおり 8 本。
+3. **`profiles.deletion_state`（`active` / `pending` / `done`）を追加する**（マイグレーション 041）。
+
+### PR の分け方（RPC ごと、ただし密結合はまとめる）
+
+- PR A: `recompute_plan_settlements`（SQL 移植 + クロスチェックテスト）+ `create_expense` /
+  `update_expense` / `delete_expense` + 対応する Server Action 改修。
+- PR B: `record_settlement_payment`。
+- PR C: `create_plan_with_children` + `replace_plan_schedule`。
+- PR D: `profiles.deletion_state`（041）+ `finalize_account_withdrawal` + 退会アクション改修。
