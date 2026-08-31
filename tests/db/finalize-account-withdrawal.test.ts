@@ -120,13 +120,16 @@ describe("finalize_account_withdrawal", () => {
     const f = await seed();
     await client.query("select public.finalize_account_withdrawal($1)", [f.userId]);
     const firstDeletedAt = (
-      await client.query<{ deleted_at: string }>("select deleted_at from public.profiles where user_id = $1", [f.userId])
+      await client.query<{ deleted_at: string }>(
+        "select deleted_at::text as deleted_at from public.profiles where user_id = $1",
+        [f.userId]
+      )
     ).rows[0].deleted_at;
 
     await client.query("select public.finalize_account_withdrawal($1)", [f.userId]);
 
     const profile = await client.query<{ deleted_at: string; deletion_state: string }>(
-      "select deleted_at, deletion_state from public.profiles where user_id = $1",
+      "select deleted_at::text as deleted_at, deletion_state from public.profiles where user_id = $1",
       [f.userId]
     );
     // deleted_at は coalesce で保持されるので初回の値のまま
