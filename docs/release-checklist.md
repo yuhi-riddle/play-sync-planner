@@ -21,39 +21,8 @@
 
 Supabase Dashboard の SQL Editor で、次の順番に実行します。
 
-- [ ] `supabase/migrations/001_phase1_schema.sql`
-- [ ] `supabase/migrations/002_calendar_integrations.sql`
-- [ ] `supabase/migrations/003_plan_reminder_settings.sql`
-- [ ] `supabase/migrations/004_plan_reminder_logs.sql`
-- [ ] `supabase/migrations/005_settlement_core.sql`
-- [ ] `supabase/migrations/006_settlement_payments.sql`
-- [ ] `supabase/migrations/007_expense_important_notes.sql`
-- [ ] `supabase/migrations/008_settlement_reminder_type.sql`
-- [ ] `supabase/migrations/009_site_notifications.sql`
-- [ ] `supabase/migrations/010_participant_user_identity.sql`
-- [ ] `supabase/migrations/011_plan_multiple_reminders.sql`
-- [ ] `supabase/migrations/012_answer_received_notifications.sql`
-- [ ] `supabase/migrations/013_repair_notifications_setup.sql`
-- [ ] `supabase/migrations/014_member_first_coordination.sql`
-- [ ] `supabase/migrations/015_fix_event_policy_recursion.sql`
-- [ ] `supabase/migrations/016_legal_consents_and_event_drafts.sql`
-- [ ] `supabase/migrations/017_connections_messages_and_invites.sql`
-- [ ] `supabase/migrations/018_require_follow_for_favorites.sql`
-- [ ] `supabase/migrations/019_user_profiles_and_avatars.sql`
-- [ ] `supabase/migrations/020_event_list_performance_and_atomic_block.sql`
-- [ ] `supabase/migrations/021_settlement_payment_total_guard.sql`
-- [ ] `supabase/migrations/022_share_link_revocation.sql`
-- [ ] `supabase/migrations/023_account_deletion.sql`
-- [ ] `supabase/migrations/024_event_tasks.sql`
-- [ ] `supabase/migrations/025_participant_settlement_payment_method.sql`
-- [ ] `supabase/migrations/026_legal_consent_app_metadata.sql`
-- [ ] `supabase/migrations/027_user_consents_no_delete.sql`
-- [ ] `supabase/migrations/028_plan_timetable.sql`
-- [ ] `supabase/migrations/029_event_list_search.sql`
-- [ ] `supabase/migrations/030_share_page_participant_rls.sql`
-- [ ] `supabase/migrations/031_drop_guest_participant_type.sql`
-
-途中でエラーが出た場合は、実行したファイル名とエラー全文を控えます。
+- [ ] `supabase/migrations/` の SQL を番号順にすべて適用した（未適用の番号がない）
+- [ ] 適用中にエラーが出た場合、ファイル名とエラー全文を控えた
 
 `009_site_notifications.sql` で `42P07 relation "notifications" already exists` が出た場合は想定内です。
 `013_repair_notifications_setup.sql` が 009 の内容を含む修復版なので、013 まで進めれば揃います。
