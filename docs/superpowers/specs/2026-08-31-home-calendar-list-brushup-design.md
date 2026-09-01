@@ -36,36 +36,38 @@
 
 ### 変更
 
-- `home-calendar.ts` に `findNextUpcomingItem(items, now)` を追加する。
-  - まず `kind === "confirmed"` の今日以降で最も近いものを探す（現行 `findNextConfirmedItem` と同じ）。
-  - 無ければ `kind === "collecting"` の今日以降で最も近いものを返す。
-  - どちらも無ければ `null`。
-- `findNextConfirmedItem` は残す（他に参照が無ければ削除可。要 grep 確認）。
-- `HomeNextConfirmedEventCard` を `HomeNextUpcomingEventCard` にリネーム、または現行のまま props で分岐:
+`list_calendar_items` は「月初−6日 〜 翌月+7日」しか返さない（migration 034 の `v_range_start` / `v_range_end`）。
+これを使い回すと次の予定が2週間以上先のとき空になる。→ **専用クエリを足す**（grill Q1）。
+
+- **専用クエリ（`app/page.tsx`）**: 自分が `joined` のイベントに紐づく plan から、今日（JST）以降で最も近い1件を取る。
+  - `app/plans/page.tsx` と同じ作法: `event_members` で `joined` の `event_id` を集め、
+    `hasSupabaseAdminEnv()` なら admin client で `plans` を引く（RLS で参加イベントが落ちないように）。
+  - 確定済み: `status = 'date_confirmed'` かつ `confirmed_start_at >= now`、`confirmed_start_at` 昇順。
+  - 調整中: `status in ('draft','collecting_answers')` の `candidate_dates.start_at >= now`、昇順。
+  - **確定を優先**し、無ければ調整中の最も近い1件。どちらも無ければ `null`。
+  - 整形は純粋関数に切り出して単体テスト（`lib/domain/home/` に `pickNextUpcoming` など）。
+- `findNextConfirmedItem`（`home-calendar.ts`）と、それを使う `calendarItems` 経由の呼び出しは撤去してよい
+  （他参照は grep 済み: `app/page.tsx` / テスト / docs のみ）。
+- `HomeNextConfirmedEventCard` → `HomeNextUpcomingEventCard` にリネーム。props で分岐:
   - `item.kind === "confirmed"` → バッジ `done` / 文言「確定済み」（現行どおり）
   - `item.kind === "collecting"` → バッジ `info`(honey) / 文言「調整中」
   - カード上部のラベルは常に「次の予定」。
   - CTA リンク文言: 確定「詳細を見る」／調整中「日程を確認する」。
-- `app/page.tsx` は `findNextUpcomingItem` を呼ぶよう差し替え。
-
-### 既知の制約
-
-`list_calendar_items` は表示月＋前後バッファしか返さない（migration 034）。
-次の予定が 2ヶ月以上先だと拾えない。バッファ幅の拡張は Batch A では触らず、必要なら follow-up。
 
 ### 対象ファイル
 
-- `lib/domain/home/home-calendar.ts`
-- `components/home/home-next-confirmed-event-card.tsx`
-- `app/page.tsx`
-- `tests/home/home-calendar.test.ts`
+- `lib/domain/home/` に整形の純粋関数を追加（＋テスト）
+- `app/page.tsx`（専用クエリ、`findNextConfirmedItem` 呼び出しの差し替え）
+- `lib/domain/home/home-calendar.ts`（`findNextConfirmedItem` 撤去）
+- `components/home/home-next-confirmed-event-card.tsx`（リネーム＋kind分岐）
+- `tests/home/home-calendar.test.ts` / `tests/home/home-next-confirmed-event-card.test.tsx`
 
 ### 受け入れ条件
 
-- 確定 0 件・調整中あり → 「次の予定」カードに直近の調整中が「調整中」バッジで出る。
-- 確定あり → 従来どおり確定が優先で出る。
-- 確定・調整中とも今日以降に無い → カード非表示（現行と同じ）。
-- 単体テスト: confirmed 優先 / collecting フォールバック / 両方無しで null。
+- 確定 0 件・今日以降に調整中あり（何ヶ月先でも）→ カードに直近の調整中が「調整中」バッジで出る。
+- 確定あり → 確定が優先で出る。
+- 今日以降に確定も調整中も無い → カード非表示。
+- 純粋関数の単体テスト: confirmed 優先 / collecting フォールバック / 両方無しで null。
 
 ---
 
@@ -226,8 +228,10 @@
   - 実装: `scroll-snap-type: y mandatory` の縦スクロールコンテナ。各年は**実ボタン**（`<button>`）で、
     フォーカス・Enter で選択でき、スクロールでも中央スナップで選択が変わる。
   - 中央に選択中を示す上下ボーダーの帯、上下にフェード。
-  - 年の範囲は「当年 −3 〜 +3」程度（イベントは基本1年先まで）。要件が出たら広げる。
+  - 年の範囲は **当年 −3 〜 +3**（grill Q2）。
   - `prefers-reduced-motion` 時はスムーススクロールを切る。
+  - ホイールは作り込みに手間がかかる（キーボード・SR・慣性）。実装後に **実機で1ラウンド微調整**を織り込む（grill Q3）。
+    必要なら `tuning-ui-visually` を使う。
 - **月**: 4×3 の 12ヶ月グリッド（`1月`〜`12月`）。現在の月を pine 塗りでハイライト。
 - 月をタップした時点で `router.push(`/plans?month=${y}-${mm}&date=${y}-${mm}-01`, { scroll: false })` して
   `<details>` を閉じる（確定ボタン不要）。年だけ変えて月未選択のままパネルを閉じた場合は遷移しない。
@@ -257,11 +261,26 @@
 
 ---
 
+## 出し方（grill Q4）
+
+Batch A を **2つの PR** に分ける。ファイルの重なりが無く、独立して `main` から出せる。
+
+- **PR-1 ホーム＋一覧**: #1（`app/page.tsx` / `lib/domain/home/` / `home-next-*` カード）、#2（`event-list-controls.tsx`）。小さく、先に出す。
+- **PR-2 カレンダー**: #3・#5・#6・#7（`calendar-styles.ts` / `adjustment-calendar.ts` / `adjustment-calendar-view.tsx` / `adjustment-month-picker.tsx`）。#5/#6 が `dayCellClass` で絡むのでまとめる。#7 のホイール微調整ラウンドはこの PR 内。
+
 ## テスト方針
 
-- ドメイン関数（`findNextUpcomingItem`、`isToday` 判定、年リスト生成、月選択 URL 生成）は Vitest で単体テスト。RED を先に確認。
+- ドメイン関数（次の予定の整形、`isToday` 判定、年リスト生成、月選択 URL 生成）は Vitest で単体テスト。RED を先に確認。
 - 見た目の変更（#2,#5,#6,#7）は実ブラウザ（`npm run dev`）で 375px と デスクトップ幅を目視確認してから完了とする。
 - 既存テストを壊さない。壊れたら原因を直す（スキップ・削除しない）。
+
+## 実装フェーズで詰める設計ディテール（前提として固定）
+
+- #1: 専用クエリは `app/plans/page.tsx` の admin client パターンを踏襲。カード文言は collecting 時も「次の予定」＋「調整中」バッジ。
+- #3: 「今日」ボタンは月ヘッダー右端のテキストピル。375px で詰まるならアイコンのみに落とす。
+- #5: 「今日」ラベルはセルからはみ出す小バッジ。クリップ・重なりが出たらセル内マーカーに変更。選択セル内のドットは白系。
+- #5/#6: 隣月の日が「今日」でも今日マーカーは付ける。
+- #7: 年だけ変えて月未タップでパネルを閉じたら遷移しない。同じ年月の月をタップしても実害なし（再 push か no-op）。
 
 ## Batch B（別途）
 
