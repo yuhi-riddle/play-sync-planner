@@ -70,161 +70,174 @@ export function EventListControls({
     */
     <section className="grid grid-cols-1 gap-3">
       {/*
-        検索は畳まない。畳むと「探せること」が画面のどこにも出ない。
-        代わりに、1ページに収まる件数のときは出さない。375px で 56px 使うのに、
-        全部見えている人には効かない。検索中は結果が1件でも出し続ける（消すと直せなくなる）。
-        条件は hidden で持ち回す。持たないと、検索した瞬間に絞り込みが既定へ戻る。
+        絞り込みは1枚のカードで囲って、下のイベント一覧との境界をはっきりさせる。
+        よく押す状態チップは表に残し、検索・カテゴリ・表示順・表示件数は「検索・並び替え」に畳む。
       */}
-      {isSearchVisible ? (
-        <form action="/events" method="get" role="search" className="flex gap-2">
-          <input type="hidden" name="status" value={query.status} />
-          <input type="hidden" name="category" value={query.category} />
-          <input type="hidden" name="sort" value={query.sort} />
-          <input type="hidden" name="limit" value={String(query.pageSize)} />
-          <input
-            type="search"
-            name="search"
-            defaultValue={query.search}
-            maxLength={EVENT_SEARCH_MAX_LENGTH}
-            aria-label="イベントを検索"
-            placeholder="タイトル・場所で探す"
-            className="min-h-11 min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
-          />
-          <button
-            type="submit"
-            aria-label="検索する"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-          >
-            <Search aria-hidden="true" className="h-4 w-4" />
-          </button>
-        </form>
-      ) : null}
+      <div className="grid grid-cols-1 gap-3 rounded-card border border-line bg-surface p-4">
+        <p className="text-eyebrow uppercase text-muted">絞り込み</p>
 
-      {/* 0件のときは件数の行が出ないので、解除の導線をここに置かないと戻れなくなる。 */}
-      {query.search ? (
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted">
-          <span className="min-w-0 break-all">「{query.search}」で検索中</span>
-          <Link
-            href={buildEventListHref({ ...query, search: "" }, 1)}
-            className="whitespace-nowrap font-bold text-pine underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-          >
-            検索を解除
-          </Link>
-        </p>
-      ) : null}
+        {/* 状態は横スクロールの帯に置く。4つとも常に見せると2段になって、また縦に伸びる。
+            -mx-4 px-4 でカードの p-4 を打ち消し、カード幅いっぱいでスクロールさせる。 */}
+        {/*
+          min-w-0 が要る。grid の子は既定の最小幅が min-content なので、
+          中の w-max なチップ列がそのまま最小幅になり、overflow-x-auto があっても
+          帯自体がカードより広くなって横スクロールが出る。
+        */}
+        <nav aria-label="状態で絞り込む" className="-mx-4 min-w-0 overflow-x-auto px-4">
+          <ul className="flex w-max gap-2">
+            {statusOrder.map((status) => {
+              const isCurrent = query.status === status;
+              const count = status === "draft" ? draftCount : null;
+              return (
+                <li key={status}>
+                  <Link
+                    // 絞り込みを変えたら1ページ目に戻す。3ページ目のまま状態だけ変えると空振りする。
+                    href={buildEventListHref({ ...query, status }, 1)}
+                    aria-current={isCurrent ? "page" : undefined}
+                    className={`inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 ${
+                      isCurrent
+                        ? "border-pine-deep bg-gradient-to-br from-pine to-pine-deep text-white"
+                        : "border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
+                    }`}
+                  >
+                    {statusLabels[status]}
+                    {count !== null && count > 0 ? (
+                      <span className={`tabular-nums ${isCurrent ? "text-white/75" : "text-muted"}`}>{count}</span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-      {/* 状態は横スクロールの帯に置く。4つとも常に見せると2段になって、また縦に伸びる。 */}
-      {/*
-        min-w-0 が要る。grid の子は既定の最小幅が min-content なので、
-        中の w-max なチップ列がそのまま最小幅になり、overflow-x-auto があっても
-        帯自体が画面より広くなって横スクロールが出る（実測 400px > 375px）。
-      */}
-      <nav aria-label="状態で絞り込む" className="-mx-4 min-w-0 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <ul className="flex w-max gap-2">
-          {statusOrder.map((status) => {
-            const isCurrent = query.status === status;
-            const count = status === "draft" ? draftCount : null;
-            return (
-              <li key={status}>
-                <Link
-                  // 絞り込みを変えたら1ページ目に戻す。3ページ目のまま状態だけ変えると空振りする。
-                  href={buildEventListHref({ ...query, status }, 1)}
-                  aria-current={isCurrent ? "page" : undefined}
-                  className={`inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 ${
-                    isCurrent
-                      ? "border-pine-deep bg-gradient-to-br from-pine to-pine-deep text-white"
-                      : "border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
-                  }`}
-                >
-                  {statusLabels[status]}
-                  {count !== null && count > 0 ? (
-                    <span className={`tabular-nums ${isCurrent ? "text-white/75" : "text-muted"}`}>{count}</span>
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      {/*
-        既定以外の条件が入っているときは開いた状態で出す。畳んだままだと
-        「なぜこの並び順なのか」が画面のどこにも書かれていないことになる。
-      */}
-      <details open={!isDefaultDetail} className="rounded-control border border-line bg-surface">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-body text-muted [&::-webkit-details-marker]:hidden">
-          <span className="min-w-0 flex-1 truncate">{detailSummary}</span>
-          <span className="whitespace-nowrap font-bold text-pine">条件を変える</span>
-          <span aria-hidden="true" className="text-muted">
-            ▾
-          </span>
-        </summary>
-
-        <form
-          action="/events"
-          method="get"
-          aria-label="イベント一覧の表示条件"
-          className="grid grid-cols-1 gap-4 border-t border-line p-4 sm:grid-cols-3"
-        >
-          {/* 状態はチップ側、検索は上の欄で切り替える。ここで送らないと、条件を変えた瞬間に消える。 */}
-          <input type="hidden" name="status" value={query.status} />
-          <input type="hidden" name="search" value={query.search} />
-
-          <label className="text-body font-medium text-muted">
-            <span className="inline-flex items-center gap-1.5">
-              {categoryAccentClasses ? (
-                <span aria-hidden="true" className={`h-2 w-2 rounded-full ${categoryAccentClasses.dot}`} />
-              ) : null}
-              カテゴリ
-            </span>
-            <select name="category" defaultValue={query.category} className={categorySelectClassName}>
-              <option value="all">すべて</option>
-              {EVENT_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {categoryLabels[category]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-body font-medium text-muted">
-            表示順
-            <select name="sort" defaultValue={query.sort} className={selectClassName}>
-              {Object.entries(sortLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-body font-medium text-muted">
-            表示件数
-            <select name="limit" defaultValue={String(query.pageSize)} className={selectClassName}>
-              {EVENT_LIST_PAGE_SIZES.map((pageSize) => (
-                <option key={pageSize} value={pageSize}>
-                  {pageSize}件
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex flex-wrap gap-2 sm:col-span-3">
-            <button
-              type="submit"
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-            >
-              表示する
-            </button>
+        {/* 0件のときは件数の行が出ないので、解除の導線をここに置かないと戻れなくなる。折りたたみの外に出す。 */}
+        {query.search ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted">
+            <span className="min-w-0 break-all">「{query.search}」で検索中</span>
             <Link
-              href="/events"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              href={buildEventListHref({ ...query, search: "" }, 1)}
+              className="whitespace-nowrap font-bold text-pine underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
             >
-              条件をリセット
+              検索を解除
             </Link>
+          </p>
+        ) : null}
+
+        {/*
+          検索・カテゴリ・表示順・表示件数はここに畳む。既定以外の条件が入っているか
+          検索中なら開いて出す。畳んだままだと「なぜこの並び順なのか」が画面のどこにも書かれていない。
+        */}
+        <details
+          open={!isDefaultDetail || Boolean(query.search)}
+          className="rounded-control border border-line bg-sunken"
+        >
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-body text-muted [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1 truncate">{detailSummary}</span>
+            <span className="whitespace-nowrap font-bold text-pine">検索・並び替え</span>
+            <span aria-hidden="true" className="text-muted">
+              ▾
+            </span>
+          </summary>
+
+          <div className="grid gap-4 border-t border-line p-4">
+            {/*
+              検索は「2ページ以上ある」か「検索中」のときだけ出す。375px で 56px 使うのに、
+              全部見えている人には効かない。検索中は結果が1件でも出し続ける（消すと直せなくなる）。
+              条件は hidden で持ち回す。持たないと、検索した瞬間に絞り込みが既定へ戻る。
+            */}
+            {isSearchVisible ? (
+              <form action="/events" method="get" role="search" className="flex gap-2">
+                <input type="hidden" name="status" value={query.status} />
+                <input type="hidden" name="category" value={query.category} />
+                <input type="hidden" name="sort" value={query.sort} />
+                <input type="hidden" name="limit" value={String(query.pageSize)} />
+                <input
+                  type="search"
+                  name="search"
+                  defaultValue={query.search}
+                  maxLength={EVENT_SEARCH_MAX_LENGTH}
+                  aria-label="イベントを検索"
+                  placeholder="タイトル・場所で探す"
+                  className="min-h-11 min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
+                />
+                <button
+                  type="submit"
+                  aria-label="検索する"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                >
+                  <Search aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </form>
+            ) : null}
+
+            <form
+              action="/events"
+              method="get"
+              aria-label="イベント一覧の表示条件"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+            >
+              {/* 状態はチップ側、検索は上の欄で切り替える。ここで送らないと、条件を変えた瞬間に消える。 */}
+              <input type="hidden" name="status" value={query.status} />
+              <input type="hidden" name="search" value={query.search} />
+
+              <label className="text-body font-medium text-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  {categoryAccentClasses ? (
+                    <span aria-hidden="true" className={`h-2 w-2 rounded-full ${categoryAccentClasses.dot}`} />
+                  ) : null}
+                  カテゴリ
+                </span>
+                <select name="category" defaultValue={query.category} className={categorySelectClassName}>
+                  <option value="all">すべて</option>
+                  {EVENT_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {categoryLabels[category]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-body font-medium text-muted">
+                表示順
+                <select name="sort" defaultValue={query.sort} className={selectClassName}>
+                  {Object.entries(sortLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-body font-medium text-muted">
+                表示件数
+                <select name="limit" defaultValue={String(query.pageSize)} className={selectClassName}>
+                  {EVENT_LIST_PAGE_SIZES.map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}件
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex flex-wrap gap-2 sm:col-span-3">
+                <button
+                  type="submit"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                >
+                  表示する
+                </button>
+                <Link
+                  href="/events"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+                >
+                  条件をリセット
+                </Link>
+              </div>
+            </form>
           </div>
-        </form>
-      </details>
+        </details>
+      </div>
 
       {pagination.totalItems > 0 ? (
         // 件数とページ送りは1行に収める。375px で縦積みにすると、ここだけで90px 使う。
