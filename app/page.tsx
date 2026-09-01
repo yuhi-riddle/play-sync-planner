@@ -1,6 +1,6 @@
 import { HomeCreateEventCta } from "@/components/home/home-create-event-cta";
 import { HomeDraftResumeCard } from "@/components/home/home-draft-resume-card";
-import { HomeNextConfirmedEventCard } from "@/components/home/home-next-confirmed-event-card";
+import { HomeNextUpcomingEventCard } from "@/components/home/home-next-upcoming-event-card";
 import { HomePriorityNotificationCard } from "@/components/home/home-priority-notification-card";
 import { HomeSelectedDateAgenda } from "@/components/home/home-selected-date-agenda";
 import { WelcomeHero } from "@/components/home/welcome-hero";
@@ -8,9 +8,16 @@ import { PageHeader } from "@/components/ui";
 import { SetupPanel } from "@/components/ui/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/event/events";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
-import { findNextConfirmedItem, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
+import type { HomeCalendarItem } from "@/lib/domain/home/home-calendar";
+import { pickNextUpcoming } from "@/lib/domain/home/next-upcoming";
 import { filterNotificationsByActionFilter, selectPriorityNotification } from "@/lib/domain/shared/site-notifications";
-import { createSupabaseServerClient, getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  getCurrentUser,
+  hasSupabaseAdminEnv,
+  hasSupabaseEnv
+} from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +40,25 @@ type NotificationRow = {
   body: string;
   href: string;
   created_at: string;
+};
+
+type EventRef = { title: string | null; location_name: string | null };
+
+type NextConfirmedRow = {
+  id: string;
+  title: string | null;
+  is_all_day: boolean | null;
+  confirmed_start_at: string | null;
+  confirmed_end_at: string | null;
+  events: EventRef | EventRef[] | null;
+};
+
+type NextCandidateRow = {
+  id: string;
+  start_at: string;
+  end_at: string | null;
+  is_all_day: boolean | null;
+  plans: { id: string; title: string | null; events: EventRef | EventRef[] | null } | null;
 };
 
 function tokyoDateKey(value: Date) {
@@ -73,6 +99,55 @@ function toCalendarItems(rows: CalendarRpcRow[]): HomeCalendarItem[] {
       href: `/plans/${row.plan_id}`
     };
   });
+}
+
+function eventOf(events: EventRef | EventRef[] | null): EventRef | null {
+  return Array.isArray(events) ? (events[0] ?? null) : events;
+}
+
+/**
+ * ホームの「次の予定」用の1件。
+ * list_calendar_items は当月＋翌週までしか返さないので、数ヶ月先の予定も拾えるよう
+ * plans / candidate_dates を直接引く（app/plans/page.tsx と同じ admin client の作法）。
+ */
+function buildNextUpcomingItem(
+  confirmedRows: NextConfirmedRow[],
+  candidateRows: NextCandidateRow[],
+  now: Date
+): HomeCalendarItem | null {
+  const items: HomeCalendarItem[] = [];
+
+  const confirmed = confirmedRows[0];
+  if (confirmed?.confirmed_start_at) {
+    const event = eventOf(confirmed.events);
+    items.push({
+      id: `confirmed-${confirmed.id}`,
+      kind: "confirmed",
+      title: event?.title?.trim() || "イベント未設定",
+      location: event?.location_name?.trim() || null,
+      startAt: confirmed.confirmed_start_at,
+      endAt: confirmed.confirmed_end_at,
+      isAllDay: confirmed.is_all_day,
+      href: `/plans/${confirmed.id}`
+    });
+  }
+
+  const candidate = candidateRows[0];
+  if (candidate?.plans) {
+    const event = eventOf(candidate.plans.events);
+    items.push({
+      id: `candidate-${candidate.id}`,
+      kind: "collecting",
+      title: event?.title?.trim() || "イベント未設定",
+      location: event?.location_name?.trim() || null,
+      startAt: candidate.start_at,
+      endAt: candidate.end_at,
+      isAllDay: candidate.is_all_day,
+      href: `/plans/${candidate.plans.id}`
+    });
+  }
+
+  return pickNextUpcoming(items, now);
 }
 
 export default async function HomePage({
@@ -126,8 +201,54 @@ export default async function HomePage({
     .select("nickname")
     .eq("user_id", user.id)
     .maybeSingle();
-  const [{ data: calendarRows, error: calendarError }, { data: notifications }, { data: eventDraft }, { data: profile }] =
-    await Promise.all([calendarPromise, notificationsPromise, eventDraftPromise, profilePromise]);
+
+  // 「次の予定」は list_calendar_items の窓の外も見たいので plans を直接引く。
+  const { data: memberships } = await supabase
+    .from("event_members")
+    .select("event_id")
+    .eq("user_id", user.id)
+    .eq("status", "joined");
+  const joinedEventIds = [...new Set((memberships ?? []).map((row) => row.event_id))];
+  const nextUpcomingClient = hasSupabaseAdminEnv() ? createSupabaseAdminClient() : supabase;
+  const nowIso = new Date().toISOString();
+
+  const nextConfirmedPromise = joinedEventIds.length
+    ? nextUpcomingClient
+        .from("plans")
+        .select("id, title, is_all_day, confirmed_start_at, confirmed_end_at, events(title, location_name)")
+        .in("event_id", joinedEventIds)
+        .eq("status", "date_confirmed")
+        .gte("confirmed_start_at", nowIso)
+        .order("confirmed_start_at", { ascending: true })
+        .limit(1)
+    : Promise.resolve({ data: [] as NextConfirmedRow[] });
+
+  const nextCandidatePromise = joinedEventIds.length
+    ? nextUpcomingClient
+        .from("candidate_dates")
+        .select("id, start_at, end_at, is_all_day, plans!inner(id, title, event_id, status, events(title, location_name))")
+        .in("plans.event_id", joinedEventIds)
+        .in("plans.status", ["draft", "collecting_answers"])
+        .gte("start_at", nowIso)
+        .order("start_at", { ascending: true })
+        .limit(1)
+    : Promise.resolve({ data: [] as NextCandidateRow[] });
+
+  const [
+    { data: calendarRows, error: calendarError },
+    { data: notifications },
+    { data: eventDraft },
+    { data: profile },
+    { data: nextConfirmedRows },
+    { data: nextCandidateRows }
+  ] = await Promise.all([
+    calendarPromise,
+    notificationsPromise,
+    eventDraftPromise,
+    profilePromise,
+    nextConfirmedPromise,
+    nextCandidatePromise
+  ]);
 
   if (calendarError) {
     throw new Error("カレンダーを読み込めませんでした。");
@@ -137,7 +258,11 @@ export default async function HomePage({
   const actionableNotifications = filterNotificationsByActionFilter(unreadNotifications, "all");
   const priorityNotification = selectPriorityNotification(actionableNotifications);
   const calendarItems = toCalendarItems((calendarRows ?? []) as CalendarRpcRow[]);
-  const nextConfirmedItem = findNextConfirmedItem(calendarItems, new Date());
+  const nextUpcomingItem = buildNextUpcomingItem(
+    (nextConfirmedRows ?? []) as NextConfirmedRow[],
+    (nextCandidateRows ?? []) as unknown as NextCandidateRow[],
+    new Date()
+  );
 
   return (
     <div className="space-y-5">
@@ -158,7 +283,7 @@ export default async function HomePage({
         href="/notifications"
       />
 
-      {nextConfirmedItem ? <HomeNextConfirmedEventCard item={nextConfirmedItem} /> : null}
+      {nextUpcomingItem ? <HomeNextUpcomingEventCard item={nextUpcomingItem} /> : null}
 
       <HomeSelectedDateAgenda selectedDateKey={baseDateKey} todayDateKey={todayDateKey} initialItems={calendarItems} />
     </div>
