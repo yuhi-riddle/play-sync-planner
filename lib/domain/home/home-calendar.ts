@@ -138,19 +138,6 @@ export function buildDayAriaLabel({
   return `${dateLabel}${holidaySuffix}、${summary}`;
 }
 
-export function findNextConfirmedItem(items: HomeCalendarItem[], now: Date): HomeCalendarItem | null {
-  const todayStart = startOfDay(now);
-  const upcomingConfirmed = items.filter(
-    (item) => item.kind === "confirmed" && new Date(item.startAt) >= todayStart
-  );
-
-  if (upcomingConfirmed.length === 0) {
-    return null;
-  }
-
-  return sortItems(upcomingConfirmed)[0];
-}
-
 export function buildHomeCalendar({
   year,
   month,
