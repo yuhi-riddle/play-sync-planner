@@ -184,7 +184,7 @@ export function EventListControls({
           {/*
             検索・カテゴリ・表示順・表示件数を1つの GET フォームにまとめる。送信ボタンは
             「表示する」だけ（以前は検索フォームが別で虫眼鏡ボタンが余分に出ていた）。
-            状態はチップ側なので hidden で持ち回す。
+            状態・進行状態はチップ側なので hidden で持ち回す。持たないと、条件を変えた瞬間に外れる。
           */}
           <form
             action="/events"
@@ -193,6 +193,7 @@ export function EventListControls({
             className="grid grid-cols-1 gap-4 border-t border-line p-4 sm:grid-cols-3"
           >
             <input type="hidden" name="status" value={query.status} />
+            <input type="hidden" name="display" value={query.displayState === "all" ? "" : query.displayState} />
 
             <label className="text-body font-medium text-muted sm:col-span-3">
               タイトル・場所で探す

@@ -119,6 +119,28 @@ describe("EventListControls", () => {
     expect(hidden).toHaveValue("completed");
   });
 
+  it("条件フォームは進行状態も hidden で持ち回す", () => {
+    render(
+      <EventListControls
+        query={{
+          status: "active",
+          category: "all",
+          sort: "newest",
+          pageSize: 10,
+          page: 1,
+          search: "",
+          displayState: "answer_waiting"
+        }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    // 検索・カテゴリ・表示順を変えたときに進行状態フィルタが外れないように
+    const form = screen.getByRole("form", { name: "イベント一覧の表示条件" });
+    expect(form.querySelector('input[type="hidden"][name="display"]')).toHaveValue("answer_waiting");
+  });
+
   it("絞り込みは見出し付きのカードで囲う", () => {
     render(
       <EventListControls
