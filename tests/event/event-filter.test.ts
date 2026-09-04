@@ -48,7 +48,7 @@ describe("event list query", () => {
     expect(normalizeEventListQuery({})).toEqual({
       status: "active",
       category: "all",
-      sort: "newest",
+      sort: "soonest",
       pageSize: 10,
       page: 1,
       search: "",
@@ -82,7 +82,7 @@ describe("event list query", () => {
     expect(normalizeEventListQuery({ status: "unknown", sort: "unknown", limit: "25", page: "0" })).toEqual({
       status: "active",
       category: "all",
-      sort: "newest",
+      sort: "soonest",
       pageSize: 10,
       page: 1,
       search: "",
@@ -136,7 +136,7 @@ describe("event search", () => {
         {
           status: "active",
           category: "all",
-          sort: "newest",
+          sort: "soonest",
           pageSize: 10,
           page: 1,
           search: "沖縄 旅行",
@@ -152,7 +152,7 @@ describe("event search", () => {
       buildEventListHref({
         status: "active",
         category: "all",
-        sort: "newest",
+        sort: "soonest",
         pageSize: 10,
         page: 1,
         search: "",
@@ -465,12 +465,12 @@ describe("buildEventListHref の display", () => {
 
   it("他の条件と共存する", () => {
     const href = buildEventListHref(
-      { ...base, category: "live", sort: "soonest", displayState: "answer_waiting" },
+      { ...base, category: "live", sort: "latest", displayState: "answer_waiting" },
       2
     );
     expect(href).toContain("display=answer_waiting");
     expect(href).toContain("category=live");
-    expect(href).toContain("sort=soonest");
+    expect(href).toContain("sort=latest");
     expect(href).toContain("page=2");
   });
 });

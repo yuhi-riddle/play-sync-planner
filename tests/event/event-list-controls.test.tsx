@@ -22,7 +22,7 @@ describe("EventListControls", () => {
   it("状態はチップで出し、押すと1ページ目に戻る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 3, search: "", displayState: "all" }}
+        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 3, search: "", displayState: "all" }}
         draftCount={2}
         pagination={{ ...basePagination, page: 3, totalItems: 46, totalPages: 5, from: 21, to: 30 }}
       />
@@ -38,7 +38,7 @@ describe("EventListControls", () => {
   it("下書きの件数はチップに出る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
+        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={2}
         pagination={basePagination}
       />
@@ -62,7 +62,7 @@ describe("EventListControls", () => {
   it("既定の条件なら詳しい絞り込みは畳んでおく", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "cancelled", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
+        query={{ status: "cancelled", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -70,7 +70,7 @@ describe("EventListControls", () => {
 
     // 状態はチップ側なので、畳む判定には数えない
     expect(container.querySelector("details")).not.toHaveAttribute("open");
-    expect(screen.getByText("すべてのカテゴリ · 新しく作成した順 · 10件")).toBeInTheDocument();
+    expect(screen.getByText("すべてのカテゴリ · 開催日が近い順 · 10件")).toBeInTheDocument();
   });
 
   it("既定以外の条件が入っていたら開いた状態で出す", () => {
@@ -210,7 +210,7 @@ describe("EventListControls", () => {
   it("検索中は、検索語と解除の導線を出す", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "live", sort: "newest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
+        query={{ status: "active", category: "live", sort: "soonest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
         draftCount={0}
         pagination={{ ...basePagination, totalItems: 0, totalPages: 0, from: 0, to: 0 }}
       />
@@ -250,7 +250,7 @@ describe("EventListControls", () => {
   it("状態のチップは検索語を保ったまま切り替える", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
+        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -327,7 +327,7 @@ describe("EventListControls", () => {
         query={{
           status: "active",
           category: "all",
-          sort: "newest",
+          sort: "soonest",
           pageSize: 10,
           page: 1,
           search: "",
@@ -393,7 +393,7 @@ describe("EventListControls", () => {
         query={{
           status: "active",
           category: "all",
-          sort: "newest",
+          sort: "soonest",
           pageSize: 10,
           page: 1,
           search: "",
