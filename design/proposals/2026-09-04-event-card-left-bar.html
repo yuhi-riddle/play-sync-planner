@@ -1,0 +1,168 @@
+<title>イベントカードの色帯</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<style>
+  :root {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7; --page-accent: #344f43;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+      --page-line: #3a352e; --page-panel: #24211d; --page-accent: #8fb59b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #1b1917; --page-fg: #ece5d9; --page-muted: #a2988a;
+    --page-line: #3a352e; --page-panel: #24211d; --page-accent: #8fb59b;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f7f4ee; --page-fg: #262320; --page-muted: #6f665c;
+    --page-line: #ddd4c2; --page-panel: #fffdf7; --page-accent: #344f43;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--page-fg);
+    font-family: "Zen Maru Gothic", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 72px; }
+  h1 { margin: 0 0 10px; font-size: 1.5rem; font-weight: 900; }
+  .lede { max-width: 640px; color: var(--page-muted); font-size: 0.9375rem; margin: 0 0 8px; }
+  .quote { max-width: 640px; font-size: 0.8125rem; color: var(--page-muted); border-left: 3px solid #df7d69; padding-left: 12px; margin: 12px 0 0; }
+
+  section.item { border-top: 1px solid var(--page-line); padding-top: 28px; margin-top: 36px; }
+  .kicker { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--page-muted); }
+  h2 { margin: 4px 0 6px; font-size: 1.0625rem; font-weight: 900; }
+  .why { max-width: 640px; color: var(--page-muted); font-size: 0.875rem; margin: 0 0 4px; }
+  .rec { max-width: 640px; font-size: 0.8125rem; border-left: 3px solid #d9aa4f; padding-left: 12px; margin: 18px 0 4px; }
+  .rec b { color: var(--page-fg); }
+
+  .row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; margin-top: 16px; }
+  .col { flex: 1 1 320px; min-width: 280px; }
+  .col-head { margin-bottom: 10px; }
+  .col-head .name { font-weight: 900; font-size: 0.875rem; }
+  .col-head .name.now { color: var(--page-muted); }
+  .col-head .aim { font-size: 0.8125rem; color: var(--page-muted); margin-top: 2px; }
+
+  .frame {
+    --canvas: #f7f3ef; --surface: #fffdf7;
+    --line: #e4dac6; --line-strong: #cbbfa6;
+    --ink: #262320; --muted: #6f665c;
+    --pine: #344f43; --moss: #5f7d65;
+    --c-live: #c18dd8; --c-live-ink: #7d4b92;
+    --c-travel: #44b2e2; --c-travel-ink: #006e9a;
+    --c-drinking: #d57cb4; --c-drinking-ink: #904475;
+    --c-nazotoki: #a098ec; --c-nazotoki-ink: #6056a3;
+    --c-boardgame: #39bda0; --c-boardgame-ink: #00785f;
+    background: var(--canvas); border: 1px solid var(--page-line); border-radius: 16px;
+    padding: 14px; color: var(--ink); font-size: 14px;
+  }
+  .card { border-radius: 14px; border: 1px solid var(--line); background: var(--surface); padding: 14px; }
+  .card + .card { margin-top: 10px; }
+  .card.bar { border-left-width: 4px; }
+  .card.bar-thin { border-left-width: 2px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
+  .badge .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+  .cat { display: inline-flex; align-items: center; gap: 5px; font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
+  .cat .dot { width: 6px; height: 6px; border-radius: 999px; }
+  .title-row { margin-top: 8px; font-weight: 700; font-size: 0.9375rem; color: var(--ink); }
+  .meta { margin-top: 6px; font-size: 0.75rem; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  .state { background: color-mix(in srgb, var(--pine) 10%, var(--surface)); color: var(--pine); }
+  .state2 { background: #f8efd9; color: #7f5c19; }
+
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; background: color-mix(in srgb, var(--page-line) 40%, transparent); padding: 1px 5px; border-radius: 5px; }
+</style>
+
+<div class="wrap">
+  <h1>イベントカードの色帯</h1>
+  <p class="lede">カード左端のカテゴリ色バー（<code>border-l-4</code>）について。</p>
+  <p class="quote">「カードの左側の色がついてるけど、AIっぽくてデザイン的にダサい」</p>
+
+  <section class="item">
+    <p class="kicker">現状</p>
+    <h2>左端4pxの帯 ＋ バッジ、で二重に色が付いている</h2>
+    <p class="why">カテゴリの色は今、<b>左の帯</b>と<b>バッジのドット</b>の2箇所に出ている。生成AI製ダッシュボードでよく見る「カード左に太いカラーバー」の型そのもので、情報としても重複している。</p>
+    <div class="row">
+      <div class="col">
+        <div class="frame">
+          <div class="card bar" style="border-left-color: var(--c-nazotoki)">
+            <span class="badge state">確定済み</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-nazotoki) 16%, var(--surface)); color: var(--c-nazotoki-ink)"><span class="dot" style="background: var(--c-nazotoki)"></span>謎解き</span>
+            <div class="title-row">週末の謎解き公演</div>
+            <div class="meta"><span>確定 9/14(月) 19:00</span><span>渋谷</span><span>参加 6人</span></div>
+          </div>
+          <div class="card bar" style="border-left-color: var(--c-travel)">
+            <span class="badge state2">回答待ち</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-travel) 16%, var(--surface)); color: var(--c-travel-ink)"><span class="dot" style="background: var(--c-travel)"></span>旅行</span>
+            <div class="title-row">夏合宿 前泊なし案</div>
+            <div class="meta"><span>8/23(日)〜</span><span>参加 4人</span></div>
+          </div>
+          <div class="card bar" style="border-left-color: var(--c-drinking)">
+            <span class="badge state">開催待ち</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-drinking) 16%, var(--surface)); color: var(--c-drinking-ink)"><span class="dot" style="background: var(--c-drinking)"></span>飲み会</span>
+            <div class="title-row">3丁目にて</div>
+            <div class="meta"><span>確定 9/2(水) 19:00</span><span>参加 5人</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="item">
+    <p class="kicker">案A（推奨）</p>
+    <h2>左帯を撤去。カテゴリはバッジだけで示す</h2>
+    <p class="why">バッジ（薄い背景＋ドット＋カテゴリ名）は既に色・形・文字の3つで伝えている。左帯はこの情報を繰り返しているだけで、無くしても読み取れる情報は減らない。カード枠は全カテゴリ共通の落ち着いた線に統一。</p>
+    <div class="row">
+      <div class="col">
+        <div class="frame">
+          <div class="card">
+            <span class="badge state">確定済み</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-nazotoki) 16%, var(--surface)); color: var(--c-nazotoki-ink)"><span class="dot" style="background: var(--c-nazotoki)"></span>謎解き</span>
+            <div class="title-row">週末の謎解き公演</div>
+            <div class="meta"><span>確定 9/14(月) 19:00</span><span>渋谷</span><span>参加 6人</span></div>
+          </div>
+          <div class="card">
+            <span class="badge state2">回答待ち</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-travel) 16%, var(--surface)); color: var(--c-travel-ink)"><span class="dot" style="background: var(--c-travel)"></span>旅行</span>
+            <div class="title-row">夏合宿 前泊なし案</div>
+            <div class="meta"><span>8/23(日)〜</span><span>参加 4人</span></div>
+          </div>
+          <div class="card">
+            <span class="badge state">開催待ち</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-drinking) 16%, var(--surface)); color: var(--c-drinking-ink)"><span class="dot" style="background: var(--c-drinking)"></span>飲み会</span>
+            <div class="title-row">3丁目にて</div>
+            <div class="meta"><span>確定 9/2(水) 19:00</span><span>参加 5人</span></div>
+          </div>
+        </div>
+        <p style="font-size:0.75rem;color:var(--page-muted);text-align:center;margin-top:8px">枠は全カテゴリ共通。色はバッジのみ</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="item">
+    <p class="kicker">案B</p>
+    <h2>左帯を残すが、細く・弱くする</h2>
+    <p class="why">帯自体は消したくない場合の弱め案。2px・低彩度にして「主張」を落とす。ただしバッジと二重表現な点は変わらない。</p>
+    <div class="row">
+      <div class="col">
+        <div class="frame">
+          <div class="card bar-thin" style="border-left-color: color-mix(in srgb, var(--c-nazotoki) 55%, var(--line))">
+            <span class="badge state">確定済み</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-nazotoki) 16%, var(--surface)); color: var(--c-nazotoki-ink)"><span class="dot" style="background: var(--c-nazotoki)"></span>謎解き</span>
+            <div class="title-row">週末の謎解き公演</div>
+            <div class="meta"><span>確定 9/14(月) 19:00</span><span>渋谷</span><span>参加 6人</span></div>
+          </div>
+          <div class="card bar-thin" style="border-left-color: color-mix(in srgb, var(--c-travel) 55%, var(--line))">
+            <span class="badge state2">回答待ち</span>
+            <span class="cat" style="background: color-mix(in srgb, var(--c-travel) 16%, var(--surface)); color: var(--c-travel-ink)"><span class="dot" style="background: var(--c-travel)"></span>旅行</span>
+            <div class="title-row">夏合宿 前泊なし案</div>
+            <div class="meta"><span>8/23(日)〜</span><span>参加 4人</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="rec"><b>推奨は案A。</b>左帯とバッジは同じ情報の二重表現で、太い色バーは生成AI製UIの典型でもある。バッジだけにすると1情報1箇所になり、カード全体も落ち着く。差分は <code>app/events/page.tsx</code> の <code>EventCard</code> から <code>border-l-4</code> と <code>accent.bar</code> を外すだけ（<code>category-color.ts</code> の <code>bar</code> は他で使っていなければ削除）。</p>
+</div>

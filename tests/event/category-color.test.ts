@@ -4,8 +4,8 @@ import { categoryAccent } from "@/lib/domain/event/category-color";
 
 describe("categoryAccent", () => {
   it("returns the matching accent classes for a known category", () => {
+    // カード左端の色帯（bar）は撤去した。カテゴリはバッジ（dot/badgeBg/badgeText）だけで示す。
     expect(categoryAccent("nazotoki")).toEqual({
-      bar: "border-l-category-nazotoki",
       badgeBg: "bg-category-nazotoki/16",
       badgeText: "text-category-nazotoki-ink",
       dot: "bg-category-nazotoki",
@@ -21,7 +21,6 @@ describe("categoryAccent", () => {
 
   it("falls back to the other/neutral accent for an unknown value", () => {
     expect(categoryAccent("not-a-real-category")).toEqual({
-      bar: "border-l-line-strong",
       badgeBg: "bg-sunken",
       badgeText: "text-muted",
       dot: "bg-subtle",

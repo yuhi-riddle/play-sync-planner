@@ -116,7 +116,8 @@ describe("EventsPage", () => {
     expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
   });
 
-  it("colors each event card's left edge and badge by category", async () => {
+  it("colors each event card's badge by category", async () => {
+    // カード左端の色帯は撤去済み（バッジと二重表現だったため）。カテゴリはバッジだけで示す。
     const eventQuery = createEventQuery([
       { ...makeEvent("event-1", "夏合宿"), category: "travel" },
       { ...makeEvent("event-2", "3丁目にて"), category: "not-a-real-category" }
@@ -132,11 +133,11 @@ describe("EventsPage", () => {
 
     const travelCardLink = screen.getByRole("link", { name: /夏合宿/ });
     expect(within(travelCardLink).getByText("旅行")).toBeInTheDocument();
-    expect(travelCardLink.closest("section")).toHaveClass("border-l-category-travel");
+    expect(travelCardLink.closest("section")).not.toHaveClass("border-l-4");
 
     const otherCardLink = screen.getByRole("link", { name: /3丁目にて/ });
     expect(within(otherCardLink).getByText("その他")).toBeInTheDocument();
-    expect(otherCardLink.closest("section")).toHaveClass("border-l-line-strong");
+    expect(otherCardLink.closest("section")).not.toHaveClass("border-l-4");
   });
 
   it("colors settlement_waiting, completed, and cancelled with visibly different tones", async () => {
