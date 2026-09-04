@@ -149,8 +149,8 @@ describe("EventListControls", () => {
     expect(screen.getByRole("navigation", { name: "状態で絞り込む" }).closest("details")).toBeNull();
   });
 
-  it("1ページに収まる件数なら検索欄は出さない", () => {
-    // 375px で 56px 使うのに、全部見えている人には効かない
+  it("検索欄は件数によらず常に出す（条件フォームの一部）", () => {
+    // 以前は総件数 > 表示件数のときだけ出していて、表示件数を増やすと消える挙動が分かりにくかった
     const { container } = render(
       <EventListControls
         query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
@@ -159,24 +159,13 @@ describe("EventListControls", () => {
       />
     );
 
-    expect(container.querySelector('input[name="search"][type="search"]')).toBeNull();
+    const searchBox = container.querySelector('input[name="search"][type="search"]');
+    expect(searchBox).not.toBeNull();
+    expect(searchBox?.closest('form[aria-label="イベント一覧の表示条件"]')).not.toBeNull();
   });
 
-  it("検索中は、結果が1件でも検索欄を出し続ける", () => {
-    // 消すと検索語を直せなくなる
-    const { container } = render(
-      <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
-        draftCount={0}
-        pagination={{ ...basePagination, totalItems: 1, totalPages: 1, from: 1, to: 1 }}
-      />
-    );
-
-    expect(container.querySelector('input[name="search"][type="search"]')).not.toBeNull();
-  });
-
-  it("検索しても絞り込みは持ち回す", () => {
-    const { container } = render(
+  it("検索と条件は1つのフォームで送る。状態は hidden、page は送らない", () => {
+    render(
       <EventListControls
         query={{ status: "completed", category: "live", sort: "soonest", pageSize: 20, page: 2, search: "" }}
         draftCount={0}
@@ -184,17 +173,16 @@ describe("EventListControls", () => {
       />
     );
 
-    // 持ち回さないと、検索した瞬間に「進行中・すべて・新しい順」へ戻る
-    const form = container.querySelector('form[role="search"]');
-    const hidden = Object.fromEntries(
-      [...(form?.querySelectorAll('input[type="hidden"]') ?? [])].map((input) => [
-        input.getAttribute("name"),
-        input.getAttribute("value")
-      ])
-    );
-    expect(hidden).toEqual({ status: "completed", category: "live", sort: "soonest", limit: "20" });
+    const form = screen.getByRole("form", { name: "イベント一覧の表示条件" });
+    // 状態はチップ側なので hidden で持ち回す
+    expect(form.querySelector('input[type="hidden"][name="status"]')).toHaveValue("completed");
+    // カテゴリ・表示順・表示件数は select 本体が name を持つので、そのまま送られる
+    expect(form.querySelector('select[name="category"]')).toHaveValue("live");
+    expect(form.querySelector('select[name="sort"]')).toHaveValue("soonest");
+    expect(form.querySelector('select[name="limit"]')).toHaveValue("20");
+    expect(form.querySelector('input[name="search"]')).not.toBeNull();
     // page は送らない。2ページ目のまま検索すると空振りする
-    expect(form?.querySelector('input[name="page"]')).toBeNull();
+    expect(form.querySelector('[name="page"]')).toBeNull();
   });
 
   it("検索中は、検索語と解除の導線を出す", () => {
@@ -224,7 +212,7 @@ describe("EventListControls", () => {
   });
 
   it("条件を変えても検索語は残る", () => {
-    const { container } = render(
+    render(
       <EventListControls
         query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
         draftCount={0}
@@ -233,9 +221,8 @@ describe("EventListControls", () => {
     );
 
     const detailForm = screen.getByRole("form", { name: "イベント一覧の表示条件" });
-    expect(detailForm.querySelector('input[type="hidden"][name="search"]')).toHaveValue("沖縄");
-    // 検索欄側にも今の語を残す。消えると打ち直しになる
-    expect(container.querySelector('input[name="search"][type="search"]')).toHaveValue("沖縄");
+    // 検索欄は条件フォームの中。今の語を初期値に残す（消えると打ち直しになる）
+    expect(detailForm.querySelector('input[name="search"][type="search"]')).toHaveValue("沖縄");
   });
 
   it("状態のチップは検索語を保ったまま切り替える", () => {

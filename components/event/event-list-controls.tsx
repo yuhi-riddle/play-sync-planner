@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
 import React from "react";
 
 import { categoryLabels, EVENT_CATEGORIES } from "@/lib/shared/constants";
@@ -49,7 +48,6 @@ export function EventListControls({
    * 残り（カテゴリ・表示順・表示件数）は畳んでおく。立替フォームと同じ段階的開示。
    */
   const isDefaultDetail = query.category === "all" && query.sort === "newest" && query.pageSize === 10;
-  const isSearchVisible = Boolean(query.search) || pagination.totalItems > pagination.pageSize;
   const detailSummary = [
     query.category === "all" ? "すべてのカテゴリ" : categoryLabels[query.category],
     sortLabels[query.sort],
@@ -140,102 +138,85 @@ export function EventListControls({
             </span>
           </summary>
 
-          <div className="grid gap-4 border-t border-line p-4">
-            {/*
-              検索は「2ページ以上ある」か「検索中」のときだけ出す。375px で 56px 使うのに、
-              全部見えている人には効かない。検索中は結果が1件でも出し続ける（消すと直せなくなる）。
-              条件は hidden で持ち回す。持たないと、検索した瞬間に絞り込みが既定へ戻る。
-            */}
-            {isSearchVisible ? (
-              <form action="/events" method="get" role="search" className="flex gap-2">
-                <input type="hidden" name="status" value={query.status} />
-                <input type="hidden" name="category" value={query.category} />
-                <input type="hidden" name="sort" value={query.sort} />
-                <input type="hidden" name="limit" value={String(query.pageSize)} />
-                <input
-                  type="search"
-                  name="search"
-                  defaultValue={query.search}
-                  maxLength={EVENT_SEARCH_MAX_LENGTH}
-                  aria-label="イベントを検索"
-                  placeholder="タイトル・場所で探す"
-                  className="min-h-11 min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 py-2 text-base text-ink outline-none transition-colors placeholder:text-muted focus:border-moss focus:ring-2 focus:ring-moss/20"
-                />
-                <button
-                  type="submit"
-                  aria-label="検索する"
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                >
-                  <Search aria-hidden="true" className="h-4 w-4" />
-                </button>
-              </form>
-            ) : null}
+          {/*
+            検索・カテゴリ・表示順・表示件数を1つの GET フォームにまとめる。送信ボタンは
+            「表示する」だけ（以前は検索フォームが別で虫眼鏡ボタンが余分に出ていた）。
+            状態はチップ側なので hidden で持ち回す。
+          */}
+          <form
+            action="/events"
+            method="get"
+            aria-label="イベント一覧の表示条件"
+            className="grid grid-cols-1 gap-4 border-t border-line p-4 sm:grid-cols-3"
+          >
+            <input type="hidden" name="status" value={query.status} />
 
-            <form
-              action="/events"
-              method="get"
-              aria-label="イベント一覧の表示条件"
-              className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-            >
-              {/* 状態はチップ側、検索は上の欄で切り替える。ここで送らないと、条件を変えた瞬間に消える。 */}
-              <input type="hidden" name="status" value={query.status} />
-              <input type="hidden" name="search" value={query.search} />
+            <label className="text-body font-medium text-muted sm:col-span-3">
+              タイトル・場所で探す
+              <input
+                type="search"
+                name="search"
+                defaultValue={query.search}
+                maxLength={EVENT_SEARCH_MAX_LENGTH}
+                placeholder="キーワードを入力"
+                className={`${selectBaseClassName} border-line-strong bg-surface placeholder:text-muted`}
+              />
+            </label>
 
-              <label className="text-body font-medium text-muted">
-                <span className="inline-flex items-center gap-1.5">
-                  {categoryAccentClasses ? (
-                    <span aria-hidden="true" className={`h-2 w-2 rounded-full ${categoryAccentClasses.dot}`} />
-                  ) : null}
-                  カテゴリ
-                </span>
-                <select name="category" defaultValue={query.category} className={categorySelectClassName}>
-                  <option value="all">すべて</option>
-                  {EVENT_CATEGORIES.map((category) => (
-                    <option key={category} value={category}>
-                      {categoryLabels[category]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <label className="text-body font-medium text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                {categoryAccentClasses ? (
+                  <span aria-hidden="true" className={`h-2 w-2 rounded-full ${categoryAccentClasses.dot}`} />
+                ) : null}
+                カテゴリ
+              </span>
+              <select name="category" defaultValue={query.category} className={categorySelectClassName}>
+                <option value="all">すべて</option>
+                {EVENT_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {categoryLabels[category]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <label className="text-body font-medium text-muted">
-                表示順
-                <select name="sort" defaultValue={query.sort} className={selectClassName}>
-                  {Object.entries(sortLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <label className="text-body font-medium text-muted">
+              表示順
+              <select name="sort" defaultValue={query.sort} className={selectClassName}>
+                {Object.entries(sortLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <label className="text-body font-medium text-muted">
-                表示件数
-                <select name="limit" defaultValue={String(query.pageSize)} className={selectClassName}>
-                  {EVENT_LIST_PAGE_SIZES.map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}件
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <label className="text-body font-medium text-muted">
+              表示件数
+              <select name="limit" defaultValue={String(query.pageSize)} className={selectClassName}>
+                {EVENT_LIST_PAGE_SIZES.map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>
+                    {pageSize}件
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <div className="flex flex-wrap gap-2 sm:col-span-3">
-                <button
-                  type="submit"
-                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                >
-                  表示する
-                </button>
-                <Link
-                  href="/events"
-                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-                >
-                  条件をリセット
-                </Link>
-              </div>
-            </form>
-          </div>
+            <div className="flex flex-wrap gap-2 sm:col-span-3">
+              <button
+                type="submit"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-body font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              >
+                表示する
+              </button>
+              <Link
+                href="/events"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-line-strong bg-surface px-4 py-2 text-body font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
+              >
+                条件をリセット
+              </Link>
+            </div>
+          </form>
         </details>
       </div>
 
