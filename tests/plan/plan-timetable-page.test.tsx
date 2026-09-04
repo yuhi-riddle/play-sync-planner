@@ -104,6 +104,8 @@ describe("PlanTimetablePage", () => {
 
       expect(screen.getByText("当日の進行表")).toBeInTheDocument();
       expect(notFound).not.toHaveBeenCalled();
+      // 開催日時は曜日つきで出す（周囲に日付見出しが無いカード単体表示のため）。2026-08-15 は土曜。
+      expect(screen.getByText(/2026\/08\/15\(土\) 13:00/)).toBeInTheDocument();
     });
 
     it("この plan の participant として含まれていれば見られる（イベントメンバーかどうかは別問題）", async () => {

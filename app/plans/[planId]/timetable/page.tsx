@@ -10,7 +10,7 @@ import {
   updatePlanTimetableItemAction
 } from "@/lib/actions/plan/plan-timetable";
 import { listEventDates, nextTimetableStartAt, sortTimetableItems, toJstDateKey } from "@/lib/domain/plan/plan-timetable";
-import { formatDateTimeRange, formatJstTime } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday, formatJstTime } from "@/lib/shared/format";
 import { createSupabaseAdminClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -171,7 +171,7 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
         <Card padding="p-4">
           <p className="text-caption text-muted">開催日時</p>
           <p className="mt-1 text-body font-bold text-ink">
-            {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at)}
+            {formatDateTimeRangeWithWeekday(plan.confirmed_start_at, plan.confirmed_end_at)}
           </p>
         </Card>
       ) : null}
