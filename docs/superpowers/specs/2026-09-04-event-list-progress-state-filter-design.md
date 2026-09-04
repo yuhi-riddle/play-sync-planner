@@ -16,7 +16,7 @@
 
 | 項目 | 決定 |
 |---|---|
-| 対象状態 | `EventDisplayState` の全7値。既存の `完了 / 中止` に加え、5つの進行状態を絞り込みに追加 |
+| 対象状態 | 「進行中」の内訳5つ（`participant_waiting` / `schedule_creation_waiting` / `answer_waiting` / `event_waiting` / `settlement_waiting`）。`完了 / 中止` は既存チップ（`p_filter`）の担当のまま。<br>実装時に確定: RPC の `p_display_state` が受けるのはこの5つだけ（`completed`/`cancelled` を渡すと `p_filter='active'` と必ず空集合になり無意味なため）。`display_state` の計算式自体は7値すべてを出す（パリティ検証のため） |
 | UI | **2段チップ**。上段は現状のまま、`進行中` 選択時のみ下段に5つ＋「すべて」 |
 | ロジックの二重化 | `getEventDisplayState`（TS）を SQL にミラー。`tests/db/` にパリティテストを置いて一致を検証 |
 | マイグレーション | 本番DBに触るので、実装計画を提示してユーザー承認を得てから適用 |
