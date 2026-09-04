@@ -20,6 +20,10 @@
 | UI | **2段チップ**。上段は現状のまま、`進行中` 選択時のみ下段に5つ＋「すべて」 |
 | ロジックの二重化 | `getEventDisplayState`（TS）を SQL にミラー。`tests/db/` にパリティテストを置いて一致を検証 |
 | マイグレーション | 本番DBに触るので、実装計画を提示してユーザー承認を得てから適用 |
+| ロールアウト | **2 PR に分ける**（PR-A: 047＋テスト → マージ → 本番に047適用 → PR-B: domain＋UI＋呼び出し）。grill Q |
+| パリティテストの now | RPC は `now()` のまま。`p_now` は足さない。seed の日時を境界から±3日離す。grill Q |
+| サブチップの件数バッジ | 出さない。grill Q |
+| URL パラメータ名 | `display`。grill Q |
 
 ## スコープ
 
@@ -174,6 +178,7 @@ page.tsx は `status='active'` のときだけサブ状態を渡す（UI がそ�
 - **表示条件**: `query.status === "active"` のときだけ下段を出す。
 - **下段のチップ**: `すべて / 参加者待ち / 日程作成待ち / 回答待ち / 開催待ち / 清算待ち`
   （ラベルは `eventDisplayStateLabels` を流用。「すべて」は `displayState: "all"`）。
+  **件数バッジは出さない**（下書きチップのような数字は付けない。grill 決定）。
 - **見た目**: 上段と同じ横スクロール帯・同じチップスタイル。選択中のチップは pine グラデ。
   上段より一段控えめにするため、下段の帯の上に細い区切り（`border-t border-line/60` 程度）か
   小見出し「進行状態」を付ける（実装時に見て決める）。
@@ -268,9 +273,35 @@ page.tsx は `status='active'` のときだけサブ状態を渡す（UI がそ�
 - 本番適用のタイミング: 実装・テストが緑になり、実装計画に沿って進めたうえで、
   ユーザーに「047 を本番に流してよいか」を確認してから。
 
-## 出し方
+## 出し方（2 PR）
 
-1つの PR（RPC マイグレーション + ドメイン + UI + テスト）。マイグレーション適用は PR マージとは別に、
-ユーザーが SQL エディタで実行する。適用前は RPC が6引数のままなので、`p_display_state` を付けて呼ぶと
-関数不一致で 400 になる → **page.tsx の RPC 呼び出しは、047 適用後にデプロイされる前提**。
-デプロイ順（migration 先 → コードデプロイ後）を PR 説明と STATE.md に明記する。
+新7引数関数は6引数呼び出しとも互換（第7引数に `default 'all'`）。だからマイグレーションを
+先に本番へ適用しておけば、旧コード（6引数）が壊れる瞬間は無い。これを使って2本に割る。
+
+### PR-A: マイグレーション＋テストのみ（呼び出しコードなし）
+
+- `supabase/migrations/047_event_list_progress_state_filter.sql`
+- `tests/event/schema/event-list-progress-state.test.ts`（文字列アサーション）
+- `tests/db/event-list-progress-state.test.ts`（DBパリティ。既存の TS `getEventDisplayState` と突き合わせ）
+- `verify-function-privileges` の期待リスト更新（新シグネチャ）
+- **page.tsx / event-filter.ts / event-list-controls.tsx は触らない**（`p_display_state` をまだ呼ばない）
+
+PR-A マージ後 → Vercel は6引数のまま（コード変更なし）→ ユーザーが SQL エディタで **047 を本番適用**
+→ 本番関数は7引数化、旧コードは第7引数 default で問題なく動く。
+
+### PR-B: ドメイン＋UI＋呼び出し
+
+- `event-filter.ts`（`displayState` クエリ項目、`normalize` / `buildEventListHref`）
+- `event-list-controls.tsx`（2段チップ）
+- `app/events/page.tsx`（`p_display_state` を渡す）
+- 単体・コンポーネントテスト
+- 実ブラウザ 375px 確認
+
+PR-B は **047 が本番適用済みであることが前提**。PR 説明と STATE.md に「047 適用後にマージ」と明記。
+
+### マイグレーションの独立性・ロールバック
+
+- 047 が触るのは `list_owned_event_ids`（029 由来。本番適用済み＝現行の events ページが動いている事実で確認済み）と
+  `plans` / `events`（001）だけ。034・025 の未適用とは無関係に 047 を適用してよい。
+- ファイル末尾に 032 と同じ形式でロールバック用のコメント（6引数版へ戻す＝029 の関数本体を再作成）を残す。
+- `docs/current-status.md` の適用チェックリストに 047 の行を足す。
