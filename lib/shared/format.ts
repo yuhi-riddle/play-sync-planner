@@ -92,6 +92,46 @@ export function formatDateTimeRange(start: string | null | undefined, end: strin
   return sameDay ? `${formatDateTime(start)} - ${formatTime(end)}` : `${formatDateTime(start)} - ${formatDateTime(end)}`;
 }
 
+/**
+ * 曜日つきの日時レンジ（"2026/09/07(月) 19:00 - 21:00"）。
+ *
+ * 周囲に日付見出しが無い場所——ホームの「次の予定」カードなど——で使う。
+ * 一覧やタイムラインは行の上に「9月7日(月)」の見出しが出るので、そちらは
+ * 曜日なしの formatDateTimeRange のままでよい。
+ */
+export function formatDateTimeRangeWithWeekday(
+  start: string | null | undefined,
+  end: string | null | undefined,
+  isAllDay = false
+): string {
+  if (!start) {
+    return unsetLabel;
+  }
+
+  if (isAllDay) {
+    return formatAllDayRange(start, end);
+  }
+
+  const dateTimeParts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  };
+  const startLabel = jstFormat(start, dateTimeParts);
+
+  if (!end) {
+    return startLabel;
+  }
+
+  const sameDay = jstDateKey(start) === jstDateKey(end);
+  const endLabel = sameDay ? formatTime(end) : jstFormat(end, dateTimeParts);
+
+  return `${startLabel} - ${endLabel}`;
+}
+
 function formatAllDayRange(start: string, end: string | null | undefined): string {
   const startLabel = formatDate(start);
   if (!end) {

@@ -36,6 +36,8 @@ describe("HomeNextUpcomingEventCard", () => {
     expect(screen.getByText("次の予定")).toBeInTheDocument();
     expect(screen.getByText("夏祭り")).toBeInTheDocument();
     expect(screen.getByText("確定済み")).toBeInTheDocument();
+    // 曜日つきで出す（周囲に日付見出しが無いので）。2026-07-26 は日曜。
+    expect(screen.getByText(/2026\/07\/26\(日\) 18:00 - 20:00/)).toBeInTheDocument();
     expect(screen.getByText("代々木公園")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "詳細を見る" })).toHaveAttribute("href", "/plans/plan-1");
   });

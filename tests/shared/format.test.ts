@@ -4,6 +4,7 @@ import {
   formatDate,
   formatDateTime,
   formatDateTimeRange,
+  formatDateTimeRangeWithWeekday,
   formatJstTime,
   formatTime,
   formatYenText,
@@ -120,6 +121,30 @@ describe("表示フォーマットの TZ 固定", () => {
     // そのまま保存されると候補が 9 時間ずれる。
     expect(withTz("UTC", () => toDateTimeLocalValue(morning))).toBe("2026-07-15T10:00");
     expect(withTz("Asia/Tokyo", () => toDateTimeLocalValue(morning))).toBe("2026-07-15T10:00");
+  });
+
+  it("formatDateTimeRangeWithWeekday は曜日つきで、同日なら終了は時刻だけ", () => {
+    // 2026-09-07 は月曜。
+    const label = withTz("UTC", () =>
+      formatDateTimeRangeWithWeekday("2026-09-07T19:00:00+09:00", "2026-09-07T21:00:00+09:00")
+    );
+    expect(label).toBe("2026/09/07(月) 19:00 - 21:00");
+    expect(label).toBe(
+      withTz("Asia/Tokyo", () =>
+        formatDateTimeRangeWithWeekday("2026-09-07T19:00:00+09:00", "2026-09-07T21:00:00+09:00")
+      )
+    );
+  });
+
+  it("formatDateTimeRangeWithWeekday は日をまたぐと終了側も曜日つき日付で出す", () => {
+    const label = withTz("UTC", () =>
+      formatDateTimeRangeWithWeekday("2026-09-07T23:00:00+09:00", "2026-09-08T01:00:00+09:00")
+    );
+    expect(label).toBe("2026/09/07(月) 23:00 - 2026/09/08(火) 01:00");
+  });
+
+  it("formatDateTimeRangeWithWeekday は終了なしなら開始だけ", () => {
+    expect(formatDateTimeRangeWithWeekday("2026-09-07T19:00:00+09:00", null)).toBe("2026/09/07(月) 19:00");
   });
 });
 

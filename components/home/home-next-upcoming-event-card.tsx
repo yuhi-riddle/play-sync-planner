@@ -2,7 +2,7 @@ import { MapPin } from "lucide-react";
 
 import { Badge, Card, SecondaryLink } from "@/components/ui";
 import type { HomeCalendarItem } from "@/lib/domain/home/home-calendar";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 
 export function HomeNextUpcomingEventCard({ item }: { item: HomeCalendarItem }) {
   const isCollecting = item.kind === "collecting";
@@ -19,7 +19,7 @@ export function HomeNextUpcomingEventCard({ item }: { item: HomeCalendarItem }) 
             {badgeLabel}
           </Badge>
           <span className="text-body font-bold tabular-nums text-pine">
-            {formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}
+            {formatDateTimeRangeWithWeekday(item.startAt, item.endAt, Boolean(item.isAllDay))}
           </span>
         </div>
         <p className="mt-2 text-title text-ink">{item.title}</p>
