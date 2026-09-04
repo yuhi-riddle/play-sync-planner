@@ -4,14 +4,19 @@ import { Badge, Card, SecondaryLink } from "@/components/ui";
 import type { HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 import { formatDateTimeRange } from "@/lib/shared/format";
 
-export function HomeNextConfirmedEventCard({ item }: { item: HomeCalendarItem }) {
+export function HomeNextUpcomingEventCard({ item }: { item: HomeCalendarItem }) {
+  const isCollecting = item.kind === "collecting";
+  const badgeTone = isCollecting ? "info" : "done";
+  const badgeLabel = isCollecting ? "調整中" : "確定済み";
+  const linkLabel = isCollecting ? "日程を確認する" : "詳細を見る";
+
   return (
     <Card aria-label="次の予定">
       <p className="text-eyebrow uppercase text-pine">次の予定</p>
       <div className="mt-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="done" dot>
-            確定済み
+          <Badge tone={badgeTone} dot>
+            {badgeLabel}
           </Badge>
           <span className="text-body font-bold tabular-nums text-pine">
             {formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}
@@ -27,7 +32,7 @@ export function HomeNextConfirmedEventCard({ item }: { item: HomeCalendarItem })
       </div>
       {item.href ? (
         <div className="mt-4">
-          <SecondaryLink href={item.href}>詳細を見る</SecondaryLink>
+          <SecondaryLink href={item.href}>{linkLabel}</SecondaryLink>
         </div>
       ) : null}
     </Card>

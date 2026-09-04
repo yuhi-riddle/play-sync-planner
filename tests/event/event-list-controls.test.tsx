@@ -119,8 +119,21 @@ describe("EventListControls", () => {
     expect(hidden).toHaveValue("completed");
   });
 
-  it("検索欄は畳まず、いつでも見えるところに出す", () => {
-    // details の中に入れると「探せること」が画面のどこにも出ない
+  it("絞り込みは見出し付きのカードで囲う", () => {
+    render(
+      <EventListControls
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    // 下のイベント一覧との境界をはっきりさせる
+    expect(screen.getByText("絞り込み")).toBeInTheDocument();
+  });
+
+  it("検索欄は『検索・並び替え』の折りたたみに入れる", () => {
+    // 境界はカードで示すので、検索は畳んでよい。状態チップは表に残す
     const { container } = render(
       <EventListControls
         query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
@@ -128,9 +141,12 @@ describe("EventListControls", () => {
         pagination={manyPagination}
       />
     );
+    expect(screen.getByText("検索・並び替え")).toBeInTheDocument();
     const searchBox = container.querySelector('input[name="search"][type="search"]');
     expect(searchBox).not.toBeNull();
-    expect(searchBox?.closest("details")).toBeNull();
+    expect(searchBox?.closest("details")).not.toBeNull();
+    // 状態チップは折りたたみの外
+    expect(screen.getByRole("navigation", { name: "状態で絞り込む" }).closest("details")).toBeNull();
   });
 
   it("1ページに収まる件数なら検索欄は出さない", () => {

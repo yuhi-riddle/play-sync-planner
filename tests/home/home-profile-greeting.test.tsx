@@ -11,8 +11,10 @@ vi.mock("@/components/home/home-selected-date-agenda", () => ({ HomeSelectedDate
 vi.mock("@/lib/actions/event/events", () => ({ discardEventDraftAction: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
+  createSupabaseAdminClient: vi.fn(),
   getCurrentUser,
-  hasSupabaseEnv: () => true
+  hasSupabaseEnv: () => true,
+  hasSupabaseAdminEnv: () => false
 }));
 
 import HomePage from "@/app/page";
@@ -36,16 +38,26 @@ function createSingleQuery(data: unknown) {
   };
 }
 
+function createResolvingQuery(data: unknown[]) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) => resolve({ data, error: null })
+  };
+}
+
 function mockHomeData(nickname: string | null, email = "account@example.com") {
   const notificationsQuery = createListQuery([]);
   const eventDraftQuery = createSingleQuery(null);
   const profileQuery = createSingleQuery({ nickname });
+  const membershipQuery = createResolvingQuery([]);
 
   getCurrentUser.mockResolvedValue({ id: "user-1", email });
   createSupabaseServerClient.mockResolvedValue({
     from: vi.fn((table: string) => {
       if (table === "notifications") return notificationsQuery;
       if (table === "event_drafts") return eventDraftQuery;
+      if (table === "event_members") return membershipQuery;
       return profileQuery;
     }),
     rpc: vi.fn().mockResolvedValue({ data: [], error: null })
