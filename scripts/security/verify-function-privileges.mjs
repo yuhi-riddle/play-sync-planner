@@ -25,10 +25,10 @@ const protectedCalls = () => [
   ["is_participant_in_my_plan", { target_participant_id: randomUUID() }],
   ["is_settlement_payer", { target_settlement_id: randomUUID() }],
   ["is_settlement_in_my_plan", { target_settlement_id: randomUUID() }],
-  // p_query は migration 029 で足した引数。省くと既定の null が入る
+  // p_query は migration 029、p_display_state は migration 047 で足した引数。省くと既定が入る
   [
     "list_owned_event_ids",
-    { p_filter: "all", p_category: "all", p_sort: "latest", p_limit: 1, p_offset: 0, p_query: null }
+    { p_filter: "all", p_category: "all", p_sort: "latest", p_limit: 1, p_offset: 0, p_query: null, p_display_state: "all" }
   ]
 ];
 
@@ -161,7 +161,7 @@ async function checkAuthenticatedUser({ baseUrl, apiKey, token, userId, counterp
     apiKey,
     token,
     functionName: "list_owned_event_ids",
-    args: { p_filter: "all", p_category: "all", p_sort: "latest", p_limit: 1, p_offset: 0, p_query: null },
+    args: { p_filter: "all", p_category: "all", p_sort: "latest", p_limit: 1, p_offset: 0, p_query: null, p_display_state: "all" },
     fetchImpl,
     ...requestOptions
   });

@@ -391,6 +391,7 @@ Phase 1 は完了済みです。
 - [x] `029_event_list_search.sql` を適用済み。
 - [x] `030_share_page_participant_rls.sql` を適用済み。（参加者のJWTで3件、他人のJWTで0件を確認）
 - [x] `031_drop_guest_participant_type.sql` を適用済み。（2026-08-11）
+- [ ] `047_event_list_progress_state_filter.sql` を適用済み。（FU #3 / PR-A。`list_owned_event_ids` を7引数化。**適用してから PR-B をマージする**。032〜046 の記録はこのチェックリストから漏れているが、047 は 029 と `plans`/`events` にしか依存しないので単独で適用してよい）
 - [ ] Supabase Project URL を設定済み。
 - [ ] Supabase anon key を設定済み。
 - [ ] Supabase service role key はサーバー側だけに設定している。
