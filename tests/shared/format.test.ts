@@ -146,6 +146,21 @@ describe("表示フォーマットの TZ 固定", () => {
   it("formatDateTimeRangeWithWeekday は終了なしなら開始だけ", () => {
     expect(formatDateTimeRangeWithWeekday("2026-09-07T19:00:00+09:00", null)).toBe("2026/09/07(月) 19:00");
   });
+
+  it("formatDateTimeRangeWithWeekday は終日予定も曜日つきで出す", () => {
+    // 単日（end は排他的なので翌日 0:00）
+    expect(
+      withTz("UTC", () =>
+        formatDateTimeRangeWithWeekday("2026-09-07T00:00:00+09:00", "2026-09-08T00:00:00+09:00", true)
+      )
+    ).toBe("2026/09/07(月) 終日");
+    // 複数日（9/7〜9/9、end は 9/10 0:00）
+    expect(
+      withTz("UTC", () =>
+        formatDateTimeRangeWithWeekday("2026-09-07T00:00:00+09:00", "2026-09-10T00:00:00+09:00", true)
+      )
+    ).toBe("2026/09/07(月) - 2026/09/09(水) 終日");
+  });
 });
 
 describe("オフセット無しの日時文字列の解釈", () => {

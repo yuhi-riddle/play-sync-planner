@@ -109,7 +109,7 @@ export function formatDateTimeRangeWithWeekday(
   }
 
   if (isAllDay) {
-    return formatAllDayRange(start, end);
+    return formatAllDayRangeWithWeekday(start, end);
   }
 
   const dateTimeParts: Intl.DateTimeFormatOptions = {
@@ -142,6 +142,27 @@ function formatAllDayRange(start: string, end: string | null | undefined): strin
   const sameDay = jstDateKey(start) === jstDateKey(inclusiveEndDate);
 
   return sameDay ? `${startLabel} 終日` : `${startLabel} - ${formatDate(inclusiveEndDate.toISOString())} 終日`;
+}
+
+/** formatAllDayRange の曜日つき版。formatDateTimeRangeWithWeekday から使う。 */
+function formatAllDayRangeWithWeekday(start: string, end: string | null | undefined): string {
+  const dateParts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short"
+  };
+  const startLabel = jstFormat(start, dateParts);
+  if (!end) {
+    return `${startLabel} 終日`;
+  }
+
+  const inclusiveEndDate = new Date(toJstDate(end).getTime() - 24 * 60 * 60 * 1000);
+  const sameDay = jstDateKey(start) === jstDateKey(inclusiveEndDate);
+
+  return sameDay
+    ? `${startLabel} 終日`
+    : `${startLabel} - ${jstFormat(inclusiveEndDate.toISOString(), dateParts)} 終日`;
 }
 
 export function toDateInputValue(value: string | null | undefined): string {
