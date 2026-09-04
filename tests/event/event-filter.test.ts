@@ -51,7 +51,8 @@ describe("event list query", () => {
       sort: "newest",
       pageSize: 10,
       page: 1,
-      search: ""
+      search: "",
+      displayState: "all"
     });
     expect(getEventStatusesForListFilter("active")).toEqual(["interested", "planning", "confirmed"]);
     expect(getEventStatusesForListFilter("draft")).toEqual([]);
@@ -74,7 +75,8 @@ describe("event list query", () => {
       sort: "soonest",
       pageSize: 50,
       page: 3,
-      search: ""
+      search: "",
+      displayState: "all"
     });
 
     expect(normalizeEventListQuery({ status: "unknown", sort: "unknown", limit: "25", page: "0" })).toEqual({
@@ -83,7 +85,8 @@ describe("event list query", () => {
       sort: "newest",
       pageSize: 10,
       page: 1,
-      search: ""
+      search: "",
+      displayState: "all"
     });
   });
 
@@ -111,7 +114,15 @@ describe("event list query", () => {
 
     expect(
       buildEventListHref(
-        { status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2, search: "" },
+        {
+          status: "cancelled",
+          category: "live",
+          sort: "latest",
+          pageSize: 20,
+          page: 2,
+          search: "",
+          displayState: "all"
+        },
         3
       )
     ).toBe("/events?status=cancelled&category=live&sort=latest&limit=20&page=3");
@@ -122,7 +133,15 @@ describe("event search", () => {
   it("検索語はURLに残す", () => {
     expect(
       buildEventListHref(
-        { status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄 旅行" },
+        {
+          status: "active",
+          category: "all",
+          sort: "newest",
+          pageSize: 10,
+          page: 1,
+          search: "沖縄 旅行",
+          displayState: "all"
+        },
         2
       )
     ).toBe("/events?search=%E6%B2%96%E7%B8%84+%E6%97%85%E8%A1%8C&page=2");
@@ -130,7 +149,15 @@ describe("event search", () => {
 
   it("検索していなければURLに出さない", () => {
     expect(
-      buildEventListHref({ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" })
+      buildEventListHref({
+        status: "active",
+        category: "all",
+        sort: "newest",
+        pageSize: 10,
+        page: 1,
+        search: "",
+        displayState: "all"
+      })
     ).toBe("/events");
   });
 
@@ -404,5 +431,46 @@ describe("event work state", () => {
       "later",
       "none"
     ]);
+  });
+});
+
+describe("normalizeEventListQuery の displayState", () => {
+  it("status=active かつ進行状態が5値のいずれかなら採用する", () => {
+    const q = normalizeEventListQuery({ status: "active", display: "answer_waiting" });
+    expect(q.displayState).toBe("answer_waiting");
+  });
+
+  it("status が active 以外なら display は無視して all", () => {
+    expect(normalizeEventListQuery({ status: "completed", display: "answer_waiting" }).displayState).toBe("all");
+    expect(normalizeEventListQuery({ status: "draft", display: "answer_waiting" }).displayState).toBe("all");
+  });
+
+  it("不正な display 値は all", () => {
+    expect(normalizeEventListQuery({ status: "active", display: "nope" }).displayState).toBe("all");
+    expect(normalizeEventListQuery({ status: "active" }).displayState).toBe("all");
+  });
+});
+
+describe("buildEventListHref の display", () => {
+  const base = normalizeEventListQuery({ status: "active" });
+
+  it("displayState が all 以外なら display= が付く", () => {
+    const href = buildEventListHref({ ...base, displayState: "event_waiting" }, 1);
+    expect(href).toBe("/events?display=event_waiting");
+  });
+
+  it("displayState が all なら display= は付かない", () => {
+    expect(buildEventListHref({ ...base, displayState: "all" }, 1)).toBe("/events");
+  });
+
+  it("他の条件と共存する", () => {
+    const href = buildEventListHref(
+      { ...base, category: "live", sort: "soonest", displayState: "answer_waiting" },
+      2
+    );
+    expect(href).toContain("display=answer_waiting");
+    expect(href).toContain("category=live");
+    expect(href).toContain("sort=soonest");
+    expect(href).toContain("page=2");
   });
 });

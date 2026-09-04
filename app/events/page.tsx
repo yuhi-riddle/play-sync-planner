@@ -45,6 +45,7 @@ type EventFilterQuery = {
   limit?: string;
   page?: string;
   search?: string;
+  display?: string;
 };
 
 type EventRow = EventListItem & {
@@ -131,7 +132,8 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       p_limit: query.pageSize,
       p_offset: requestedOffset,
       // 空文字ではなく null で渡す。SQL 側は null を「検索していない」として扱う
-      p_query: query.search || null
+      p_query: query.search || null,
+      p_display_state: query.displayState
     });
     if (rpcError) throw new Error(rpcError.message);
 

@@ -3,10 +3,18 @@ import { EVENT_CATEGORIES } from "@/lib/shared/constants";
 export const EVENT_LIST_FILTERS = ["active", "draft", "cancelled", "completed"] as const;
 export const EVENT_LIST_SORTS = ["newest", "soonest", "latest"] as const;
 export const EVENT_LIST_PAGE_SIZES = [10, 20, 50] as const;
+export const EVENT_LIST_PROGRESS_STATES = [
+  "participant_waiting",
+  "schedule_creation_waiting",
+  "answer_waiting",
+  "event_waiting",
+  "settlement_waiting"
+] as const;
 
 export type EventListFilter = (typeof EVENT_LIST_FILTERS)[number];
 export type EventListSort = (typeof EVENT_LIST_SORTS)[number];
 export type EventListPageSize = (typeof EVENT_LIST_PAGE_SIZES)[number];
+export type EventListProgressState = (typeof EVENT_LIST_PROGRESS_STATES)[number] | "all";
 export type EventSettlementState = "not_started" | "not_needed" | "needed" | "settling" | "settled";
 export type EventDisplayState =
   | "participant_waiting"
@@ -58,6 +66,7 @@ export type EventListQuery = {
   pageSize: EventListPageSize;
   page: number;
   search: string;
+  displayState: EventListProgressState;
 };
 
 /** 検索語の最大文字数。SQL側の left(..., 100) と揃える。 */
@@ -151,21 +160,29 @@ export function normalizeEventListQuery(query: {
   limit?: string;
   page?: string;
   search?: string;
+  display?: string;
 }): EventListQuery {
   const pageSize = Number(query.limit);
   const page = Number(query.page);
+  const status = EVENT_LIST_FILTERS.includes(query.status as EventListFilter)
+    ? (query.status as EventListFilter)
+    : "active";
+  const displayState: EventListProgressState =
+    status === "active" &&
+    EVENT_LIST_PROGRESS_STATES.includes(query.display as (typeof EVENT_LIST_PROGRESS_STATES)[number])
+      ? (query.display as EventListProgressState)
+      : "all";
 
   return {
-    status: EVENT_LIST_FILTERS.includes(query.status as EventListFilter)
-      ? (query.status as EventListFilter)
-      : "active",
+    status,
     category: normalizeCategory(query.category),
     sort: EVENT_LIST_SORTS.includes(query.sort as EventListSort) ? (query.sort as EventListSort) : "newest",
     pageSize: EVENT_LIST_PAGE_SIZES.includes(pageSize as EventListPageSize)
       ? (pageSize as EventListPageSize)
       : 10,
     page: Number.isSafeInteger(page) && page > 0 ? page : 1,
-    search: normalizeEventSearch(query.search)
+    search: normalizeEventSearch(query.search),
+    displayState
   };
 }
 
@@ -356,6 +373,9 @@ export function buildEventListHref(query: EventListQuery, page = query.page) {
   }
   if (query.search) {
     params.set("search", query.search);
+  }
+  if (query.displayState !== "all") {
+    params.set("display", query.displayState);
   }
   if (page > 1) {
     params.set("page", String(page));

@@ -105,10 +105,10 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(screen.getByText("参加者待ち")).toBeInTheDocument();
     expect(screen.getByText("新宿")).toBeInTheDocument();
     expect(screen.getByText("参加 1人")).toBeInTheDocument();
     const eventCardLink = screen.getByRole("link", { name: /週末の謎解き会/ });
+    expect(within(eventCardLink).getByText("参加者待ち")).toBeInTheDocument();
     expect(within(eventCardLink).getByText("謎解き")).toBeInTheDocument();
     expect(within(eventCardLink).queryByText("清算中")).not.toBeInTheDocument();
     expect(within(eventCardLink).queryByText("参加者を確認")).not.toBeInTheDocument();
@@ -257,7 +257,8 @@ describe("EventsPage", () => {
       p_sort: "soonest",
       p_limit: 20,
       p_offset: 20,
-      p_query: null
+      p_query: null,
+      p_display_state: "all"
     });
     expect(eventQuery.in).toHaveBeenCalledWith("id", ["event-1", "event-2"]);
     expect(screen.getAllByRole("heading", { level: 2, name: /番目/ }).map((heading) => heading.textContent)).toEqual([
@@ -283,6 +284,23 @@ describe("EventsPage", () => {
     expect(
       screen.getByText("「沖縄」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。")
     ).toBeInTheDocument();
+  });
+
+  it("進行状態はデータベースに渡す", async () => {
+    const eventQuery = createEventQuery([]);
+    const rpc = createRpcResult([], 0);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "active", display: "answer_waiting" }) }));
+
+    expect(rpc).toHaveBeenCalledWith(
+      "list_owned_event_ids",
+      expect.objectContaining({ p_display_state: "answer_waiting" })
+    );
   });
 
   it("下書きも検索でしぼる", async () => {

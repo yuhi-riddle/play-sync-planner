@@ -6,7 +6,9 @@ import { categoryAccent } from "@/lib/domain/event/category-color";
 import {
   buildEventListHref,
   EVENT_LIST_PAGE_SIZES,
+  EVENT_LIST_PROGRESS_STATES,
   EVENT_SEARCH_MAX_LENGTH,
+  eventDisplayStateLabels,
   type EventListFilter,
   type EventListPagination,
   type EventListQuery,
@@ -32,6 +34,14 @@ const statusLabels: Record<EventListFilter, string> = {
 };
 
 const statusOrder: EventListFilter[] = ["active", "draft", "completed", "cancelled"];
+
+function progressChipClass(isCurrent: boolean) {
+  return `inline-flex min-h-11 items-center whitespace-nowrap rounded-full border px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 ${
+    isCurrent
+      ? "border-pine-deep bg-gradient-to-br from-pine to-pine-deep text-white"
+      : "border-line-strong bg-surface text-ink hover:border-moss hover:text-pine"
+  }`;
+}
 
 export function EventListControls({
   query,
@@ -90,7 +100,7 @@ export function EventListControls({
                 <li key={status}>
                   <Link
                     // 絞り込みを変えたら1ページ目に戻す。3ページ目のまま状態だけ変えると空振りする。
-                    href={buildEventListHref({ ...query, status }, 1)}
+                    href={buildEventListHref({ ...query, status, displayState: "all" }, 1)}
                     aria-current={isCurrent ? "page" : undefined}
                     className={`inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-body font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 ${
                       isCurrent
@@ -108,6 +118,39 @@ export function EventListControls({
             })}
           </ul>
         </nav>
+
+        {query.status === "active" ? (
+          <div className="grid gap-1.5">
+            <p className="text-caption font-bold text-muted">進行状態</p>
+            <nav aria-label="進行状態で絞り込む" className="-mx-4 min-w-0 overflow-x-auto px-4">
+              <ul className="flex w-max gap-2">
+                <li>
+                  <Link
+                    href={buildEventListHref({ ...query, displayState: "all" }, 1)}
+                    aria-current={query.displayState === "all" ? "page" : undefined}
+                    className={progressChipClass(query.displayState === "all")}
+                  >
+                    すべて
+                  </Link>
+                </li>
+                {EVENT_LIST_PROGRESS_STATES.map((state) => {
+                  const isCurrent = query.displayState === state;
+                  return (
+                    <li key={state}>
+                      <Link
+                        href={buildEventListHref({ ...query, status: "active", displayState: state }, 1)}
+                        aria-current={isCurrent ? "page" : undefined}
+                        className={progressChipClass(isCurrent)}
+                      >
+                        {eventDisplayStateLabels[state]}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </div>
+        ) : null}
 
         {/* 0件のときは件数の行が出ないので、解除の導線をここに置かないと戻れなくなる。折りたたみの外に出す。 */}
         {query.search ? (
@@ -141,7 +184,7 @@ export function EventListControls({
           {/*
             検索・カテゴリ・表示順・表示件数を1つの GET フォームにまとめる。送信ボタンは
             「表示する」だけ（以前は検索フォームが別で虫眼鏡ボタンが余分に出ていた）。
-            状態はチップ側なので hidden で持ち回す。
+            状態・進行状態はチップ側なので hidden で持ち回す。持たないと、条件を変えた瞬間に外れる。
           */}
           <form
             action="/events"
@@ -150,6 +193,7 @@ export function EventListControls({
             className="grid grid-cols-1 gap-4 border-t border-line p-4 sm:grid-cols-3"
           >
             <input type="hidden" name="status" value={query.status} />
+            <input type="hidden" name="display" value={query.displayState === "all" ? "" : query.displayState} />
 
             <label className="text-body font-medium text-muted sm:col-span-3">
               タイトル・場所で探す
