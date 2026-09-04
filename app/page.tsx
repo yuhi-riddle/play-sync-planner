@@ -9,7 +9,7 @@ import { SetupPanel } from "@/components/ui/state-panels";
 import { discardEventDraftAction } from "@/lib/actions/event/events";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
 import type { HomeCalendarItem } from "@/lib/domain/home/home-calendar";
-import { pickNextUpcoming } from "@/lib/domain/home/next-upcoming";
+import { jstStartOfToday, pickNextUpcoming } from "@/lib/domain/home/next-upcoming";
 import { filterNotificationsByActionFilter, selectPriorityNotification } from "@/lib/domain/shared/site-notifications";
 import {
   createSupabaseAdminClient,
@@ -210,7 +210,10 @@ export default async function HomePage({
     .eq("status", "joined");
   const joinedEventIds = [...new Set((memberships ?? []).map((row) => row.event_id))];
   const nextUpcomingClient = hasSupabaseAdminEnv() ? createSupabaseAdminClient() : supabase;
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  // 下限は現在時刻ではなく JST の当日 0 時。現在時刻にすると、当日 00:00 開始の終日予定などが
+  // pickNextUpcoming（同じく JST 当日 0 時が下限）に渡る前にクエリで落ちてしまう。
+  const upcomingSinceIso = jstStartOfToday(now).toISOString();
 
   const nextConfirmedPromise = joinedEventIds.length
     ? nextUpcomingClient
@@ -218,7 +221,7 @@ export default async function HomePage({
         .select("id, title, is_all_day, confirmed_start_at, confirmed_end_at, events(title, location_name)")
         .in("event_id", joinedEventIds)
         .eq("status", "date_confirmed")
-        .gte("confirmed_start_at", nowIso)
+        .gte("confirmed_start_at", upcomingSinceIso)
         .order("confirmed_start_at", { ascending: true })
         .limit(1)
     : Promise.resolve({ data: [] as NextConfirmedRow[] });
@@ -229,7 +232,7 @@ export default async function HomePage({
         .select("id, start_at, end_at, is_all_day, plans!inner(id, title, event_id, status, events(title, location_name))")
         .in("plans.event_id", joinedEventIds)
         .in("plans.status", ["draft", "collecting_answers"])
-        .gte("start_at", nowIso)
+        .gte("start_at", upcomingSinceIso)
         .order("start_at", { ascending: true })
         .limit(1)
     : Promise.resolve({ data: [] as NextCandidateRow[] });
@@ -261,7 +264,7 @@ export default async function HomePage({
   const nextUpcomingItem = buildNextUpcomingItem(
     (nextConfirmedRows ?? []) as NextConfirmedRow[],
     (nextCandidateRows ?? []) as unknown as NextCandidateRow[],
-    new Date()
+    now
   );
 
   return (
