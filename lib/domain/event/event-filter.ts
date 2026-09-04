@@ -176,7 +176,9 @@ export function normalizeEventListQuery(query: {
   return {
     status,
     category: normalizeCategory(query.category),
-    sort: EVENT_LIST_SORTS.includes(query.sort as EventListSort) ? (query.sort as EventListSort) : "newest",
+    // 既定は開催日が近い順。「新しく作成した順」だと、今日やる予定と半年先の予定が
+    // 作成タイミングでバラバラに並んでしまい、次に何があるか一覧から読み取りにくい。
+    sort: EVENT_LIST_SORTS.includes(query.sort as EventListSort) ? (query.sort as EventListSort) : "soonest",
     pageSize: EVENT_LIST_PAGE_SIZES.includes(pageSize as EventListPageSize)
       ? (pageSize as EventListPageSize)
       : 10,
@@ -365,7 +367,7 @@ export function buildEventListHref(query: EventListQuery, page = query.page) {
   if (query.category !== "all") {
     params.set("category", query.category);
   }
-  if (query.sort !== "newest") {
+  if (query.sort !== "soonest") {
     params.set("sort", query.sort);
   }
   if (query.pageSize !== 10) {

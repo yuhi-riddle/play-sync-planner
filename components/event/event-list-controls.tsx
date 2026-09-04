@@ -57,7 +57,7 @@ export function EventListControls({
    * 実際に押されるのはほぼ「状態」だけなので、状態はチップで1タップに出し、
    * 残り（カテゴリ・表示順・表示件数）は畳んでおく。立替フォームと同じ段階的開示。
    */
-  const isDefaultDetail = query.category === "all" && query.sort === "newest" && query.pageSize === 10;
+  const isDefaultDetail = query.category === "all" && query.sort === "soonest" && query.pageSize === 10;
   const detailSummary = [
     query.category === "all" ? "すべてのカテゴリ" : categoryLabels[query.category],
     sortLabels[query.sort],
