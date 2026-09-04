@@ -22,7 +22,7 @@ describe("EventListControls", () => {
   it("状態はチップで出し、押すと1ページ目に戻る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 3, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 3, search: "", displayState: "all" }}
         draftCount={2}
         pagination={{ ...basePagination, page: 3, totalItems: 46, totalPages: 5, from: 21, to: 30 }}
       />
@@ -38,7 +38,7 @@ describe("EventListControls", () => {
   it("下書きの件数はチップに出る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={2}
         pagination={basePagination}
       />
@@ -50,7 +50,7 @@ describe("EventListControls", () => {
   it("下書きが0件なら数字を出さない", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -62,7 +62,7 @@ describe("EventListControls", () => {
   it("既定の条件なら詳しい絞り込みは畳んでおく", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "cancelled", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "cancelled", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -76,7 +76,7 @@ describe("EventListControls", () => {
   it("既定以外の条件が入っていたら開いた状態で出す", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "active", category: "live", sort: "soonest", pageSize: 20, page: 1, search: "" }}
+        query={{ status: "active", category: "live", sort: "soonest", pageSize: 20, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -89,7 +89,7 @@ describe("EventListControls", () => {
   it("カテゴリ・表示順・表示件数はGETフォームのまま残す", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={1}
         pagination={basePagination}
       />
@@ -108,7 +108,7 @@ describe("EventListControls", () => {
   it("条件を変えても、チップで選んだ状態は保たれる", () => {
     const { container } = render(
       <EventListControls
-        query={{ status: "completed", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "completed", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -122,7 +122,7 @@ describe("EventListControls", () => {
   it("絞り込みは見出し付きのカードで囲う", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -136,7 +136,7 @@ describe("EventListControls", () => {
     // 境界はカードで示すので、検索は畳んでよい。状態チップは表に残す
     const { container } = render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={manyPagination}
       />
@@ -153,7 +153,7 @@ describe("EventListControls", () => {
     // 以前は総件数 > 表示件数のときだけ出していて、表示件数を増やすと消える挙動が分かりにくかった
     const { container } = render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -167,7 +167,7 @@ describe("EventListControls", () => {
   it("検索と条件は1つのフォームで送る。状態は hidden、page は送らない", () => {
     render(
       <EventListControls
-        query={{ status: "completed", category: "live", sort: "soonest", pageSize: 20, page: 2, search: "" }}
+        query={{ status: "completed", category: "live", sort: "soonest", pageSize: 20, page: 2, search: "", displayState: "all" }}
         draftCount={0}
         pagination={{ ...manyPagination, pageSize: 20 }}
       />
@@ -188,7 +188,7 @@ describe("EventListControls", () => {
   it("検索中は、検索語と解除の導線を出す", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "live", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        query={{ status: "active", category: "live", sort: "newest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
         draftCount={0}
         pagination={{ ...basePagination, totalItems: 0, totalPages: 0, from: 0, to: 0 }}
       />
@@ -202,7 +202,7 @@ describe("EventListControls", () => {
   it("検索していなければ解除の導線は出さない", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -214,7 +214,7 @@ describe("EventListControls", () => {
   it("条件を変えても検索語は残る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -228,7 +228,7 @@ describe("EventListControls", () => {
   it("状態のチップは検索語を保ったまま切り替える", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -244,7 +244,7 @@ describe("EventListControls", () => {
   it("ページ送りは絞り込みを保ったまま出す", () => {
     render(
       <EventListControls
-        query={{ status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2, search: "" }}
+        query={{ status: "cancelled", category: "live", sort: "latest", pageSize: 20, page: 2, search: "", displayState: "all" }}
         draftCount={0}
         pagination={{
           page: 2,
@@ -273,7 +273,7 @@ describe("EventListControls", () => {
   it("カテゴリがすべてなら色ドットも枠色も出さない", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -287,7 +287,7 @@ describe("EventListControls", () => {
   it("カテゴリを選んでいれば選択中カテゴリの色をラベルとselectに出す", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "nazotoki", sort: "newest", pageSize: 10, page: 1, search: "" }}
+        query={{ status: "active", category: "nazotoki", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -297,5 +297,95 @@ describe("EventListControls", () => {
     expect(select).toHaveClass("border-category-nazotoki", "bg-category-nazotoki/16");
     const dot = select.closest("label")?.querySelector('span[aria-hidden="true"]');
     expect(dot).toHaveClass("bg-category-nazotoki");
+  });
+
+  it("status=active のとき進行状態の2段目チップが出る", () => {
+    render(
+      <EventListControls
+        query={{
+          status: "active",
+          category: "all",
+          sort: "newest",
+          pageSize: 10,
+          page: 1,
+          search: "",
+          displayState: "all"
+        }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const nav = screen.getByRole("navigation", { name: "進行状態で絞り込む" });
+    expect(within(nav).getByRole("link", { name: "回答待ち" })).toHaveAttribute(
+      "href",
+      "/events?display=answer_waiting"
+    );
+    expect(within(nav).getByRole("link", { name: "すべて" })).toHaveAttribute("href", "/events");
+  });
+
+  it("status=completed のとき2段目チップは出ない", () => {
+    render(
+      <EventListControls
+        query={{
+          status: "completed",
+          category: "all",
+          sort: "newest",
+          pageSize: 10,
+          page: 1,
+          search: "",
+          displayState: "all"
+        }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    expect(screen.queryByRole("navigation", { name: "進行状態で絞り込む" })).not.toBeInTheDocument();
+  });
+
+  it("選択中の進行状態チップに aria-current が付く", () => {
+    render(
+      <EventListControls
+        query={{
+          status: "active",
+          category: "all",
+          sort: "newest",
+          pageSize: 10,
+          page: 1,
+          search: "",
+          displayState: "event_waiting"
+        }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const nav = screen.getByRole("navigation", { name: "進行状態で絞り込む" });
+    expect(within(nav).getByRole("link", { name: "開催待ち" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("上段の状態チップを押すと進行状態は all に戻る", () => {
+    render(
+      <EventListControls
+        query={{
+          status: "active",
+          category: "all",
+          sort: "newest",
+          pageSize: 10,
+          page: 1,
+          search: "",
+          displayState: "answer_waiting"
+        }}
+        draftCount={0}
+        pagination={basePagination}
+      />
+    );
+
+    const statusNav = screen.getByRole("navigation", { name: "状態で絞り込む" });
+    expect(within(statusNav).getByRole("link", { name: "完了" })).toHaveAttribute(
+      "href",
+      "/events?status=completed"
+    );
   });
 });
