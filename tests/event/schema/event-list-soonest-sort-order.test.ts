@@ -7,9 +7,22 @@ const migrationPath = resolve(
   process.cwd(),
   "supabase/migrations/048_event_list_soonest_sort_order.sql"
 );
+const migration047Path = resolve(
+  process.cwd(),
+  "supabase/migrations/047_event_list_progress_state_filter.sql"
+);
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
+}
+
+/** order by 句を「,」区切りのキー配列にし、空白を潰したうえで soonest 絡みのキーを除く。 */
+function nonSoonestKeys(orderBy: string): string[] {
+  return orderBy
+    .split(",")
+    .map((key) => key.trim().replace(/\s+/g, " "))
+    .filter((key) => key.length > 0)
+    .filter((key) => !/soonest/.test(key));
 }
 
 /** SQL の -- コメントを取り除いた本文。コメント内の文字列で assertion をすり抜けさせない。 */
@@ -63,9 +76,18 @@ describe("event list soonest 並び順の migration 048", () => {
     );
   });
 
-  it("newest / latest のキーは 047 のまま", () => {
-    const orderBy = extractOrderBy(stripSqlComments(readMigration()));
-    expect(orderBy).toContain("case when sort_value = 'newest' then created_at end desc nulls last");
-    expect(orderBy).toContain("case when sort_value = 'latest' then schedule_start end desc nulls last");
+  it("soonest 以外のキー（newest / latest / タイブレーク）は 047 と完全一致", () => {
+    const from048 = nonSoonestKeys(extractOrderBy(stripSqlComments(readMigration())));
+    const from047 = nonSoonestKeys(
+      extractOrderBy(stripSqlComments(readFileSync(migration047Path, "utf8")))
+    );
+    // soonest のキーを除いたら、残りの内容も並び順も 047 と1文字違わないはず。
+    expect(from047).toEqual([
+      "case when sort_value = 'newest' then created_at end desc nulls last",
+      "case when sort_value = 'latest' then schedule_start end desc nulls last",
+      "created_at desc",
+      "id desc"
+    ]);
+    expect(from048).toEqual(from047);
   });
 });

@@ -53,6 +53,24 @@ async function addPlan(
   );
 }
 
+/**
+ * confirmed 日時を「トランザクション開始時刻ちょうど」に置いた確定プランを足す。
+ * SQL 側の分岐（schedule_start < now() / schedule_start >= now()）と同じ時計で境界値を作るため、
+ * JS の new Date() ではなく DB の transaction_timestamp() を使う。
+ */
+async function addPlanAtTxNow(eventId: string): Promise<void> {
+  await client.query(
+    `insert into public.plans
+       (event_id, owner_user_id, title, status, settlement_status, confirmed_start_at, confirmed_end_at)
+     values ($1, $2, 'p', 'date_confirmed', 'not_started', transaction_timestamp(), transaction_timestamp())`,
+    [eventId, ownerId]
+  );
+}
+
+async function setCreatedAt(eventId: string, expr: string): Promise<void> {
+  await client.query(`update public.events set created_at = ${expr} where id = $1`, [eventId]);
+}
+
 async function rpcIds(sort: string): Promise<string[]> {
   const { rows } = await client.query<{ event_ids: string[] }>(
     `select event_ids from public.list_owned_event_ids('active', 'all', $1, 50, 0, null, 'all')`,
@@ -79,6 +97,10 @@ afterEach(async () => {
 
 describe("list_owned_event_ids の soonest 並び順", () => {
   it("未来の予定 → 過去の未清算（直近ほど上）→ 日付なし、の順に並ぶ", async () => {
+    // N: schedule_start がちょうど現在時刻（境界値）。未来バケツの先頭に来る
+    const n = await makeEvent("confirmed");
+    await addPlanAtTxNow(n);
+
     // A: 7日後に確定
     const a = await makeEvent("confirmed");
     await addPlan(a, { status: "date_confirmed", confirmedStart: daysFromNow(7), confirmedEnd: daysFromNow(7) });
@@ -108,14 +130,32 @@ describe("list_owned_event_ids の soonest 並び順", () => {
     // E: 日付なし（日程作成待ち）
     const e = await makeEvent("planning");
 
-    expect(await rpcIds("soonest")).toEqual([b, a, c, d, e]);
+    expect(await rpcIds("soonest")).toEqual([n, b, a, c, d, e]);
   });
 
-  it("newest は作成順（新しいものが先）のまま", async () => {
-    const first = await makeEvent("planning");
-    const second = await makeEvent("planning");
-    await client.query("update public.events set created_at = now() - interval '1 hour' where id = $1", [first]);
+  it("newest / latest は soonest キーの影響を受けず、日付ありのイベントでも 047 と同じ順に並ぶ", async () => {
+    // P: 5日後に確定、作成が一番古い
+    const p = await makeEvent("confirmed");
+    await addPlan(p, { status: "date_confirmed", confirmedStart: daysFromNow(5), confirmedEnd: daysFromNow(5) });
+    await setCreatedAt(p, "now() - interval '3 hours'");
 
-    expect(await rpcIds("newest")).toEqual([second, first]);
+    // Q: 10日前に終わった確定＋清算中、作成が一番新しい
+    const q = await makeEvent("confirmed");
+    await addPlan(q, {
+      status: "date_confirmed",
+      settlementStatus: "settling",
+      confirmedStart: daysFromNow(-10),
+      confirmedEnd: daysFromNow(-10)
+    });
+    await setCreatedAt(q, "now() - interval '1 hour'");
+
+    // R: 日付なし、作成はその中間
+    const r = await makeEvent("planning");
+    await setCreatedAt(r, "now() - interval '2 hours'");
+
+    // newest: created_at の新しい順
+    expect(await rpcIds("newest")).toEqual([q, r, p]);
+    // latest: schedule_start の遅い順（null は最後）、同点は created_at desc
+    expect(await rpcIds("latest")).toEqual([p, q, r]);
   });
 });
