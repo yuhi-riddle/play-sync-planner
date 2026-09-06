@@ -23,7 +23,7 @@ import {
   type EventDisplayState,
   type EventListItem
 } from "@/lib/domain/event/event-filter";
-import { formatDate, formatDateTimeRange } from "@/lib/shared/format";
+import { formatDate, formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -271,7 +271,7 @@ function Meta({ icon: Icon, text, strong = false }: { icon: typeof CalendarDays;
 function formatSchedule(schedule: ReturnType<typeof getEventCardSummary>["schedule"]) {
   if (!schedule.startAt) return null;
   if (schedule.isConfirmed) {
-    return `確定 ${formatDateTimeRange(schedule.startAt, schedule.endAt, schedule.isAllDay)}`;
+    return `確定 ${formatDateTimeRangeWithWeekday(schedule.startAt, schedule.endAt, schedule.isAllDay)}`;
   }
   return !schedule.endAt || schedule.startAt === schedule.endAt
     ? formatDate(schedule.startAt)

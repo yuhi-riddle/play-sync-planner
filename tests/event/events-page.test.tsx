@@ -181,6 +181,33 @@ describe("EventsPage", () => {
     expect(cancelledBadge.className).not.toBe(completedBadge.className);
   });
 
+  it("確定済みイベントのカードは日時を曜日つきで出す（一覧は日付見出しが無い）", async () => {
+    const confirmedPlan = {
+      id: "plan-1",
+      status: "date_confirmed",
+      settlement_status: "not_started",
+      confirmed_start_at: "2026-07-07T10:00:00Z", // JST 2026/07/07 19:00
+      confirmed_end_at: "2026-07-07T12:00:00Z", // JST 21:00
+      is_all_day: false
+    };
+    const eventQuery = createEventQuery([
+      { ...makeEvent("event-1", "確定済みの集まり"), status: "confirmed", plans: [confirmedPlan] }
+    ]);
+    const rpc = createRpcResult(["event-1"], 1);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    const card = screen.getByRole("link", { name: /確定済みの集まり/ });
+    expect(
+      within(card).getByText(/確定 2026\/07\/07\([日月火水木金土]\) 19:00 - 21:00/)
+    ).toBeInTheDocument();
+  });
+
   it("shows the draft card's status and category as shared Badge pills", async () => {
     const eventQuery = createEventQuery([]);
     const rpc = createRpcResult([], 0);
