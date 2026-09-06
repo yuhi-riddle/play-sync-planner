@@ -30,7 +30,7 @@
 - 日程もプランも無く「気になる／調整中」で放置されたイベント（別テーマ「放置イベントの棚卸し」）
 - 清算完了時に `events.status = 'done'` を立てる（settlement 側の変更。別スペック）
 - 参加者への通知（オーナーのみ）
-- プロンプト通知の繰り返し（通知は1回、カードの帯が継続表示を担う）
+- プロンプト通知の繰り返し（1スヌーズ期間に1回、カードの帯が継続表示を担う）
 
 ## タイムライン
 
@@ -40,8 +40,9 @@
       │  30日（何も出さない。まだ清算するかもしれないし、
       │        明らかに終わっていて放置でも問題ない期間）
       ▼
-wrapup_prompt_at 到達
-   ＋ status が done/cancelled でない
+promptDue 到達（= 最終開催日+30日、スヌーズ中はその明け）
+   ＋ status が planning/confirmed
+   ＋ lifecycle 済み（開催日を過ぎた）
    ＋ 清算待ちでない
       │
       ▼
@@ -50,43 +51,52 @@ wrapup_prompt_at 到達
       │
       │  さらに14日、オーナーの操作なし
       ▼
-cron が status = 'done'、wrapup_auto_done = true
-・ベル通知1件（kind = wrapup_done、「戻す」付き）
+autoDoneDue 到達
+・EVENT_WRAPUP_AUTO_DONE=on なら cron が status='done'、wrapup_auto_done=true
+  ＋ ベル通知1件（kind = wrapup_done、「戻す」付き）
+・off（dry-run）なら status 不変、ログのみ
 ```
 
 - 最初の猶予: **30日**
 - プロンプト → 自動 done の猶予: **14日**
+- オーナーの操作: 「完了にする」（即 done）／「後で」（30日スヌーズ、無制限）
 
 ## データモデル
 
-### migration 049（`events` に2列追加）
+### migration 049
+
+**`events` に2列追加:**
 
 | 列 | 型 | 用途 |
 |---|---|---|
-| `wrapup_prompt_at` | `timestamptz` null可 | 確認プロンプト／自動 done の起点。cron が「最終開催日 + 30日」を最初にセット。「後で」で `now() + 30日` に更新 |
+| `wrapup_snoozed_until` | `timestamptz` null可 | 「後で」「戻す」だけが書く。この時刻まではプロンプトも自動 done も出さない。バックフィルで「もう気にしない」古いイベントを遠い未来（`'2999-01-01'`）にして恒久除外するのにも使う |
 | `wrapup_auto_done` | `boolean not null default false` | cron が自動 done したか。`wrapup_done` 通知を出すか・きれいに復元できるかの判断に使う |
 
-インデックス: `create index on public.events (wrapup_prompt_at) where wrapup_prompt_at is not null;`（cron の走査用）。
+**`wrapup_prompt_at` は持たない。** プロンプト／自動 done の起点は cron が毎回 plans と日付から計算する（下記「タイマーの計算」）。開催日が後から変わってもズレない。
 
-ロールバック: 2列と index を drop するだけ。データ破壊なし。
+**インデックス:** `create index events_wrapup_scan_idx on public.events (status) where status in ('planning', 'confirmed');`（cron の走査候補を絞る）。
 
-### notifications の kind 追加（同 migration）
+**ロールバック:** 2列と index を drop するだけ。データ破壊なし。
 
-`notifications_kind_check` に `wrapup_prompt`, `wrapup_done` を追加（既存の制約を drop して張り直す。migration 013 と同じパターン）。
+**notifications の kind 追加（同 migration）:** `notifications_kind_check` に `wrapup_prompt`, `wrapup_done` を追加（既存の制約を drop して張り直す。migration 013 と同じパターン）。
+
+**バックフィル（同 migration の DML）:** 既存の対象イベント（`isEventWrapupEligible` 相当を SQL で近似 — `status in ('planning','confirmed')` かつ最終開催日が過去）のうち、**最終開催日がリリース時点で90日超前**のものに `wrapup_snoozed_until = '2999-01-01'` をセット。「もう気にしていない」古いイベントを一切触らないため。それ以外の既存イベントは列 null のまま通常フローに乗る（下記のタイマー計算に `now() + 14日` の下限があるので一斉発火しない）。
 
 ### 「最終開催日」の定義
 
-`isEventLifecycleFinished` と同じ計算。確定プラン（`ignoredPlanStatuses` を除く）があればその最遅の終了時刻（`confirmed_end_at ?? confirmed_start_at` を `endOfScheduleTimestamp` に通す）。なければ `event.end_date ?? event.start_date` の当日終わり（JST）。cron の起点セットと自動 done 判定は両方この値を使う。
+`isEventLifecycleFinished` と同じ計算。確定プラン（`ignoredPlanStatuses` を除く）があればその最遅の終了時刻（`confirmed_end_at ?? confirmed_start_at` を `endOfScheduleTimestamp` に通す）。なければ `event.end_date ?? event.start_date` の当日終わり（JST）。
 
-### バックフィル
-
-初回 cron 実行時、既存の対象イベントに:
+### タイマーの計算（保存しない。毎回導出）
 
 ```
-wrapup_prompt_at = greatest(最終開催日 + interval '30 days', now() + interval '14 days')
+lastDate     = 最終開催日（上記）
+promptDue    = max(lastDate + 30日, wrapup_snoozed_until ?? -∞, リリース日 + 14日)
+autoDoneDue  = promptDue + 14日
 ```
 
-リリース直後にプロンプト・自動 done が一斉発火しないよう、最低14日の猶予を挟む。
+- `リリース日 + 14日` の下限は、バックフィル対象（列 null で90日以内）がリリース直後に発火しないための保険。実装ではリリース日を定数で持つ（例 `WRAPUP_ROLLOUT_FLOOR = '2026-09-XX'`）。リリースから2週間経てば実質無効になる。
+- プロンプトを出す条件: `now >= promptDue`
+- 自動 done の条件: `now >= autoDoneDue` かつ `EVENT_WRAPUP_AUTO_DONE === 'on'`
 
 ## 対象判定（純粋関数）
 
@@ -108,23 +118,34 @@ Vercel Cron は使わない（`docs/current-status.md`: vercel.json に crons �
 
 ### 処理順
 
-1. **対象取得** — `events` を `status in ('planning', 'confirmed')` で、plans を join して取得。owner ごと。件数は closed beta 規模なので全件で可（既存 cron と同じキーセットページング方針）。TS 側で `isEventWrapupEligible` を通す。
-2. **起点セット** — `wrapup_prompt_at is null` の対象に `最終開催日 + 30日`（バックフィル分は下限 `now() + 14日`）を書く。
-3. **プロンプト通知** — `now >= wrapup_prompt_at` かつ未通知の対象に kind `wrapup_prompt` の通知を upsert。`dedupe_key = 'event_wrapup:' + event.id`。href はイベント詳細。
-4. **自動 done** — `now >= wrapup_prompt_at + interval '14 days'` の対象に:
+1. **対象取得** — `events` を `status in ('planning', 'confirmed')` で、plans を join して取得。owner ごと。件数は closed beta 規模なので全件で可（既存 cron と同じキーセットページング方針）。TS 側で `isEventWrapupEligible` を通し、`wrapup_snoozed_until` が未来ならスキップ。
+2. **タイマー計算** — 対象ごとに `promptDue` / `autoDoneDue` を導出（保存しない）。
+3. **プロンプト通知** — `now >= promptDue` の対象に kind `wrapup_prompt` の通知を upsert。`dedupe_key = 'event_wrapup:' + event.id + ':' + promptDue.toISOString().slice(0,10)`（スヌーズで `promptDue` が動くと新しい dedupe_key になり、スヌーズ明けに再通知される）。href はイベント詳細。dry-run 中と本番で本文を出し分け（下記「通知の文面」）。
+4. **自動 done** — `EVENT_WRAPUP_AUTO_DONE === 'on'` かつ `now >= autoDoneDue` の対象に:
    - `events` を `status = 'done'`, `wrapup_auto_done = true` に更新
-   - kind `wrapup_done` の通知を作成（「◯◯を完了にしました。30日以上動きがなかったためです。」＋「戻す」）
-   - 既存の `wrapup_prompt` 通知を既読化（`settlements.ts` と同じ後始末パターン）
+   - kind `wrapup_done` の通知を作成（`dedupe_key = 'event_wrapup_done:' + event.id`）。「◯◯を完了にしました。1ヶ月以上動きがなかったためです。」＋「戻す」
+   - この event の未読 `wrapup_prompt` 通知を既読化（`settlements.ts` と同じ後始末パターン）
+   - **dry-run 中（`EVENT_WRAPUP_AUTO_DONE !== 'on'`）** は status を変えず、`console.log('[wrapup] would auto-complete', { eventId, lastDate, autoDoneDue })` だけ出す。
 
 ### 冪等性
 
-- 手順2は null 条件で二重書き込みなし
-- 手順3は `dedupe_key` の upsert で1回だけ
-- 手順4は `status = 'done'` になった時点で次スキャンの手順1で除外される
+- 手順3は `dedupe_key`（promptDue の日付入り）の upsert で、同じスヌーズ期間内は1回だけ
+- 手順4は `status = 'done'` になった時点で次スキャンの手順1（status フィルタ）で除外される。dry-run 中はログが毎回出るが実害なし
 
 ### エラー処理
 
-1件の更新失敗で全体を止めない。集計して部分成功を返す（既存 cron は1エラーで 500 を返す作りだが、mutation が混ざるので変更する）。レスポンスに `{ promoted, autoCompleted, plansScanned, eventsScanned, errors: [...] }`。
+1件の更新失敗で全体を止めない。集計して結果を返す（既存 cron は1エラーで 500 を返す作りだが、mutation が混ざるので変更する）。レスポンス: `{ notified, autoCompleted, wouldAutoComplete, eventsScanned, plansScanned, errors: [...] }`。
+
+### 通知の文面
+
+- **dry-run 中**: 「◯◯は終わりましたか？」＋ href。自動完了には触れない
+- **本番（auto-done on）**: 上に加えて「このまま何もしないと {autoDoneDue の日付} に自動で完了になります」の一文
+
+### dry-run から本番への切替（運用チェックリスト）
+
+1. 約1ヶ月、`wouldAutoComplete` のログ／レスポンスを確認
+2. ログに「完了にすべきでないイベント」が出ていないこと（＝ `isEventWrapupEligible` が正しい）を確認
+3. 問題なければ Vercel の環境変数 `EVENT_WRAPUP_AUTO_DONE` を `on` に。コード変更・再デプロイ不要（環境変数変更で次回 cron から有効）
 
 ## UI
 
@@ -132,8 +153,8 @@ Vercel Cron は使わない（`docs/current-status.md`: vercel.json に crons �
 
 `app/events/page.tsx`:
 
-- `getEventCardSummary` に `wrapupPrompt: boolean` を追加（`isEventWrapupEligible(event, now)` かつ `event.wrapup_prompt_at != null` かつ `now >= wrapup_prompt_at`）
-- RPC / クエリで `wrapup_prompt_at` を取得する（`app/events/page.tsx` の select に追加）
+- `getEventCardSummary` に `wrapupPrompt: boolean` を追加（`isEventWrapupEligible(event, now)` かつ `now >= promptDue`。`promptDue` は cron と同じ計算式を共通関数 `getEventWrapupTimers(event, now)` に切り出して両方から使う）
+- クエリで `wrapup_snoozed_until` を取得する（`app/events/page.tsx` の events select に追加。RPC は id しか返さないので events の再フェッチ側）
 - true のとき `EventCard` 下部に帯:
   - 面: `bg-sunken`、上辺 `border-t border-dashed border-line-strong`
   - 文言: 「開催おつかれさまでした。このイベント、締めていい？」
@@ -153,39 +174,53 @@ Vercel Cron は使わない（`docs/current-status.md`: vercel.json に crons �
 
 | action | 処理 |
 |---|---|
-| `completeEventAction(eventId)` | owner 確認 → `status = 'done'`, `wrapup_auto_done = false`。`wrapup_prompt` 通知を既読化 |
-| `snoozeEventWrapupAction(eventId)` | owner 確認 → `wrapup_prompt_at = now() + interval '30 days'`。`wrapup_prompt` 通知を既読化 |
-| `reopenEventAction(eventId)` | owner 確認 → `status = 'confirmed'`, `wrapup_auto_done = false`, `wrapup_prompt_at = now() + interval '30 days'`（すぐ再発火させない）|
+| `completeEventAction(eventId)` | owner 確認 → `status = 'done'`, `wrapup_auto_done = false`。この event の未読 `wrapup_prompt` 通知を既読化 |
+| `snoozeEventWrapupAction(eventId)` | owner 確認 → `wrapup_snoozed_until = now() + interval '30 days'`。未読 `wrapup_prompt` 通知を既読化 |
+| `reopenEventAction(eventId)` | owner 確認 → `status = 'planning'`, `wrapup_auto_done = false`, `wrapup_snoozed_until = now() + interval '30 days'`（すぐ再発火させない）|
 
-全アクション `revalidatePath("/")`, `revalidatePath("/events")`。非 owner は既存の `cancelEventAction` と同じ形で拒否。
+全アクション `revalidatePath("/")`, `revalidatePath("/events")`。owner ガードは既存の `cancelEventAction` と同じ `.eq("owner_user_id", user.id)`。0 行マッチでも throw しない既存挙動に合わせるが、`completeEventAction` は「押した本人＝ owner」が前提なので実害なし。
 
-`reopenEventAction` が `confirmed` 固定なのは、対象が「確定プランを持つ期日超過イベント」だから。プランなしの期日超過（`event.end_date` だけで判定されたケース）でも、開催日が設定済み＝日程は決まっていたので `confirmed` で妥当。
+`reopenEventAction` が `planning` 固定なのは:
+- `done` のまま何か列を戻しても `isEventLifecycleFinished` が `status='done'` で永久に短絡する（`event-filter.ts:264`）ので、非終了に戻すことが必須
+- 既存の `restartPlanAdjustmentAction`（`lib/actions/plan/plans.ts`）も terminal からの復帰で `events.status='planning'` にしており、パターンが揃う
+- 確定プランが残っていれば派生状態が再計算され、未来なら「開催待ち」、過去のままなら再び「完了」→ スヌーズ明けに再プロンプト（穏やかなリマインドとして許容）
+
+既存の「再調整を始める」ボタン（`app/plans/[planId]/page.tsx:304`、`plan.status==='date_confirmed'` のみが条件で `event.status` を見ない）は**触らない**。自動 done 後に押しても `restartPlanAdjustmentAction` が `events.status='planning'` にするので、実質的な reopen 経路として自然に機能する。
 
 ## エッジケース
 
 | 状況 | 挙動 |
 |---|---|
-| プロンプト後に新しい未来の日程が確定 | `isEventLifecycleFinished` が false → 帯・通知が消える。自動 done されない。`wrapup_prompt_at` は残るが判定で弾かれる |
+| プロンプト後に新しい未来の日程が確定 | `isEventLifecycleFinished` が false → `isEventWrapupEligible` false → 帯・通知が消える。自動 done されない |
 | オーナーが cron より先に手で完了 | `status = 'done'` で以降スキップ |
-| プロンプト後に立替追加で清算が必要に | 派生状態が `settlement_waiting` → 帯は隠れ、wrapup は止まる。清算完了後にまた対象へ |
-| 自動 done 済みを「戻す」 | `confirmed` に復帰、`wrapup_prompt_at` は +30日先 |
+| プロンプト後に立替追加で清算が必要に | 派生状態が `settlement_waiting` → `isEventWrapupEligible` false → 帯は隠れ wrapup は止まる。清算完了後にまた対象へ |
+| 自動 done 済みを「戻す」 | `status='planning'` に復帰、`wrapup_snoozed_until = now()+30日`、`wrapup_auto_done=false` |
+| 自動 done 後に未来の確定プランを足す | `status='done'` の短絡で派生状態は `completed` のまま（`event-filter.ts:264`）。先に「戻す」を押させる必要がある。`wrapup_done` 通知の「戻す」がその導線 |
 | タイムゾーン | 最終開催日の判定は既存の JST 対応 `endOfScheduleTimestamp` をそのまま使う（Vercel は UTC） |
 | 中止済みイベント | `status` チェックで最初から除外 |
-| 「後で」を無限に繰り返す | オーナーの選択として許容（30日ごとに再プロンプト） |
+| 「後で」を無限に繰り返す | オーナーの選択として許容（30日ごとに再プロンプト、`dedupe_key` が変わるので通知も再度出る） |
+| `done` イベントのチャット・タスク | 既存挙動どおり動く（`cancelled` だけが止める）。この設計では変更しない |
 
 ## テスト
 
-- **純粋関数** `isEventWrapupEligible(event, now)`（`tests/event/`）— lifecycle 済み × 清算不要のみ true。清算待ち・done・cancelled・未来予定ありは false
-- **cron ロジック**（`tests/db/`）— 起点セット → 30日後にプロンプト通知1件 → 44日後に `status = 'done'` ＋ `wrapup_done` 通知。2回流して重複なし（冪等）
-- **Server actions**（`tests/actions/`）— 各アクションの status 遷移と owner ガード、非 owner 拒否
+- **純粋関数** `isEventWrapupEligible(event, now)` / `getEventWrapupTimers(event, now)`（`tests/event/`）— lifecycle 済み × 清算不要のみ eligible。清算待ち・done・cancelled・未来予定ありは false。timers はスヌーズ・リリース下限・最終開催日の各条件で `promptDue` / `autoDoneDue` が正しい
+- **cron ロジック**（`tests/db/`）— 30日後にプロンプト通知1件 → 44日後、`EVENT_WRAPUP_AUTO_DONE='on'` で `status='done'` ＋ `wrapup_done` 通知、`off` では status 不変でログのみ。スヌーズ後は dedupe_key が変わって再通知。2回流して重複なし
+- **Server actions**（`tests/actions/`）— 各アクションの status / 列遷移と owner ガード、非 owner 拒否
 - **EventCard**（`tests/event/events-page.test.tsx`）— 帯の表示条件（`wrapupPrompt` true/false）とボタンの action 紐付け（jsdom はクラス名検証）
+- **スキーマ文字列テスト**（`tests/event/schema/`）— migration 049 の列追加・kind 制約・バックフィル DML
 
 ## 実装順（プラン作成時の目安）
 
-1. migration 049（2列 + index + kind 制約）＋ スキーマ文字列テスト
-2. `isEventWrapupEligible` 純粋関数 ＋ テスト（TDD、RED 確認）
-3. Server actions 3本 ＋ テスト
-4. cron に events 走査を追加 ＋ DB テスト
+1. migration 049（`wrapup_snoozed_until` / `wrapup_auto_done` / index / kind 制約 / 90日超バックフィル DML）＋ スキーマ文字列テスト
+2. `isEventWrapupEligible` ＋ `getEventWrapupTimers` 純粋関数 ＋ テスト（TDD、RED 確認）
+3. Server actions 3本（`completeEventAction` / `snoozeEventWrapupAction` / `reopenEventAction`）＋ テスト
+4. cron に events 走査を追加（環境変数ガード込み）＋ DB テスト
 5. `getEventCardSummary` に `wrapupPrompt` ＋ `app/events/page.tsx` のクエリと帯 ＋ コンポーネントテスト
-6. 通知 kind 2種の UI 対応
-7. バックフィルの確認（初回 cron 実行を本番で監視）
+6. 通知 kind 2種（`wrapup_prompt` / `wrapup_done`）の UI 対応・文面の dry-run 出し分け
+7. リリース後: dry-run ログを1ヶ月監視 → 問題なければ `EVENT_WRAPUP_AUTO_DONE=on`
+
+## 未確定（実装計画で潰す。設計判断ではない）
+
+- `wrapup_prompt` 通知にアクションボタンを持たせる仕組みが既存にあるか（`confirmation_due` の実装を読む）。無ければ href 遷移＋帯で操作にフォールバック
+- `NotificationActionFilter` への新 kind の割り当て（当面「すべて」のみで可）
+- `WRAPUP_ROLLOUT_FLOOR` 定数の具体日（マージ日を見て決める）
