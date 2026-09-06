@@ -1,0 +1,394 @@
+<title>イベント完了の押させ方</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --canvas: #f7f3ef;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --text: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --ink: #23262b;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --pine-deep: #2c4638;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --mist: #eff3ee;
+    --skywash: #d9e8e7;
+    --nazotoki: #a098ec;
+    --nazotoki-ink: #6056a3;
+    --boardgame: #39bda0;
+    --boardgame-ink: #00785f;
+    --radius-card: 20px;
+    --radius-control: 14px;
+    --shadow-raise: 0 1px 2px rgba(62,51,39,.04), 0 3px 10px rgba(62,51,39,.05);
+    --shadow-soft: 0 8px 26px rgba(62,51,39,.09);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #1c1a17;
+      --surface: #262320;
+      --sunken: #211e1a;
+      --line: #3a342c;
+      --line-strong: #4d4638;
+      --text: #f0ebe2;
+      --muted: #a99f90;
+      --subtle: #7c7466;
+      --ink: #f0ebe2;
+      --moss: #8fae94;
+      --pine: #b9d3c0;
+      --pine-deep: #a7c4ae;
+      --clay: #e0917a;
+      --clay-ink: #eaa892;
+      --honey: #d8b26b;
+      --honey-ink: #e6c68a;
+      --mist: #2b332c;
+      --skywash: #26363a;
+      --shadow-raise: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.3);
+      --shadow-soft: 0 8px 26px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #1c1a17;
+    --surface: #262320;
+    --sunken: #211e1a;
+    --line: #3a342c;
+    --line-strong: #4d4638;
+    --text: #f0ebe2;
+    --muted: #a99f90;
+    --subtle: #7c7466;
+    --ink: #f0ebe2;
+    --moss: #8fae94;
+    --pine: #b9d3c0;
+    --pine-deep: #a7c4ae;
+    --clay: #e0917a;
+    --clay-ink: #eaa892;
+    --honey: #d8b26b;
+    --honey-ink: #e6c68a;
+    --mist: #2b332c;
+    --skywash: #26363a;
+    --shadow-raise: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.3);
+    --shadow-soft: 0 8px 26px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: "Zen Kaku Gothic New", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 960px; margin: 0 auto; padding: 48px 20px 88px; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--moss); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin: 0 0 12px; text-wrap: balance; }
+  .lede { color: var(--muted); margin: 0 0 8px; max-width: 62ch; }
+  .axis { color: var(--muted); font-size: .9rem; margin: 4px 0 0; }
+  .axis b { color: var(--text); font-weight: 500; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 28px;
+    margin-top: 40px;
+  }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  .col-head .name { font-size: 1.05rem; font-weight: 700; margin: 0; }
+  .col-head .aim { font-size: .88rem; color: var(--muted); margin: 3px 0 0; }
+
+  /* phone frame */
+  .phone {
+    width: 100%;
+    background: var(--canvas);
+    border: 1px solid var(--line-strong);
+    border-radius: 22px;
+    padding: 14px 12px;
+    box-shadow: var(--shadow-soft);
+  }
+  .phone-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 6px 12px; color: var(--muted); font-size: .8rem;
+  }
+  .bell { position: relative; }
+  .bell .dot {
+    position: absolute; top: -3px; right: -5px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--clay); border: 1.5px solid var(--canvas);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-raise);
+    overflow: hidden;
+  }
+  .card + .card { margin-top: 10px; }
+  .card-body { padding: 14px; }
+  .cat {
+    display: inline-block; font-size: .68rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .cat.nazotoki { background: color-mix(in srgb, var(--nazotoki) 26%, transparent); color: var(--nazotoki-ink); }
+  .cat.boardgame { background: color-mix(in srgb, var(--boardgame) 26%, transparent); color: var(--boardgame-ink); }
+  .title { font-weight: 700; margin: 8px 0 4px; font-size: .98rem; }
+  .meta { font-size: .82rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .state {
+    font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+    background: var(--sunken); color: var(--muted);
+  }
+
+  /* buttons */
+  .btn {
+    appearance: none; border: 0; cursor: pointer;
+    font: inherit; font-weight: 700; font-size: .86rem;
+    border-radius: 999px; padding: 8px 16px;
+    min-height: 38px;
+  }
+  .btn-primary { background: linear-gradient(160deg, var(--pine), var(--pine-deep)); color: #fffdf7; }
+  :root[data-theme="dark"] .btn-primary, :root:not([data-theme="light"]) .btn-primary { color: #1c1a17; }
+  @media (prefers-color-scheme: light) { .btn-primary { color: #fffdf7; } }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line-strong); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* A: notification */
+  .notif {
+    display: flex; gap: 10px; padding: 12px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .notif:last-child { border-bottom: 0; }
+  .notif .ic {
+    flex: 0 0 30px; height: 30px; border-radius: 8px;
+    background: var(--mist); display: grid; place-items: center;
+    color: var(--pine); font-size: .9rem;
+  }
+  .notif .n-title { font-size: .88rem; font-weight: 700; margin: 0; }
+  .notif .n-body { font-size: .8rem; color: var(--muted); margin: 2px 0 8px; }
+  .notif .unread { background: color-mix(in srgb, var(--skywash) 40%, transparent); }
+
+  /* B: inline card footer */
+  .confirm-strip {
+    background: var(--sunken);
+    border-top: 1px dashed var(--line-strong);
+    padding: 11px 14px 13px;
+  }
+  .confirm-strip .q { font-size: .84rem; font-weight: 700; margin: 0 0 9px; }
+  .confirm-strip .q span { color: var(--muted); font-weight: 400; }
+
+  /* C: home wrap-up section */
+  .section-h {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 4px 2px 8px;
+  }
+  .section-h h3 { font-size: .92rem; margin: 0; }
+  .section-h .count {
+    font-family: "IBM Plex Mono", monospace; font-size: .74rem;
+    color: var(--clay-ink); background: color-mix(in srgb, var(--clay) 18%, transparent);
+    border-radius: 999px; padding: 1px 8px;
+  }
+  .wrap-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-control); padding: 10px 12px;
+  }
+  .wrap-row + .wrap-row { margin-top: 8px; }
+  .wrap-row .r-title { font-size: .86rem; font-weight: 700; flex: 1; min-width: 0; }
+  .wrap-row .r-sub { font-size: .75rem; color: var(--muted); }
+  .mini {
+    appearance: none; border: 0; cursor: pointer; font: inherit;
+    font-size: .78rem; font-weight: 700; border-radius: 999px;
+    padding: 5px 12px; min-height: 32px;
+  }
+  .mini.done { background: var(--pine); color: #fffdf7; }
+  :root[data-theme="dark"] .mini.done, :root:not([data-theme="light"]) .mini.done { color: #1c1a17; }
+  @media (prefers-color-scheme: light) { .mini.done { color: #fffdf7; } }
+  .mini.skip { background: transparent; color: var(--muted); }
+
+  /* comparison table */
+  .compare { margin-top: 52px; }
+  .compare h2 { font-size: 1.15rem; margin: 0 0 14px; padding-top: 26px; border-top: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: .8rem; }
+  td:first-child { font-weight: 700; }
+  .mark-good { color: var(--pine); font-weight: 700; }
+  .mark-mid { color: var(--honey-ink); }
+  .mark-bad { color: var(--clay-ink); }
+
+  .rec {
+    margin-top: 28px; background: var(--surface);
+    border: 1px solid var(--line); border-left: 3px solid var(--moss);
+    border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow-raise);
+  }
+  .rec p { margin: 0; }
+  .rec p + p { margin-top: 8px; }
+  .rec strong { color: var(--pine); }
+</style>
+
+<div class="page">
+  <p class="eyebrow">play-sync-planner / 完了の押させ方</p>
+  <h1>「このイベント終わった？」をどこで、どう訊くか</h1>
+  <p class="lede">期日は過ぎたが清算不要で status が未クローズのイベントに、オーナーが「完了」を押す導線。同じイベント・同じ幅（375px）で3案。</p>
+  <p class="axis">比較軸: <b>①見逃しにくさ</b> ／ <b>②まとめて処理できるか</b> ／ <b>③既存基盤との相性</b></p>
+
+  <div class="grid">
+
+    <!-- 案A -->
+    <div class="col">
+      <div class="col-head">
+        <p class="name">案A・通知センターに出す</p>
+        <p class="aim">狙い: 既存のベル通知にアクションを1つ足すだけ。実装最小。</p>
+      </div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span class="bell">🔔<span class="dot"></span></span></div>
+        <div class="card">
+          <div class="notif unread">
+            <div class="ic">✓</div>
+            <div>
+              <p class="n-title">謎解き公演は終わりましたか？</p>
+              <p class="n-body">9/1(月) に開催予定でした。清算は不要の設定です。</p>
+              <div class="btn-row">
+                <button class="btn btn-primary" style="padding:6px 14px;min-height:34px">完了にする</button>
+                <button class="btn btn-ghost" style="padding:6px 14px;min-height:34px">まだ続く</button>
+              </div>
+            </div>
+          </div>
+          <div class="notif">
+            <div class="ic" style="background:var(--skywash);color:var(--pine)">◷</div>
+            <div>
+              <p class="n-title">立替の回答が3件そろいました</p>
+              <p class="n-body">ボードゲーム会 @ 高円寺</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案B -->
+    <div class="col">
+      <div class="col-head">
+        <p class="name">案B・一覧カードの下に確認帯（推奨）</p>
+        <p class="aim">狙い: 一覧を開けば必ず目に入る。開催おつかれの一言を添えて心理的ハードルを下げる。</p>
+      </div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span class="bell">🔔<span class="dot"></span></span></div>
+        <div class="card">
+          <div class="card-body">
+            <span class="cat nazotoki">謎解き</span>
+            <p class="title">謎解き公演「渋谷の廃病院」</p>
+            <p class="meta"><span class="state">完了</span> 確定 9/1(月) 19:00</p>
+          </div>
+          <div class="confirm-strip">
+            <p class="q">開催おつかれさまでした。<span>このイベント、締めていい？</span></p>
+            <div class="btn-row">
+              <button class="btn btn-primary">完了にする</button>
+              <button class="btn btn-ghost">まだ続く</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <span class="cat boardgame">ボードゲーム</span>
+            <p class="title">ボードゲーム会 @ 高円寺</p>
+            <p class="meta"><span class="state" style="background:color-mix(in srgb,var(--honey) 20%,transparent);color:var(--honey-ink)">回答待ち</span> 日程調整中</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案C -->
+    <div class="col">
+      <div class="col-head">
+        <p class="name">案C・ホームに「振り返り」枠</p>
+        <p class="aim">狙い: 終わったかものイベントを1画面に集約。まとめて処理。</p>
+      </div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span class="bell">🔔<span class="dot"></span></span></div>
+        <div class="section-h">
+          <h3>終わったかも</h3>
+          <span class="count">3件</span>
+        </div>
+        <div class="wrap-row">
+          <div>
+            <div class="r-title">謎解き公演「渋谷の廃病院」</div>
+            <div class="r-sub">9/1(月) ・ 清算なし</div>
+          </div>
+          <button class="mini done">完了</button>
+          <button class="mini skip">まだ</button>
+        </div>
+        <div class="wrap-row">
+          <div>
+            <div class="r-title">花見 @ 代々木公園</div>
+            <div class="r-sub">8/20(木) ・ 清算なし</div>
+          </div>
+          <button class="mini done">完了</button>
+          <button class="mini skip">まだ</button>
+        </div>
+        <div class="wrap-row">
+          <div>
+            <div class="r-title">映画「デューン3」</div>
+            <div class="r-sub">8/15(土) ・ 清算なし</div>
+          </div>
+          <button class="mini done">完了</button>
+          <button class="mini skip">まだ</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="compare">
+    <h2>比較</h2>
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr><th>案</th><th>① 見逃しにくさ</th><th>② まとめ処理</th><th>③ 既存基盤との相性</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A・通知</td>
+          <td class="mark-mid">中（ベルを開く人だけ）</td>
+          <td class="mark-bad">なし（1件ずつ）</td>
+          <td class="mark-good">高（kind を1つ足すだけ）</td>
+          <td>通知に action ボタンを持たせる実装は新規</td>
+        </tr>
+        <tr>
+          <td>B・カード帯</td>
+          <td class="mark-good">高（一覧の主動線）</td>
+          <td class="mark-mid">中（スクロールで順に）</td>
+          <td class="mark-good">高（EventCard の分岐追加）</td>
+          <td>「完了」カードが並ぶだけだと見落とすので帯で差をつける</td>
+        </tr>
+        <tr>
+          <td>C・振り返り枠</td>
+          <td class="mark-mid">中（ホームに来る人だけ）</td>
+          <td class="mark-good">高（1画面で連続処理）</td>
+          <td class="mark-bad">低（新セクション＝新概念）</td>
+          <td>件数が0のとき枠をどう畳むか等、設計が増える</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="rec">
+      <p><strong>推奨: 案B を主、案A を補助。</strong></p>
+      <p>判断基準は「オーナーが確実に通る動線に置く」。一覧（案B）は必ず通るが、開かない期間もあるので通知（案A）で一押しする。両方とも既存コンポーネントの分岐追加で済む。</p>
+      <p>案C は「振り返り」という新セクションを増やすぶん設計コストが高く、いま解きたい範囲（放置イベントを閉じる）に対して過剰。まず B+A で出し、件数が多いと分かったら C を検討。</p>
+    </div>
+  </div>
+</div>
