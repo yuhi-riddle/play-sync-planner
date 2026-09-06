@@ -95,9 +95,13 @@ export function formatDateTimeRange(start: string | null | undefined, end: strin
 /**
  * 曜日つきの日時レンジ（"2026/09/07(月) 19:00 - 21:00"）。
  *
- * 周囲に日付見出しが無い場所——ホームの「次の予定」カードなど——で使う。
- * 一覧やタイムラインは行の上に「9月7日(月)」の見出しが出るので、そちらは
- * 曜日なしの formatDateTimeRange のままでよい。
+ * 予定日時を単体で見せる場所で使う。近くに日付見出しが無く、その1行だけで
+ * 何曜日か分からないと困るところ——ホームの「次の予定」カード、イベント一覧
+ * カードの確定日時、plan の確定日時カード、候補ランキング／確定フォームの
+ * 候補カードなど。
+ *
+ * 逆に、行の上に「9月7日(月)」の日付見出しが出るところ（選択日の予定一覧、
+ * 日程調整カレンダーのタイムライン）は曜日なしの formatDateTimeRange のままでよい。
  */
 export function formatDateTimeRangeWithWeekday(
   start: string | null | undefined,

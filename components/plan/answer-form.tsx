@@ -11,7 +11,7 @@ import {
   type AnswerCandidateDate
 } from "@/lib/domain/plan/answer-calendar";
 import { type PreviousAnswer } from "@/lib/domain/plan/previous-answers";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRange, formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { Button, MadoiForm, Skeleton } from "@/components/ui";
 
 /** CalendarNotice が空文字になっても縮まないようにする最低高。 */
@@ -244,7 +244,7 @@ export function AnswerForm({
               className={`rounded-control border bg-surface p-4 ${isUnanswered ? "border-clay/60" : "border-line"}`}
             >
               <legend className="px-1 text-sm font-semibold text-ink">
-                候補{index + 1} {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
+                候補{index + 1} {formatDateTimeRangeWithWeekday(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
               </legend>
               <div className="mt-3 grid grid-cols-3 gap-1.5">
                 {choices.map((choice) => {

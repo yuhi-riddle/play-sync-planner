@@ -14,7 +14,7 @@ import { TimeDialPicker } from "@/components/plan/time-dial-picker";
 import { buildMonthCalendar, formatDateForInput, toDateTimeLocalValueFromParts } from "@/lib/domain/calendar/calendar";
 import type { ActionState } from "@/lib/domain/shared/action-state";
 import { busyCountByDate, busyRangesForDate } from "@/lib/domain/calendar/calendar-availability";
-import { formatDateTime, formatDateTimeRange, toDateTimeLocalValue } from "@/lib/shared/format";
+import { formatDateTime, formatDateTimeRangeWithWeekday, toDateTimeLocalValue } from "@/lib/shared/format";
 
 const INITIAL_ACTION_STATE: ActionState = { status: "idle" };
 
@@ -1043,7 +1043,7 @@ function SelectedCandidates({ candidates, onRemove }: { candidates: CandidateDra
           </span>
           <div className="flex-1">
             <p className="text-eyebrow uppercase text-pine">候補 {index + 1}</p>
-            <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRange(candidate.start, candidate.end, candidate.isAllDay)}</p>
+            <p className="mt-1 text-sm font-bold text-ink">{formatDateTimeRangeWithWeekday(candidate.start, candidate.end, candidate.isAllDay)}</p>
           </div>
           {onRemove ? (
             <button

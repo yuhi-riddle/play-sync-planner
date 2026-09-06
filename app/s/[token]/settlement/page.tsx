@@ -16,7 +16,7 @@ import {
 import { buildGoogleCalendarShareUrl } from "@/lib/domain/calendar/calendar-sync";
 import { resolveParticipantSettlementRole } from "@/lib/domain/settlement/settlement";
 import { findAnswerParticipant } from "@/lib/domain/plan/participant-identity";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -228,7 +228,7 @@ export default async function PublicSettlementPage({
             <div>
               <h2 className="text-lg font-semibold text-ink">確定した日程</h2>
               <p className="mt-1 text-sm leading-6 text-muted">
-                {formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
+                {formatDateTimeRangeWithWeekday(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { confirmPlanAction } from "@/lib/actions/plan/confirm";
 import type { CandidateAnswerSummary } from "@/lib/domain/plan/confirmation";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { MadoiForm, SubmitButton } from "@/components/ui";
 
 function AnswerStat({ label, value, tone }: { label: string; value: number; tone: string }) {
@@ -79,7 +79,7 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
                 <span className="rounded-full bg-mist/42 px-3 py-1 text-xs font-bold text-pine">スコア {candidate.score}</span>
               </div>
 
-              <p className="mt-3 text-base font-bold text-ink">{formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}</p>
+              <p className="mt-3 text-base font-bold text-ink">{formatDateTimeRangeWithWeekday(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}</p>
               <p className="mt-1 text-sm text-muted">
                 回答済み {candidate.answered}/{candidate.totalParticipants}人
               </p>
@@ -135,7 +135,7 @@ export function ConfirmForm({ planId, candidates }: { planId: string; candidates
             <div className="mt-4 rounded-control border border-moss/18 bg-mist/24 p-4">
               <p className="text-eyebrow uppercase text-pine">確定する日程</p>
               <p className="mt-2 text-base font-bold text-ink">
-                {formatDateTimeRange(pendingCandidate.start_at, pendingCandidate.end_at, Boolean(pendingCandidate.is_all_day))}
+                {formatDateTimeRangeWithWeekday(pendingCandidate.start_at, pendingCandidate.end_at, Boolean(pendingCandidate.is_all_day))}
               </p>
               <p className="mt-1 text-sm text-muted">
                 ○ {pendingCandidate.yes} / △ {pendingCandidate.maybe} / × {pendingCandidate.no} / 未回答 {pendingCandidate.unanswered}

@@ -37,7 +37,7 @@ import { buildProgressSummaryLine } from "@/lib/domain/plan/plans";
 import { summarizeReminderLogs } from "@/lib/domain/settlement/reminder-log";
 import { buildReminderMessage, pendingParticipants } from "@/lib/domain/settlement/reminder-message";
 import { getSettlementStatusView } from "@/lib/domain/settlement/settlement";
-import { formatDateTime, formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTime, formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -351,7 +351,7 @@ export default async function PlanDetailPage({
               />
               <MetaCell
                 label="確定日時"
-                value={formatDateTimeRange(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
+                value={formatDateTimeRangeWithWeekday(plan.confirmed_start_at, plan.confirmed_end_at, Boolean(plan.is_all_day))}
                 tone={isConfirmed ? undefined : "muted"}
               />
               <MetaCell label="清算" value={<SettlementStatusBadge label={settlementStatus.label} tone={settlementStatus.tone} />} />
@@ -525,7 +525,7 @@ function CandidateCard({ candidate }: { candidate: CandidateAnswerSummary }) {
             <span className="text-caption tabular-nums text-muted">スコア {candidate.score}</span>
           </div>
           <h3 className="mt-3 text-title tabular-nums text-ink">
-            {formatDateTimeRange(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
+            {formatDateTimeRangeWithWeekday(candidate.start_at, candidate.end_at, Boolean(candidate.is_all_day))}
           </h3>
           <p className="mt-1 text-caption tabular-nums text-muted">
             回答済み {candidate.answered}/{candidate.totalParticipants}人
