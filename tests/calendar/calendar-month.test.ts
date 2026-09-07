@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { dateLabel, defaultDateForMonth, monthLabel, monthParam, moveMonth, parseMonth } from "@/lib/domain/calendar/calendar-month";
+import {
+  dateLabel,
+  defaultDateForMonth,
+  monthLabel,
+  monthParam,
+  moveMonth,
+  parseMonth,
+  pickerYearRange
+} from "@/lib/domain/calendar/calendar-month";
 
 describe("parseMonth", () => {
   it("splits a YYYY-MM string into year and month", () => {
@@ -43,5 +51,28 @@ describe("dateLabel", () => {
 
   it("includes the year when asked", () => {
     expect(dateLabel("2026-07-15", { includeYear: true })).toBe("2026年7月15日(水)");
+  });
+});
+
+describe("pickerYearRange", () => {
+  it("当年 −3〜+3 の7年を返す", () => {
+    expect(pickerYearRange("2026-07", 2026)).toEqual([2023, 2024, 2025, 2026, 2027, 2028, 2029]);
+  });
+
+  it("表示中の年が範囲より先なら、その年まで伸ばす", () => {
+    expect(pickerYearRange("2031-01", 2026)).toEqual([2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031]);
+  });
+
+  it("表示中の年が範囲より前なら、その年から始める", () => {
+    expect(pickerYearRange("2020-01", 2026)).toEqual([
+      2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029
+    ]);
+  });
+
+  it("極端な年の URL でも当年 ±20 で頭打ちにする", () => {
+    const years = pickerYearRange("9999-12", 2026);
+    expect(years[0]).toBe(2023);
+    expect(years[years.length - 1]).toBe(2046);
+    expect(years.length).toBeLessThanOrEqual(24);
   });
 });

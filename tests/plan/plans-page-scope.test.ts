@@ -13,6 +13,15 @@ describe("calendar page scope", () => {
     expect(page).not.toContain('.eq("owner_user_id", user.id)');
   });
 
+  it("月のフォールバックを JST で決める（ローカル時刻の getMonth() を使わない）", () => {
+    const page = readFileSync(resolve(process.cwd(), "app/plans/page.tsx"), "utf8");
+
+    expect(page).toContain("toJstDateKey(new Date())");
+    // fallback で today.getMonth()/getFullYear() を使うと Vercel(UTC) の深夜に前月へずれる
+    expect(page).not.toMatch(/today\.getMonth\(\)/);
+    expect(page).not.toMatch(/today\.getFullYear\(\)/);
+  });
+
   it("scopes the plans query to the displayed month instead of fetching every candidate date", () => {
     const page = readFileSync(resolve(process.cwd(), "app/plans/page.tsx"), "utf8");
 

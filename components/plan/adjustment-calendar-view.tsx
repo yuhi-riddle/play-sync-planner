@@ -13,8 +13,14 @@ import {
   type AdjustmentCandidate,
   type CalendarDay
 } from "@/lib/domain/plan/adjustment-calendar";
-import { dayCellClass, weekdayClass } from "@/lib/shared/calendar-styles";
-import { dateLabel as formatDateLabel, defaultDateForMonth, monthLabel, moveMonth, parseMonth } from "@/lib/domain/calendar/calendar-month";
+import { dayCellClass, dayCellTextClass, weekdayClass } from "@/lib/shared/calendar-styles";
+import {
+  dateLabel as formatDateLabel,
+  defaultDateForMonth,
+  monthLabel,
+  moveMonth,
+  parseMonth
+} from "@/lib/domain/calendar/calendar-month";
 import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
@@ -40,7 +46,8 @@ function dayAriaLabel(day: CalendarDay, googleCount: number) {
     hasOverlap: day.hasOverlap
   });
 
-  return `${summary}。この日の候補を見る`;
+  const todayPrefix = day.isToday ? "今日、" : "";
+  return `${todayPrefix}${summary}。この日の候補を見る`;
 }
 
 function buildSearchHref(dateKey: string) {
@@ -53,13 +60,18 @@ function DayDots({ day, googleCount }: { day: CalendarDay; googleCount: number }
     return null;
   }
 
+  // 選択セルは濃い pine 塗り。ドット・文字が沈まないよう、選択時は明るい色に振る。
+  const collectingDot = day.isSelected ? "bg-white" : "bg-honey";
+  const confirmedDot = day.isSelected ? "bg-mist" : "bg-moss";
+  const overflowText = day.isSelected ? "text-white/90" : "text-muted";
+
   return (
     <span className="mt-2 flex flex-wrap gap-1" aria-hidden="true">
-      {day.hasCollecting ? <span className="h-2 w-2 rounded-full bg-honey" /> : null}
-      {day.hasConfirmed ? <span className="h-2 w-2 rounded-full bg-moss" /> : null}
+      {day.hasCollecting ? <span className={clsx("h-2 w-2 rounded-full", collectingDot)} /> : null}
+      {day.hasConfirmed ? <span className={clsx("h-2 w-2 rounded-full", confirmedDot)} /> : null}
       {googleCount > 0 ? <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" /> : null}
       {day.hasOverlap ? <span className="rounded-full bg-clay px-1.5 text-[10px] font-bold text-white">重</span> : null}
-      {total > 3 ? <span className="text-[10px] font-bold text-muted">+{total - 3}</span> : null}
+      {total > 3 ? <span className={clsx("text-[10px] font-bold", overflowText)}>+{total - 3}</span> : null}
     </span>
   );
 }
@@ -124,10 +136,13 @@ function sortTimelineItems(candidates: AdjustmentCandidate[], googleItems: HomeC
 export function AdjustmentCalendarView({
   month,
   selectedDateKey,
+  todayDateKey,
   candidates
 }: {
   month: string;
   selectedDateKey: string;
+  /** サーバーで JST 固定で確定した「今日」。render 中に new Date() を読まない。 */
+  todayDateKey: string;
   candidates: AdjustmentCandidate[];
 }) {
   const [googleItems, setGoogleItems] = useState<HomeCalendarItem[]>([]);
@@ -135,7 +150,8 @@ export function AdjustmentCalendarView({
   const { year, month: monthNumber } = parseMonth(month);
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
-  const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, candidates });
+  const showTodayLink = todayDateKey.slice(0, 7) !== month;
+  const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, todayDateKey, candidates });
   const googleCalendar = useMemo(
     () => buildHomeCalendar({ year, month: monthNumber, selectedDateKey, items: googleItems }),
     [googleItems, monthNumber, selectedDateKey, year]
@@ -187,7 +203,11 @@ export function AdjustmentCalendarView({
           >
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
           </Link>
-          <AdjustmentMonthPicker currentMonth={month} label={monthLabel(month)} />
+          <AdjustmentMonthPicker
+            currentMonth={month}
+            currentYear={Number(todayDateKey.slice(0, 4))}
+            label={monthLabel(month)}
+          />
           <Link
             href={`/plans?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
             scroll={false}
@@ -197,6 +217,18 @@ export function AdjustmentCalendarView({
             <ChevronRight aria-hidden="true" className="h-5 w-5" />
           </Link>
         </div>
+
+        {showTodayLink ? (
+          <div className="mt-3 flex justify-end">
+            <Link
+              href={`/plans?month=${todayDateKey.slice(0, 7)}&date=${todayDateKey}`}
+              scroll={false}
+              className="inline-flex min-h-9 items-center rounded-full border border-line-strong bg-surface px-3 py-1 text-sm font-bold text-pine transition-colors hover:border-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            >
+              今日に戻る
+            </Link>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-muted">
           <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
@@ -234,13 +266,25 @@ export function AdjustmentCalendarView({
                     href={buildSearchHref(day.dateKey)}
                     scroll={false}
                     className={clsx(
-                      "min-h-16 rounded-control border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
+                      "relative min-h-16 rounded-control border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
                       dayCellClass(day)
                     )}
                     aria-label={dayAriaLabel(day, googleCount)}
                     aria-current={day.isSelected ? "date" : undefined}
                   >
-                    <span className="text-sm font-bold">{day.day}</span>
+                    <span
+                      className={clsx(
+                        "text-sm font-bold",
+                        !day.isSelected && day.isCurrentMonth ? dayCellTextClass(day) : null
+                      )}
+                    >
+                      {day.day}
+                    </span>
+                    {day.isToday && !day.isSelected ? (
+                      <span className="absolute right-1 top-1 rounded-full bg-pine px-1 text-[10px] font-bold leading-4 text-white">
+                        今日
+                      </span>
+                    ) : null}
                     <DayDots day={day} googleCount={googleCount} />
                   </Link>
                 );

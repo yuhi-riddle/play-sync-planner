@@ -21,6 +21,7 @@ export type CalendarDay = {
   day: number;
   isCurrentMonth: boolean;
   isSelected: boolean;
+  isToday: boolean;
   candidateCount: number;
   hasOverlap: boolean;
   hasConfirmed: boolean;
@@ -151,11 +152,13 @@ export function buildAdjustmentCalendar({
   year,
   month,
   selectedDateKey,
+  todayDateKey,
   candidates
 }: {
   year: number;
   month: number;
   selectedDateKey: string;
+  todayDateKey: string;
   candidates: AdjustmentCandidate[];
 }): AdjustmentCalendar {
   const grouped = groupCandidatesByDate(candidates);
@@ -175,6 +178,7 @@ export function buildAdjustmentCalendar({
       day: cursor.getDate(),
       isCurrentMonth: cursor.getMonth() === month - 1,
       isSelected: dateKey === selectedDateKey,
+      isToday: dateKey === todayDateKey,
       candidateCount: dayCandidates.length,
       hasOverlap: hasOverlappingTimeRanges(dayCandidates),
       hasConfirmed: dayCandidates.some((candidate) => candidate.status === "date_confirmed"),
