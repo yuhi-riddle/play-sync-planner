@@ -61,6 +61,7 @@ describe("buildAdjustmentCalendar", () => {
       year: 2026,
       month: 7,
       selectedDateKey: "2026-07-12",
+      todayDateKey: "2026-07-01",
       candidates: []
     });
 
@@ -75,6 +76,7 @@ describe("buildAdjustmentCalendar", () => {
       year: 2026,
       month: 7,
       selectedDateKey: "2026-07-12",
+      todayDateKey: "2026-07-01",
       candidates: [...baseCandidates]
     });
 
@@ -89,6 +91,7 @@ describe("buildAdjustmentCalendar", () => {
       year: 2026,
       month: 7,
       selectedDateKey: "2026-07-12",
+      todayDateKey: "2026-07-01",
       candidates: [
         {
           ...baseCandidates[0],
@@ -113,6 +116,7 @@ describe("buildAdjustmentCalendar", () => {
       year: 2026,
       month: 7,
       selectedDateKey: "2026-07-13",
+      todayDateKey: "2026-07-01",
       candidates: [
         {
           ...baseCandidates[0],
@@ -137,6 +141,7 @@ describe("buildAdjustmentCalendar", () => {
       year: 2026,
       month: 7,
       selectedDateKey: "2026-07-21",
+      todayDateKey: "2026-07-01",
       candidates: [...baseCandidates]
     });
 
@@ -147,6 +152,43 @@ describe("buildAdjustmentCalendar", () => {
         status: "date_confirmed"
       })
     ]);
+  });
+
+  it("todayDateKey に一致する升目だけ isToday=true になる", () => {
+    const calendar = buildAdjustmentCalendar({
+      year: 2026,
+      month: 7,
+      selectedDateKey: "2026-07-10",
+      todayDateKey: "2026-07-15",
+      candidates: []
+    });
+    const flat = calendar.weeks.flat();
+    expect(flat.filter((day) => day.isToday).map((day) => day.dateKey)).toEqual(["2026-07-15"]);
+  });
+
+  it("todayDateKey が表示月の外なら isToday の升目は無い", () => {
+    const calendar = buildAdjustmentCalendar({
+      year: 2026,
+      month: 7,
+      selectedDateKey: "2026-07-10",
+      todayDateKey: "2026-09-01",
+      candidates: []
+    });
+    expect(calendar.weeks.flat().some((day) => day.isToday)).toBe(false);
+  });
+
+  it("隣月の升目でも todayDateKey に一致すれば isToday=true", () => {
+    // 2026-07 グリッドの先頭は 6/28。6/30 が「今日」なら隣月セルでも印を付ける（設計 #5/#6）。
+    const calendar = buildAdjustmentCalendar({
+      year: 2026,
+      month: 7,
+      selectedDateKey: "2026-07-10",
+      todayDateKey: "2026-06-30",
+      candidates: []
+    });
+    const today = calendar.weeks.flat().find((day) => day.isToday);
+    expect(today?.dateKey).toBe("2026-06-30");
+    expect(today?.isCurrentMonth).toBe(false);
   });
 });
 
@@ -184,6 +226,7 @@ describe("candidateDateKeys の TZ 非依存性", () => {
       year: 2026,
       month: 7,
       selectedDateKey: "2026-07-13",
+      todayDateKey: "2026-07-01",
       candidates: [
         {
           ...baseCandidates[0],
