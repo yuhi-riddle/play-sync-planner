@@ -1,3 +1,5 @@
+import { toJstDateKey } from "@/lib/shared/jst";
+
 export function parseMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
   return { year, month: monthNumber };
@@ -29,4 +31,22 @@ export function dateLabel(dateKey: string, { includeYear = false }: { includeYea
     day: "numeric",
     weekday: "short"
   }).format(new Date(`${dateKey}T00:00:00`));
+}
+
+/** 表示中の月（"YYYY-MM"）が JST の当月と一致するか。 */
+export function isDisplayingCurrentMonth(month: string, now: Date) {
+  return toJstDateKey(now).slice(0, 7) === month;
+}
+
+/** 月ピッカーの年ホイールに出す年の並び。基本は当年 ±3。表示中の年が外なら含むまで伸ばす。 */
+export function pickerYearRange(currentMonth: string, now: Date): number[] {
+  const currentYear = Number(toJstDateKey(now).slice(0, 4));
+  const shownYear = parseMonth(currentMonth).year;
+  const from = Math.min(currentYear - 3, shownYear);
+  const to = Math.max(currentYear + 3, shownYear);
+  const years: number[] = [];
+  for (let year = from; year <= to; year += 1) {
+    years.push(year);
+  }
+  return years;
 }

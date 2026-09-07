@@ -15,7 +15,14 @@ import {
 } from "@/lib/domain/plan/adjustment-calendar";
 import { dayCellClass, dayCellTextClass, weekdayClass } from "@/lib/shared/calendar-styles";
 import { toJstDateKey } from "@/lib/shared/jst";
-import { dateLabel as formatDateLabel, defaultDateForMonth, monthLabel, moveMonth, parseMonth } from "@/lib/domain/calendar/calendar-month";
+import {
+  dateLabel as formatDateLabel,
+  defaultDateForMonth,
+  isDisplayingCurrentMonth,
+  monthLabel,
+  moveMonth,
+  parseMonth
+} from "@/lib/domain/calendar/calendar-month";
 import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 import { formatDateTimeRange } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
@@ -137,6 +144,7 @@ export function AdjustmentCalendarView({
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
   const todayDateKey = toJstDateKey(new Date());
+  const showTodayLink = !isDisplayingCurrentMonth(month, new Date());
   const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, todayDateKey, candidates });
   const googleCalendar = useMemo(
     () => buildHomeCalendar({ year, month: monthNumber, selectedDateKey, items: googleItems }),
@@ -199,6 +207,18 @@ export function AdjustmentCalendarView({
             <ChevronRight aria-hidden="true" className="h-5 w-5" />
           </Link>
         </div>
+
+        {showTodayLink ? (
+          <div className="mt-3 flex justify-end">
+            <Link
+              href={`/plans?month=${todayDateKey.slice(0, 7)}&date=${todayDateKey}`}
+              scroll={false}
+              className="inline-flex min-h-9 items-center rounded-full border border-line-strong bg-surface px-3 py-1 text-sm font-bold text-pine transition-colors hover:border-pine focus:outline-none focus:ring-2 focus:ring-clay"
+            >
+              今日に戻る
+            </Link>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-muted">
           <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1">
