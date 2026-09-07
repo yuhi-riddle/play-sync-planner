@@ -8,11 +8,16 @@ export const WRAPUP_AUTO_DONE_DELAY_MS = 14 * DAY_MS;
 
 /**
  * どのイベントも、この日付より前にはプロンプト・自動 done を出さない。
- * 「migration 049 をマージした日 + 14日」を入れる。バックフィル対象が
- * リリース直後に一斉発火するのを防ぐ保険。2週間経てば実質無効。
+ * バックフィル対象がリリース直後に一斉発火するのを防ぐ保険。2週間経てば実質無効。
+ *
+ * `EVENT_WRAPUP_PROMPT_FLOOR` 環境変数で上書きできる（cron と一覧カードの両方が
+ * この関数を通すので入力元が1つに揃う）。既定値は「migration 049 をマージした日 + 14日」。
  */
-export const WRAPUP_PROMPT_FLOOR_ISO =
-  process.env.NODE_ENV === "test" ? "2000-01-01" : "2026-10-04";
+export const WRAPUP_PROMPT_FLOOR_DEFAULT_ISO = "2026-10-04";
+
+export function wrapupPromptFloorIso(): string {
+  return process.env.EVENT_WRAPUP_PROMPT_FLOOR ?? WRAPUP_PROMPT_FLOOR_DEFAULT_ISO;
+}
 
 export type EventWrapupInput = EventListItem & { wrapup_snoozed_until?: string | null };
 
@@ -34,7 +39,7 @@ export function getEventWrapupTimers(
   }
 
   const snoozeMs = event.wrapup_snoozed_until ? Date.parse(event.wrapup_snoozed_until) : 0;
-  const floorMs = Date.parse(`${options.promptFloorIso ?? WRAPUP_PROMPT_FLOOR_ISO}T00:00:00+09:00`);
+  const floorMs = Date.parse(`${options.promptFloorIso ?? wrapupPromptFloorIso()}T00:00:00+09:00`);
 
   const promptDue = Math.max(lastMs + WRAPUP_PROMPT_DELAY_MS, snoozeMs, floorMs);
   return { promptDue, autoDoneDue: promptDue + WRAPUP_AUTO_DONE_DELAY_MS };
@@ -63,8 +68,9 @@ export type EventWrapupNotificationRow = {
   dedupe_key: string;
 };
 
-function promptDedupeKey(eventId: string, promptDue: number): string {
-  return `event_wrapup:${eventId}:${new Date(promptDue).toISOString().slice(0, 10)}`;
+/** yyyy-mm-dd。スヌーズ・再オープンで promptDue / autoDoneDue が動くと別 key になり、通知が出直せる。 */
+function dueDateKey(dueMs: number): string {
+  return new Date(dueMs).toISOString().slice(0, 10);
 }
 
 export function planEventWrapupSweep(
@@ -99,7 +105,7 @@ export function planEventWrapupSweep(
           title: "イベントを完了にしました",
           body: `「${event.title}」を完了にしました。1ヶ月以上動きがなかったためです。`,
           href: `/events/${event.id}`,
-          dedupe_key: `event_wrapup_done:${event.id}`
+          dedupe_key: `event_wrapup_done:${event.id}:${dueDateKey(timers.autoDoneDue)}`
         });
       } else {
         wouldAutoComplete.push(event.id);
@@ -117,7 +123,7 @@ export function planEventWrapupSweep(
           ? `「${event.title}」は終わりましたか？ このまま何もしないと${deadline}に自動で完了になります。`
           : `「${event.title}」は終わりましたか？`,
         href: `/events/${event.id}`,
-        dedupe_key: promptDedupeKey(event.id, timers.promptDue)
+        dedupe_key: `event_wrapup:${event.id}:${dueDateKey(timers.promptDue)}`
       });
     }
   }

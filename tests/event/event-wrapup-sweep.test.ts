@@ -65,7 +65,7 @@ describe("planEventWrapupSweep", () => {
     expect(result.autoComplete).toEqual(["b"]);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]).toMatchObject({ kind: "wrapup_done", href: "/events/b" });
-    expect(result.notifications[0].dedupe_key).toBe("event_wrapup_done:b");
+    expect(result.notifications[0].dedupe_key).toMatch(/^event_wrapup_done:b:\d{4}-\d{2}-\d{2}$/);
   });
 
   it("autoDoneDue を過ぎても autoDoneEnabled=false なら wouldAutoComplete のみ、通知なし", () => {

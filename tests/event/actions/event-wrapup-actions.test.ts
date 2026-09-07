@@ -36,6 +36,10 @@ function client() {
       record.filters[column] = value;
       return builder;
     });
+    builder.in = vi.fn((column: string, values: unknown) => {
+      record.filters[`${column}:in`] = values;
+      return builder;
+    });
     builder.is = vi.fn((column: string, value: unknown) => {
       record.filters[`${column}:is`] = value;
       return builder;
@@ -52,7 +56,7 @@ describe("event wrapup actions", () => {
     getCurrentActiveUser.mockResolvedValue({ id: userId });
   });
 
-  it("completeEventAction は status=done, wrapup_auto_done=false に更新し owner で絞る", async () => {
+  it("completeEventAction は status=done, wrapup_auto_done=false に更新し owner + 進行中で絞る", async () => {
     const { client: c, updates } = client();
     createSupabaseServerClient.mockResolvedValue(c);
 
@@ -60,8 +64,29 @@ describe("event wrapup actions", () => {
 
     const eventUpdate = updates.find((u) => u.table === "events");
     expect(eventUpdate?.values).toEqual({ status: "done", wrapup_auto_done: false });
-    expect(eventUpdate?.filters).toMatchObject({ id: eventId, owner_user_id: userId });
+    expect(eventUpdate?.filters).toMatchObject({
+      id: eventId,
+      owner_user_id: userId,
+      "status:in": ["planning", "confirmed"]
+    });
     expect(revalidatePath).toHaveBeenCalledWith("/events");
+  });
+
+  it("reopenEventAction は done かつ wrapup_auto_done=true のイベントだけを対象にする", async () => {
+    const { client: c, updates } = client();
+    createSupabaseServerClient.mockResolvedValue(c);
+
+    await reopenEventAction(eventId);
+
+    const eventUpdate = updates.find((u) => u.table === "events");
+    expect(eventUpdate?.filters).toMatchObject({
+      id: eventId,
+      owner_user_id: userId,
+      status: "done",
+      wrapup_auto_done: true
+    });
+    const notifUpdate = updates.find((u) => u.table === "notifications");
+    expect(notifUpdate?.filters).toMatchObject({ "kind:in": ["wrapup_prompt", "wrapup_done"] });
   });
 
   it("snoozeEventWrapupAction は wrapup_snoozed_until を約30日先にする", async () => {

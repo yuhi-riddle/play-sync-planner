@@ -171,7 +171,9 @@ export default async function EventDetailPage({
               {isOwner ? (
                 <>
                   <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
-                  <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+                  {!isEventTerminal ? (
+                    <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+                  ) : null}
                 </>
               ) : null}
               {isJoined ? (

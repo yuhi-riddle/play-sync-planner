@@ -41,11 +41,24 @@ add constraint notifications_kind_check check (
 -- バックフィル: このマイグレーション適用時点で最終開催日が90日超前の
 -- planning/confirmed イベントは「もう気にしていない」扱い。恒久スヌーズして
 -- wrapup の対象から外す（プロンプトも自動 done も出ない）。
+--
+-- 対象を絞る条件は TS の isEventWrapupEligible に寄せる:
+--   - 清算待ちのプランがあるものは除外（清算完了後に wrapup 対象へ移るので隠さない）
+--   - 日時が未確定の関連プランがあるものは除外（lifecycle 未確定なので TS は null 扱い）
 -- 最終開催日は「取り消し以外の確定プランの最遅終了」または events の開催日。
 update public.events e
 set wrapup_snoozed_until = '2999-01-01T00:00:00Z'
 where e.status in ('planning', 'confirmed')
   and e.wrapup_snoozed_until is null
+  and not exists (
+    select 1 from public.plans p
+    where p.event_id = e.id
+      and p.status not in ('cancelled', 'skipped')
+      and (
+        coalesce(p.settlement_status, 'not_started') not in ('not_needed', 'settled')
+        or p.confirmed_start_at is null
+      )
+  )
   and coalesce(
     (
       select max(coalesce(p.confirmed_end_at, p.confirmed_start_at))

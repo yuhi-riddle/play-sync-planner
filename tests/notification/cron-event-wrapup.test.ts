@@ -28,12 +28,19 @@ function client(events: Array<Record<string, unknown>>) {
 
   const from = vi.fn((table: string) => {
     if (table === "notifications") {
+      const readUpdate = () => {
+        const link: Record<string, unknown> = {};
+        link.eq = () => link;
+        link.in = () => link;
+        link.is = async () => ({ error: null });
+        return link;
+      };
       return {
         upsert: vi.fn(async (rows: unknown[]) => {
           upserts.push(rows);
           return { error: null };
         }),
-        update: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ is: vi.fn(async () => ({ error: null })) })) })) }))
+        update: vi.fn(readUpdate)
       };
     }
 
@@ -45,12 +52,20 @@ function client(events: Array<Record<string, unknown>>) {
     builder.limit = chain;
     builder.gt = chain;
     if (table === "events") {
-      builder.update = vi.fn((values: Record<string, unknown>) => ({
-        eq: vi.fn((_c: string, id: unknown) => {
-          eventUpdates.push({ values, id });
-          return { eq: vi.fn(async () => ({ error: null })) };
-        })
-      }));
+      // .update(values, { count }).eq("id", id).in("status", [...]) → { error, count }
+      builder.update = vi.fn((values: Record<string, unknown>) => {
+        const link: Record<string, unknown> = {};
+        let matchedId: unknown;
+        link.eq = (_c: string, id: unknown) => {
+          matchedId = id;
+          return link;
+        };
+        link.in = async () => {
+          eventUpdates.push({ values, id: matchedId });
+          return { error: null, count: 1 };
+        };
+        return link;
+      });
       builder.then = (resolve: (v: { data: unknown; error: null }) => unknown) =>
         Promise.resolve({ data: events, error: null }).then(resolve);
     } else {
@@ -115,6 +130,61 @@ describe("GET /api/cron/notifications — event wrapup", () => {
     expect(eventUpdates).toEqual([]);
     expect(body.wrapup.wouldAutoComplete).toBe(1);
     expect(body.wrapup.autoCompleted).toBe(0);
+  });
+
+  it("通知 upsert が失敗したら自動 done を見送る", async () => {
+    vi.stubEnv("EVENT_WRAPUP_AUTO_DONE", "on");
+    const upserts: unknown[][] = [];
+    const eventUpdates: unknown[] = [];
+    const from = vi.fn((table: string) => {
+      if (table === "notifications") {
+        return {
+          upsert: vi.fn(async (rows: unknown[]) => {
+            upserts.push(rows);
+            return { error: { message: "boom" } };
+          }),
+          update: vi.fn(() => {
+            const l: Record<string, unknown> = {};
+            l.eq = () => l;
+            l.in = () => l;
+            l.is = async () => ({ error: null });
+            return l;
+          })
+        };
+      }
+      const b: Record<string, unknown> = {};
+      const chain = () => b;
+      b.select = chain;
+      b.in = chain;
+      b.order = chain;
+      b.limit = chain;
+      b.gt = chain;
+      if (table === "events") {
+        b.update = vi.fn(() => {
+          const l: Record<string, unknown> = {};
+          l.eq = () => l;
+          l.in = async () => {
+            eventUpdates.push(true);
+            return { error: null, count: 1 };
+          };
+          return l;
+        });
+        b.then = (resolve: (v: { data: unknown; error: null }) => unknown) =>
+          Promise.resolve({ data: [pastEvent("x", -70)], error: null }).then(resolve);
+      } else {
+        b.then = (resolve: (v: { data: unknown; error: null }) => unknown) =>
+          Promise.resolve({ data: [], error: null }).then(resolve);
+      }
+      return b;
+    });
+    createSupabaseAdminClient.mockReturnValue({ from });
+
+    const res = await GET(request());
+    const body = await res.json();
+
+    expect(eventUpdates).toEqual([]);
+    expect(body.wrapup.autoCompleted).toBe(0);
+    expect(body.wrapup.errors.length).toBeGreaterThan(0);
   });
 
   it("autoDoneDue 超え・EVENT_WRAPUP_AUTO_DONE=on なら status=done に更新し wrapup_done を出す", async () => {

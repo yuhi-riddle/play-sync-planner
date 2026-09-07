@@ -191,6 +191,8 @@ describe("EventDetailPage - 自動完了の取り消し", () => {
     );
 
     expect(screen.getByRole("button", { name: "完了を取り消す" })).toBeInTheDocument();
+    // 終了状態では「イベントを中止」は出さない（先に中止すると取り消し導線を失うため）
+    expect(screen.queryByRole("button", { name: "イベントを中止" })).not.toBeInTheDocument();
   });
 
   it.each([

@@ -250,7 +250,8 @@ export async function completeEventAction(eventId: string) {
     .from("events")
     .update({ status: "done", wrapup_auto_done: false })
     .eq("id", eventId)
-    .eq("owner_user_id", user.id);
+    .eq("owner_user_id", user.id)
+    .in("status", ["planning", "confirmed"]);
   if (error) {
     throw new Error(error.message);
   }
@@ -275,7 +276,8 @@ export async function snoozeEventWrapupAction(eventId: string) {
     .from("events")
     .update({ wrapup_snoozed_until: snoozedUntil })
     .eq("id", eventId)
-    .eq("owner_user_id", user.id);
+    .eq("owner_user_id", user.id)
+    .in("status", ["planning", "confirmed"]);
   if (error) {
     throw new Error(error.message);
   }
@@ -299,10 +301,22 @@ export async function reopenEventAction(eventId: string) {
     .from("events")
     .update({ status: "planning", wrapup_auto_done: false, wrapup_snoozed_until: snoozedUntil })
     .eq("id", eventId)
-    .eq("owner_user_id", user.id);
+    .eq("owner_user_id", user.id)
+    .eq("status", "done")
+    .eq("wrapup_auto_done", true);
   if (error) {
     throw new Error(error.message);
   }
+
+  // このイベントの wrapup 通知（プロンプト・自動完了の知らせ）を片付ける。
+  // 残しておくと、再び自動完了しても dedupe で新しい通知が出ないように見える混乱を生む。
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .in("kind", ["wrapup_prompt", "wrapup_done"])
+    .eq("href", `/events/${eventId}`)
+    .is("read_at", null);
 
   revalidatePath("/");
   revalidatePath("/events");

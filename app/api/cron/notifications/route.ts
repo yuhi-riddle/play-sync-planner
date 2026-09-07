@@ -7,6 +7,7 @@ import {
 } from "@/lib/domain/shared/site-notifications";
 import {
   planEventWrapupSweep,
+  wrapupPromptFloorIso,
   type EventWrapupSweepEvent
 } from "@/lib/domain/event/event-wrapup";
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/server";
@@ -117,10 +118,11 @@ export async function GET(request: NextRequest) {
   const autoDoneEnabled = process.env.EVENT_WRAPUP_AUTO_DONE === "on";
   const sweep = planEventWrapupSweep(wrapupEvents, now, {
     autoDoneEnabled,
-    promptFloorIso: process.env.EVENT_WRAPUP_PROMPT_FLOOR ?? "2026-10-04"
+    promptFloorIso: wrapupPromptFloorIso()
   });
 
   const wrapupErrors: string[] = [];
+  let wrapupNotificationsOk = true;
 
   if (sweep.notifications.length > 0) {
     const { error } = await supabase.from("notifications").upsert(sweep.notifications, {
@@ -128,17 +130,37 @@ export async function GET(request: NextRequest) {
       ignoreDuplicates: true
     });
     if (error) {
-      wrapupErrors.push(`notifications: ${error.message}`);
+      wrapupErrors.push(`wrapup notifications: ${error.message}`);
+      wrapupNotificationsOk = false;
     }
   }
 
-  for (const eventId of sweep.autoComplete) {
-    const { error } = await supabase
-      .from("events")
-      .update({ status: "done", wrapup_auto_done: true })
-      .eq("id", eventId);
-    if (error) {
-      wrapupErrors.push(`event ${eventId}: ${error.message}`);
+  // 通知が入らなかったら自動 done は見送る（次回 cron でリトライ。
+  // wrapup_done 通知なしでイベントが閉じるのを防ぐ）。
+  const autoCompletedIds: string[] = [];
+  if (wrapupNotificationsOk) {
+    for (const eventId of sweep.autoComplete) {
+      // 取得後に所有者が手で完了・中止・日程変更していたら上書きしない。
+      const { error, count } = await supabase
+        .from("events")
+        .update({ status: "done", wrapup_auto_done: true }, { count: "exact" })
+        .eq("id", eventId)
+        .in("status", ["planning", "confirmed"]);
+      if (error) {
+        wrapupErrors.push(`event ${eventId}: ${error.message}`);
+        continue;
+      }
+      if ((count ?? 0) === 0) {
+        continue; // 状態が変わっていた
+      }
+      autoCompletedIds.push(eventId);
+      // 既存の wrapup_prompt 通知を既読化（spec の後始末）。
+      await supabase
+        .from("notifications")
+        .update({ read_at: now.toISOString() })
+        .eq("kind", "wrapup_prompt")
+        .eq("href", `/events/${eventId}`)
+        .is("read_at", null);
     }
   }
 
@@ -151,7 +173,7 @@ export async function GET(request: NextRequest) {
     plansScanned: plans.length,
     wrapup: {
       notified: sweep.notifications.filter((n) => n.kind === "wrapup_prompt").length,
-      autoCompleted: sweep.autoComplete.length,
+      autoCompleted: autoCompletedIds.length,
       wouldAutoComplete: sweep.wouldAutoComplete.length,
       eventsScanned: wrapupEvents.length,
       errors: wrapupErrors

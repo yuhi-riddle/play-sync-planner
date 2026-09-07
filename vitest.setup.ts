@@ -3,6 +3,14 @@ import "@testing-library/jest-dom/vitest";
 import { afterAll, beforeAll, vi } from "vitest";
 
 /**
+ * イベント自動完了(wrapup)の「この日より前は発火しない」フロア。
+ * 既定は本番リリース日ベースの未来日なので、固定時刻(2026-07-01)のテストでは
+ * すべてのプロンプトがフロアに張り付いて出なくなる。テストでは過去に倒す。
+ * 個別テストが別の値を検証したいときは vi.stubEnv で上書きできる。
+ */
+process.env.EVENT_WRAPUP_PROMPT_FLOOR ??= "2000-01-01";
+
+/**
  * next/font/google はビルド時専用のフォントローダーで、vitest(jsdom)環境では実体を持たない。
  * app/layout.tsx が Zen_Maru_Gothic を呼ぶため、無害なオブジェクトを返すダミーに差し替える。
  */

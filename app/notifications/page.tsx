@@ -30,7 +30,9 @@ const kindLabels: Record<string, string> = {
   payment_due: "支払い",
   confirmation_due: "受け取り確認",
   event_invitation: "招待",
-  event_message: "チャット"
+  event_message: "チャット",
+  wrapup_prompt: "イベントの締め",
+  wrapup_done: "自動完了"
 };
 
 const readStateBadge: Record<"unread" | "read", { label: string; tone: BadgeTone }> = {
