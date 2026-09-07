@@ -223,3 +223,88 @@ export async function updateEventAction(eventId: string, formData: FormData) {
   revalidatePath(`/events/${eventId}`);
   redirect(`/events/${eventId}`);
 }
+
+async function markWrapupPromptRead(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  eventId: string,
+  userId: string
+) {
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("kind", "wrapup_prompt")
+    .eq("href", `/events/${eventId}`)
+    .is("read_at", null);
+}
+
+/** 帯・通知の「完了にする」。期日超過イベントを手動で締める。 */
+export async function completeEventAction(eventId: string) {
+  const user = await getCurrentActiveUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ status: "done", wrapup_auto_done: false })
+    .eq("id", eventId)
+    .eq("owner_user_id", user.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await markWrapupPromptRead(supabase, eventId, user.id);
+
+  revalidatePath("/");
+  revalidatePath("/events");
+  revalidatePath(`/events/${eventId}`);
+}
+
+/** 帯・通知の「後で」。確認プロンプトを30日先送りする。 */
+export async function snoozeEventWrapupAction(eventId: string) {
+  const user = await getCurrentActiveUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const snoozedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ wrapup_snoozed_until: snoozedUntil })
+    .eq("id", eventId)
+    .eq("owner_user_id", user.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await markWrapupPromptRead(supabase, eventId, user.id);
+
+  revalidatePath("/");
+  revalidatePath("/events");
+}
+
+/** 自動完了の取り消し。done を planning に戻す（done のままだと lifecycle 判定が永久に短絡する）。 */
+export async function reopenEventAction(eventId: string) {
+  const user = await getCurrentActiveUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const snoozedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ status: "planning", wrapup_auto_done: false, wrapup_snoozed_until: snoozedUntil })
+    .eq("id", eventId)
+    .eq("owner_user_id", user.id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/events");
+  revalidatePath(`/events/${eventId}`);
+}
