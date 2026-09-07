@@ -22,7 +22,7 @@ import {
   parseMonth
 } from "@/lib/domain/calendar/calendar-month";
 import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { isJapaneseHoliday } from "@/lib/domain/calendar/japanese-holidays";
 
@@ -88,7 +88,7 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-bold text-pine">
-            {formatDateTimeRange(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}
+            {formatDateTimeRangeWithWeekday(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}
           </p>
           <h3 className="mt-1 text-base font-bold text-ink">{candidate.eventTitle}</h3>
           <p className="mt-1 text-sm text-muted">{candidate.planTitle ?? "日程調整"}</p>
@@ -112,7 +112,7 @@ function GoogleTimelineItem({ item }: { item: HomeCalendarItem }) {
           Google Calendar
         </span>
         <span className="text-sm font-bold text-pine">
-          {formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}
+          {formatDateTimeRangeWithWeekday(item.startAt, item.endAt, Boolean(item.isAllDay))}
         </span>
       </div>
       <h3 className="mt-2 text-base font-bold text-ink">{item.title}</h3>
