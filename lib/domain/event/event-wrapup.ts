@@ -11,9 +11,9 @@ export const WRAPUP_AUTO_DONE_DELAY_MS = 14 * DAY_MS;
  * バックフィル対象がリリース直後に一斉発火するのを防ぐ保険。2週間経てば実質無効。
  *
  * `EVENT_WRAPUP_PROMPT_FLOOR` 環境変数で上書きできる（cron と一覧カードの両方が
- * この関数を通すので入力元が1つに揃う）。既定値は「migration 049 をマージした日 + 14日」。
+ * この関数を通すので入力元が1つに揃う）。既定値は PR #45 マージ日(2026-09-07) + 14日。
  */
-export const WRAPUP_PROMPT_FLOOR_DEFAULT_ISO = "2026-10-04";
+export const WRAPUP_PROMPT_FLOOR_DEFAULT_ISO = "2026-09-21";
 
 export function wrapupPromptFloorIso(): string {
   return process.env.EVENT_WRAPUP_PROMPT_FLOOR ?? WRAPUP_PROMPT_FLOOR_DEFAULT_ISO;
