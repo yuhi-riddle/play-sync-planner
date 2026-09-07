@@ -13,7 +13,8 @@ import {
   type AdjustmentCandidate,
   type CalendarDay
 } from "@/lib/domain/plan/adjustment-calendar";
-import { dayCellClass, weekdayClass } from "@/lib/shared/calendar-styles";
+import { dayCellClass, dayCellTextClass, weekdayClass } from "@/lib/shared/calendar-styles";
+import { toJstDateKey } from "@/lib/shared/jst";
 import { dateLabel as formatDateLabel, defaultDateForMonth, monthLabel, moveMonth, parseMonth } from "@/lib/domain/calendar/calendar-month";
 import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
 import { formatDateTimeRange } from "@/lib/shared/format";
@@ -135,7 +136,8 @@ export function AdjustmentCalendarView({
   const { year, month: monthNumber } = parseMonth(month);
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
-  const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, candidates });
+  const todayDateKey = toJstDateKey(new Date());
+  const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, todayDateKey, candidates });
   const googleCalendar = useMemo(
     () => buildHomeCalendar({ year, month: monthNumber, selectedDateKey, items: googleItems }),
     [googleItems, monthNumber, selectedDateKey, year]
@@ -234,13 +236,25 @@ export function AdjustmentCalendarView({
                     href={buildSearchHref(day.dateKey)}
                     scroll={false}
                     className={clsx(
-                      "min-h-16 rounded-control border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
+                      "relative min-h-16 rounded-control border p-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-clay sm:min-h-20 sm:p-2",
                       dayCellClass(day)
                     )}
                     aria-label={dayAriaLabel(day, googleCount)}
                     aria-current={day.isSelected ? "date" : undefined}
                   >
-                    <span className="text-sm font-bold">{day.day}</span>
+                    <span
+                      className={clsx(
+                        "text-sm font-bold",
+                        !day.isSelected && day.isCurrentMonth ? dayCellTextClass(day) : null
+                      )}
+                    >
+                      {day.day}
+                    </span>
+                    {day.isToday && !day.isSelected ? (
+                      <span className="absolute right-1 top-1 rounded-full bg-pine px-1 text-[10px] font-bold leading-4 text-white">
+                        今日
+                      </span>
+                    ) : null}
                     <DayDots day={day} googleCount={googleCount} />
                   </Link>
                 );

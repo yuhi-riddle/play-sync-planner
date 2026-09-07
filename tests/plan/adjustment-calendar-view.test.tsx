@@ -165,4 +165,61 @@ describe("AdjustmentCalendarView", () => {
     expect(placeholders.length).toBeGreaterThan(0);
     expect(screen.queryByText("この日の候補やGoogle Calendar予定はありません。")).not.toBeInTheDocument();
   });
+
+  it("今日の升目に「今日」ラベルを出す（当月表示・別日を選択中）", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-10" candidates={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("今日")).toBeInTheDocument();
+    });
+  });
+
+  it("表示月が当月でなければ「今日」ラベルは出ない", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    render(<AdjustmentCalendarView month="2026-09" selectedDateKey="2026-09-10" candidates={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("adjustment-month-grid")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("今日")).not.toBeInTheDocument();
+  });
+
+  it("別の月を表示中は「今日に戻る」リンクを出す", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    render(<AdjustmentCalendarView month="2026-09" selectedDateKey="2026-09-10" candidates={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "今日に戻る" })).toHaveAttribute(
+        "href",
+        "/plans?month=2026-07&date=2026-07-01"
+      );
+    });
+  });
+
+  it("当月を表示中は「今日に戻る」リンクを出さない", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-10" candidates={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("adjustment-month-grid")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("link", { name: "今日に戻る" })).not.toBeInTheDocument();
+  });
 });
