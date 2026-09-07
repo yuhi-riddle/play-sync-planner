@@ -1,13 +1,14 @@
 import { CopyPlus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import React, { Suspense } from "react";
 
 import { EventMemberInviteCard } from "@/components/event/event-member-invite-card";
 import { EventInviteCandidates } from "@/components/event/event-invite-candidates";
 import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventChat } from "@/components/event/event-chat";
 import { EventDetailTabs } from "@/components/event/event-detail-tabs";
+import { EventReopenAction } from "@/components/event/event-reopen-action";
 import { GoogleMapsDirectionsLink } from "@/components/ui/google-maps-directions-link";
 import { Badge, ButtonLink, Card, EmptyState, PageHeader, SecondaryLink, SectionHeading, Skeleton, SubmitButton } from "@/components/ui";
 import { closeEventInvitesAction, revokeAndCreateEventInviteAction } from "@/lib/actions/event/event-members";
@@ -21,7 +22,7 @@ import {
   toggleEventTaskDoneAction,
   updateEventTaskAssigneeAction
 } from "@/lib/actions/event/event-tasks";
-import { cancelEventAction, duplicateEventAction } from "@/lib/actions/event/events";
+import { cancelEventAction, duplicateEventAction, reopenEventAction } from "@/lib/actions/event/events";
 import type { EventTask } from "@/lib/domain/event/event-tasks";
 import { categoryLabels, planStatusLabels } from "@/lib/shared/constants";
 import { buildEventInviteUrl } from "@/lib/domain/event/event-members";
@@ -78,7 +79,7 @@ export default async function EventDetailPage({
   const supabase = await createSupabaseServerClient();
   const { data: event } = await supabase
     .from("events")
-    .select("*, plans(id, title, status, confirmed_start_at, answer_deadline_at)")
+    .select("*, wrapup_auto_done, plans(id, title, status, confirmed_start_at, answer_deadline_at)")
     .eq("id", eventId)
     .single();
 
@@ -170,7 +171,9 @@ export default async function EventDetailPage({
               {isOwner ? (
                 <>
                   <SecondaryLink href={`/events/${event.id}/edit`}>イベント情報を編集</SecondaryLink>
-                  <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+                  {!isEventTerminal ? (
+                    <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+                  ) : null}
                 </>
               ) : null}
               {isJoined ? (
@@ -181,6 +184,9 @@ export default async function EventDetailPage({
                 </form>
               ) : null}
             </div>
+            {isOwner && event.status === "done" && event.wrapup_auto_done ? (
+              <EventReopenAction action={reopenEventAction.bind(null, event.id)} />
+            ) : null}
           </Card>
         </>
       ) : null}

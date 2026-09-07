@@ -48,6 +48,7 @@ export type EventListItem = {
   created_at?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  wrapup_snoozed_until?: string | null;
   plans?: readonly EventListPlan[] | null;
   event_members?: readonly { status?: string | null }[] | null;
 };
@@ -276,6 +277,34 @@ export function isEventLifecycleFinished(event: EventListItem, now = new Date())
   if (!endAt) return false;
 
   return endOfScheduleTimestamp(endAt, true) < now.getTime();
+}
+
+/**
+ * 「最終開催日」の絶対時刻(ms)。isEventLifecycleFinished が過去判定に使う値と同じ。
+ * - 取り消し以外の関連プランがあり、全部に終了時刻があれば、その最遅
+ * - 関連プランが無ければ event.end_date ?? start_date の当日終わり(JST)
+ * - 終了時刻の無い関連プランが1つでもあれば「まだ確定しきっていない」とみなし null
+ */
+export function getEventLastScheduleTimestamp(event: EventListItem): number | null {
+  const relevantPlans = (event.plans ?? []).filter((plan) => !ignoredPlanStatuses.has(plan.status ?? ""));
+
+  if (relevantPlans.length > 0) {
+    const ends: number[] = [];
+    for (const plan of relevantPlans) {
+      const endAt = plan.confirmed_end_at ?? plan.confirmed_start_at;
+      if (!endAt) {
+        return null;
+      }
+      ends.push(endOfScheduleTimestamp(endAt, plan.is_all_day === true));
+    }
+    return Math.max(...ends);
+  }
+
+  const endAt = event.end_date ?? event.start_date;
+  if (!endAt) {
+    return null;
+  }
+  return endOfScheduleTimestamp(endAt, true);
 }
 
 export function getEventDisplayState(event: EventListItem, now = new Date()): EventDisplayState {

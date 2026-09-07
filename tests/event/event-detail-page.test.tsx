@@ -27,7 +27,8 @@ vi.mock("@/lib/actions/event/event-tasks", () => ({
 }));
 vi.mock("@/lib/actions/event/events", () => ({
   cancelEventAction: vi.fn(),
-  duplicateEventAction: vi.fn()
+  duplicateEventAction: vi.fn(),
+  reopenEventAction: vi.fn()
 }));
 
 import EventDetailPage from "@/app/events/[eventId]/page";
@@ -60,6 +61,7 @@ function baseEvent() {
     location_name: null,
     url: null,
     memo: null,
+    wrapup_auto_done: false,
     plans: []
   };
 }
@@ -166,6 +168,51 @@ describe("EventDetailPage - 終了状態のイベント", () => {
     );
 
     expect(screen.getByRole("heading", { name: "日程調整" })).toBeInTheDocument();
+  });
+});
+
+describe("EventDetailPage - 自動完了の取り消し", () => {
+  beforeEach(() => {
+    vi.stubGlobal("React", React);
+    vi.clearAllMocks();
+  });
+
+  it("owner かつ status=done かつ wrapup_auto_done=true のとき取り消しボタンを出す", async () => {
+    const event = cancelledEvent({ status: "done", wrapup_auto_done: true });
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 1, membershipRow: null });
+    getCurrentUserId.mockResolvedValue("owner-1");
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    expect(screen.getByRole("button", { name: "完了を取り消す" })).toBeInTheDocument();
+    // 終了状態では「イベントを中止」は出さない（先に中止すると取り消し導線を失うため）
+    expect(screen.queryByRole("button", { name: "イベントを中止" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["owner でない", "member-1", "done", true],
+    ["手動で完了した", "owner-1", "done", false],
+    ["status が done でない", "owner-1", "planning", true]
+  ])("%s とき取り消しボタンを出さない", async (_case, currentUserId, status, wrapupAutoDone) => {
+    const event = cancelledEvent({ status, wrapup_auto_done: wrapupAutoDone });
+    mockServerClient(event);
+    mockAdminClient({ memberCount: 1, membershipRow: null });
+    getCurrentUserId.mockResolvedValue(currentUserId);
+
+    render(
+      await EventDetailPage({
+        params: Promise.resolve({ eventId: "event-1" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    expect(screen.queryByRole("button", { name: "完了を取り消す" })).not.toBeInTheDocument();
   });
 });
 
