@@ -1,5 +1,3 @@
-import { toJstDateKey } from "@/lib/shared/jst";
-
 export function parseMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
   return { year, month: monthNumber };
@@ -33,15 +31,13 @@ export function dateLabel(dateKey: string, { includeYear = false }: { includeYea
   }).format(new Date(`${dateKey}T00:00:00`));
 }
 
-/** 表示中の月（"YYYY-MM"）が JST の当月と一致するか。 */
-export function isDisplayingCurrentMonth(month: string, now: Date) {
-  return toJstDateKey(now).slice(0, 7) === month;
-}
-
-/** 月ピッカーの年ホイールに出す年の並び。基本は当年 ±3。表示中の年が外なら含むまで伸ばす。 */
-export function pickerYearRange(currentMonth: string, now: Date): number[] {
-  const currentYear = Number(toJstDateKey(now).slice(0, 4));
-  const shownYear = parseMonth(currentMonth).year;
+/**
+ * 月ピッカーの年ホイールに出す年の並び。基本は当年 ±3。表示中の年が外なら
+ * その年を含むまで伸ばす。ただし妙な URL（month=9999-12 等）で数千個生成しないよう
+ * 当年から前後20年で頭打ちにする。
+ */
+export function pickerYearRange(currentMonth: string, currentYear: number): number[] {
+  const shownYear = clampYear(parseMonth(currentMonth).year, currentYear);
   const from = Math.min(currentYear - 3, shownYear);
   const to = Math.max(currentYear + 3, shownYear);
   const years: number[] = [];
@@ -49,4 +45,11 @@ export function pickerYearRange(currentMonth: string, now: Date): number[] {
     years.push(year);
   }
   return years;
+}
+
+function clampYear(year: number, currentYear: number) {
+  if (!Number.isFinite(year)) {
+    return currentYear;
+  }
+  return Math.min(Math.max(year, currentYear - 20), currentYear + 20);
 }

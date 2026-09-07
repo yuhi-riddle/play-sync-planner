@@ -40,6 +40,7 @@ describe("AdjustmentCalendarView", () => {
       <AdjustmentCalendarView
         month="2026-07"
         selectedDateKey="2026-07-12"
+        todayDateKey="2026-07-01"
         candidates={[
           {
             id: "candidate-1",
@@ -77,7 +78,7 @@ describe("AdjustmentCalendarView", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
     );
 
-    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" todayDateKey="2026-07-01" candidates={[]} />);
 
     const scroller = screen.getByLabelText("日程調整カレンダーの日付一覧");
     const sizer = scroller.firstElementChild as HTMLElement;
@@ -98,7 +99,7 @@ describe("AdjustmentCalendarView", () => {
     );
 
     const { container } = render(
-      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />
+      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" todayDateKey="2026-07-01" candidates={[]} />
     );
 
     expect(screen.getByTestId("adjustment-month-grid")).toHaveClass("gap-0.5", "sm:gap-1");
@@ -122,7 +123,7 @@ describe("AdjustmentCalendarView", () => {
       })
     );
 
-    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" todayDateKey="2026-07-01" candidates={[]} />);
 
     expect(screen.getByLabelText("日程調整カレンダーの日付一覧")).toHaveClass("overflow-x-auto");
     await waitFor(() => {
@@ -137,7 +138,7 @@ describe("AdjustmentCalendarView", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" todayDateKey="2026-07-01" candidates={[]} />);
 
     const statusContainer = screen.getByTestId("adjustment-google-status");
     expect(statusContainer).toHaveClass(GOOGLE_STATUS_MIN_HEIGHT_CLASS);
@@ -156,7 +157,7 @@ describe("AdjustmentCalendarView", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
 
     const { container } = render(
-      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" candidates={[]} />
+      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" todayDateKey="2026-07-01" candidates={[]} />
     );
 
     const placeholders = Array.from(container.querySelectorAll("div")).filter((element) =>
@@ -172,7 +173,7 @@ describe("AdjustmentCalendarView", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
     );
 
-    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-10" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-10" todayDateKey="2026-07-01" candidates={[]} />);
 
     await waitFor(() => {
       expect(screen.getByText("今日")).toBeInTheDocument();
@@ -185,7 +186,7 @@ describe("AdjustmentCalendarView", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
     );
 
-    render(<AdjustmentCalendarView month="2026-09" selectedDateKey="2026-09-10" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-09" selectedDateKey="2026-09-10" todayDateKey="2026-07-01" candidates={[]} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("adjustment-month-grid")).toBeInTheDocument();
@@ -199,7 +200,7 @@ describe("AdjustmentCalendarView", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
     );
 
-    render(<AdjustmentCalendarView month="2026-09" selectedDateKey="2026-09-10" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-09" selectedDateKey="2026-09-10" todayDateKey="2026-07-01" candidates={[]} />);
 
     await waitFor(() => {
       expect(screen.getByRole("link", { name: "今日に戻る" })).toHaveAttribute(
@@ -215,7 +216,7 @@ describe("AdjustmentCalendarView", () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
     );
 
-    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-10" candidates={[]} />);
+    render(<AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-10" todayDateKey="2026-07-01" candidates={[]} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("adjustment-month-grid")).toBeInTheDocument();

@@ -14,11 +14,9 @@ import {
   type CalendarDay
 } from "@/lib/domain/plan/adjustment-calendar";
 import { dayCellClass, dayCellTextClass, weekdayClass } from "@/lib/shared/calendar-styles";
-import { toJstDateKey } from "@/lib/shared/jst";
 import {
   dateLabel as formatDateLabel,
   defaultDateForMonth,
-  isDisplayingCurrentMonth,
   monthLabel,
   moveMonth,
   parseMonth
@@ -48,7 +46,8 @@ function dayAriaLabel(day: CalendarDay, googleCount: number) {
     hasOverlap: day.hasOverlap
   });
 
-  return `${summary}。この日の候補を見る`;
+  const todayPrefix = day.isToday ? "今日、" : "";
+  return `${todayPrefix}${summary}。この日の候補を見る`;
 }
 
 function buildSearchHref(dateKey: string) {
@@ -61,13 +60,18 @@ function DayDots({ day, googleCount }: { day: CalendarDay; googleCount: number }
     return null;
   }
 
+  // 選択セルは濃い pine 塗り。ドット・文字が沈まないよう、選択時は明るい色に振る。
+  const collectingDot = day.isSelected ? "bg-white" : "bg-honey";
+  const confirmedDot = day.isSelected ? "bg-mist" : "bg-moss";
+  const overflowText = day.isSelected ? "text-white/90" : "text-muted";
+
   return (
     <span className="mt-2 flex flex-wrap gap-1" aria-hidden="true">
-      {day.hasCollecting ? <span className="h-2 w-2 rounded-full bg-honey" /> : null}
-      {day.hasConfirmed ? <span className="h-2 w-2 rounded-full bg-moss" /> : null}
+      {day.hasCollecting ? <span className={clsx("h-2 w-2 rounded-full", collectingDot)} /> : null}
+      {day.hasConfirmed ? <span className={clsx("h-2 w-2 rounded-full", confirmedDot)} /> : null}
       {googleCount > 0 ? <span className="h-2 w-2 rounded-full bg-skywash ring-1 ring-sky-300" /> : null}
       {day.hasOverlap ? <span className="rounded-full bg-clay px-1.5 text-[10px] font-bold text-white">重</span> : null}
-      {total > 3 ? <span className="text-[10px] font-bold text-muted">+{total - 3}</span> : null}
+      {total > 3 ? <span className={clsx("text-[10px] font-bold", overflowText)}>+{total - 3}</span> : null}
     </span>
   );
 }
@@ -132,10 +136,13 @@ function sortTimelineItems(candidates: AdjustmentCandidate[], googleItems: HomeC
 export function AdjustmentCalendarView({
   month,
   selectedDateKey,
+  todayDateKey,
   candidates
 }: {
   month: string;
   selectedDateKey: string;
+  /** サーバーで JST 固定で確定した「今日」。render 中に new Date() を読まない。 */
+  todayDateKey: string;
   candidates: AdjustmentCandidate[];
 }) {
   const [googleItems, setGoogleItems] = useState<HomeCalendarItem[]>([]);
@@ -143,8 +150,7 @@ export function AdjustmentCalendarView({
   const { year, month: monthNumber } = parseMonth(month);
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
-  const todayDateKey = toJstDateKey(new Date());
-  const showTodayLink = !isDisplayingCurrentMonth(month, new Date());
+  const showTodayLink = todayDateKey.slice(0, 7) !== month;
   const calendar = buildAdjustmentCalendar({ year, month: monthNumber, selectedDateKey, todayDateKey, candidates });
   const googleCalendar = useMemo(
     () => buildHomeCalendar({ year, month: monthNumber, selectedDateKey, items: googleItems }),
@@ -197,7 +203,11 @@ export function AdjustmentCalendarView({
           >
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
           </Link>
-          <AdjustmentMonthPicker currentMonth={month} label={monthLabel(month)} />
+          <AdjustmentMonthPicker
+            currentMonth={month}
+            currentYear={Number(todayDateKey.slice(0, 4))}
+            label={monthLabel(month)}
+          />
           <Link
             href={`/plans?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
             scroll={false}

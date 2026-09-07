@@ -2,6 +2,7 @@ import { AdjustmentCalendarView } from "@/components/plan/adjustment-calendar-vi
 import { PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
 import { defaultSelectedDateKey, type AdjustmentCandidate } from "@/lib/domain/plan/adjustment-calendar";
+import { toJstDateKey } from "@/lib/shared/jst";
 import { monthRangeInTokyo } from "@/lib/domain/plan/group-availability";
 import {
   createSupabaseAdminClient,
@@ -30,18 +31,21 @@ type PlanRow = {
   candidate_dates?: CandidateDateRow[];
 };
 
-function parseMonth(value: string | undefined) {
+function parseMonth(value: string | undefined, todayDateKey: string) {
+  const fallback = () => ({
+    year: Number(todayDateKey.slice(0, 4)),
+    month: Number(todayDateKey.slice(5, 7))
+  });
+
   const match = /^(\d{4})-(\d{2})$/.exec(value ?? "");
   if (!match) {
-    const today = new Date();
-    return { year: today.getFullYear(), month: today.getMonth() + 1 };
+    return fallback();
   }
 
   const year = Number(match[1]);
   const month = Number(match[2]);
   if (month < 1 || month > 12) {
-    const today = new Date();
-    return { year: today.getFullYear(), month: today.getMonth() + 1 };
+    return fallback();
   }
 
   return { year, month };
@@ -84,7 +88,10 @@ export default async function PlansPage({
   searchParams?: Promise<{ month?: string; date?: string }>;
 }) {
   const query = (await searchParams) ?? {};
-  const { year, month } = parseMonth(query.month);
+  // 「今日」はサーバーで1回だけ JST 固定で確定し、以降このリクエスト内で使い回す
+  // （render 中に new Date() を読むと SSR とクライアントで日付境界がずれ得る）。
+  const todayDateKey = toJstDateKey(new Date());
+  const { year, month } = parseMonth(query.month, todayDateKey);
   const currentMonth = monthParam(year, month);
   const selectedDateKey = query.date ?? defaultSelectedDate(year, month);
 
@@ -144,7 +151,12 @@ export default async function PlansPage({
         description="自分のGoogleカレンダーと、Madoiで調整中の候補日時を月ごとに見比べます。"
       />
 
-      <AdjustmentCalendarView month={currentMonth} selectedDateKey={selectedDateKey} candidates={candidates} />
+      <AdjustmentCalendarView
+        month={currentMonth}
+        selectedDateKey={selectedDateKey}
+        todayDateKey={todayDateKey}
+        candidates={candidates}
+      />
     </div>
   );
 }
