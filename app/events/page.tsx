@@ -1,3 +1,4 @@
+import React from "react";
 import { clsx } from "clsx";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -5,9 +6,10 @@ import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 
 import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventListControls } from "@/components/event/event-list-controls";
+import { EventWrapupActions } from "@/components/event/event-wrapup-actions";
 import { Badge, type BadgeTone, Card, EmptyState, PageHeader } from "@/components/ui";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
-import { cancelEventAction } from "@/lib/actions/event/events";
+import { cancelEventAction, completeEventAction, snoozeEventWrapupAction } from "@/lib/actions/event/events";
 import { categoryAccent } from "@/lib/domain/event/category-color";
 import { categoryLabels } from "@/lib/shared/constants";
 import { getEventDraftResumePath } from "@/lib/domain/event/event-flow";
@@ -23,6 +25,7 @@ import {
   type EventDisplayState,
   type EventListItem
 } from "@/lib/domain/event/event-filter";
+import { shouldShowWrapupPrompt } from "@/lib/domain/event/event-wrapup";
 import { formatDate, formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -57,6 +60,7 @@ type EventRow = EventListItem & {
   location_name: string | null;
   status: string;
   created_at: string;
+  wrapup_snoozed_until: string | null;
   plans: Array<{
     id: string;
     status: string;
@@ -150,7 +154,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       const { data: pageRows, error: pageError } = await supabase
         .from("events")
         .select(
-          "id, title, category, start_date, end_date, location_name, status, created_at, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day)"
+          "id, title, category, start_date, end_date, location_name, status, created_at, wrapup_snoozed_until, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day)"
         )
         .in("id", eventIds);
       if (pageError) throw new Error(pageError.message);
@@ -250,6 +254,12 @@ function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean
           <Meta icon={UsersRound} text={`参加 ${summary.joinedCount}人`} />
         </div>
       </Link>
+      {shouldShowWrapupPrompt(event) ? (
+        <EventWrapupActions
+          completeAction={completeEventAction.bind(null, event.id)}
+          snoozeAction={snoozeEventWrapupAction.bind(null, event.id)}
+        />
+      ) : null}
       {showCancel && !isEventLifecycleFinished(event) ? (
         <div className="mt-4 border-t border-line pt-4">
           <EventCancelAction action={cancelEventAction.bind(null, event.id)} />

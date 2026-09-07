@@ -11,7 +11,11 @@ const { createSupabaseServerClient, getCurrentUserId, redirect } = vi.hoisted(()
 vi.mock("next/navigation", () => ({
   redirect
 }));
-vi.mock("@/lib/actions/event/events", () => ({ cancelEventAction: vi.fn() }));
+vi.mock("@/lib/actions/event/events", () => ({
+  cancelEventAction: vi.fn(),
+  completeEventAction: vi.fn(),
+  snoozeEventWrapupAction: vi.fn()
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient,
   getCurrentUserId,
@@ -418,5 +422,69 @@ describe("EventsPage", () => {
       p_limit: 10,
       p_offset: 2_147_483_650
     }));
+  });
+
+  it("期日超過・清算不要で30日以上たったイベントに確認帯を出す", async () => {
+    const longAgo = new Date("2026-05-01T10:00:00Z").toISOString(); // vitest.setup の now=2026-07-01 より60日前
+    const eventQuery = createEventQuery([
+      {
+        ...makeEvent("event-1", "先月の集まり"),
+        status: "confirmed",
+        wrapup_snoozed_until: null,
+        plans: [
+          {
+            id: "plan-1",
+            status: "date_confirmed",
+            settlement_status: "not_needed",
+            confirmed_start_at: longAgo,
+            confirmed_end_at: longAgo,
+            is_all_day: false
+          }
+        ]
+      }
+    ]);
+    const rpc = createRpcResult(["event-1"], 1);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "completed" }) }));
+
+    expect(screen.getByText(/開催おつかれさまでした/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "完了にする" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "後で" })).toBeInTheDocument();
+  });
+
+  it("期日超過でも30日たっていなければ確認帯を出さない", async () => {
+    const recent = new Date("2026-06-25T10:00:00Z").toISOString(); // now の6日前
+    const eventQuery = createEventQuery([
+      {
+        ...makeEvent("event-1", "先週の集まり"),
+        status: "confirmed",
+        wrapup_snoozed_until: null,
+        plans: [
+          {
+            id: "plan-1",
+            status: "date_confirmed",
+            settlement_status: "not_needed",
+            confirmed_start_at: recent,
+            confirmed_end_at: recent,
+            is_all_day: false
+          }
+        ]
+      }
+    ]);
+    const rpc = createRpcResult(["event-1"], 1);
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "completed" }) }));
+
+    expect(screen.queryByText(/開催おつかれさまでした/)).not.toBeInTheDocument();
   });
 });
