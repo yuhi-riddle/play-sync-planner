@@ -7,7 +7,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 
 import { buildHomeAgendaDay, type HomeAgendaItem } from "@/lib/domain/home/home-agenda";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { weekdayClass } from "@/lib/shared/calendar-styles";
 import { Badge, Button, Card, EmptyState, SectionHeading, Skeleton, type BadgeTone } from "@/components/ui";
@@ -133,7 +133,7 @@ function AgendaItem({ item }: { item: HomeAgendaItem }) {
           {badge.label}
         </Badge>
         <span className="text-body font-bold tabular-nums text-pine">
-          {formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}
+          {formatDateTimeRangeWithWeekday(item.startAt, item.endAt, Boolean(item.isAllDay))}
         </span>
       </div>
       <p className="mt-2 text-body font-bold text-ink">{item.title}</p>

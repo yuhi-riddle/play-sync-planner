@@ -71,55 +71,70 @@ export function AdjustmentMonthPicker({
   }
 
   return (
-    <details ref={detailsRef} className="group relative" onToggle={(event) => {
-      if ((event.currentTarget as HTMLDetailsElement).open) {
-        scrollYearToCenter(selectedYear, "auto");
-      }
-    }}>
+    <details
+      ref={detailsRef}
+      className="group relative"
+      onToggle={(event) => {
+        if ((event.currentTarget as HTMLDetailsElement).open) {
+          // パネルが可視になった直後はレイアウト未確定。次フレームで中央へ寄せる。
+          requestAnimationFrame(() => scrollYearToCenter(selectedYear, "auto"));
+        }
+      }}
+    >
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-base font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay sm:px-4 sm:text-xl [&::-webkit-details-marker]:hidden">
         <CalendarDays aria-hidden="true" className="h-4 w-4 text-pine sm:h-5 sm:w-5" />
         {label}
       </summary>
-      <div className="absolute left-1/2 z-10 mt-2 w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 rounded-control border border-line bg-cream p-3 shadow-lift">
-        <div className="flex gap-3">
-          {/* 年ホイール: 縦スクロール＋中央スナップ。スクロール位置で選択年が変わる。 */}
-          <div
-            ref={wheelRef}
-            onScroll={syncYearFromScroll}
-            className="relative h-40 w-20 shrink-0 snap-y snap-mandatory overflow-y-auto scroll-py-16 rounded-control border border-line bg-surface [scrollbar-width:none] motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
-            aria-label="年を選ぶ"
-          >
-            <div className="py-16">
-              {years.map((year) => (
-                <button
-                  key={year}
-                  ref={(node) => {
-                    if (node) {
-                      yearButtonRefs.current.set(year, node);
-                    } else {
-                      yearButtonRefs.current.delete(year);
-                    }
-                  }}
-                  type="button"
-                  onClick={() => {
-                    setSelectedYear(year);
-                    scrollYearToCenter(year, "smooth");
-                  }}
-                  aria-pressed={year === selectedYear}
-                  className={clsx(
-                    "block w-full snap-center py-2 text-center text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                    year === selectedYear ? "text-pine" : "text-muted hover:text-ink"
-                  )}
-                >
-                  {year}年
-                </button>
-              ))}
-            </div>
-            {/* 中央の選択帯 */}
+      <div className="absolute left-1/2 z-10 mt-2 w-[min(19rem,calc(100vw-2rem))] -translate-x-1/2 rounded-control border border-line bg-cream p-3 shadow-lift">
+        <div className="flex gap-2">
+          {/* 年ホイール: 縦スクロール＋中央スナップ。スクロール位置で選択年が変わる。
+              中央に淡い帯、上下にフェードでホイールらしく見せる。 */}
+          <div className="relative shrink-0">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-1/2 h-9 -translate-y-1/2 border-y border-pine/40"
+              className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-9 -translate-y-1/2 rounded-control bg-pine/[0.07]"
             />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 rounded-t-control bg-gradient-to-b from-cream to-transparent"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-10 rounded-b-control bg-gradient-to-t from-cream to-transparent"
+            />
+            <div
+              ref={wheelRef}
+              onScroll={syncYearFromScroll}
+              className="h-36 w-[4.25rem] snap-y snap-mandatory overflow-y-auto scroll-py-[3.75rem] rounded-control border border-line bg-surface [scrollbar-width:none] motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
+              aria-label="年を選ぶ"
+            >
+              <div className="py-[3.75rem]">
+                {years.map((year) => (
+                  <button
+                    key={year}
+                    ref={(node) => {
+                      if (node) {
+                        yearButtonRefs.current.set(year, node);
+                      } else {
+                        yearButtonRefs.current.delete(year);
+                      }
+                    }}
+                    type="button"
+                    onClick={() => {
+                      setSelectedYear(year);
+                      scrollYearToCenter(year, "smooth");
+                    }}
+                    aria-pressed={year === selectedYear}
+                    className={clsx(
+                      "block w-full snap-center py-2 text-center text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                      year === selectedYear ? "text-pine" : "text-subtle hover:text-ink"
+                    )}
+                  >
+                    {year}年
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* 12ヶ月グリッド */}

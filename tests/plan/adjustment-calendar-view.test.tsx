@@ -61,11 +61,14 @@ describe("AdjustmentCalendarView", () => {
 
     expect(screen.getByText("謎解き公演")).toBeInTheDocument();
     expect(screen.getByText("Google Calendar")).toBeInTheDocument();
+    // タイムラインの日時は曜日つき（見出しの日付と食い違って見えないように）。2026-07-12 は日曜。
+    expect(screen.getByText(/2026\/07\/12\(日\) 19:00/)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText("歯医者")).toBeInTheDocument();
     });
     expect(screen.getByText("新宿")).toBeInTheDocument();
+    expect(screen.getByText(/2026\/07\/12\(日\) 10:00 - 11:00/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/google-calendar/freebusy?month=2026-07");
   });
 
