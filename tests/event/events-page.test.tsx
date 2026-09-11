@@ -221,7 +221,7 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(screen.getByText("これから")).toBeInTheDocument();
+    expect(screen.getByText("開催予定")).toBeInTheDocument();
     const card = screen.getByRole("link", { name: /確定済みの集まり/ });
     expect(within(card).getByText("火 19:00")).toBeInTheDocument();
   });

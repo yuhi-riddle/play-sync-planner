@@ -89,7 +89,7 @@ describe("getEventListGroup", () => {
     expect(eventListGroupLabels).toEqual({
       your_turn: "あなたの番",
       waiting: "待ち",
-      upcoming: "これから",
+      upcoming: "開催予定",
       done: "おわり"
     });
   });
