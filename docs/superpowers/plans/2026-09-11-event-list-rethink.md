@@ -261,7 +261,8 @@ describe("formatRelativeEventDate", () => {
   });
 
   it("明日なら「明日 時刻」", () => {
-    expect(formatRelativeEventDate("2026-07-02T09:30:00+09:00", now)).toBe("明日 09:30");
+    // formatTime は timeStyle:"short" 準拠でゼロ埋めしない
+    expect(formatRelativeEventDate("2026-07-02T09:30:00+09:00", now)).toBe("明日 9:30");
   });
 
   it("2〜6日先なら曜日＋時刻", () => {
