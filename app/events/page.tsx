@@ -22,6 +22,7 @@ import {
   isEventLifecycleFinished,
   normalizeCategory,
   normalizeEventListQuery,
+  type EventCategoryFilter,
   type EventDisplayState,
   type EventListItem
 } from "@/lib/domain/event/event-filter";
@@ -123,6 +124,8 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
     eventMatchesSearch({ title: draftPayload.title, location_name: draftPayload.location_name }, query.search)
       ? eventDraft
       : null;
+  // フィルタ条件に関係なく、下書きがあれば常に一覧の先頭に出す
+  const pinnedDraft = query.status !== "draft" ? eventDraft : null;
 
   let eventRows: EventRow[] = [];
   let totalItems = visibleDraft ? 1 : 0;
@@ -183,43 +186,52 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       <PageHeader eyebrow="Events" title="イベント一覧" />
       <EventListControls query={displayQuery} draftCount={draftCount} pagination={pagination} />
       {visibleDraft ? (
-        <Card className="transition-colors hover:border-moss/45">
-          <Link href={getEventDraftResumePath()} className="block focus:outline-none focus:ring-2 focus:ring-clay">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="mb-3">
-                  <Badge tone="info">下書き</Badge>
-                </div>
-                <h2 className="text-xl font-bold text-ink">
-                  {typeof draftPayload.title === "string" && draftPayload.title.trim()
-                    ? draftPayload.title.trim()
-                    : "タイトル未入力のイベント"}
-                </h2>
-                <p className="mt-2 text-sm text-muted">
-                  {typeof draftPayload.location_name === "string" && draftPayload.location_name.trim()
-                    ? draftPayload.location_name.trim()
-                    : "場所メモ未設定"}
-                </p>
-              </div>
-              <Badge tone="done">{draftCategory === "all" ? "カテゴリ未設定" : categoryLabels[draftCategory]}</Badge>
-            </div>
-            <p className="mt-4 border-t border-line pt-4 text-sm font-bold text-pine">続きから入力</p>
-          </Link>
-        </Card>
-      ) : eventRows.length > 0 ? (
-        <div className="grid gap-4">
-          {eventRows.map((event) => (
-            <EventCard key={event.id} event={event} showCancel={query.status === "active"} />
-          ))}
-        </div>
+        <DraftCard payload={draftPayload} category={draftCategory} />
       ) : (
-        <EmptyState>
-          {query.search
-            ? `「${query.search}」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。`
-            : "条件に合うイベントはありません。絞り込みを変えるか、「イベント作成」から新しく作成してください。"}
-        </EmptyState>
+        <div className="space-y-6">
+          {pinnedDraft ? <DraftCard payload={draftPayload} category={draftCategory} /> : null}
+          {eventRows.length > 0 ? (
+            <div className="grid gap-4">
+              {eventRows.map((event) => (
+                <EventCard key={event.id} event={event} showCancel={query.status === "active"} />
+              ))}
+            </div>
+          ) : !pinnedDraft ? (
+            <EmptyState>
+              {query.search
+                ? `「${query.search}」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。`
+                : "条件に合うイベントはありません。絞り込みを変えるか、「イベント作成」から新しく作成してください。"}
+            </EmptyState>
+          ) : null}
+        </div>
       )}
     </div>
+  );
+}
+
+function DraftCard({ payload, category }: { payload: EventDraftPayload; category: EventCategoryFilter }) {
+  return (
+    <Card className="transition-colors hover:border-moss/45">
+      <Link href={getEventDraftResumePath()} className="block focus:outline-none focus:ring-2 focus:ring-clay">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="mb-3">
+              <Badge tone="info">下書き</Badge>
+            </div>
+            <h2 className="text-xl font-bold text-ink">
+              {typeof payload.title === "string" && payload.title.trim() ? payload.title.trim() : "タイトル未入力のイベント"}
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              {typeof payload.location_name === "string" && payload.location_name.trim()
+                ? payload.location_name.trim()
+                : "場所メモ未設定"}
+            </p>
+          </div>
+          <Badge tone="done">{category === "all" ? "カテゴリ未設定" : categoryLabels[category]}</Badge>
+        </div>
+        <p className="mt-4 border-t border-line pt-4 text-sm font-bold text-pine">続きから入力</p>
+      </Link>
+    </Card>
   );
 }
 

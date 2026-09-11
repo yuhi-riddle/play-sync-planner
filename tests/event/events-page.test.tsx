@@ -71,7 +71,7 @@ describe("EventsPage", () => {
     });
   });
 
-  it("shows active events by default and exposes the saved draft count", async () => {
+  it("shows active events by default and shows the pinned draft card", async () => {
     const eventQuery = createEventQuery([makeEvent("event-1", "夏ライブ")]);
     const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery({
@@ -86,9 +86,28 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    // 下書きの件数は独立したバッジをやめ、状態チップに寄せた
-    expect(screen.getByRole("link", { name: "下書き 1" })).toHaveAttribute("href", "/events?status=draft");
+    // 下書きは状態タブが無くなった分、常時カードとして先頭に出る
+    expect(screen.getByRole("link", { name: /入力途中の旅行/ })).toHaveAttribute("href", "/events/new?resume=draft");
     expect(screen.getByRole("heading", { name: "夏ライブ" })).toBeInTheDocument();
+  });
+
+  it("下書きは完了タブでも常時先頭に表示される", async () => {
+    const eventQuery = createEventQuery([{ ...makeEvent("event-1", "完了イベント"), status: "done" }]);
+    const rpc = createRpcResult(["event-1"], 1);
+    const draftQuery = createDraftQuery({
+      id: "draft-1",
+      payload: { title: "入力途中の旅行", category: "travel" },
+      updated_at: "2026-07-15T00:00:00Z"
+    });
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({ status: "completed" }) }));
+
+    expect(screen.getByRole("link", { name: /入力途中の旅行/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "完了イベント" })).toBeInTheDocument();
   });
 
   it("shows one concrete state and keeps the event card concise", async () => {
