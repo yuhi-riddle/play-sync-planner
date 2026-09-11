@@ -270,28 +270,19 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                       </GroupSection>
                     ) : null}
                     {doneAll.length > 0 ? (
-                      <details className="rounded-card border border-line bg-surface">
-                        <summary className="flex cursor-pointer items-center justify-between p-4 text-eyebrow uppercase text-muted">
-                          <span className="flex items-center gap-2">
-                            <span>{eventListGroupLabels.done}</span>
-                            <span className="tabular-nums">{doneAll.length}</span>
-                          </span>
-                          <span aria-hidden="true">▾</span>
-                        </summary>
-                        <div className="grid gap-4 border-t border-line p-4">
-                          {doneAll.map((event) => (
-                            <GroupedEventCard key={event.id} event={event} group="done" />
-                          ))}
-                          {doneOverflow.totalCount > doneAll.length ? (
-                            <Link
-                              href="/events?status=completed"
-                              className="text-center text-body font-bold text-pine underline-offset-2 hover:underline"
-                            >
-                              もっと見る
-                            </Link>
-                          ) : null}
-                        </div>
-                      </details>
+                      <GroupSection title={eventListGroupLabels.done} count={doneAll.length} defaultOpen={false}>
+                        {doneAll.map((event) => (
+                          <GroupedEventCard key={event.id} event={event} group="done" />
+                        ))}
+                        {doneOverflow.totalCount > doneAll.length ? (
+                          <Link
+                            href="/events?status=completed"
+                            className="text-center text-body font-bold text-pine underline-offset-2 hover:underline"
+                          >
+                            もっと見る
+                          </Link>
+                        ) : null}
+                      </GroupSection>
                     ) : null}
                   </>
                 );
@@ -456,15 +447,28 @@ function GroupedEventCard({ event, group }: { event: EventRow; group: EventListG
   );
 }
 
-function GroupSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function GroupSection({
+  title,
+  count,
+  defaultOpen = true,
+  children
+}: {
+  title: string;
+  count: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="grid gap-3">
-      <p className="flex items-center gap-2 text-eyebrow uppercase text-muted">
-        <span>{title}</span>
-        <span className="tabular-nums">{count}</span>
-      </p>
-      <div className="grid gap-4">{children}</div>
-    </div>
+    <details open={defaultOpen} className="rounded-card border border-line bg-surface">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between p-4 text-eyebrow uppercase text-muted [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <span>{title}</span>
+          <span className="tabular-nums">{count}</span>
+        </span>
+        <span aria-hidden="true">▾</span>
+      </summary>
+      <div className="grid gap-4 border-t border-line p-4">{children}</div>
+    </details>
   );
 }
 

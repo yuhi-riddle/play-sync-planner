@@ -502,6 +502,35 @@ describe("EventsPage", () => {
     expect(screen.queryByText(/開催おつかれさまでした/)).not.toBeInTheDocument();
   });
 
+  it("グループはすべて開閉できる。あなたの番/待ち/これからは既定で開き、おわりは既定で閉じる", async () => {
+    const eventQuery = createEventLookupQuery([
+      makeEvent("event-1", "調整中の会"),
+      { ...makeEvent("done-1", "完了した会1"), status: "done" }
+    ]);
+    const rpc = createGroupedRpc({
+      active: { ids: ["event-1"], total: 1 },
+      completed: { ids: ["done-1"], total: 1 },
+      cancelled: { ids: [], total: 0 }
+    });
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    const { container } = render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    const detailsList = Array.from(container.querySelectorAll("details"));
+    const yourTurnDetails = detailsList.find((el) => el.textContent?.includes("あなたの番"));
+    const doneDetails = detailsList.find((el) => el.textContent?.includes("おわり"));
+
+    expect(yourTurnDetails).toHaveAttribute("open");
+    expect(doneDetails).not.toHaveAttribute("open");
+
+    const summary = doneDetails?.querySelector("summary");
+    expect(summary).toHaveClass("list-none", "[&::-webkit-details-marker]:hidden");
+  });
+
   it("おわりグループは完了・中止を合算した別枠クエリから出す", async () => {
     const eventQuery = createEventLookupQuery([
       makeEvent("event-1", "調整中の会"),
