@@ -169,6 +169,45 @@ function formatAllDayRangeWithWeekday(start: string, end: string | null | undefi
     : `${startLabel} - ${jstFormat(inclusiveEndDate.toISOString(), dateParts)} 終日`;
 }
 
+function jstDateKeyToUtcMs(key: string): number {
+  const [year, month, day] = key.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function jstDayDiff(value: string | Date, now: Date): number {
+  return Math.round((jstDateKeyToUtcMs(jstDateKey(value)) - jstDateKeyToUtcMs(jstDateKey(now))) / (24 * 60 * 60 * 1000));
+}
+
+/**
+ * イベント一覧の「これから」グループ用。近い日付ほど曜日感覚で読めるようにする。
+ * 今日/明日はラベル、2〜6日先は曜日＋時刻、それ以降は月/日(曜)＋時刻（年をまたげば年も）。
+ */
+export function formatRelativeEventDate(value: string | null | undefined, now: Date): string {
+  if (!value) {
+    return unsetLabel;
+  }
+
+  const dayDiff = jstDayDiff(value, now);
+  const time = formatTime(value);
+
+  if (dayDiff === 0) {
+    return `今日 ${time}`;
+  }
+  if (dayDiff === 1) {
+    return `明日 ${time}`;
+  }
+  if (dayDiff >= 2 && dayDiff <= 6) {
+    return `${jstFormat(value, { weekday: "short" })} ${time}`;
+  }
+
+  const sameYear = jstFormat(value, { year: "numeric" }) === jstFormat(now, { year: "numeric" });
+  const dateParts: Intl.DateTimeFormatOptions = sameYear
+    ? { month: "numeric", day: "numeric", weekday: "short" }
+    : { year: "numeric", month: "numeric", day: "numeric", weekday: "short" };
+
+  return `${jstFormat(value, dateParts)} ${time}`;
+}
+
 export function toDateInputValue(value: string | null | undefined): string {
   if (!value) {
     return "";

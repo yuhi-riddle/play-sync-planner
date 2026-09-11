@@ -6,6 +6,7 @@ import {
   formatDateTimeRange,
   formatDateTimeRangeWithWeekday,
   formatJstTime,
+  formatRelativeEventDate,
   formatTime,
   formatYenText,
   toDateTimeLocalValue
@@ -188,5 +189,34 @@ describe("オフセット無しの日時文字列の解釈", () => {
     // 誤って全部 +09:00 を足してしまうと、こちらが 19:00 になって壊れる。
     expect(withTz("UTC", () => formatDateTime("2026-08-15T01:00:00+00:00"))).toContain("10:00");
     expect(withTz("UTC", () => formatDateTime("2026-08-15T01:00:00Z"))).toContain("10:00");
+  });
+});
+
+describe("formatRelativeEventDate", () => {
+  const now = new Date("2026-07-01T00:00:00+09:00"); // JST 水曜
+
+  it("今日なら「今日 時刻」", () => {
+    expect(formatRelativeEventDate("2026-07-01T19:00:00+09:00", now)).toBe("今日 19:00");
+  });
+
+  it("明日なら「明日 時刻」", () => {
+    // formatTime は timeStyle:"short" 準拠でゼロ埋めしない（既存の formatDateTime 系と同じ）
+    expect(formatRelativeEventDate("2026-07-02T09:30:00+09:00", now)).toBe("明日 9:30");
+  });
+
+  it("2〜6日先なら曜日＋時刻", () => {
+    expect(formatRelativeEventDate("2026-07-07T19:00:00+09:00", now)).toBe("火 19:00");
+  });
+
+  it("7日以上先（同年）なら月/日(曜)＋時刻", () => {
+    expect(formatRelativeEventDate("2026-09-20T19:00:00+09:00", now)).toBe("9/20(日) 19:00");
+  });
+
+  it("年をまたぐなら年も出す", () => {
+    expect(formatRelativeEventDate("2027-01-03T19:00:00+09:00", now)).toBe("2027/1/3(日) 19:00");
+  });
+
+  it("未設定なら未設定ラベル", () => {
+    expect(formatRelativeEventDate(null, now)).toBe("未設定");
   });
 });

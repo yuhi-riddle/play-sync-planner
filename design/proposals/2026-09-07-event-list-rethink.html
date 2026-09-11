@@ -1,0 +1,449 @@
+<title>イベント一覧の作り直し</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+
+<style>
+  :root {
+    --canvas: #f7f3ef;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --text: #262320;
+    --muted: #6f665c;
+    --subtle: #948a7d;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --pine-deep: #2c4638;
+    --clay: #df7d69;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --mist: #eff3ee;
+    --radius-card: 18px;
+    --radius-control: 12px;
+    --shadow: 0 1px 2px rgba(62,51,39,.04), 0 6px 18px rgba(62,51,39,.06);
+    --nazotoki: #a098ec;
+    --boardgame: #39bda0;
+    --drinking: #d57cb4;
+    --movie: #76a5ef;
+    --live: #c18dd8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
+      --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
+      --moss: #8fae94; --pine: #b9d3c0; --pine-deep: #a7c4ae; --clay: #e0917a;
+      --clay-ink: #eaa892; --honey: #d8b26b; --honey-ink: #e6c68a; --mist: #2b332c;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
+    --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
+    --moss: #8fae94; --pine: #b9d3c0; --pine-deep: #a7c4ae; --clay: #e0917a;
+    --clay-ink: #eaa892; --honey: #d8b26b; --honey-ink: #e6c68a; --mist: #2b332c;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--text);
+    font-family: "Zen Kaku Gothic New", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1240px; margin: 0 auto; padding: 44px 20px 96px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: .72rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--moss); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin: 0 0 12px; }
+  .lede { color: var(--muted); margin: 0 0 6px; max-width: 66ch; }
+  .axis { color: var(--muted); font-size: .9rem; margin: 2px 0 0; }
+  .axis b { color: var(--text); font-weight: 500; }
+
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 28px; margin-top: 36px; align-items: start;
+  }
+  .col-head .name { font-size: 1.05rem; font-weight: 700; margin: 0; }
+  .col-head .aim { font-size: .88rem; color: var(--muted); margin: 3px 0 12px; }
+
+  .phone {
+    background: var(--canvas); border: 1px solid var(--line-strong);
+    border-radius: 22px; padding: 14px 12px; box-shadow: var(--shadow);
+  }
+  .bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 6px 12px; color: var(--muted); font-size: .8rem;
+  }
+  .h-title { font-size: 1.15rem; font-weight: 700; margin: 2px 6px 12px; }
+
+  /* section header */
+  .sec {
+    display: flex; align-items: center; gap: 8px;
+    margin: 18px 4px 8px; font-size: .82rem; font-weight: 700; color: var(--muted);
+  }
+  .sec:first-of-type { margin-top: 4px; }
+  .sec .count {
+    font-family: "IBM Plex Mono", monospace; font-size: .72rem;
+    background: var(--sunken); color: var(--muted); border-radius: 999px; padding: 0 7px;
+  }
+  .sec.act { color: var(--clay-ink); }
+  .sec.act .count { background: color-mix(in srgb, var(--clay) 16%, transparent); color: var(--clay-ink); }
+
+  /* cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-card); box-shadow: var(--shadow);
+    padding: 13px 14px; margin-bottom: 9px;
+  }
+  .card.act { border-color: color-mix(in srgb, var(--clay) 45%, var(--line)); }
+  .card.done { background: var(--sunken); box-shadow: none; }
+  .row { display: flex; align-items: flex-start; gap: 10px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex: 0 0 8px; }
+  .dot.nazotoki { background: var(--nazotoki); }
+  .dot.boardgame { background: var(--boardgame); }
+  .dot.drinking { background: var(--drinking); }
+  .dot.movie { background: var(--movie); }
+  .dot.live { background: var(--live); }
+  .body { min-width: 0; flex: 1; }
+  .ttl { font-weight: 700; font-size: .96rem; line-height: 1.35; }
+  .card.done .ttl { color: var(--muted); font-weight: 500; }
+  .sub { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+  .when { color: var(--pine); font-weight: 700; }
+  .act-line {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .84rem; font-weight: 700; color: var(--clay-ink); margin-top: 3px;
+  }
+  .chev { color: var(--subtle); margin-top: 4px; flex: 0 0 auto; }
+
+  /* A: filter row */
+  .filter {
+    display: flex; gap: 6px; margin: 0 4px 4px; flex-wrap: wrap;
+  }
+  .filter .f {
+    font-size: .78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  }
+  .filter .f.on { background: var(--pine); color: #fffdf7; border-color: var(--pine); }
+  :root[data-theme="dark"] .filter .f.on, :root:not([data-theme="light"]) .filter .f.on { color: #1c1a17; }
+  @media (prefers-color-scheme: light) { .filter .f.on { color: #fffdf7; } }
+  .search {
+    margin: 8px 4px 2px; display: flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px;
+    background: var(--surface); color: var(--subtle); font-size: .85rem;
+  }
+
+  /* B: action strip */
+  .todo {
+    background: var(--surface); border: 1px solid color-mix(in srgb, var(--clay) 40%, var(--line));
+    border-radius: var(--radius-card); padding: 10px 12px; margin: 0 4px 14px;
+    box-shadow: var(--shadow);
+  }
+  .todo h4 { font-size: .82rem; margin: 0 0 8px; color: var(--clay-ink); }
+  .todo-row {
+    display: flex; align-items: center; gap: 9px; padding: 6px 0; font-size: .86rem;
+    border-top: 1px solid var(--line);
+  }
+  .todo-row:first-of-type { border-top: 0; }
+  .todo-row .tk { width: 15px; height: 15px; border-radius: 5px; border: 1.5px solid var(--line-strong); flex: 0 0 15px; }
+  .todo-row .tt { flex: 1; min-width: 0; font-weight: 700; }
+  .todo-row .tw { font-size: .76rem; color: var(--muted); }
+
+  /* B: agenda day group */
+  .day {
+    font-size: .8rem; font-weight: 700; color: var(--muted);
+    margin: 16px 4px 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line);
+  }
+  .agenda-row {
+    display: flex; gap: 10px; padding: 9px 4px; align-items: baseline;
+  }
+  .agenda-row .at { flex: 0 0 52px; font-weight: 700; font-size: .82rem; color: var(--pine); }
+  .agenda-row .an { flex: 1; min-width: 0; }
+  .agenda-row .an .t { font-weight: 700; font-size: .9rem; }
+  .agenda-row .an .m { font-size: .78rem; color: var(--muted); }
+
+  /* C: current-style card */
+  .c-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-card); box-shadow: var(--shadow);
+    padding: 14px; margin-bottom: 10px;
+  }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .badge { font-size: .68rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .badge.state-wait { background: color-mix(in srgb, var(--honey) 22%, transparent); color: var(--honey-ink); }
+  .badge.state-plan { background: var(--mist); color: var(--pine); }
+  .badge.state-done { background: var(--sunken); color: var(--muted); }
+  .badge.cat { background: color-mix(in srgb, var(--nazotoki) 24%, transparent); color: #6056a3; display: inline-flex; align-items: center; gap: 5px; }
+  .badge.cat::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--nazotoki); }
+  .c-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 8px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: var(--muted); }
+  .meta span { display: inline-flex; align-items: center; gap: 5px; }
+
+  .compare { margin-top: 54px; }
+  .compare h2 { font-size: 1.15rem; margin: 0 0 14px; padding-top: 26px; border-top: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: .8rem; }
+  td:first-child { font-weight: 700; }
+  .good { color: var(--pine); font-weight: 700; }
+  .mid { color: var(--honey-ink); }
+  .bad { color: var(--clay-ink); }
+  .rec {
+    margin-top: 26px; background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--moss); border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow);
+  }
+  .rec p { margin: 0; } .rec p + p { margin-top: 8px; } .rec strong { color: var(--pine); }
+  .note { font-size: .82rem; color: var(--subtle); margin-top: 10px; }
+</style>
+
+<div class="page">
+  <p class="eyebrow">play-sync-planner / イベント一覧</p>
+  <h1>「絞り込むリスト」から「今どうなってるか一覧」へ</h1>
+  <p class="lede">3案とも「やること」でグループ分けし、進行状態チップは廃止。カードの強弱・情報量・並べ方の思想が違う。同じ6件・375px 幅で比較。</p>
+  <p class="axis">軸: <b>①パッと見の把握</b> ／ <b>②実装コスト</b> ／ <b>③検索・カテゴリ絞り込みとの両立</b></p>
+
+  <div class="grid">
+
+    <!-- 案A -->
+    <div class="col">
+      <div class="col-head">
+        <p class="name">案A・グループ ＋ 簡素カード</p>
+        <p class="aim">狙い: 1カード＝ドット＋タイトル＋1行。要対応グループだけ枠で立てる。</p>
+      </div>
+      <div class="phone">
+        <div class="bar"><span>9:41</span><span>◐ ▮▮▮</span></div>
+        <p class="h-title">イベント</p>
+        <div class="search">🔍 タイトル・場所で探す</div>
+        <div class="filter">
+          <span class="f on">すべて</span><span class="f">謎解き</span><span class="f">ライブ</span><span class="f">飲み</span><span class="f">…</span>
+        </div>
+
+        <div class="sec act">あなたの番 <span class="count">3</span></div>
+        <div class="card act">
+          <div class="row">
+            <span class="dot nazotoki"></span>
+            <div class="body">
+              <div class="ttl">謎解き公演「渋谷の廃病院」</div>
+              <div class="act-line">✎ 日程を確定する</div>
+              <div class="sub">回答 4/5人 ・ 候補 3日</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <div class="card act">
+          <div class="row">
+            <span class="dot drinking"></span>
+            <div class="body">
+              <div class="ttl">忘年会</div>
+              <div class="act-line">＋ 日程の候補をつくる</div>
+              <div class="sub">参加 6人</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <div class="card act">
+          <div class="row">
+            <span class="dot movie"></span>
+            <div class="body">
+              <div class="ttl">花見 @ 代々木公園</div>
+              <div class="act-line">¥ 清算をまとめる</div>
+              <div class="sub">3/20(金) に開催済み</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="sec">待ち <span class="count">1</span></div>
+        <div class="card">
+          <div class="row">
+            <span class="dot boardgame"></span>
+            <div class="body">
+              <div class="ttl">ボードゲーム会 @ 高円寺</div>
+              <div class="sub">回答を集めています ・ 2/5人</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="sec">これから <span class="count">1</span></div>
+        <div class="card">
+          <div class="row">
+            <span class="dot live"></span>
+            <div class="body">
+              <div class="ttl">ハッセイ観劇</div>
+              <div class="sub"><span class="when">来週火 19:00</span> 確定</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+
+        <div class="sec">おわり <span class="count">8</span> ▾</div>
+        <div class="card done">
+          <div class="row">
+            <span class="dot movie"></span>
+            <div class="body"><div class="ttl">映画「デューン3」</div><div class="sub">2/15(土)</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案B -->
+    <div class="col">
+      <div class="col-head">
+        <p class="name">案B・要対応の消化リスト ＋ 日付アジェンダ</p>
+        <p class="aim">狙い: 上に「やること」をチェックリスト風に固定。下は日付で束ねた予定表。</p>
+      </div>
+      <div class="phone">
+        <div class="bar"><span>9:41</span><span>◐ ▮▮▮</span></div>
+        <p class="h-title">イベント</p>
+
+        <div class="todo">
+          <h4>あなたの番 ・ 3件</h4>
+          <div class="todo-row">
+            <span class="tk"></span>
+            <span class="tt">謎解き公演「渋谷の廃病院」</span>
+            <span class="tw">日程を確定</span>
+          </div>
+          <div class="todo-row">
+            <span class="tk"></span>
+            <span class="tt">忘年会</span>
+            <span class="tw">候補をつくる</span>
+          </div>
+          <div class="todo-row">
+            <span class="tk"></span>
+            <span class="tt">花見 @ 代々木公園</span>
+            <span class="tw">清算をまとめる</span>
+          </div>
+        </div>
+
+        <div class="filter">
+          <span class="f on">予定順</span><span class="f">調整中</span><span class="f">おわり</span>
+        </div>
+
+        <div class="day">来週</div>
+        <div class="agenda-row">
+          <span class="at">火 19:00</span>
+          <span class="an"><span class="t">ハッセイ観劇</span><span class="m"> ・ 確定 ・ ライブ</span></span>
+        </div>
+
+        <div class="day">日付調整中</div>
+        <div class="agenda-row">
+          <span class="at">3日中</span>
+          <span class="an"><span class="t">謎解き公演「渋谷の廃病院」</span><span class="m"> ・ 回答 4/5</span></span>
+        </div>
+        <div class="agenda-row">
+          <span class="at">未定</span>
+          <span class="an"><span class="t">ボードゲーム会 @ 高円寺</span><span class="m"> ・ 回答 2/5</span></span>
+        </div>
+        <div class="agenda-row">
+          <span class="at">未定</span>
+          <span class="an"><span class="t">忘年会</span><span class="m"> ・ 候補なし</span></span>
+        </div>
+
+        <div class="day">おわった予定 ▾</div>
+        <div class="agenda-row" style="opacity:.6">
+          <span class="at">2/15</span>
+          <span class="an"><span class="t">映画「デューン3」</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案C -->
+    <div class="col">
+      <div class="col-head">
+        <p class="name">案C・現状カード ＋ グループ見出しだけ</p>
+        <p class="aim">狙い: 今のカードは変えず、グループ見出しを差し込むだけ。最小変更。</p>
+      </div>
+      <div class="phone">
+        <div class="bar"><span>9:41</span><span>◐ ▮▮▮</span></div>
+        <p class="h-title">イベント</p>
+        <div class="filter">
+          <span class="f on">進行中</span><span class="f">完了</span><span class="f">中止</span>
+        </div>
+        <div class="search">🔍 検索・並び替え ▾</div>
+
+        <div class="sec act">あなたの番 <span class="count">3</span></div>
+        <div class="c-card">
+          <div class="badges">
+            <span class="badge state-wait">回答待ち</span>
+            <span class="badge cat">謎解き</span>
+          </div>
+          <h3>謎解き公演「渋谷の廃病院」</h3>
+          <div class="meta">
+            <span>📅 候補 3日</span><span>👥 参加 4/5人</span>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="badges">
+            <span class="badge state-plan">日程作成待ち</span>
+            <span class="badge cat" style="color:#904475"><span></span>飲み</span>
+          </div>
+          <h3>忘年会</h3>
+          <div class="meta"><span>👥 参加 6人</span></div>
+        </div>
+
+        <div class="sec">これから <span class="count">1</span></div>
+        <div class="c-card">
+          <div class="badges">
+            <span class="badge state-plan">開催待ち</span>
+            <span class="badge cat" style="color:#7d4b92"><span style="background:#c18dd8"></span>ライブ</span>
+          </div>
+          <h3>ハッセイ観劇</h3>
+          <div class="meta"><span>📅 確定 2026/09/16(火) 19:00</span></div>
+        </div>
+
+        <div class="sec">おわり <span class="count">8</span> ▾</div>
+        <div class="c-card" style="background:var(--sunken);box-shadow:none">
+          <div class="badges"><span class="badge state-done">完了</span></div>
+          <h3 style="color:var(--muted)">映画「デューン3」</h3>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="compare">
+    <h2>比較</h2>
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr><th>案</th><th>① パッと見の把握</th><th>② 実装コスト</th><th>③ 絞り込みとの両立</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A・グループ＋簡素カード</td>
+          <td class="good">高（要対応→待ち→これから→おわり）</td>
+          <td class="mid">中（EventCard 作り直し＋グループ化）</td>
+          <td class="good">検索＋カテゴリだけ残す。状態はグループが担う</td>
+          <td>「あなたの番」の判定＝現行 displayState を「要対応かどうか」に写す</td>
+        </tr>
+        <tr>
+          <td>B・消化リスト＋アジェンダ</td>
+          <td class="good">高（やることが常に一番上）</td>
+          <td class="bad">高（アジェンダ表示・日付束ね・要対応判定を新規）</td>
+          <td class="mid">「予定順／調整中／おわり」の3タブに寄せ替え</td>
+          <td>カレンダーアプリ寄り。日付未定イベントの置き場所の設計が要る</td>
+        </tr>
+        <tr>
+          <td>C・現状カード＋見出し</td>
+          <td class="mid">中（カードの強弱は変わらない）</td>
+          <td class="good">低（見出しの差し込みのみ）</td>
+          <td class="good">現状の絞り込みをそのまま残せる</td>
+          <td>「思想ガラッと」には届かない。バッジ2枚・情報量はそのまま</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="rec">
+      <p><strong>推奨: 案A。</strong></p>
+      <p>判断基準は「10件そこそこのリストで、開いた瞬間に “自分が何をすればいいか” が分かること」。案A は要対応を枠付きで最上部に立て、カードから競合バッジと余分な meta を削ってドット＋タイトル＋1行にする。指摘の1〜5がまとめて解ける。</p>
+      <p>案B は理想は高いが、アジェンダ・日付束ね・要対応判定を全部新規に作るので重い。まず案A で出して、日付軸が欲しくなったら案B の要素（上部の消化リスト）を後入れできる。案C は安全だがカードの中身は変わらないので「見づらい」の芯には触れない。</p>
+    </div>
+    <p class="note">参考モック。実トークン（design/tokens.css）の値・状態を写したもので、実コンポーネントではない。文字サイズ・余白は実装時に詰める。</p>
+  </div>
+</div>
