@@ -18,6 +18,7 @@ import {
   eventDisplayStateLabels,
   eventMatchesSearch,
   getEventCardSummary,
+  getEventLastScheduleTimestamp,
   getEventListPagination,
   isEventLifecycleFinished,
   normalizeCategory,
@@ -42,6 +43,9 @@ const eventDisplayStateTones: Record<EventDisplayState, BadgeTone> = {
   completed: "done",
   cancelled: "warn"
 };
+
+const EVENT_ROW_SELECT =
+  "id, title, category, start_date, end_date, location_name, status, created_at, wrapup_snoozed_until, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at)";
 
 type EventFilterQuery = {
   status?: string;
@@ -130,8 +134,61 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
   // フィルタ条件に関係なく、下書きがあれば常に一覧の先頭に出す
   const pinnedDraft = query.status !== "draft" ? eventDraft : null;
 
+  const fetchEventRows = async (eventIds: string[]): Promise<EventRow[]> => {
+    const { data: pageRows, error: pageError } = await supabase
+      .from("events")
+      .select(EVENT_ROW_SELECT)
+      .in("id", eventIds);
+    if (pageError) throw new Error(pageError.message);
+
+    const rowsById = new Map(((pageRows ?? []) as EventRow[]).map((event) => [event.id, event]));
+    return eventIds.flatMap((eventId) => {
+      const event = rowsById.get(eventId);
+      return event ? [event] : [];
+    });
+  };
+
+  const fetchDoneOverflow = async (): Promise<{ events: EventRow[]; totalCount: number }> => {
+    const [completedResult, cancelledResult] = await Promise.all([
+      supabase.rpc("list_owned_event_ids", {
+        p_filter: "completed",
+        p_category: query.category,
+        p_sort: "latest",
+        p_limit: 5,
+        p_offset: 0,
+        p_query: query.search || null,
+        p_display_state: "all"
+      }),
+      supabase.rpc("list_owned_event_ids", {
+        p_filter: "cancelled",
+        p_category: query.category,
+        p_sort: "latest",
+        p_limit: 5,
+        p_offset: 0,
+        p_query: query.search || null,
+        p_display_state: "all"
+      })
+    ]);
+    if (completedResult.error) throw new Error(completedResult.error.message);
+    if (cancelledResult.error) throw new Error(cancelledResult.error.message);
+
+    const completedRow = (completedResult.data?.[0] ?? null) as EventListRpcRow | null;
+    const cancelledRow = (cancelledResult.data?.[0] ?? null) as EventListRpcRow | null;
+    const totalCount = Number(completedRow?.total_count ?? 0) + Number(cancelledRow?.total_count ?? 0);
+    const eventIds = [...(completedRow?.event_ids ?? []), ...(cancelledRow?.event_ids ?? [])];
+    if (eventIds.length === 0) return { events: [], totalCount };
+
+    const events = await fetchEventRows(eventIds);
+    events.sort(
+      (left, right) =>
+        (getEventLastScheduleTimestamp(right) ?? 0) - (getEventLastScheduleTimestamp(left) ?? 0)
+    );
+    return { events: events.slice(0, 5), totalCount };
+  };
+
   let eventRows: EventRow[] = [];
   let totalItems = visibleDraft ? 1 : 0;
+  let doneOverflow: { events: EventRow[]; totalCount: number } = { events: [], totalCount: 0 };
 
   if (query.status !== "draft") {
     const requestedOffset = (query.page - 1) * query.pageSize;
@@ -157,19 +214,11 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
     }
 
     if (eventIds.length > 0) {
-      const { data: pageRows, error: pageError } = await supabase
-        .from("events")
-        .select(
-          "id, title, category, start_date, end_date, location_name, status, created_at, wrapup_snoozed_until, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at)"
-        )
-        .in("id", eventIds);
-      if (pageError) throw new Error(pageError.message);
+      eventRows = await fetchEventRows(eventIds);
+    }
 
-      const rowsById = new Map(((pageRows ?? []) as EventRow[]).map((event) => [event.id, event]));
-      eventRows = eventIds.flatMap((eventId) => {
-        const event = rowsById.get(eventId);
-        return event ? [event] : [];
-      });
+    if (isGrouped) {
+      doneOverflow = await fetchDoneOverflow();
     }
   }
 
@@ -196,6 +245,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
           {isGrouped
             ? (() => {
                 const buckets = bucketEventRows(eventRows);
+                const doneAll = [...buckets.done, ...doneOverflow.events];
                 return (
                   <>
                     {buckets.yourTurn.length > 0 ? (
@@ -219,6 +269,30 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                         ))}
                       </GroupSection>
                     ) : null}
+                    {doneAll.length > 0 ? (
+                      <details className="rounded-card border border-line bg-surface">
+                        <summary className="flex cursor-pointer items-center justify-between p-4 text-eyebrow uppercase text-muted">
+                          <span className="flex items-center gap-2">
+                            <span>{eventListGroupLabels.done}</span>
+                            <span className="tabular-nums">{doneAll.length}</span>
+                          </span>
+                          <span aria-hidden="true">▾</span>
+                        </summary>
+                        <div className="grid gap-4 border-t border-line p-4">
+                          {doneAll.map((event) => (
+                            <GroupedEventCard key={event.id} event={event} group="done" />
+                          ))}
+                          {doneOverflow.totalCount > doneAll.length ? (
+                            <Link
+                              href="/events?status=completed"
+                              className="text-center text-body font-bold text-pine underline-offset-2 hover:underline"
+                            >
+                              もっと見る
+                            </Link>
+                          ) : null}
+                        </div>
+                      </details>
+                    ) : null}
                   </>
                 );
               })()
@@ -229,7 +303,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
                 ))}
               </div>
             ) : null}
-          {!isGrouped && eventRows.length === 0 && !pinnedDraft ? (
+          {eventRows.length === 0 && !pinnedDraft && (!isGrouped || doneOverflow.events.length === 0) ? (
             <EmptyState>
               {query.search
                 ? `「${query.search}」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。`

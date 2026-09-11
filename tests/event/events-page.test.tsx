@@ -31,10 +31,17 @@ function createEventQuery(data: Array<Record<string, unknown>>) {
   };
 }
 
-function createRpcResult(eventIds: string[], totalCount: number) {
-  return vi.fn().mockResolvedValue({
-    data: [{ event_ids: eventIds, total_count: totalCount }],
-    error: null
+/**
+ * グループ表示では「おわり」別枠クエリ（p_filter=completed/cancelled）が
+ * メインクエリと同じ rpc モックを追加で叩く。フィルタを区別しないと、
+ * どのテストでもメインの1件が「おわり」枠にも紛れ込んで二重表示になる。
+ */
+function createRpcResult(eventIds: string[], totalCount: number, filter = "active") {
+  return vi.fn((_name: string, params: { p_filter: string }) => {
+    if (params.p_filter !== filter) {
+      return Promise.resolve({ data: [{ event_ids: [], total_count: 0 }], error: null });
+    }
+    return Promise.resolve({ data: [{ event_ids: eventIds, total_count: totalCount }], error: null });
   });
 }
 
@@ -51,6 +58,22 @@ function makeEvent(id: string, title: string) {
     plans: [],
     event_members: []
   };
+}
+
+function createEventLookupQuery(allEvents: Array<Record<string, unknown>>) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn((_column: string, ids: string[]) =>
+      Promise.resolve({ data: allEvents.filter((event) => ids.includes(event.id as string)), error: null })
+    )
+  };
+}
+
+function createGroupedRpc(byFilter: Record<string, { ids: string[]; total: number }>) {
+  return vi.fn((_name: string, params: { p_filter: string }) => {
+    const result = byFilter[params.p_filter] ?? { ids: [], total: 0 };
+    return Promise.resolve({ data: [{ event_ids: result.ids, total_count: result.total }], error: null });
+  });
 }
 
 function createDraftQuery(draft: Record<string, unknown> | null) {
@@ -93,7 +116,7 @@ describe("EventsPage", () => {
 
   it("下書きは完了タブでも常時先頭に表示される", async () => {
     const eventQuery = createEventQuery([{ ...makeEvent("event-1", "完了イベント"), status: "done" }]);
-    const rpc = createRpcResult(["event-1"], 1);
+    const rpc = createRpcResult(["event-1"], 1, "completed");
     const draftQuery = createDraftQuery({
       id: "draft-1",
       payload: { title: "入力途中の旅行", category: "travel" },
@@ -257,7 +280,7 @@ describe("EventsPage", () => {
       makeEvent("event-2", "2番目"),
       makeEvent("event-1", "1番目")
     ]);
-    const rpc = createRpcResult(["event-1", "event-2"], 1001);
+    const rpc = createRpcResult(["event-1", "event-2"], 1001, "completed");
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       rpc,
@@ -434,7 +457,7 @@ describe("EventsPage", () => {
         ]
       }
     ]);
-    const rpc = createRpcResult(["event-1"], 1);
+    const rpc = createRpcResult(["event-1"], 1, "completed");
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       rpc,
@@ -467,7 +490,7 @@ describe("EventsPage", () => {
         ]
       }
     ]);
-    const rpc = createRpcResult(["event-1"], 1);
+    const rpc = createRpcResult(["event-1"], 1, "completed");
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       rpc,
@@ -477,5 +500,53 @@ describe("EventsPage", () => {
     render(await EventsPage({ searchParams: Promise.resolve({ status: "completed" }) }));
 
     expect(screen.queryByText(/開催おつかれさまでした/)).not.toBeInTheDocument();
+  });
+
+  it("おわりグループは完了・中止を合算した別枠クエリから出す", async () => {
+    const eventQuery = createEventLookupQuery([
+      makeEvent("event-1", "調整中の会"),
+      { ...makeEvent("done-1", "完了した会1"), status: "done" },
+      { ...makeEvent("done-2", "中止した会1"), status: "cancelled" }
+    ]);
+    const rpc = createGroupedRpc({
+      active: { ids: ["event-1"], total: 1 },
+      completed: { ids: ["done-1"], total: 1 },
+      cancelled: { ids: ["done-2"], total: 1 }
+    });
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByText("おわり")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "調整中の会" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "完了した会1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "中止した会1" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "もっと見る" })).not.toBeInTheDocument();
+  });
+
+  it("おわりの合計が5件を超えたら「もっと見る」を出す", async () => {
+    const doneEvents = Array.from({ length: 5 }, (_, index) => ({
+      ...makeEvent(`done-${index}`, `完了した会${index}`),
+      status: "done"
+    }));
+    const eventQuery = createEventLookupQuery(doneEvents);
+    const rpc = createGroupedRpc({
+      active: { ids: [], total: 0 },
+      completed: { ids: doneEvents.map((event) => event.id), total: 6 },
+      cancelled: { ids: [], total: 0 }
+    });
+    const draftQuery = createDraftQuery(null);
+    createSupabaseServerClient.mockResolvedValue({
+      rpc,
+      from: vi.fn((table: string) => (table === "event_drafts" ? draftQuery : eventQuery))
+    });
+
+    render(await EventsPage({ searchParams: Promise.resolve({}) }));
+
+    expect(screen.getByRole("link", { name: "もっと見る" })).toHaveAttribute("href", "/events?status=completed");
   });
 });
