@@ -22,23 +22,23 @@ describe("EventListControls", () => {
   it("状態はチップで出し、押すと1ページ目に戻る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 3, search: "", displayState: "all" }}
+        query={{ status: "completed", category: "all", sort: "soonest", pageSize: 10, page: 3, search: "", displayState: "all" }}
         draftCount={2}
         pagination={{ ...basePagination, page: 3, totalItems: 46, totalPages: 5, from: 21, to: 30 }}
       />
     );
 
     const chips = screen.getByRole("navigation", { name: "状態で絞り込む" });
-    expect(within(chips).getByRole("link", { name: "進行中" })).toHaveAttribute("aria-current", "page");
+    expect(within(chips).getByRole("link", { name: "完了" })).toHaveAttribute("aria-current", "page");
     // 3ページ目のまま状態だけ変えると、件数が足りず空振りする
-    expect(within(chips).getByRole("link", { name: "完了" })).toHaveAttribute("href", "/events?status=completed");
+    expect(within(chips).getByRole("link", { name: "進行中" })).toHaveAttribute("href", "/events");
     expect(within(chips).getByRole("link", { name: "中止" })).toHaveAttribute("href", "/events?status=cancelled");
   });
 
   it("下書きの件数はチップに出る", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "", displayState: "all" }}
+        query={{ status: "completed", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={2}
         pagination={basePagination}
       />
@@ -50,7 +50,7 @@ describe("EventListControls", () => {
   it("下書きが0件なら数字を出さない", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
+        query={{ status: "completed", category: "all", sort: "newest", pageSize: 10, page: 1, search: "", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -167,8 +167,8 @@ describe("EventListControls", () => {
     const searchBox = container.querySelector('input[name="search"][type="search"]');
     expect(searchBox).not.toBeNull();
     expect(searchBox?.closest("details")).not.toBeNull();
-    // 状態チップは折りたたみの外
-    expect(screen.getByRole("navigation", { name: "状態で絞り込む" }).closest("details")).toBeNull();
+    // グループ表示（active）では状態タブそのものを出さない
+    expect(screen.queryByRole("navigation", { name: "状態で絞り込む" })).not.toBeInTheDocument();
   });
 
   it("検索欄は件数によらず常に出す（条件フォームの一部）", () => {
@@ -250,7 +250,7 @@ describe("EventListControls", () => {
   it("状態のチップは検索語を保ったまま切り替える", () => {
     render(
       <EventListControls
-        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
+        query={{ status: "cancelled", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "沖縄", displayState: "all" }}
         draftCount={0}
         pagination={basePagination}
       />
@@ -321,29 +321,17 @@ describe("EventListControls", () => {
     expect(dot).toHaveClass("bg-category-nazotoki");
   });
 
-  it("status=active のとき進行状態の2段目チップが出る", () => {
+  it("グループ表示（status=active）では状態タブ・進行状態チップを出さない", () => {
     render(
       <EventListControls
-        query={{
-          status: "active",
-          category: "all",
-          sort: "soonest",
-          pageSize: 10,
-          page: 1,
-          search: "",
-          displayState: "all"
-        }}
-        draftCount={0}
+        query={{ status: "active", category: "all", sort: "soonest", pageSize: 10, page: 1, search: "", displayState: "all" }}
+        draftCount={2}
         pagination={basePagination}
       />
     );
 
-    const nav = screen.getByRole("navigation", { name: "進行状態で絞り込む" });
-    expect(within(nav).getByRole("link", { name: "回答待ち" })).toHaveAttribute(
-      "href",
-      "/events?display=answer_waiting"
-    );
-    expect(within(nav).getByRole("link", { name: "すべて" })).toHaveAttribute("href", "/events");
+    expect(screen.queryByRole("navigation", { name: "状態で絞り込む" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "進行状態で絞り込む" })).not.toBeInTheDocument();
   });
 
   it("status=completed のとき2段目チップは出ない", () => {
@@ -366,32 +354,11 @@ describe("EventListControls", () => {
     expect(screen.queryByRole("navigation", { name: "進行状態で絞り込む" })).not.toBeInTheDocument();
   });
 
-  it("選択中の進行状態チップに aria-current が付く", () => {
-    render(
-      <EventListControls
-        query={{
-          status: "active",
-          category: "all",
-          sort: "newest",
-          pageSize: 10,
-          page: 1,
-          search: "",
-          displayState: "event_waiting"
-        }}
-        draftCount={0}
-        pagination={basePagination}
-      />
-    );
-
-    const nav = screen.getByRole("navigation", { name: "進行状態で絞り込む" });
-    expect(within(nav).getByRole("link", { name: "開催待ち" })).toHaveAttribute("aria-current", "page");
-  });
-
   it("上段の状態チップを押すと進行状態は all に戻る", () => {
     render(
       <EventListControls
         query={{
-          status: "active",
+          status: "cancelled",
           category: "all",
           sort: "soonest",
           pageSize: 10,
