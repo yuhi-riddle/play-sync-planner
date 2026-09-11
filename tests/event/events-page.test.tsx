@@ -110,14 +110,14 @@ describe("EventsPage", () => {
     expect(screen.getByRole("heading", { name: "完了イベント" })).toBeInTheDocument();
   });
 
-  it("shows one concrete state and keeps the event card concise", async () => {
+  it("あなたの番グループにはアクション文言だけを出し、場所・参加人数は出さない", async () => {
     const eventQuery = createEventQuery([{
       ...makeEvent("event-1", "週末の謎解き会"),
       category: "nazotoki",
       status: "interested",
       location_name: "新宿",
       event_members: [{ status: "joined" }],
-      plans: [{ status: "draft", settlement_status: "settling" }]
+      plans: []
     }]);
     const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery(null);
@@ -128,24 +128,17 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(screen.getByText("新宿")).toBeInTheDocument();
-    expect(screen.getByText("参加 1人")).toBeInTheDocument();
+    expect(screen.getByText("あなたの番")).toBeInTheDocument();
     const eventCardLink = screen.getByRole("link", { name: /週末の謎解き会/ });
-    expect(within(eventCardLink).getByText("参加者待ち")).toBeInTheDocument();
-    expect(within(eventCardLink).getByText("謎解き")).toBeInTheDocument();
-    expect(within(eventCardLink).queryByText("清算中")).not.toBeInTheDocument();
-    expect(within(eventCardLink).queryByText("参加者を確認")).not.toBeInTheDocument();
-    expect(within(eventCardLink).queryByText("気になる")).not.toBeInTheDocument();
-    expect(within(eventCardLink).queryByText(/日程調整 \d+件/)).not.toBeInTheDocument();
+    expect(within(eventCardLink).getByText("▶ 日程調整を始める")).toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("新宿")).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText(/参加 \d+人/)).not.toBeInTheDocument();
+    expect(within(eventCardLink).queryByText("参加者待ち")).not.toBeInTheDocument();
   });
 
-  it("colors each event card's badge by category", async () => {
-    // カード左端の色帯は撤去済み（バッジと二重表現だったため）。カテゴリはバッジだけで示す。
-    const eventQuery = createEventQuery([
-      { ...makeEvent("event-1", "夏合宿"), category: "travel" },
-      { ...makeEvent("event-2", "3丁目にて"), category: "not-a-real-category" }
-    ]);
-    const rpc = createRpcResult(["event-1", "event-2"], 2);
+  it("カードの左端はカテゴリの色ドットのみで、テキストラベルは出さない", async () => {
+    const eventQuery = createEventQuery([{ ...makeEvent("event-1", "夏合宿"), category: "travel" }]);
+    const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       rpc,
@@ -154,16 +147,13 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    const travelCardLink = screen.getByRole("link", { name: /夏合宿/ });
-    expect(within(travelCardLink).getByText("旅行")).toBeInTheDocument();
-    expect(travelCardLink.closest("section")).not.toHaveClass("border-l-4");
-
-    const otherCardLink = screen.getByRole("link", { name: /3丁目にて/ });
-    expect(within(otherCardLink).getByText("その他")).toBeInTheDocument();
-    expect(otherCardLink.closest("section")).not.toHaveClass("border-l-4");
+    const cardLink = screen.getByRole("link", { name: /夏合宿/ });
+    expect(within(cardLink).queryByText("旅行")).not.toBeInTheDocument();
+    const dot = cardLink.querySelector('span[aria-hidden="true"]');
+    expect(dot).toHaveClass("bg-category-travel");
   });
 
-  it("colors settlement_waiting, completed, and cancelled with visibly different tones", async () => {
+  it("清算待ちイベントはあなたの番グループに入る", async () => {
     const pastPlan = {
       id: "plan-1",
       status: "date_confirmed",
@@ -172,12 +162,8 @@ describe("EventsPage", () => {
       confirmed_end_at: "2020-01-01T00:00:00Z",
       is_all_day: false
     };
-    const eventQuery = createEventQuery([
-      { ...makeEvent("event-1", "清算待ちイベント"), plans: [pastPlan] },
-      { ...makeEvent("event-2", "完了イベント"), status: "done" },
-      { ...makeEvent("event-3", "中止イベント"), status: "cancelled" }
-    ]);
-    const rpc = createRpcResult(["event-1", "event-2", "event-3"], 3);
+    const eventQuery = createEventQuery([{ ...makeEvent("event-1", "清算待ちイベント"), plans: [pastPlan] }]);
+    const rpc = createRpcResult(["event-1"], 1);
     const draftQuery = createDraftQuery(null);
     createSupabaseServerClient.mockResolvedValue({
       rpc,
@@ -186,31 +172,18 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    // ナビの絞り込みリンクにも「完了」「中止」の文言があるため、各イベントカード内に絞って取得する
-    const settlementCard = screen.getByRole("link", { name: /清算待ちイベント/ });
-    const completedCard = screen.getByRole("link", { name: /完了イベント/ });
-    const cancelledCard = screen.getByRole("link", { name: /中止イベント/ });
-    const settlementBadge = within(settlementCard).getByText("清算待ち");
-    const completedBadge = within(completedCard).getByText("完了");
-    const cancelledBadge = within(cancelledCard).getByText("中止");
-
-    // settlement_waiting は neutral (border-line / bg-sunken / text-muted)
-    expect(settlementBadge).toHaveClass("bg-sunken", "text-muted");
-    // completed は done (bg-mist / text-pine、現状維持)
-    expect(completedBadge).toHaveClass("bg-mist", "text-pine");
-    // cancelled は warn (bg-clay/14 相当 / text-clay-ink) で、他の2つと明確に異なる
-    expect(cancelledBadge).toHaveClass("text-clay-ink");
-    expect(cancelledBadge.className).not.toBe(settlementBadge.className);
-    expect(cancelledBadge.className).not.toBe(completedBadge.className);
+    expect(screen.getByText("あなたの番")).toBeInTheDocument();
+    const cardLink = screen.getByRole("link", { name: /清算待ちイベント/ });
+    expect(within(cardLink).getByText("¥ 清算をまとめる")).toBeInTheDocument();
   });
 
-  it("確定済みイベントのカードは日時を曜日つきで出す（一覧は日付見出しが無い）", async () => {
+  it("これからグループのカードは相対日付で出す", async () => {
     const confirmedPlan = {
       id: "plan-1",
       status: "date_confirmed",
       settlement_status: "not_started",
-      confirmed_start_at: "2026-07-07T10:00:00Z", // JST 2026/07/07 19:00
-      confirmed_end_at: "2026-07-07T12:00:00Z", // JST 21:00
+      confirmed_start_at: "2026-07-07T10:00:00Z", // JST 2026/07/07 19:00, vitest.setup の now=2026-07-01 の6日後（火）
+      confirmed_end_at: "2026-07-07T12:00:00Z",
       is_all_day: false
     };
     const eventQuery = createEventQuery([
@@ -225,10 +198,9 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
+    expect(screen.getByText("これから")).toBeInTheDocument();
     const card = screen.getByRole("link", { name: /確定済みの集まり/ });
-    expect(
-      within(card).getByText(/確定 2026\/07\/07\([日月火水木金土]\) 19:00 - 21:00/)
-    ).toBeInTheDocument();
+    expect(within(card).getByText("火 19:00")).toBeInTheDocument();
   });
 
   it("shows the draft card's status and category as shared Badge pills", async () => {
@@ -257,7 +229,7 @@ describe("EventsPage", () => {
     expect(categoryBadge).toHaveClass("bg-mist", "text-pine", "border-moss/30");
   });
 
-  it("omits the schedule and location rows when they are unset", async () => {
+  it("日程が未設定でも「あなたの番」のアクション文言だけを出す", async () => {
     const eventQuery = createEventQuery([{
       ...makeEvent("event-2", "まだ何も決まっていない会"),
       category: "other",
@@ -275,9 +247,9 @@ describe("EventsPage", () => {
 
     render(await EventsPage({ searchParams: Promise.resolve({}) }));
 
-    expect(screen.queryByText("日程未設定")).not.toBeInTheDocument();
-    expect(screen.queryByText("場所未設定")).not.toBeInTheDocument();
-    expect(screen.getByText("参加 1人")).toBeInTheDocument();
+    expect(screen.queryByText("参加 1人")).not.toBeInTheDocument();
+    const cardLink = screen.getByRole("link", { name: /まだ何も決まっていない会/ });
+    expect(within(cardLink).getByText("▶ 日程調整を始める")).toBeInTheDocument();
   });
 
   it("asks the database for one page and fetches only the returned event ids", async () => {

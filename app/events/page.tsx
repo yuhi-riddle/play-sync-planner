@@ -2,7 +2,7 @@ import React from "react";
 import { clsx } from "clsx";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, MapPin, UsersRound } from "lucide-react";
+import { CalendarDays, ChevronRight, MapPin, UsersRound } from "lucide-react";
 
 import { EventCancelAction } from "@/components/event/event-cancel-action";
 import { EventListControls } from "@/components/event/event-list-controls";
@@ -27,7 +27,8 @@ import {
   type EventListItem
 } from "@/lib/domain/event/event-filter";
 import { shouldShowWrapupPrompt } from "@/lib/domain/event/event-wrapup";
-import { formatDate, formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
+import { formatDate, formatDateTimeRangeWithWeekday, formatRelativeEventDate } from "@/lib/shared/format";
+import { getEventListGroup, eventListGroupLabels, type EventListGroup } from "@/lib/domain/event/event-list-group";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,7 @@ type EventRow = EventListItem & {
     confirmed_start_at: string | null;
     confirmed_end_at: string | null;
     is_all_day: boolean | null;
+    answer_deadline_at: string | null;
   }> | null;
   event_members: Array<{ status: string }> | null;
 };
@@ -86,6 +88,7 @@ type EventDraftPayload = {
 
 export default async function EventsPage({ searchParams }: { searchParams?: Promise<EventFilterQuery> }) {
   const query = normalizeEventListQuery((await searchParams) ?? {});
+  const isGrouped = query.status === "active";
 
   if (!hasSupabaseEnv()) {
     return (
@@ -157,7 +160,7 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       const { data: pageRows, error: pageError } = await supabase
         .from("events")
         .select(
-          "id, title, category, start_date, end_date, location_name, status, created_at, wrapup_snoozed_until, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day)"
+          "id, title, category, start_date, end_date, location_name, status, created_at, wrapup_snoozed_until, event_members(status), plans(id, status, settlement_status, confirmed_start_at, confirmed_end_at, is_all_day, answer_deadline_at)"
         )
         .in("id", eventIds);
       if (pageError) throw new Error(pageError.message);
@@ -190,13 +193,43 @@ export default async function EventsPage({ searchParams }: { searchParams?: Prom
       ) : (
         <div className="space-y-6">
           {pinnedDraft ? <DraftCard payload={draftPayload} category={draftCategory} /> : null}
-          {eventRows.length > 0 ? (
-            <div className="grid gap-4">
-              {eventRows.map((event) => (
-                <EventCard key={event.id} event={event} showCancel={query.status === "active"} />
-              ))}
-            </div>
-          ) : !pinnedDraft ? (
+          {isGrouped
+            ? (() => {
+                const buckets = bucketEventRows(eventRows);
+                return (
+                  <>
+                    {buckets.yourTurn.length > 0 ? (
+                      <GroupSection title={eventListGroupLabels.your_turn} count={buckets.yourTurn.length}>
+                        {buckets.yourTurn.map((event) => (
+                          <GroupedEventCard key={event.id} event={event} group="your_turn" />
+                        ))}
+                      </GroupSection>
+                    ) : null}
+                    {buckets.waiting.length > 0 ? (
+                      <GroupSection title={eventListGroupLabels.waiting} count={buckets.waiting.length}>
+                        {buckets.waiting.map((event) => (
+                          <GroupedEventCard key={event.id} event={event} group="waiting" />
+                        ))}
+                      </GroupSection>
+                    ) : null}
+                    {buckets.upcoming.length > 0 ? (
+                      <GroupSection title={eventListGroupLabels.upcoming} count={buckets.upcoming.length}>
+                        {buckets.upcoming.map((event) => (
+                          <GroupedEventCard key={event.id} event={event} group="upcoming" />
+                        ))}
+                      </GroupSection>
+                    ) : null}
+                  </>
+                );
+              })()
+            : eventRows.length > 0 ? (
+              <div className="grid gap-4">
+                {eventRows.map((event) => (
+                  <EventCard key={event.id} event={event} showCancel={query.status === "active"} />
+                ))}
+              </div>
+            ) : null}
+          {!isGrouped && eventRows.length === 0 && !pinnedDraft ? (
             <EmptyState>
               {query.search
                 ? `「${query.search}」に一致するイベントはありません。別の言葉で探すか、絞り込みを変えてみてください。`
@@ -279,6 +312,100 @@ function EventCard({ event, showCancel }: { event: EventRow; showCancel: boolean
       ) : null}
     </Card>
   );
+}
+
+const groupActionLabels: Partial<Record<EventDisplayState, string>> = {
+  schedule_creation_waiting: "＋ 日程の候補をつくる",
+  participant_waiting: "▶ 日程調整を始める",
+  settlement_waiting: "¥ 清算をまとめる"
+};
+
+function groupedCardActionLine(
+  event: EventRow,
+  group: EventListGroup,
+  summary: ReturnType<typeof getEventCardSummary>,
+  isWrapup: boolean
+): string {
+  if (isWrapup) {
+    return "✓ 完了か確認する";
+  }
+  if (group === "your_turn") {
+    if (summary.displayState === "answer_waiting") {
+      return "✎ 回答を締めて日程を確定する";
+    }
+    return groupActionLabels[summary.displayState] ?? "";
+  }
+  if (group === "waiting") {
+    return "回答受付中";
+  }
+  if (group === "upcoming") {
+    return summary.schedule.startAt ? formatRelativeEventDate(summary.schedule.startAt, new Date()) : "";
+  }
+  if (event.status === "cancelled") {
+    return "中止";
+  }
+  return summary.schedule.startAt ? formatDate(summary.schedule.startAt) : "開催日未設定";
+}
+
+function GroupedEventCard({ event, group }: { event: EventRow; group: EventListGroup }) {
+  const summary = getEventCardSummary(event);
+  const normalizedCategory = normalizeCategory(event.category);
+  const category = normalizedCategory === "all" ? "other" : normalizedCategory;
+  const accent = categoryAccent(category);
+  const isWrapup = shouldShowWrapupPrompt(event);
+  const line = groupedCardActionLine(event, group, summary, isWrapup);
+
+  return (
+    <Card className="transition-colors hover:border-moss/45">
+      <Link href={`/events/${event.id}`} className="block focus:outline-none focus:ring-2 focus:ring-clay">
+        <div className="flex items-start gap-3">
+          <span aria-hidden="true" className={clsx("mt-2 h-2 w-2 shrink-0 rounded-full", accent.dot)} />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg font-bold text-ink">{event.title}</h2>
+            {line ? <p className="mt-1 text-sm text-muted">{line}</p> : null}
+          </div>
+          <ChevronRight aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-muted" />
+        </div>
+      </Link>
+      {isWrapup ? (
+        <EventWrapupActions
+          completeAction={completeEventAction.bind(null, event.id)}
+          snoozeAction={snoozeEventWrapupAction.bind(null, event.id)}
+        />
+      ) : null}
+      {!isEventLifecycleFinished(event) ? (
+        <div className="mt-4 border-t border-line pt-4">
+          <EventCancelAction action={cancelEventAction.bind(null, event.id)} />
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function GroupSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-3">
+      <p className="flex items-center gap-2 text-eyebrow uppercase text-muted">
+        <span>{title}</span>
+        <span className="tabular-nums">{count}</span>
+      </p>
+      <div className="grid gap-4">{children}</div>
+    </div>
+  );
+}
+
+type EventGroupBuckets = { yourTurn: EventRow[]; waiting: EventRow[]; upcoming: EventRow[]; done: EventRow[] };
+
+function bucketEventRows(rows: EventRow[]): EventGroupBuckets {
+  const buckets: EventGroupBuckets = { yourTurn: [], waiting: [], upcoming: [], done: [] };
+  for (const event of rows) {
+    const group = getEventListGroup(event);
+    if (group === "your_turn") buckets.yourTurn.push(event);
+    else if (group === "waiting") buckets.waiting.push(event);
+    else if (group === "upcoming") buckets.upcoming.push(event);
+    else buckets.done.push(event);
+  }
+  return buckets;
 }
 
 function Meta({ icon: Icon, text, strong = false }: { icon: typeof CalendarDays; text: string; strong?: boolean }) {
