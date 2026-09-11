@@ -7,7 +7,7 @@ export type EventListGroup = "your_turn" | "waiting" | "upcoming" | "done";
 export const eventListGroupLabels: Record<EventListGroup, string> = {
  your_turn: "あなたの番",
  waiting: "待ち",
- upcoming: "これから",
+ upcoming: "開催予定",
  done: "おわり"
 };
 

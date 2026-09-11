@@ -179,7 +179,7 @@ function jstDayDiff(value: string | Date, now: Date): number {
 }
 
 /**
- * イベント一覧の「これから」グループ用。近い日付ほど曜日感覚で読めるようにする。
+ * イベント一覧の「開催予定」グループ用。近い日付ほど曜日感覚で読めるようにする。
  * 今日/明日はラベル、2〜6日先は曜日＋時刻、それ以降は月/日(曜)＋時刻（年をまたげば年も）。
  */
 export function formatRelativeEventDate(value: string | null | undefined, now: Date): string {
