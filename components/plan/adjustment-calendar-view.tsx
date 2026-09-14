@@ -147,6 +147,7 @@ export function AdjustmentCalendarView({
 }) {
   const [googleItems, setGoogleItems] = useState<HomeCalendarItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
+  const [isNavigatingByMonth, setIsNavigatingByMonth] = useState(false);
   const { year, month: monthNumber } = parseMonth(month);
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
@@ -190,7 +191,7 @@ export function AdjustmentCalendarView({
   }, [month]);
 
   return (
-    <>
+    <div className={clsx("space-y-7 t-content-fade", isNavigatingByMonth && "is-pending")}>
       {/* 375px で7列を収めるため、モバイルだけ余白を詰める。
           削るのは余白であってセルではないので、1日あたりの表示領域はむしろ広がる。 */}
       <Card padding="p-3 sm:p-5">
@@ -207,6 +208,7 @@ export function AdjustmentCalendarView({
             currentMonth={month}
             currentYear={Number(todayDateKey.slice(0, 4))}
             label={monthLabel(month)}
+            onNavigatingChange={setIsNavigatingByMonth}
           />
           <Link
             href={`/plans?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
@@ -329,6 +331,6 @@ export function AdjustmentCalendarView({
           )}
         </div>
       </Card>
-    </>
+    </div>
   );
 }

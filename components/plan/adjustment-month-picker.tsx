@@ -12,12 +12,15 @@ const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 export function AdjustmentMonthPicker({
   currentMonth,
   currentYear,
-  label
+  label,
+  onNavigatingChange
 }: {
   currentMonth: string;
   /** サーバーで確定した「今年」。年ホイールの範囲に使う（render 中に new Date() を読まない）。 */
   currentYear: number;
   label: string;
+  /** 月を選んでから、実際に新しい月のデータ（currentMonthの変化）が届くまでtrue。 */
+  onNavigatingChange?: (pending: boolean) => void;
 }) {
   const router = useRouter();
   const { year: shownYear, month: shownMonthNumber } = parseMonth(currentMonth);
@@ -27,6 +30,7 @@ export function AdjustmentMonthPicker({
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
   const yearButtonRefs = useRef(new Map<number, HTMLButtonElement>());
+  const previousMonthRef = useRef(currentMonth);
 
   // 中央に一番近い年を選択年にする。スクロール中に何度も走るので軽く。
   const syncYearFromScroll = useCallback(() => {
@@ -64,9 +68,18 @@ export function AdjustmentMonthPicker({
     scrollYearToCenter(shownYear, "auto");
   }, [shownYear]);
 
+  // 新しい月のデータ（currentMonthの変化）が実際に届いた時点で、淡くしていたのを解除する。
+  useEffect(() => {
+    if (previousMonthRef.current !== currentMonth) {
+      previousMonthRef.current = currentMonth;
+      onNavigatingChange?.(false);
+    }
+  }, [currentMonth, onNavigatingChange]);
+
   function goToMonth(monthNumber: number) {
     const monthParam = `${selectedYear}-${String(monthNumber).padStart(2, "0")}`;
     detailsRef.current?.removeAttribute("open");
+    onNavigatingChange?.(true);
     router.push(`/plans?month=${monthParam}&date=${monthParam}-01`, { scroll: false });
   }
 
