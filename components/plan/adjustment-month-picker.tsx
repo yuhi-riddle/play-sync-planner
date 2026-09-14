@@ -92,7 +92,7 @@ export function AdjustmentMonthPicker({
           <div className="relative shrink-0">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-9 -translate-y-1/2 rounded-control bg-pine/[0.07]"
+              className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-9 -translate-y-1/2 rounded-control bg-mist"
             />
             <div
               aria-hidden="true"
