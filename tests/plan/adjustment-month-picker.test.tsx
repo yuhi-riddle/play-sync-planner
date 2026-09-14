@@ -61,6 +61,18 @@ describe("AdjustmentMonthPicker", () => {
     expect(details.open).toBe(false);
   });
 
+  it("選択中の年ボタン自体をbg-mistでハイライトする（固定位置の帯には頼らない）", () => {
+    renderPicker();
+
+    expect(screen.getByRole("button", { name: "2026年" })).toHaveClass("bg-mist");
+    expect(screen.getByRole("button", { name: "2027年" })).not.toHaveClass("bg-mist");
+
+    fireEvent.click(screen.getByRole("button", { name: "2027年" }));
+
+    expect(screen.getByRole("button", { name: "2027年" })).toHaveClass("bg-mist");
+    expect(screen.getByRole("button", { name: "2026年" })).not.toHaveClass("bg-mist");
+  });
+
   it("年ボタンは aria-pressed で選択状態を示す", () => {
     renderPicker();
     expect(screen.getByRole("button", { name: "2026年" })).toHaveAttribute("aria-pressed", "true");

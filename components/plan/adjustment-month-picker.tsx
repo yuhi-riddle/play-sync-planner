@@ -88,12 +88,9 @@ export function AdjustmentMonthPicker({
       <div className="absolute left-1/2 z-10 mt-2 w-[min(19rem,calc(100vw-2rem))] -translate-x-1/2 rounded-control border border-line bg-cream p-3 shadow-lift">
         <div className="flex gap-2">
           {/* 年ホイール: 縦スクロール＋中央スナップ。スクロール位置で選択年が変わる。
-              中央に淡い帯、上下にフェードでホイールらしく見せる。 */}
+              選択中の年ボタン自体をハイライトする（固定位置の帯だとスクロールスナップと
+              ズレることがあったため）。上下はフェードでホイールらしく見せる。 */}
           <div className="relative shrink-0">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-9 -translate-y-1/2 rounded-control bg-mist"
-            />
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 rounded-t-control bg-gradient-to-b from-cream to-transparent"
@@ -126,8 +123,8 @@ export function AdjustmentMonthPicker({
                     }}
                     aria-pressed={year === selectedYear}
                     className={clsx(
-                      "block w-full snap-center py-2 text-center text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
-                      year === selectedYear ? "text-pine" : "text-subtle hover:text-ink"
+                      "block w-full snap-center rounded-control py-2 text-center text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay",
+                      year === selectedYear ? "bg-mist text-pine" : "text-subtle hover:text-ink"
                     )}
                   >
                     {year}年
