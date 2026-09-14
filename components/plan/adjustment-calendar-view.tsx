@@ -22,7 +22,7 @@ import {
   parseMonth
 } from "@/lib/domain/calendar/calendar-month";
 import { buildDayAriaLabel, buildHomeCalendar, type HomeCalendarItem } from "@/lib/domain/home/home-calendar";
-import { formatDateTimeRange } from "@/lib/shared/format";
+import { formatDateTimeRangeWithWeekday } from "@/lib/shared/format";
 import { googleItemsFromResponse, type GoogleCalendarResponse } from "@/lib/google-calendar/free-busy-items";
 import { isJapaneseHoliday } from "@/lib/domain/calendar/japanese-holidays";
 
@@ -88,7 +88,7 @@ function CandidateTimelineItem({ candidate }: { candidate: AdjustmentCandidate }
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-bold text-pine">
-            {formatDateTimeRange(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}
+            {formatDateTimeRangeWithWeekday(candidate.startAt, candidate.endAt, Boolean(candidate.isAllDay))}
           </p>
           <h3 className="mt-1 text-base font-bold text-ink">{candidate.eventTitle}</h3>
           <p className="mt-1 text-sm text-muted">{candidate.planTitle ?? "日程調整"}</p>
@@ -112,7 +112,7 @@ function GoogleTimelineItem({ item }: { item: HomeCalendarItem }) {
           Google Calendar
         </span>
         <span className="text-sm font-bold text-pine">
-          {formatDateTimeRange(item.startAt, item.endAt, Boolean(item.isAllDay))}
+          {formatDateTimeRangeWithWeekday(item.startAt, item.endAt, Boolean(item.isAllDay))}
         </span>
       </div>
       <h3 className="mt-2 text-base font-bold text-ink">{item.title}</h3>
@@ -147,6 +147,7 @@ export function AdjustmentCalendarView({
 }) {
   const [googleItems, setGoogleItems] = useState<HomeCalendarItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
+  const [isNavigatingByMonth, setIsNavigatingByMonth] = useState(false);
   const { year, month: monthNumber } = parseMonth(month);
   const previousMonth = moveMonth(month, -1);
   const nextMonth = moveMonth(month, 1);
@@ -190,7 +191,7 @@ export function AdjustmentCalendarView({
   }, [month]);
 
   return (
-    <>
+    <div className={clsx("space-y-7 t-content-fade", isNavigatingByMonth && "is-pending")}>
       {/* 375px で7列を収めるため、モバイルだけ余白を詰める。
           削るのは余白であってセルではないので、1日あたりの表示領域はむしろ広がる。 */}
       <Card padding="p-3 sm:p-5">
@@ -207,6 +208,7 @@ export function AdjustmentCalendarView({
             currentMonth={month}
             currentYear={Number(todayDateKey.slice(0, 4))}
             label={monthLabel(month)}
+            onNavigatingChange={setIsNavigatingByMonth}
           />
           <Link
             href={`/plans?month=${nextMonth}&date=${defaultDateForMonth(nextMonth)}`}
@@ -329,6 +331,6 @@ export function AdjustmentCalendarView({
           )}
         </div>
       </Card>
-    </>
+    </div>
   );
 }
