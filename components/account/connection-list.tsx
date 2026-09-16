@@ -5,9 +5,11 @@ import { unstable_rethrow } from "next/navigation";
 import React, { useRef, useState, useTransition } from "react";
 import type { KeyboardEvent } from "react";
 
+import { ActiveSharedEventsModal } from "@/components/account/active-shared-events-modal";
 import {
   blockUserAction,
   followUserAction,
+  loadActiveSharedEventsAction,
   loadMoreConnectionsAction,
   toggleFavoriteAction,
   unfollowUserAction,
@@ -17,6 +19,7 @@ import type { ActionState } from "@/lib/domain/shared/action-state";
 import {
   isMutualFollow,
   toBlockedUser,
+  type ActiveSharedEvent,
   type BlockedUser,
   type ConnectionCandidate,
   type ConnectionCategory,
@@ -262,6 +265,9 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmingBlock, setConfirmingBlock] = useState(false);
+  const [activeEvents, setActiveEvents] = useState<ActiveSharedEvent[] | null>(null);
+  const [isLoadingActiveEvents, startActiveEventsTransition] = useTransition();
+  const [activeEventsError, setActiveEventsError] = useState<string | null>(null);
 
   function run(action: (userId: string) => Promise<ActionState>) {
     setError(null);
@@ -278,6 +284,19 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
     });
   }
 
+  function openActiveEventsModal() {
+    setActiveEventsError(null);
+    startActiveEventsTransition(async () => {
+      try {
+        const events = await loadActiveSharedEventsAction(person.userId);
+        setActiveEvents(events);
+      } catch (cause) {
+        unstable_rethrow(cause);
+        setActiveEventsError(cause instanceof Error ? cause.message : "読み込めませんでした。");
+      }
+    });
+  }
+
   return (
     <article className="rounded-control border border-line bg-surface p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -287,6 +306,17 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
             共通のイベント {person.sharedEventCount}件
             {isMutualFollow(person) ? "・相互フォロー" : person.isFollowing ? "・フォロー中" : ""}
           </p>
+          {person.activeSharedEventCount > 0 ? (
+            <button
+              type="button"
+              disabled={isLoadingActiveEvents}
+              onClick={openActiveEventsModal}
+              className="mt-1 inline-flex min-h-6 items-center text-sm font-bold text-pine underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-clay disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              進行中 {person.activeSharedEventCount}件
+            </button>
+          ) : null}
+          {activeEventsError ? <p className="mt-1 text-sm text-clay-ink" role="alert">{activeEventsError}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <ActionButton
@@ -334,6 +364,13 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
         <p className="mt-3 text-sm font-semibold text-clay-ink" role="alert">
           {error}
         </p>
+      ) : null}
+      {activeEvents ? (
+        <ActiveSharedEventsModal
+          displayName={person.displayName}
+          events={activeEvents}
+          onClose={() => setActiveEvents(null)}
+        />
       ) : null}
     </article>
   );

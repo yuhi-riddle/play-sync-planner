@@ -5,7 +5,9 @@ import { redirect, unstable_rethrow } from "next/navigation";
 
 import { errorState, successState, type ActionState } from "@/lib/domain/shared/action-state";
 import {
+  mapActiveSharedEvent,
   mapConnectionPage,
+  type ActiveSharedEvent,
   type ConnectionCategory,
   type ConnectionCursor,
   type ConnectionPage
@@ -354,4 +356,23 @@ export async function respondToEventUserInvitationAction(
     unstable_rethrow(cause);
     return errorState(cause instanceof Error ? cause.message : "招待への返答を保存できませんでした。");
   }
+}
+
+export async function loadActiveSharedEventsAction(otherUserId: string): Promise<ActiveSharedEvent[]> {
+  const user = await getCurrentActiveUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const targetUserId = requireTargetUserId(otherUserId);
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_active_shared_events", {
+    p_other_user_id: targetUserId
+  });
+
+  if (error) {
+    throw new Error("進行中の共通イベントを読み込めませんでした");
+  }
+
+  return (data ?? []).map(mapActiveSharedEvent);
 }

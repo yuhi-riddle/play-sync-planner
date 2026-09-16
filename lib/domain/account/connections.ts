@@ -1,7 +1,10 @@
+import type { EventDisplayState } from "@/lib/domain/event/event-filter";
+
 export type ConnectionCandidate = {
   userId: string;
   displayName: string;
   sharedEventCount: number;
+  activeSharedEventCount: number;
   latestSharedAt: string;
   isFollowing: boolean;
   isFollowedBy: boolean;
@@ -23,6 +26,7 @@ type ConnectionRpcRow = {
   user_id: string;
   display_name: string;
   shared_event_count: number | string;
+  active_shared_event_count: number | string;
   latest_shared_at: string | null;
   is_following: boolean;
   is_followed_by: boolean;
@@ -36,6 +40,7 @@ export function mapConnectionCandidateRow(row: ConnectionRpcRow): ConnectionCand
     userId: row.user_id,
     displayName: row.display_name,
     sharedEventCount: Number(row.shared_event_count),
+    activeSharedEventCount: Number(row.active_shared_event_count),
     latestSharedAt: row.latest_shared_at ?? "",
     isFollowing: row.is_following,
     isFollowedBy: row.is_followed_by,
@@ -110,4 +115,24 @@ export function sortInviteCandidates(candidates: ConnectionCandidate[]): Connect
 
     return a.userId.localeCompare(b.userId);
   });
+}
+
+export type ActiveSharedEvent = {
+  eventId: string;
+  title: string;
+  displayState: EventDisplayState;
+};
+
+type ActiveSharedEventRpcRow = {
+  event_id: string;
+  title: string;
+  display_state: string;
+};
+
+export function mapActiveSharedEvent(row: ActiveSharedEventRpcRow): ActiveSharedEvent {
+  return {
+    eventId: row.event_id,
+    title: row.title,
+    displayState: row.display_state as EventDisplayState
+  };
 }
