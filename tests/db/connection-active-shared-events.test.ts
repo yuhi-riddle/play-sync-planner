@@ -137,6 +137,10 @@ describe("list_connections の active_shared_event_count", () => {
     await joinEvent(doneEventId, other);
 
     await asUser(me);
+    // follow_user_atomic ではなく直接 insert する。RPCの内部で呼ぶ
+    // private.try_consume_authenticated_rate_limit_once（035_authenticated_rate_limits.sql:141-168）が
+    // search_path='' の下で digest() を非修飾で呼んでおり解決できない、既存の無関係なバグがあるため。
+    // list_connections は user_connections のフォロー行だけを見るので、状態としては等価。
     await client.query(
       "insert into public.user_connections (follower_user_id, followed_user_id) values ($1,$2)",
       [me, other]
