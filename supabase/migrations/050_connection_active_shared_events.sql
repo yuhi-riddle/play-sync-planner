@@ -77,6 +77,10 @@ select
   end as display_state
 from event_state;
 
+-- PostgRESTの初期設定は新規リレーションにanon/authenticatedへのSELECTを自動付与するため、
+-- このビューは下のsecurity definer RPC経由でのみ到達可能にする（032の関数版と同じ対処）。
+revoke all on table public.event_activity_state from anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- 自分と相手の両方が現在も joined な、進行中の共通イベント一覧
 -- ---------------------------------------------------------------------------
@@ -329,4 +333,5 @@ commit;
 -- drop function if exists public.list_connections(text, timestamptz, uuid, integer);
 -- （その後、034時点の list_connections 定義を再適用する）
 -- drop function if exists public.list_active_shared_events(uuid);
+-- grant select on table public.event_activity_state to anon, authenticated;
 -- drop view if exists public.event_activity_state;

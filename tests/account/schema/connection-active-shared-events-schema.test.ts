@@ -17,6 +17,7 @@ describe("connection active shared events migration", () => {
     expect(migration).toContain("as display_state");
     expect(migration).toContain("'settlement_waiting'");
     expect(migration).toContain("'schedule_creation_waiting'");
+    expect(migration).toContain("revoke all on table public.event_activity_state from anon, authenticated;");
   });
 
   it("creates list_active_shared_events with a block check", () => {
