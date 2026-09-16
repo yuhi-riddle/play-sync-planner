@@ -2,11 +2,14 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { unblockUserAction, unfollowUserAction, loadMoreConnectionsAction } = vi.hoisted(() => ({
-  unblockUserAction: vi.fn().mockResolvedValue(undefined),
-  unfollowUserAction: vi.fn(),
-  loadMoreConnectionsAction: vi.fn()
-}));
+const { unblockUserAction, unfollowUserAction, loadMoreConnectionsAction, loadActiveSharedEventsAction } = vi.hoisted(
+  () => ({
+    unblockUserAction: vi.fn().mockResolvedValue(undefined),
+    unfollowUserAction: vi.fn(),
+    loadMoreConnectionsAction: vi.fn(),
+    loadActiveSharedEventsAction: vi.fn()
+  })
+);
 
 vi.mock("@/lib/actions/account/connections", () => ({
   blockUserAction: vi.fn(),
@@ -14,7 +17,8 @@ vi.mock("@/lib/actions/account/connections", () => ({
   toggleFavoriteAction: vi.fn(),
   unfollowUserAction,
   unblockUserAction,
-  loadMoreConnectionsAction
+  loadMoreConnectionsAction,
+  loadActiveSharedEventsAction
 }));
 
 vi.mock("next/navigation", () => ({
@@ -30,6 +34,7 @@ const favorite: ConnectionCandidate = {
   userId: "11111111-1111-4111-8111-111111111111",
   displayName: "あきらさん",
   sharedEventCount: 3,
+  activeSharedEventCount: 2,
   latestSharedAt: "2026-07-01T10:00:00.000Z",
   isFollowing: true,
   isFollowedBy: true,
@@ -40,6 +45,7 @@ const following: ConnectionCandidate = {
   ...favorite,
   userId: "22222222-2222-4222-8222-222222222222",
   displayName: "はるかさん",
+  activeSharedEventCount: 0,
   isFollowing: true,
   isFollowedBy: false,
   isFavorite: false
@@ -49,6 +55,7 @@ const candidate: ConnectionCandidate = {
   ...favorite,
   userId: "33333333-3333-4333-8333-333333333333",
   displayName: "みなとさん",
+  activeSharedEventCount: 0,
   isFollowing: false,
   isFollowedBy: false,
   isFavorite: false
@@ -233,5 +240,42 @@ describe("ConnectionList", () => {
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("続きを読み込めませんでした。"));
     await waitFor(() => expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument());
+  });
+
+  describe("進行中の共通イベント", () => {
+    it("activeSharedEventCountが0より大きいときだけボタンを出す", () => {
+      render(
+        <ConnectionList
+          favorites={{ items: [favorite], totalCount: 1, nextCursor: null }}
+          following={{ items: [following], totalCount: 1, nextCursor: null }}
+          candidates={{ items: [candidate], totalCount: 1, nextCursor: null }}
+        />
+      );
+
+      expect(screen.getByRole("button", { name: "進行中 2件" })).toBeInTheDocument();
+    });
+
+    it("押すとloadActiveSharedEventsActionを呼び、結果をモーダルに表示する", async () => {
+      loadActiveSharedEventsAction.mockResolvedValue([
+        { eventId: "event-1", title: "夏の集まり", displayState: "event_waiting" }
+      ]);
+
+      render(
+        <ConnectionList
+          favorites={{ items: [favorite], totalCount: 1, nextCursor: null }}
+          following={{ items: [], totalCount: 0, nextCursor: null }}
+          candidates={{ items: [], totalCount: 0, nextCursor: null }}
+        />
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "進行中 2件" }));
+
+      await waitFor(() => {
+        expect(loadActiveSharedEventsAction).toHaveBeenCalledWith(favorite.userId);
+      });
+      await waitFor(() => {
+        expect(screen.getByRole("link", { name: /夏の集まり/ })).toBeInTheDocument();
+      });
+    });
   });
 });
