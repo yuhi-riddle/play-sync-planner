@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isMutualFollow,
+  mapActiveSharedEvent,
   mapConnectionCandidateRow,
   mapConnectionCounts,
   mapConnectionPage,
@@ -14,6 +15,7 @@ const baseCandidate: ConnectionCandidate = {
   userId: "base",
   displayName: "Base",
   sharedEventCount: 1,
+  activeSharedEventCount: 0,
   latestSharedAt: "2026-07-01T00:00:00.000Z",
   isFollowing: false,
   isFollowedBy: false,
@@ -67,12 +69,13 @@ describe("toBlockedUser", () => {
 });
 
 describe("mapConnectionCandidateRow", () => {
-  it("converts an RPC row into a ConnectionCandidate, coercing the bigint count", () => {
+  it("converts an RPC row into a ConnectionCandidate, coercing the bigint counts", () => {
     expect(
       mapConnectionCandidateRow({
         user_id: "row-user",
         display_name: "行のユーザー",
         shared_event_count: "3",
+        active_shared_event_count: "1",
         latest_shared_at: "2026-07-01T00:00:00.000Z",
         is_following: true,
         is_followed_by: false,
@@ -84,6 +87,7 @@ describe("mapConnectionCandidateRow", () => {
       userId: "row-user",
       displayName: "行のユーザー",
       sharedEventCount: 3,
+      activeSharedEventCount: 1,
       latestSharedAt: "2026-07-01T00:00:00.000Z",
       isFollowing: true,
       isFollowedBy: false,
@@ -97,6 +101,7 @@ describe("mapConnectionCandidateRow", () => {
         user_id: "row-user",
         display_name: "行のユーザー",
         shared_event_count: 0,
+        active_shared_event_count: 0,
         latest_shared_at: null,
         is_following: false,
         is_followed_by: false,
@@ -113,6 +118,7 @@ describe("mapConnectionPage", () => {
     user_id: userId,
     display_name: userId,
     shared_event_count: 1,
+    active_shared_event_count: 1,
     latest_shared_at: "2026-07-01T00:00:00.000Z",
     is_following: false,
     is_followed_by: false,
@@ -151,6 +157,22 @@ describe("mapConnectionCounts", () => {
       following: 0,
       shared: 0,
       blocked: 0
+    });
+  });
+});
+
+describe("mapActiveSharedEvent", () => {
+  it("converts an RPC row into an ActiveSharedEvent", () => {
+    expect(
+      mapActiveSharedEvent({
+        event_id: "event-1",
+        title: "夏の集まり",
+        display_state: "event_waiting"
+      })
+    ).toEqual({
+      eventId: "event-1",
+      title: "夏の集まり",
+      displayState: "event_waiting"
     });
   });
 });
