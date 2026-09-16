@@ -14,6 +14,7 @@ const favorite = {
   userId: "11111111-1111-4111-8111-111111111111",
   displayName: "Aさん",
   sharedEventCount: 3,
+  activeSharedEventCount: 0,
   latestSharedAt: "2026-07-01T10:00:00.000Z",
   isFollowing: true,
   isFollowedBy: true,
