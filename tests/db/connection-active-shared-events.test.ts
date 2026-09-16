@@ -137,7 +137,10 @@ describe("list_connections の active_shared_event_count", () => {
     await joinEvent(doneEventId, other);
 
     await asUser(me);
-    await client.query("select public.follow_user_atomic($1)", [other]);
+    await client.query(
+      "insert into public.user_connections (follower_user_id, followed_user_id) values ($1,$2)",
+      [me, other]
+    );
     const { rows } = await client.query(
       "select shared_event_count, active_shared_event_count from public.list_connections('following', null, null, 20)"
     );
