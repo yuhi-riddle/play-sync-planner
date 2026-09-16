@@ -37,4 +37,17 @@ describe("connection active shared events migration", () => {
     expect(migration).toContain("active_shared_event_count bigint");
     expect(migration).toContain("count(*) filter (where activity.is_active)::bigint as active_shared_event_count");
   });
+
+  it("restores execute grants for list_active_shared_events and list_connections", () => {
+    const migration = readFileSync(migrationPath, "utf8");
+
+    expect(migration).toContain("revoke all on function public.list_active_shared_events(uuid) from public;");
+    expect(migration).toContain("revoke all on function public.list_active_shared_events(uuid) from anon;");
+    expect(migration).toContain("grant execute on function public.list_active_shared_events(uuid) to authenticated;");
+    expect(migration).toContain("grant execute on function public.list_active_shared_events(uuid) to service_role;");
+    expect(migration).toContain("revoke all on function public.list_connections(text, timestamptz, uuid, integer) from public;");
+    expect(migration).toContain("revoke all on function public.list_connections(text, timestamptz, uuid, integer) from anon;");
+    expect(migration).toContain("grant execute on function public.list_connections(text, timestamptz, uuid, integer) to authenticated;");
+    expect(migration).toContain("grant execute on function public.list_connections(text, timestamptz, uuid, integer) to service_role;");
+  });
 });

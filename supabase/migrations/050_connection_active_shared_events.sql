@@ -145,6 +145,11 @@ begin
 end;
 $$;
 
+revoke all on function public.list_active_shared_events(uuid) from public;
+revoke all on function public.list_active_shared_events(uuid) from anon;
+grant execute on function public.list_active_shared_events(uuid) to authenticated;
+grant execute on function public.list_active_shared_events(uuid) to service_role;
+
 -- ---------------------------------------------------------------------------
 -- list_connections に active_shared_event_count を追加（戻り値の列が増えるので
 -- create or replace ではなく drop してから作り直す）
@@ -326,12 +331,19 @@ begin
 end;
 $$;
 
+revoke all on function public.list_connections(text, timestamptz, uuid, integer) from public;
+revoke all on function public.list_connections(text, timestamptz, uuid, integer) from anon;
+grant execute on function public.list_connections(text, timestamptz, uuid, integer) to authenticated;
+grant execute on function public.list_connections(text, timestamptz, uuid, integer) to service_role;
+
 commit;
 
 -- ロールバック（今回の変更をすべて戻す場合はこれを実行する）:
 --
+-- grant execute on function public.list_connections(text, timestamptz, uuid, integer) to anon;
 -- drop function if exists public.list_connections(text, timestamptz, uuid, integer);
 -- （その後、034時点の list_connections 定義を再適用する）
+-- grant execute on function public.list_active_shared_events(uuid) to anon;
 -- drop function if exists public.list_active_shared_events(uuid);
 -- grant select on table public.event_activity_state to anon, authenticated;
 -- drop view if exists public.event_activity_state;

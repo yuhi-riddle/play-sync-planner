@@ -316,7 +316,7 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
               進行中 {person.activeSharedEventCount}件
             </button>
           ) : null}
-          {activeEventsError ? <p className="mt-1 text-sm text-clay-ink">{activeEventsError}</p> : null}
+          {activeEventsError ? <p className="mt-1 text-sm text-clay-ink" role="alert">{activeEventsError}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <ActionButton
