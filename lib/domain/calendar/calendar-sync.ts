@@ -1,3 +1,5 @@
+import { toJstDateKey } from "@/lib/shared/jst";
+
 export type ConfirmedCalendarEvent = {
   title: string;
   location: string | null;
@@ -137,7 +139,7 @@ function foldIcsLine(line: string): string {
 
 /** 終日予定用。日付だけを YYYYMMDD で書く。 */
 function formatIcsDate(value: string): string {
-  return value.slice(0, 10).replace(/-/g, "");
+  return toJstDateKey(value).replace(/-/g, "");
 }
 
 /**
