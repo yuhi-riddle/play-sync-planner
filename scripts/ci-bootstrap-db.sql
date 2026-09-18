@@ -8,7 +8,11 @@
 -- このファイルは CI の migrations ジョブでのみ実行する（scripts/apply-migrations.sh の前）。
 -- 本番・ローカルの実 Supabase では実行しない。
 
-create extension if not exists pgcrypto;
+-- 本番のSupabaseはpgcryptoをextensionsスキーマにインストールする。
+-- publicへ入れると非修飾のdigest()呼び出しがCIでは通るのに本番でだけ失敗する
+-- 問題を見逃す（migration 051で実際に踏んだ）。
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------------------------------------------------------------------------
 -- ロール
