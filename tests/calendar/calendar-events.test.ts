@@ -243,4 +243,39 @@ describe("calendar event helpers", () => {
       })
     );
   });
+
+  /*
+   * DBに実際に保存される値はtoISOString()が返すUTCの"Z"付き文字列（例: JST 7/1 00:00 は
+   * "2026-06-30T15:00:00.000Z"）。"+09:00"を直書きした上のテストだとslice(0,10)が
+   * JST日付とたまたま一致してバグを検出できない。
+   */
+  it("inserts an all-day confirmed calendar event with UTC-stored values (real DB format)", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: "google-event-1" })
+    })) as unknown as typeof fetch;
+
+    await insertCalendarEvent({
+      accessToken: "access-token",
+      event: {
+        title: "終日イベント",
+        location: null,
+        start: "2026-06-30T15:00:00.000Z",
+        end: "2026-07-01T15:00:00.000Z",
+        isAllDay: true
+      },
+      fetchImpl
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+      expect.objectContaining({
+        body: JSON.stringify({
+          summary: "終日イベント",
+          start: { date: "2026-07-01" },
+          end: { date: "2026-07-02" }
+        })
+      })
+    );
+  });
 });

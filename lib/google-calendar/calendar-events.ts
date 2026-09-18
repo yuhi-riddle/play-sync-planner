@@ -1,5 +1,6 @@
 import type { BusyRange } from "@/lib/domain/calendar/calendar-availability";
 import type { ConfirmedCalendarEvent } from "@/lib/domain/calendar/calendar-sync";
+import { toJstDateKey } from "@/lib/shared/jst";
 
 export type CalendarEventRange = BusyRange & {
   title: string | null;
@@ -146,8 +147,8 @@ export async function insertCalendarEvent({
         ...externalId,
         summary: event.title,
         ...(event.location ? { location: event.location } : {}),
-        start: { date: event.start.slice(0, 10) },
-        end: { date: event.end.slice(0, 10) },
+        start: { date: toJstDateKey(event.start) },
+        end: { date: toJstDateKey(event.end) },
         ...attendees
       }
     : {

@@ -134,6 +134,28 @@ describe("buildIcsCalendar", () => {
   });
 
   /*
+   * DBに実際に保存される値はtoISOString()が返すUTCの"Z"付き文字列（例: JST 7/1 00:00 は
+   * "2026-06-30T15:00:00.000Z"）。上のテストのように"+09:00"を直書きした値だと
+   * slice(0,10)がJST日付とたまたま一致してバグを検出できない。
+   */
+  it("終日予定はUTCで保存された値でもJSTの日付になる（実際のDB保存形式）", () => {
+    const ics = buildIcsCalendar({
+      uid: "plan-1@madoi",
+      now,
+      event: {
+        title: "合宿",
+        location: null,
+        start: "2026-06-30T15:00:00.000Z",
+        end: "2026-07-02T15:00:00.000Z",
+        isAllDay: true
+      }
+    });
+
+    expect(lines(ics)).toContain("DTSTART;VALUE=DATE:20260701");
+    expect(lines(ics)).toContain("DTEND;VALUE=DATE:20260703");
+  });
+
+  /*
    * 題名に「,」や「;」が入っただけで値が割れて読まれる。
    * 「A, B」のような書き方は普通にありえる。
    */
