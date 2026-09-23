@@ -26,8 +26,7 @@ type CalendarRpcRow = {
   plan_id: string;
   event_title: string | null;
   plan_title: string | null;
-  // 本番の list_calendar_items は migration 052 適用までは location_name を返さない。
-  location_name?: string | null;
+  location_name: string | null;
   start_at: string;
   end_at: string | null;
   is_all_day: boolean | null;

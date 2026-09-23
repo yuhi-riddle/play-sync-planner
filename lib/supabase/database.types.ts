@@ -1388,6 +1388,7 @@ export type Database = {
           end_at: string
           event_title: string
           is_all_day: boolean
+          location_name: string
           maybe_count: number
           no_count: number
           plan_id: string
