@@ -62,7 +62,7 @@ export type PlanNotificationSettlement = {
   amount: number | null;
   status: string | null;
   from_participant_id: string | null;
-  participants?: { display_name: string | null } | { display_name: string | null }[] | null;
+  participants?: { display_name: string | null } | null;
   settlement_payments?: PlanNotificationSettlementPayment[];
 };
 
@@ -78,10 +78,10 @@ export type PlanNotificationPlan = {
   status: string;
   settlement_status: string | null;
   answer_deadline_at: string | null;
-  events: { title: string | null } | { title: string | null }[] | null;
+  events: { title: string | null } | null;
   participants?: PlanNotificationParticipant[];
   settlements?: PlanNotificationSettlement[];
-  plan_reminder_settings?: PlanNotificationReminderSetting[] | PlanNotificationReminderSetting | null;
+  plan_reminder_settings?: PlanNotificationReminderSetting | null;
 };
 
 const notificationTitles: Record<NotificationKind, string> = {
@@ -316,12 +316,12 @@ export function selectPriorityNotification<T extends { kind: string; created_at?
 }
 
 function planTitle(plan: PlanNotificationPlan) {
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const event = plan.events;
   return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
 }
 
 function reminderOffsets(settings: PlanNotificationPlan["plan_reminder_settings"]) {
-  const setting = Array.isArray(settings) ? settings[0] : settings;
+  const setting = settings;
   const offsets = setting?.reminder_offsets_minutes?.length
     ? setting.reminder_offsets_minutes
     : setting?.reminder_offset_minutes === null || setting?.reminder_offset_minutes === undefined
@@ -355,7 +355,7 @@ function remainingAmount(settlement: PlanNotificationSettlement) {
 }
 
 function participantName(settlement: PlanNotificationSettlement) {
-  const participant = Array.isArray(settlement.participants) ? settlement.participants[0] : settlement.participants;
+  const participant = settlement.participants;
   return participant?.display_name?.trim() ?? "";
 }
 

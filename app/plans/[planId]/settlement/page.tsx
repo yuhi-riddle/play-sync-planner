@@ -42,7 +42,6 @@ export const dynamic = "force-dynamic";
 
 type ParticipantRelation =
   | { id: string; display_name: string; user_id?: string | null; settlement_payment_method?: string | null }
-  | { id: string; display_name: string; user_id?: string | null; settlement_payment_method?: string | null }[]
   | null;
 
 type ParticipantRow = {
@@ -116,12 +115,8 @@ const settlementStatusLabels: Record<SettlementPaymentProgress["status"], string
   confirmed: "受け取り確認済み"
 };
 
-function firstParticipant(value: ParticipantRelation) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 function participantName(value: ParticipantRelation) {
-  return firstParticipant(value)?.display_name ?? "不明な参加者";
+  return value?.display_name ?? "不明な参加者";
 }
 
 function settlementProgress(settlement: SettlementRow) {
@@ -168,7 +163,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     notFound();
   }
 
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const event = plan.events;
   const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
     a.display_name.localeCompare(b.display_name, "ja")
   );
@@ -185,8 +180,8 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
     ? resolveParticipantSettlementRole(
         myParticipant.id,
         settlements.map((settlement) => ({
-          fromParticipantId: firstParticipant(settlement.from_participant)?.id ?? "",
-          toParticipantId: firstParticipant(settlement.to_participant)?.id ?? ""
+          fromParticipantId: settlement.from_participant?.id ?? "",
+          toParticipantId: settlement.to_participant?.id ?? ""
         }))
       )
     : null;
@@ -205,7 +200,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
   const markReminderSent = markSettlementReminderSentAction.bind(null, plan.id);
   const unpaidSettlements = settlements.filter((settlement) => settlementProgress(settlement).remainingAmount > 0);
   const hasMissingPaymentInstructions = unpaidSettlements.some(
-    (settlement) => !firstParticipant(settlement.to_participant)?.settlement_payment_method && !settlement.payment_url
+    (settlement) => !settlement.to_participant?.settlement_payment_method && !settlement.payment_url
   );
   const settlementPaymentCount = settlements.reduce((total, settlement) => total + (settlement.settlement_payments ?? []).length, 0);
   const settlementOverview = summarizeSettlementOverview(
@@ -237,7 +232,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
         fromName: participantName(settlement.from_participant),
         toName: participantName(settlement.to_participant),
         remainingAmount: progress.remainingAmount,
-        paymentMethod: firstParticipant(settlement.to_participant)?.settlement_payment_method ?? null,
+        paymentMethod: settlement.to_participant?.settlement_payment_method ?? null,
         paymentUrl: settlement.payment_url,
         memo: settlement.memo
       };
@@ -261,7 +256,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
           paymentMethod: payment.payment_method,
           paymentUrl: payment.payment_url,
           memo: payment.memo,
-          canConfirm: firstParticipant(settlement.to_participant)?.user_id === userId
+          canConfirm: settlement.to_participant?.user_id === userId
         }))
     )
     .sort((a, b) => b.paidAt.localeCompare(a.paidAt));
@@ -457,7 +452,7 @@ export default async function SettlementPage({ params }: { params: Promise<{ pla
                       settlement={settlement}
                       progress={progress}
                       canManage={isOwner}
-                      canConfirm={firstParticipant(settlement.to_participant)?.user_id === userId}
+                      canConfirm={settlement.to_participant?.user_id === userId}
                     />
                   </div>
                 </article>
@@ -719,7 +714,7 @@ function SettlementActions({
   canConfirm: boolean;
 }) {
   const instructionView = getPaymentInstructionView(
-    firstParticipant(settlement.to_participant)?.settlement_payment_method ?? null,
+    settlement.to_participant?.settlement_payment_method ?? null,
     settlement.payment_url
   );
 
@@ -731,7 +726,7 @@ function SettlementActions({
         <p className="text-eyebrow uppercase text-pine">支払い先</p>
         <p className="mt-2 text-sm font-bold text-ink">{instructionView.methodLabel}</p>
         <PaymentDestinationLink href={settlement.payment_url} label={instructionView.linkLabel} detail={instructionView.detail} className="mt-2" />
-        {progress.remainingAmount > 0 && isPayPayMethod(firstParticipant(settlement.to_participant)?.settlement_payment_method) ? (
+        {progress.remainingAmount > 0 && isPayPayMethod(settlement.to_participant?.settlement_payment_method) ? (
           <PayPayActionPanel amount={progress.remainingAmount} className="mt-3" />
         ) : null}
         {settlement.memo ? <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">メモ: {settlement.memo}</p> : null}

@@ -26,7 +26,7 @@ type ConnectionRpcRow = {
   user_id: string;
   display_name: string;
   shared_event_count: number | string;
-  active_shared_event_count: number | string;
+  active_shared_event_count?: number | string;
   latest_shared_at: string | null;
   is_following: boolean;
   is_followed_by: boolean;
@@ -40,7 +40,7 @@ export function mapConnectionCandidateRow(row: ConnectionRpcRow): ConnectionCand
     userId: row.user_id,
     displayName: row.display_name,
     sharedEventCount: Number(row.shared_event_count),
-    activeSharedEventCount: Number(row.active_shared_event_count),
+    activeSharedEventCount: Number(row.active_shared_event_count ?? 0),
     latestSharedAt: row.latest_shared_at ?? "",
     isFollowing: row.is_following,
     isFollowedBy: row.is_followed_by,

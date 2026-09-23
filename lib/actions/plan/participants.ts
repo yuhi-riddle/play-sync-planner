@@ -7,12 +7,8 @@ import { errorState, failWith, successState, type ActionState } from "@/lib/doma
 import { participantDeletionRefusal } from "@/lib/domain/plan/participant-deletion";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supabase/server";
 
-type ExpenseTitleRow = { title: string | null };
-type SplitRow = { expenses: ExpenseTitleRow | ExpenseTitleRow[] | null };
-
-function titleOf(expense: ExpenseTitleRow | ExpenseTitleRow[] | null) {
-  const row = Array.isArray(expense) ? expense[0] : expense;
-  return row?.title?.trim() || "名前のない立替";
+function titleOf(expense: { title: string | null } | null) {
+  return expense?.title?.trim() || "名前のない立替";
 }
 
 /**
@@ -79,8 +75,8 @@ export async function deletePlanParticipantAction(
    * （lib/domain/action-state.ts）、ActionState で返す。
    */
   const refusal = participantDeletionRefusal(participant.display_name, {
-    paidExpenseTitles: ((paidExpenses ?? []) as ExpenseTitleRow[]).map((expense) => titleOf(expense)),
-    splitExpenseTitles: ((splits ?? []) as SplitRow[]).map((split) => titleOf(split.expenses))
+    paidExpenseTitles: (paidExpenses ?? []).map((expense) => titleOf(expense)),
+    splitExpenseTitles: (splits ?? []).map((split) => titleOf(split.expenses))
   });
 
   if (refusal) {

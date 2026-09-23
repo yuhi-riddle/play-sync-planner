@@ -111,6 +111,23 @@ describe("mapConnectionCandidateRow", () => {
       }).latestSharedAt
     ).toBe("");
   });
+
+  // list_event_invite_candidates は進行中の共通イベント数を返さない。
+  it("treats a missing active_shared_event_count as 0 instead of NaN", () => {
+    expect(
+      mapConnectionCandidateRow({
+        user_id: "row-user",
+        display_name: "行のユーザー",
+        shared_event_count: 2,
+        latest_shared_at: "2026-07-01T00:00:00.000Z",
+        is_following: false,
+        is_followed_by: false,
+        is_favorite: false,
+        cursor_at: "2026-07-01T00:00:00.000Z",
+        cursor_user_id: "row-user"
+      }).activeSharedEventCount
+    ).toBe(0);
+  });
 });
 
 describe("mapConnectionPage", () => {

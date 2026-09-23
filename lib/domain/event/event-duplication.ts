@@ -2,7 +2,7 @@ const COPY_SUFFIX = "（コピー）";
 const DEFAULT_TITLE = "新しいイベント";
 
 export type DuplicableEvent = {
-  category: string | null;
+  category: string;
   title: string | null;
   url: string | null;
   location_name: string | null;
@@ -11,7 +11,7 @@ export type DuplicableEvent = {
 };
 
 export type DuplicatedEvent = {
-  category: string | null;
+  category: string;
   title: string;
   url: string | null;
   location_name: string | null;

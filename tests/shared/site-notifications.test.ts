@@ -208,7 +208,7 @@ describe("buildPlanNotificationInputs", () => {
         answer_deadline_at: "2026-07-10T21:00:00+09:00",
         events: { title: "イベント" },
         participants: [{ display_name: "鈴木", status: "invited" }],
-        plan_reminder_settings: [{ reminder_offset_minutes: 1440, reminder_offsets_minutes: [1440, 180] }],
+        plan_reminder_settings: { reminder_offset_minutes: 1440, reminder_offsets_minutes: [1440, 180] },
         settlements: []
       },
       new Date("2026-07-10T18:30:00+09:00")
@@ -231,7 +231,7 @@ describe("buildPlanNotificationInputs", () => {
         answer_deadline_at: "2026-07-10T21:00:00+09:00",
         events: { title: "イベント" },
         participants: [],
-        plan_reminder_settings: [{ reminder_offset_minutes: null, reminder_offsets_minutes: [180] }],
+        plan_reminder_settings: { reminder_offset_minutes: null, reminder_offsets_minutes: [180] },
         settlements: []
       },
       new Date("2026-07-10T17:59:00+09:00")

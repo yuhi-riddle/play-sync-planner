@@ -60,7 +60,7 @@ function basePlan(overrides: Record<string, unknown> = {}) {
     // JST 2026-08-15 13:00 - 19:00（単日）。
     confirmed_start_at: "2026-08-15T04:00:00+00:00",
     confirmed_end_at: "2026-08-15T10:00:00+00:00",
-    events: [{ id: eventId, title: "夏合宿" }],
+    events: { id: eventId, title: "夏合宿" },
     participants: [participant("p1", "田中", ownerId), participant("p2", "鈴木", memberUserId)],
     ...overrides
   };

@@ -13,18 +13,6 @@ function calendarEventExternalId(planId: string) {
   return `madoiplan${planId.replace(/-/g, "")}`;
 }
 
-type PlanCalendarRow = {
-  id: string;
-  title: string | null;
-  owner_user_id: string;
-  confirmed_start_at: string | null;
-  confirmed_end_at: string | null;
-  is_all_day?: boolean | null;
-  google_calendar_event_id: string | null;
-  events: { title: string | null; location_name: string | null } | { title: string | null; location_name: string | null }[] | null;
-  participants?: Array<{ user_id: string | null; status: string }>;
-};
-
 export async function createGoogleCalendarEventForPlanAction(planId: string) {
   const userId = await getCurrentActiveUserId();
   if (!userId) {
@@ -45,7 +33,7 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
     throw new Error("日程調整が見つかりません");
   }
 
-  const planRow = plan as PlanCalendarRow;
+  const planRow = plan;
   if (!planRow.confirmed_start_at) {
     throw new Error("日程が確定していません");
   }
@@ -104,7 +92,7 @@ export async function createGoogleCalendarEventForPlanAction(planId: string) {
       ? await createSupabaseAdminClient().from("calendar_integrations").select("account_email").eq("provider", "google").in("user_id", participantUserIds)
       : { data: [] };
   const attendeeEmails = [...new Set((attendeeIntegrations ?? []).flatMap((integration) => (integration.account_email ? [integration.account_email] : [])))];
-  const event = Array.isArray(planRow.events) ? planRow.events[0] : planRow.events;
+  const event = planRow.events;
 
   try {
     const accessToken = await resolveGoogleCalendarAccessToken({ supabase, userId, integration: integration as CalendarIntegrationRow });

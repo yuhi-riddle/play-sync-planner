@@ -5,8 +5,6 @@ import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/serve
 
 export const dynamic = "force-dynamic";
 
-type PlanEvent = { title: string | null; location_name: string | null };
-
 /**
  * 確定した予定を .ics で返す。
  *
@@ -46,7 +44,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pla
     return notFoundResponse();
   }
 
-  const event = (Array.isArray(plan.events) ? plan.events[0] : plan.events) as PlanEvent | null;
+  const event = plan.events;
   const ics = buildIcsCalendar({
     uid: `${plan.id}@madoi`,
     event: buildConfirmedCalendarEvent({

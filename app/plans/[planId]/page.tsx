@@ -60,11 +60,6 @@ type ParticipantRow = {
   status: string;
 };
 
-type ReminderSettingRow = {
-  reminder_offset_minutes: number | null;
-  reminder_offsets_minutes?: number[] | null;
-};
-
 type ReminderLogRow = {
   sent_at: string;
 };
@@ -152,16 +147,14 @@ export default async function PlanDetailPage({
     (link) => (link.status ?? "open") === "open"
   )?.token;
   const shareUrl = shareToken ? `${protocol}://${host}/s/${shareToken}/answer` : null;
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const event = plan.events;
   const participants = ((plan.participants ?? []) as ParticipantRow[]).sort((a, b) =>
     a.display_name.localeCompare(b.display_name, "ja")
   );
   const participantProgress = summarizeParticipantProgress(participants);
   const pendingParticipantRows = pendingParticipants(participants);
   const pendingNames = pendingParticipantRows.map((participant) => participant.display_name);
-  const reminderSetting = (Array.isArray(plan.plan_reminder_settings)
-    ? plan.plan_reminder_settings[0]
-    : plan.plan_reminder_settings) as ReminderSettingRow | null | undefined;
+  const reminderSetting = plan.plan_reminder_settings;
   const reminderOffsetMinutes = reminderSetting?.reminder_offset_minutes ?? null;
   const reminderOffsetsMinutes = reminderSetting?.reminder_offsets_minutes?.length
     ? reminderSetting.reminder_offsets_minutes
