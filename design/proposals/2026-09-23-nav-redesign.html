@@ -1,0 +1,396 @@
+<title>ナビの入口の置き場所</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap">
+
+<style>
+  :root {
+    --canvas: #f7f3ef; --surface: #fffdf7; --sunken: #f6f0e4;
+    --line: #e4dac6; --line-strong: #cbbfa6;
+    --text: #262320; --muted: #6f665c; --subtle: #948a7d;
+    --moss: #5f7d65; --pine: #344f43; --pine-deep: #2c4638;
+    --clay: #df7d69; --clay-ink: #a8492f; --mist: #eff3ee; --skywash: #d9e8e7;
+    --scrim: rgba(38, 35, 32, .38);
+    --good: #3f7a52; --bad: #a8492f; --meh: #7f5c19;
+    --shadow: 0 1px 2px rgba(62,51,39,.04), 0 3px 10px rgba(62,51,39,.05);
+    --lift: 0 20px 48px rgba(62,51,39,.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
+      --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
+      --moss: #8fae94; --pine: #b9d3c0; --pine-deep: #a7c4ae; --clay: #e0917a;
+      --clay-ink: #eaa892; --mist: #2b332c; --skywash: #24302f; --scrim: rgba(0,0,0,.55);
+      --good: #8fc79f; --bad: #eaa892; --meh: #e6c68a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.35);
+      --lift: 0 20px 48px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
+    --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
+    --moss: #8fae94; --pine: #b9d3c0; --pine-deep: #a7c4ae; --clay: #e0917a;
+    --clay-ink: #eaa892; --mist: #2b332c; --skywash: #24302f; --scrim: rgba(0,0,0,.55);
+    --good: #8fc79f; --bad: #eaa892; --meh: #e6c68a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.35);
+    --lift: 0 20px 48px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--text);
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 36px 80px; }
+  h1 { font-size: 1.6rem; margin: 0 0 6px; text-wrap: balance; }
+  .lead { color: var(--muted); margin: 0 0 8px; max-width: 64ch; }
+  .premise { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 28px; font-size: .86rem; color: var(--muted); }
+  .premise b { color: var(--text); }
+
+  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 20px; align-items: start; }
+  .opt {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
+    padding: 18px 16px 18px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .opt.rec { border-color: var(--moss); box-shadow: 0 0 0 2px var(--moss) inset; }
+  .opt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .opt h2 { font-size: 1.12rem; margin: 0; }
+  .tag { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--mist); color: var(--pine); white-space: nowrap; }
+  .tag.now { background: var(--sunken); color: var(--muted); }
+  .aim { margin: 0; font-size: .9rem; color: var(--muted); min-height: 3.2em; }
+
+  .frames { display: flex; gap: 10px; justify-content: center; }
+
+  /* ---- 端末モック（375px を 0.62 倍で描く想定の固定サイズ） ---- */
+  .phone {
+    position: relative; width: 196px; height: 380px; flex: none;
+    border: 1px solid var(--line-strong); border-radius: 22px; overflow: hidden;
+    background: var(--canvas); box-shadow: var(--shadow); font-size: 9px;
+  }
+  .phone .cap { position: absolute; top: -18px; left: 0; right: 0; text-align: center; font-size: .7rem; color: var(--muted); }
+  .frames .slot { position: relative; padding-top: 18px; }
+  .hdr {
+    height: 34px; display: flex; align-items: center; gap: 6px; padding: 0 8px;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+  }
+  .logo { display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 10px; }
+  .logo i { width: 14px; height: 14px; border-radius: 4px; background: var(--moss); display: block; }
+  .hdr .sp { flex: 1; }
+  .ib {
+    position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--surface); display: grid; place-items: center; color: var(--muted);
+  }
+  .ib.labeled { width: auto; border-radius: 8px; padding: 0 6px; gap: 3px; display: inline-flex; align-items: center; font-size: 8.5px; font-weight: 700; color: var(--pine); }
+  .ib svg, .nav svg, .menu svg { width: 11px; height: 11px; }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #d9c7a8, #b8a17b); border: 1px solid var(--line); }
+  .badge {
+    position: absolute; top: -4px; right: -5px; min-width: 12px; height: 12px; padding: 0 3px;
+    border-radius: 6px; background: var(--clay); color: #fff; font-size: 7.5px; font-weight: 700;
+    display: grid; place-items: center; line-height: 1;
+  }
+  .body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px; }
+  .card .t { font-weight: 700; font-size: 9.5px; }
+  .card .s { color: var(--muted); font-size: 8px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--sunken); margin-top: 4px; }
+  .bar.w6 { width: 60%; } .bar.w8 { width: 82%; }
+
+  .nav {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 42px;
+    display: grid; gap: 2px; padding: 4px 4px 5px; background: var(--surface); border-top: 1px solid var(--line);
+  }
+  .nav.n4 { grid-template-columns: repeat(4, 1fr); }
+  .nav.n5 { grid-template-columns: repeat(5, 1fr); }
+  .nav a {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    border-radius: 7px; color: var(--muted); font-size: 7.5px; font-weight: 700; text-decoration: none; white-space: nowrap;
+  }
+  .nav a.on { background: var(--mist); color: var(--pine); }
+  .nav a .badge { top: 1px; right: 8px; }
+  .fab {
+    position: absolute; right: 8px; bottom: 50px; height: 22px; padding: 0 8px; border-radius: 11px;
+    background: var(--pine); color: #fff; font-size: 8px; font-weight: 700; display: flex; align-items: center; gap: 3px;
+  }
+
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface);
+    border-radius: 14px 14px 0 0; padding: 8px 8px 12px; box-shadow: var(--lift);
+  }
+  .grab { width: 26px; height: 3px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 8px; }
+  .drawer {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 72%; background: var(--surface);
+    box-shadow: var(--lift); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .menu a {
+    position: relative; display: flex; align-items: center; gap: 7px; padding: 7px 6px; border-radius: 7px;
+    color: var(--text); font-size: 9px; font-weight: 700; text-decoration: none;
+  }
+  .menu a.on { background: var(--mist); color: var(--pine); }
+  .menu a .cnt { margin-left: auto; background: var(--clay); color: #fff; border-radius: 6px; padding: 0 5px; font-size: 7.5px; line-height: 12px; }
+  .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
+  .menu .who { display: flex; align-items: center; gap: 6px; padding: 4px 6px 8px; font-size: 9px; font-weight: 700; }
+
+  /* ---- 比較表 ---- */
+  .facts { display: grid; gap: 4px; margin: 0; font-size: .84rem; }
+  .facts div { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .meh { color: var(--meh); }
+  .pc { font-size: .84rem; margin: 0; padding-left: 1.1em; color: var(--text); }
+  .pc li { margin: 2px 0; }
+  .pc li.minus { color: var(--muted); }
+
+  .verdict {
+    margin-top: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px;
+  }
+  .verdict h2 { font-size: 1.1rem; margin: 0 0 6px; }
+  .verdict p { margin: 0 0 8px; max-width: 72ch; }
+  .desk-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 12px; }
+  .desk-slot { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .dcap { font-size: .75rem; color: var(--muted); font-weight: 700; }
+  .desk { border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; background: var(--canvas); font-size: 9px; box-shadow: var(--shadow); }
+  .desk .dh { height: 38px; }
+  .drow { display: grid; gap: 6px; padding: 10px 12px 0; }
+  .drow.d4 { grid-template-columns: repeat(4, 1fr); }
+  .drow.d5 { grid-template-columns: repeat(5, 1fr); }
+  .drow a {
+    position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; height: 24px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted);
+    font-weight: 700; font-size: 8.5px; white-space: nowrap;
+  }
+  .drow a.on { border-color: var(--moss); background: var(--mist); color: var(--pine); }
+  .drow svg { width: 10px; height: 10px; }
+  .drow .badge { top: -5px; right: -4px; }
+  .dbody { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px 12px; }
+  .note { font-size: .8rem; color: var(--muted); margin-top: 18px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-range" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4M7 15h10" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c1.8.7 3 2.5 3.5 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+  <h1>設定・通知への入口をどこに置くか</h1>
+  <p class="lead">いま困っているのは「設定・通知などに行きづらい」こと。4つとも同じ条件（375px・ホーム画面・未読通知3件）で並べています。</p>
+  <div class="premise">
+    <span><b>いま設定へ行く道</b>：右上の丸いアバターをタップ（ラベルなし）</span>
+    <span><b>いま通知へ行く道</b>：右上の小さなベル（22px相当）</span>
+    <span><b>ログアウト</b>：右上に常設</span>
+  </div>
+
+  <div class="options">
+
+    <!-- 現状 -->
+    <section class="opt">
+      <div class="opt-head"><h2>現状</h2><span class="tag now">ビフォー</span></div>
+      <p class="aim">右上に丸ボタン3つ（アバター＝設定、ベル、ログアウト）。下部ナビは主要4画面だけ。</p>
+      <div class="frames">
+        <div class="slot"><div class="phone" role="img" aria-label="現状のモック">
+          <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="sp"></span>
+            <span class="avatar"></span>
+            <span class="ib"><svg><use href="#i-bell"/></svg><span class="badge">3</span></span>
+            <span class="ib"><svg><use href="#i-out"/></svg></span>
+          </div>
+          <div class="body">
+            <div class="card"><div class="t">次の予定</div><div class="s">10/4(土) 謎解き</div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">今週</div><div class="bar w8"></div><div class="bar w6"></div></div>
+          </div>
+          <nav class="nav n4">
+            <a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a>
+          </nav>
+        </div></div>
+      </div>
+      <dl class="facts">
+        <div><dt>通知まで</dt><dd>1タップ（小さい）</dd></div>
+        <div><dt>設定まで</dt><dd class="bad">1タップ（入口と分からない）</dd></div>
+        <div><dt>主要4画面まで</dt><dd>1タップ</dd></div>
+        <div><dt>下部ナビの項目幅</dt><dd>約94px</dd></div>
+      </dl>
+    </section>
+
+    <!-- 案A -->
+    <section class="opt rec">
+      <div class="opt-head"><h2>案A 通知を下部ナビへ</h2><span class="tag">推奨</span></div>
+      <p class="aim">毎日見る通知を下部ナビの5つ目に。右上は「設定」1つだけにして、ログアウトは設定画面の中へ。</p>
+      <div class="frames">
+        <div class="slot"><div class="phone" role="img" aria-label="案Aのモック">
+          <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="sp"></span>
+            <span class="ib labeled"><svg><use href="#i-gear"/></svg>設定</span>
+          </div>
+          <div class="body">
+            <div class="card"><div class="t">次の予定</div><div class="s">10/4(土) 謎解き</div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">今週</div><div class="bar w8"></div><div class="bar w6"></div></div>
+          </div>
+          <nav class="nav n5">
+            <a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a><a><svg><use href="#i-bell"/></svg>通知<span class="badge">3</span></a>
+          </nav>
+        </div></div>
+      </div>
+      <dl class="facts">
+        <div><dt>通知まで</dt><dd class="good">1タップ（下部ナビ）</dd></div>
+        <div><dt>設定まで</dt><dd class="good">1タップ（ラベル付き）</dd></div>
+        <div><dt>主要4画面まで</dt><dd>1タップ</dd></div>
+        <div><dt>下部ナビの項目幅</dt><dd class="meh">約75px</dd></div>
+      </dl>
+      <ul class="pc">
+        <li>親指の届く位置に未読バッジ。ベルを探さなくてよい</li>
+        <li>右上が1つになり、窮屈さもなくなる</li>
+        <li class="minus">下部ナビが5つで満杯。今後の追加は枠がない</li>
+        <li class="minus">ログアウトが1タップ深くなる（頻度は低い）</li>
+      </ul>
+    </section>
+
+    <!-- 案B -->
+    <section class="opt">
+      <div class="opt-head"><h2>案B 5つ目を「メニュー」に</h2><span class="tag now">拡張重視</span></div>
+      <p class="aim">下部ナビの5つ目を「メニュー」にし、下から出るシートに通知・設定・ログアウトをまとめる。右上はロゴだけ。</p>
+      <div class="frames">
+        <div class="slot"><div class="phone" role="img" aria-label="案B 閉じた状態のモック">
+          <span class="cap">閉じた状態</span>
+          <div class="hdr"><span class="logo"><i></i>Madoi</span></div>
+          <div class="body">
+            <div class="card"><div class="t">次の予定</div><div class="s">10/4(土) 謎解き</div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">今週</div><div class="bar w8"></div><div class="bar w6"></div></div>
+          </div>
+          <nav class="nav n5">
+            <a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a><a><svg><use href="#i-menu"/></svg>メニュー<span class="badge">3</span></a>
+          </nav>
+        </div></div>
+        <div class="slot"><div class="phone" role="img" aria-label="案B シートを開いた状態のモック">
+          <span class="cap">開いた状態</span>
+          <div class="hdr"><span class="logo"><i></i>Madoi</span></div>
+          <div class="body">
+            <div class="card"><div class="t">次の予定</div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet menu">
+            <div class="grab"></div>
+            <div class="who"><span class="avatar"></span>ゆうひ</div>
+            <a><svg><use href="#i-bell"/></svg>通知<span class="cnt">3</span></a>
+            <a><svg><use href="#i-gear"/></svg>設定</a>
+            <hr>
+            <a><svg><use href="#i-out"/></svg>ログアウト</a>
+          </div>
+        </div></div>
+      </div>
+      <dl class="facts">
+        <div><dt>通知まで</dt><dd class="meh">2タップ</dd></div>
+        <div><dt>設定まで</dt><dd class="meh">2タップ</dd></div>
+        <div><dt>主要4画面まで</dt><dd>1タップ</dd></div>
+        <div><dt>下部ナビの項目幅</dt><dd class="meh">約75px</dd></div>
+      </dl>
+      <ul class="pc">
+        <li>通知・設定以外（将来のグループ等）もシートに足せる</li>
+        <li>ヘッダーが一番すっきりする</li>
+        <li class="minus">通知が今より1タップ遠くなる</li>
+        <li class="minus">「メニュー」の中身は開くまで見えない</li>
+      </ul>
+    </section>
+
+    <!-- 案C -->
+    <section class="opt">
+      <div class="opt-head"><h2>案C 左ドロワー</h2><span class="tag now">画面の広さ重視</span></div>
+      <p class="aim">下部ナビをやめ、左上の三本線から全項目の縦リストを開く。画面の高さをいちばん広く使える。</p>
+      <div class="frames">
+        <div class="slot"><div class="phone" role="img" aria-label="案C 閉じた状態のモック">
+          <span class="cap">閉じた状態</span>
+          <div class="hdr"><span class="ib"><svg><use href="#i-menu"/></svg><span class="badge">3</span></span><span class="logo"><i></i>Madoi</span></div>
+          <div class="body">
+            <div class="card"><div class="t">次の予定</div><div class="s">10/4(土) 謎解き</div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div><div class="bar w8"></div></div>
+            <div class="card"><div class="t">今週</div><div class="bar w8"></div><div class="bar w6"></div></div>
+            <div class="card"><div class="t">調整中</div><div class="bar w6"></div></div>
+          </div>
+          <span class="fab" style="bottom:10px"><svg style="width:9px;height:9px"><use href="#i-plus"/></svg>イベント作成</span>
+        </div></div>
+        <div class="slot"><div class="phone" role="img" aria-label="案C ドロワーを開いた状態のモック">
+          <span class="cap">開いた状態</span>
+          <div class="hdr"><span class="ib"><svg><use href="#i-menu"/></svg></span><span class="logo"><i></i>Madoi</span></div>
+          <div class="scrim"></div>
+          <div class="drawer menu">
+            <div class="who"><span class="avatar"></span>ゆうひ</div>
+            <a class="on"><svg><use href="#i-home"/></svg>ホーム</a>
+            <a><svg><use href="#i-cal"/></svg>イベント</a>
+            <a><svg><use href="#i-range"/></svg>カレンダー</a>
+            <a><svg><use href="#i-users"/></svg>つながり</a>
+            <a><svg><use href="#i-bell"/></svg>通知<span class="cnt">3</span></a>
+            <hr>
+            <a><svg><use href="#i-gear"/></svg>設定</a>
+            <a><svg><use href="#i-out"/></svg>ログアウト</a>
+          </div>
+        </div></div>
+      </div>
+      <dl class="facts">
+        <div><dt>通知まで</dt><dd class="meh">2タップ</dd></div>
+        <div><dt>設定まで</dt><dd class="meh">2タップ</dd></div>
+        <div><dt>主要4画面まで</dt><dd class="bad">2タップ</dd></div>
+        <div><dt>下部ナビの項目幅</dt><dd>（なし）</dd></div>
+      </dl>
+      <ul class="pc">
+        <li>本文の高さが下部ナビ分（約70px）広がる</li>
+        <li>項目がいくつ増えても入る</li>
+        <li class="minus">毎日使う4画面の切り替えまで2タップになる</li>
+        <li class="minus">いまいる画面以外の選択肢が普段は見えない</li>
+      </ul>
+    </section>
+
+  </div>
+
+  <section class="verdict">
+    <h2>推奨は案A</h2>
+    <p>判断の基準は「よく行く場所ほど近くに置く」です。通知はほぼ毎日開き、設定はたまにしか開かず、ログアウトはめったに使いません。この頻度の順に距離を並べられるのは案Aだけです。案Bと案Cは、困りごとの「通知に行きづらい」を今より悪くしてしまいます。</p>
+    <p>下部ナビの枠が5つで埋まる点は、将来グループ機能などを足すときに改めて考えます（そのときは案Bの「メニュー」に移れる形にしておく）。</p>
+  </section>
+
+  <section class="verdict" id="desktop">
+    <h2>案Aのとき、携帯とPCの違いは「置き場所」だけ</h2>
+    <p>いまも同じナビ部品を、携帯では画面下に固定し、PCではヘッダーの下に横一列で並べています。案Aでもこの仕組みはそのままです。並ぶ項目（主要4画面＋通知）と右上の「設定」は、携帯とPCで同じにします。</p>
+    <div class="desk-row">
+      <div class="desk-slot"><span class="dcap">PC・現状</span>
+        <div class="desk" role="img" aria-label="PCの現状のモック">
+          <div class="hdr dh"><span class="logo"><i></i>Madoi</span><span class="sp"></span>
+            <span class="ib labeled" style="color:var(--muted)"><span class="avatar" style="width:14px;height:14px"></span>ゆうひ</span>
+            <span class="ib"><svg><use href="#i-bell"/></svg><span class="badge">3</span></span>
+            <span class="ib"><svg><use href="#i-out"/></svg></span>
+          </div>
+          <div class="drow d4">
+            <a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a>
+          </div>
+          <div class="dbody"><div class="card"><div class="t">次の予定</div><div class="bar w8"></div></div><div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div></div></div>
+        </div>
+      </div>
+      <div class="desk-slot"><span class="dcap">PC・案A</span>
+        <div class="desk" role="img" aria-label="PCの案Aのモック">
+          <div class="hdr dh"><span class="logo"><i></i>Madoi</span><span class="sp"></span>
+            <span class="ib labeled"><svg><use href="#i-gear"/></svg>設定</span>
+          </div>
+          <div class="drow d5">
+            <a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a><a><svg><use href="#i-bell"/></svg>通知<span class="badge">3</span></a>
+          </div>
+          <div class="dbody"><div class="card"><div class="t">次の予定</div><div class="bar w8"></div></div><div class="card"><div class="t">選択日の予定</div><div class="bar w6"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">参考モックです。配色は design/tokens.css、ナビの構成は components/layout/primary-nav.tsx・auth-nav.tsx の現状を写しています。デスクトップは、どの案でもヘッダー直下のナビ行に同じ項目を並べる想定です。</p>
+</div>

@@ -1,0 +1,191 @@
+<title>右上の設定ボタン</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap">
+
+<style>
+  :root {
+    --canvas: #f7f3ef; --surface: #fffdf7; --sunken: #f6f0e4;
+    --line: #e4dac6; --line-strong: #cbbfa6;
+    --text: #262320; --muted: #6f665c; --subtle: #948a7d;
+    --moss: #5f7d65; --pine: #344f43; --clay: #df7d69; --mist: #eff3ee;
+    --good: #3f7a52; --bad: #a8492f; --meh: #7f5c19;
+    --shadow: 0 1px 2px rgba(62,51,39,.04), 0 3px 10px rgba(62,51,39,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
+      --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
+      --moss: #8fae94; --pine: #b9d3c0; --clay: #e0917a; --mist: #2b332c;
+      --good: #8fc79f; --bad: #eaa892; --meh: #e6c68a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
+    --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
+    --moss: #8fae94; --pine: #b9d3c0; --clay: #e0917a; --mist: #2b332c;
+    --good: #8fc79f; --bad: #eaa892; --meh: #e6c68a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--text);
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 36px 80px; }
+  h1 { font-size: 1.5rem; margin: 0 0 6px; text-wrap: balance; }
+  .lead { color: var(--muted); margin: 0 0 24px; max-width: 66ch; }
+
+  .opt {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
+    padding: 18px; margin-bottom: 18px; display: grid; gap: 14px;
+  }
+  .opt.rec { border-color: var(--moss); box-shadow: 0 0 0 2px var(--moss) inset; }
+  .opt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  .opt h2 { font-size: 1.08rem; margin: 0; }
+  .tag { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--mist); color: var(--pine); }
+  .aim { margin: 0; color: var(--muted); font-size: .9rem; flex-basis: 100%; }
+
+  .shots { display: grid; grid-template-columns: 375px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .shots { grid-template-columns: 1fr; } }
+  .shot { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .cap { font-size: .75rem; font-weight: 700; color: var(--muted); }
+  .screen { border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden; background: var(--canvas); box-shadow: var(--shadow); }
+  .sp-screen { max-width: 375px; }
+
+  /* 実寸のヘッダー（アプリの h-11 = 44px ボタン、py-2） */
+  .hdr { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .pc .hdr { padding: 16px 24px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .logo i { width: 32px; height: 32px; border-radius: 9px; background: var(--moss); display: block; }
+  .pc .logo i { width: 40px; height: 40px; }
+  .grow { flex: 1; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 8px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
+    color: var(--text); font-weight: 700; font-size: 14px; box-shadow: var(--shadow); white-space: nowrap;
+  }
+  .btn.gear { padding-left: 12px; color: var(--pine); }
+  .btn svg { width: 18px; height: 18px; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #d9c7a8, #b8a17b); flex: none; }
+  .btn .sub { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+  .body { padding: 12px 16px 14px; display: grid; gap: 8px; }
+  .pc .body { padding: 14px 24px 18px; grid-template-columns: 1fr 1fr; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+  .card b { display: block; }
+  .bar { height: 7px; border-radius: 4px; background: var(--sunken); margin-top: 6px; width: 80%; }
+
+  .navrow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 14px 24px 0; }
+  .navrow a, .bnav a {
+    position: relative; display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+    color: var(--muted); font-size: 13px; font-weight: 700; height: 40px; white-space: nowrap;
+  }
+  .navrow a.on, .bnav a.on { border-color: var(--moss); background: var(--mist); color: var(--pine); }
+  .navrow svg, .bnav svg { width: 16px; height: 16px; }
+  .bnav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px; background: var(--surface); border-top: 1px solid var(--line); }
+  .bnav a { flex-direction: column; gap: 2px; height: 56px; border: 0; font-size: 11px; background: transparent; }
+  .badge {
+    position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+    background: var(--clay); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center;
+  }
+  .bnav .badge { top: 4px; right: 14px; }
+
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; font-size: .86rem; }
+  .facts span b { font-weight: 700; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .meh { color: var(--meh); }
+  .note { font-size: .8rem; color: var(--muted); margin-top: 8px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-range" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4M7 15h10" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c1.8.7 3 2.5 3.5 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<template id="bottom-nav">
+  <nav class="bnav"><a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a><a><svg><use href="#i-bell"/></svg>通知<span class="badge">3</span></a></nav>
+</template>
+<template id="pc-nav">
+  <div class="navrow"><a class="on"><svg><use href="#i-home"/></svg>ホーム</a><a><svg><use href="#i-cal"/></svg>イベント</a><a><svg><use href="#i-range"/></svg>カレンダー</a><a><svg><use href="#i-users"/></svg>つながり</a><a><svg><use href="#i-bell"/></svg>通知<span class="badge">3</span></a></div>
+</template>
+
+<div class="page">
+  <h1>右上の「設定」ボタンをどう見せるか</h1>
+  <p class="lead">案A（通知を下部ナビへ）に決めたあと、右上に1つだけ残すボタンの見た目を比べます。各案とも左がスマホ（実寸375px）、右がPCです。どれも押すと設定画面に移ります。</p>
+
+  <section class="opt rec">
+    <div class="opt-head"><h2>①アバター＋「設定」</h2><span class="tag">推奨</span>
+      <p class="aim">自分の顔写真と「設定」の文字を並べる。誰でログインしているかと、押した先がどこかの両方が分かる。</p></div>
+    <div class="shots">
+      <div class="shot"><span class="cap">スマホ</span><div class="screen sp-screen">
+        <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span><span class="btn"><span class="avatar"></span>設定</span></div>
+        <div class="body"><div class="card"><b>次の予定</b>10/4(土) 謎解き<div class="bar"></div></div></div>
+        <div data-slot="bottom-nav"></div>
+      </div></div>
+      <div class="shot"><span class="cap">PC</span><div class="screen pc">
+        <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span><span class="btn"><span class="avatar"></span>設定</span></div>
+        <div data-slot="pc-nav"></div>
+        <div class="body"><div class="card"><b>次の予定</b>10/4(土) 謎解き<div class="bar"></div></div><div class="card"><b>選択日の予定</b><div class="bar"></div></div></div>
+      </div></div>
+    </div>
+    <p class="facts"><span>押した先が分かる <b class="good">◎</b></span><span>誰でログイン中か <b class="good">◎</b></span><span>スマホでの幅 <b>約90px</b></span></p>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><h2>②歯車＋「設定」</h2>
+      <p class="aim">前回の比較ページで描いた形。「設定」だと一目で分かる一方、アバター写真はヘッダーから消える。</p></div>
+    <div class="shots">
+      <div class="shot"><span class="cap">スマホ</span><div class="screen sp-screen">
+        <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span><span class="btn gear"><svg><use href="#i-gear"/></svg>設定</span></div>
+        <div class="body"><div class="card"><b>次の予定</b>10/4(土) 謎解き<div class="bar"></div></div></div>
+        <div data-slot="bottom-nav"></div>
+      </div></div>
+      <div class="shot"><span class="cap">PC</span><div class="screen pc">
+        <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span><span class="btn gear"><svg><use href="#i-gear"/></svg>設定</span></div>
+        <div data-slot="pc-nav"></div>
+        <div class="body"><div class="card"><b>次の予定</b>10/4(土) 謎解き<div class="bar"></div></div><div class="card"><b>選択日の予定</b><div class="bar"></div></div></div>
+      </div></div>
+    </div>
+    <p class="facts"><span>押した先が分かる <b class="good">◎</b></span><span>誰でログイン中か <b class="bad">×（設定画面で分かる）</b></span><span>スマホでの幅 <b>約85px</b></span></p>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><h2>③アバター＋ニックネーム</h2>
+      <p class="aim">いまのPC版に近い形。誰かはよく分かるが、押すと設定に行くことは文字からは読み取れない。</p></div>
+    <div class="shots">
+      <div class="shot"><span class="cap">スマホ</span><div class="screen sp-screen">
+        <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span><span class="btn"><span class="avatar"></span>ゆうひ</span></div>
+        <div class="body"><div class="card"><b>次の予定</b>10/4(土) 謎解き<div class="bar"></div></div></div>
+        <div data-slot="bottom-nav"></div>
+      </div></div>
+      <div class="shot"><span class="cap">PC</span><div class="screen pc">
+        <div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span><span class="btn"><span class="avatar"></span>ゆうひ</span></div>
+        <div data-slot="pc-nav"></div>
+        <div class="body"><div class="card"><b>次の予定</b>10/4(土) 謎解き<div class="bar"></div></div><div class="card"><b>選択日の予定</b><div class="bar"></div></div></div>
+      </div></div>
+    </div>
+    <p class="facts"><span>押した先が分かる <b class="bad">△</b></span><span>誰でログイン中か <b class="good">◎</b></span><span>スマホでの幅 <b class="meh">名前の長さしだい</b></span></p>
+  </section>
+
+  <p class="note">参考モックです。配色は design/tokens.css、ボタンの高さ（44px）と丸みは今の auth-nav.tsx に合わせています。</p>
+</div>
+
+<script>
+  document.querySelectorAll("[data-slot]").forEach((slot) => {
+    const tpl = document.getElementById(slot.dataset.slot);
+    if (tpl) slot.replaceWith(tpl.content.cloneNode(true));
+  });
+</script>
