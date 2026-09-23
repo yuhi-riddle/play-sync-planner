@@ -104,7 +104,7 @@ export default async function PlanTimetablePage({ params }: { params: Promise<{ 
     }))
   );
 
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const event = plan.events;
 
   // 編集できる集合（event_members, status=joined）は canView の集合（オーナー or この plan の
   // participant）と別物。共有リンクから回答しただけのログイン済みユーザーは participant 行を

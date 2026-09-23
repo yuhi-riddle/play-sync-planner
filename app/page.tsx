@@ -26,7 +26,8 @@ type CalendarRpcRow = {
   plan_id: string;
   event_title: string | null;
   plan_title: string | null;
-  location_name: string | null;
+  // 本番の list_calendar_items は migration 052 適用までは location_name を返さない。
+  location_name?: string | null;
   start_at: string;
   end_at: string | null;
   is_all_day: boolean | null;
@@ -50,7 +51,7 @@ type NextConfirmedRow = {
   is_all_day: boolean | null;
   confirmed_start_at: string | null;
   confirmed_end_at: string | null;
-  events: EventRef | EventRef[] | null;
+  events: EventRef | null;
 };
 
 type NextCandidateRow = {
@@ -58,7 +59,7 @@ type NextCandidateRow = {
   start_at: string;
   end_at: string | null;
   is_all_day: boolean | null;
-  plans: { id: string; title: string | null; events: EventRef | EventRef[] | null } | null;
+  plans: { id: string; title: string | null; events: EventRef | null } | null;
 };
 
 function tokyoDateKey(value: Date) {
@@ -101,10 +102,6 @@ function toCalendarItems(rows: CalendarRpcRow[]): HomeCalendarItem[] {
   });
 }
 
-function eventOf(events: EventRef | EventRef[] | null): EventRef | null {
-  return Array.isArray(events) ? (events[0] ?? null) : events;
-}
-
 /**
  * ホームの「次の予定」用の1件。
  * list_calendar_items は当月＋翌週までしか返さないので、数ヶ月先の予定も拾えるよう
@@ -119,7 +116,7 @@ function buildNextUpcomingItem(
 
   const confirmed = confirmedRows[0];
   if (confirmed?.confirmed_start_at) {
-    const event = eventOf(confirmed.events);
+    const event = confirmed.events;
     items.push({
       id: `confirmed-${confirmed.id}`,
       kind: "confirmed",
@@ -134,7 +131,7 @@ function buildNextUpcomingItem(
 
   const candidate = candidateRows[0];
   if (candidate?.plans) {
-    const event = eventOf(candidate.plans.events);
+    const event = candidate.plans.events;
     items.push({
       id: `candidate-${candidate.id}`,
       kind: "collecting",
@@ -224,7 +221,7 @@ export default async function HomePage({
         .gte("confirmed_start_at", upcomingSinceIso)
         .order("confirmed_start_at", { ascending: true })
         .limit(1)
-    : Promise.resolve({ data: [] as NextConfirmedRow[] });
+    : Promise.resolve({ data: [] });
 
   const nextCandidatePromise = joinedEventIds.length
     ? nextUpcomingClient
@@ -235,7 +232,7 @@ export default async function HomePage({
         .gte("start_at", upcomingSinceIso)
         .order("start_at", { ascending: true })
         .limit(1)
-    : Promise.resolve({ data: [] as NextCandidateRow[] });
+    : Promise.resolve({ data: [] });
 
   const [
     { data: calendarRows, error: calendarError },
@@ -262,8 +259,8 @@ export default async function HomePage({
   const priorityNotification = selectPriorityNotification(actionableNotifications);
   const calendarItems = toCalendarItems((calendarRows ?? []) as CalendarRpcRow[]);
   const nextUpcomingItem = buildNextUpcomingItem(
-    (nextConfirmedRows ?? []) as NextConfirmedRow[],
-    (nextCandidateRows ?? []) as unknown as NextCandidateRow[],
+    nextConfirmedRows ?? [],
+    nextCandidateRows ?? [],
     now
   );
 

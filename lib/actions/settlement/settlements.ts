@@ -96,20 +96,17 @@ type SettlementPaymentRow = {
 
 type NotificationParticipantRelation =
   | { display_name: string | null; user_id?: string | null }
-  | Array<{ display_name: string | null; user_id?: string | null }>
   | null;
 
-function firstNotificationParticipant(value: NotificationParticipantRelation) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 function notificationParticipantName(value: NotificationParticipantRelation) {
-  return firstNotificationParticipant(value)?.display_name?.trim() || "参加者";
+  return value?.display_name?.trim() || "参加者";
 }
 
-function notificationPlanTitle(plan: { title?: string | null; events?: { title: string | null } | { title: string | null }[] | null }) {
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
-  return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
+function notificationPlanTitle(
+  plan: { title?: string | null; events?: { title: string | null } | null } | null
+) {
+  const event = plan?.events;
+  return [event?.title, plan?.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
 }
 
 async function notifySettlementConfirmationDue({
@@ -132,20 +129,20 @@ async function notifySettlementConfirmationDue({
     return;
   }
 
-  const receiver = firstNotificationParticipant(settlement.to_participant as NotificationParticipantRelation);
+  const receiver = settlement.to_participant;
   if (!receiver?.user_id) {
     return;
   }
 
-  const plan = Array.isArray(settlement.plans) ? settlement.plans[0] : settlement.plans;
+  const plan = settlement.plans;
   const candidate = buildNotificationCandidate({
     userId: receiver.user_id,
     kind: "confirmation_due",
     planId: settlement.plan_id,
-    title: notificationPlanTitle(plan ?? {}),
+    title: notificationPlanTitle(plan),
     href: `/plans/${settlement.plan_id}/settlement#confirmation`,
     dueAt: `payment:${paymentId}`,
-    participantNames: [notificationParticipantName(settlement.from_participant as NotificationParticipantRelation)]
+    participantNames: [notificationParticipantName(settlement.from_participant)]
   });
 
   await admin.from("notifications").upsert(
@@ -350,7 +347,7 @@ export async function updateExpenseAction(
       .eq("id", expenseId)
       .single();
 
-    const plan = Array.isArray(expense?.plans) ? expense?.plans[0] : expense?.plans;
+    const plan = expense?.plans;
     if (error || !expense || plan?.owner_user_id !== userId) {
       return errorState("主催者だけが立替支払いを編集できます");
     }
@@ -406,7 +403,7 @@ export async function deleteExpenseAction(expenseId: string) {
     .eq("id", expenseId)
     .single();
 
-  const plan = Array.isArray(expense?.plans) ? expense?.plans[0] : expense?.plans;
+  const plan = expense?.plans;
   if (error || !expense || plan?.owner_user_id !== userId) {
     throw new Error("主催者だけが立替支払いを削除できます");
   }
@@ -444,7 +441,7 @@ export async function recordSettlementPaymentAction(settlementId: string, formDa
     .eq("id", settlementId)
     .single();
 
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
+  const plan = settlement?.plans;
   if (error || !settlement || plan?.owner_user_id !== userId) {
     throw new Error("主催者だけが支払い記録を追加できます");
   }
@@ -650,9 +647,9 @@ export async function confirmSettlementPaymentAction(paymentId: string) {
     .eq("id", paymentId)
     .single();
 
-  const settlement = Array.isArray(payment?.settlements) ? payment?.settlements[0] : payment?.settlements;
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
-  const receiver = Array.isArray(settlement?.to_participant) ? settlement?.to_participant[0] : settlement?.to_participant;
+  const settlement = payment?.settlements;
+  const plan = settlement?.plans;
+  const receiver = settlement?.to_participant;
   if (
     error ||
     !payment ||
@@ -727,7 +724,7 @@ export async function updateSettlementPaymentInstructionAction(settlementId: str
     .eq("id", settlementId)
     .single();
 
-  const plan = Array.isArray(settlement?.plans) ? settlement?.plans[0] : settlement?.plans;
+  const plan = settlement?.plans;
   if (error || !settlement || plan?.owner_user_id !== userId) {
     throw new Error("主催者だけが支払い先メモを編集できます");
   }

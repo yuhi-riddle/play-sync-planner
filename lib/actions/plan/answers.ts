@@ -13,14 +13,6 @@ type CandidateRow = {
   plan_id: string;
 };
 
-type AnswerPlanRow = {
-  id: string;
-  title: string | null;
-  owner_user_id: string;
-  answer_deadline_at: string | null;
-  events?: { title: string | null } | { title: string | null }[] | null;
-};
-
 export async function submitAvailabilityAnswersAction(token: string, formData: FormData) {
   /*
    * ログイン中の本人としてDBを触る。service role をやめたので、参加者でなければ
@@ -51,7 +43,7 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
     throw new Error("この共有リンクは無効化されています。主催者に新しいリンクを確認してください");
   }
 
-  const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as AnswerPlanRow | null;
+  const plan = link.plans;
   if (!canAnswerPlan(plan?.answer_deadline_at ?? null, new Date())) {
     throw new Error("回答期限を過ぎています");
   }
@@ -165,7 +157,7 @@ export async function submitAvailabilityAnswersAction(token: string, formData: F
   redirect(`/s/${token}/answer/complete`);
 }
 
-function answerNotificationTitle(plan: AnswerPlanRow) {
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+function answerNotificationTitle(plan: { events: { title: string | null } | null; title: string | null }) {
+  const event = plan.events;
   return [event?.title, plan.title].map((value) => value?.trim()).filter(Boolean).join(" / ") || "日程調整";
 }

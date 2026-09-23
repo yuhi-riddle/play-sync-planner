@@ -27,7 +27,7 @@ type PlanRow = {
   title: string | null;
   status: string;
   answer_deadline_at: string | null;
-  events: { title: string | null } | { title: string | null }[] | null;
+  events: { title: string | null } | null;
   candidate_dates?: CandidateDateRow[];
 };
 
@@ -60,7 +60,7 @@ function defaultSelectedDate(year: number, month: number) {
 }
 
 function toCandidate(plan: PlanRow, candidate: CandidateDateRow): AdjustmentCandidate {
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const event = plan.events;
   const counts = (candidate.availability_answers ?? []).reduce(
     (result, answer) => {
       result[answer.answer] += 1;
@@ -138,6 +138,7 @@ export default async function PlansPage({
     : { data: [] };
   const plans = plansResult.data;
 
+  // DB の CHECK 制約で回答値は限定されるが、生成型では string のためキャストする。
   const candidates = ((plans ?? []) as PlanRow[]).flatMap((plan) =>
     (plan.candidate_dates ?? []).map((candidate) => toCandidate(plan, candidate))
   );

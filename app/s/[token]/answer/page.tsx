@@ -62,8 +62,8 @@ export default async function PublicAnswerPage({ params }: { params: Promise<{ t
     return <UnavailablePage />;
   }
 
-  const plan = Array.isArray(link.plans) ? link.plans[0] : link.plans;
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const plan = link.plans;
+  const event = plan.events;
   const candidateDates = plan.candidate_dates ?? [];
   const revoked = link.status === "revoked";
   const answerable = canAnswerPlan(plan.answer_deadline_at, new Date()) && canAnswerPlan(link.expires_at, new Date());

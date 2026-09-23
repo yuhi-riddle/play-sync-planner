@@ -38,7 +38,6 @@ function UnavailablePage() {
 
 type ParticipantRelation =
   | { id: string; display_name: string; user_id: string | null; settlement_payment_method: string | null }
-  | { id: string; display_name: string; user_id: string | null; settlement_payment_method: string | null }[]
   | null;
 
 type PublicExpenseRow = {
@@ -47,7 +46,7 @@ type PublicExpenseRow = {
   amount: number;
   memo: string | null;
   is_important: boolean;
-  payer: ParticipantRelation;
+  payer: { display_name: string | null } | null;
 };
 
 type PublicSettlementRow = {
@@ -67,24 +66,8 @@ type PublicParticipantRow = {
   settlement_payment_method: string | null;
 };
 
-type PublicPlanRow = {
-  id: string;
-  title: string | null;
-  confirmed_start_at: string | null;
-  confirmed_end_at: string | null;
-  is_all_day: boolean;
-  events: { title: string | null; location_name: string | null } | { title: string | null; location_name: string | null }[] | null;
-  participants?: PublicParticipantRow[];
-  expenses?: PublicExpenseRow[];
-  settlements?: PublicSettlementRow[];
-};
-
-function firstParticipant(value: ParticipantRelation) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function participantName(value: ParticipantRelation) {
-  return firstParticipant(value)?.display_name ?? "不明な参加者";
+function participantName(value: { display_name: string | null } | null) {
+  return value?.display_name ?? "不明な参加者";
 }
 
 export default async function PublicSettlementPage({
@@ -140,7 +123,7 @@ export default async function PublicSettlementPage({
     );
   }
 
-  const plan = (Array.isArray(link.plans) ? link.plans[0] : link.plans) as PublicPlanRow | null;
+  const plan = link.plans;
   if (!plan) {
     return <UnavailablePage />;
   }
@@ -163,7 +146,7 @@ export default async function PublicSettlementPage({
     return <UnavailablePage />;
   }
 
-  const event = Array.isArray(plan.events) ? plan.events[0] : plan.events;
+  const event = plan.events;
   const calendarShareUrl =
     plan.confirmed_start_at && plan.confirmed_end_at
       ? buildGoogleCalendarShareUrl({
@@ -184,12 +167,12 @@ export default async function PublicSettlementPage({
 
   const settlements = ((plan.settlements ?? []) as PublicSettlementRow[]).map<PublicSettlementItem>((settlement) => ({
     id: settlement.id,
-    fromParticipantId: firstParticipant(settlement.from_participant)?.id ?? "",
-    toParticipantId: firstParticipant(settlement.to_participant)?.id ?? "",
+    fromParticipantId: settlement.from_participant?.id ?? "",
+    toParticipantId: settlement.to_participant?.id ?? "",
     fromName: participantName(settlement.from_participant),
     toName: participantName(settlement.to_participant),
     amount: settlement.amount,
-    paymentMethod: firstParticipant(settlement.to_participant)?.settlement_payment_method ?? null,
+    paymentMethod: settlement.to_participant?.settlement_payment_method ?? null,
     paymentUrl: settlement.payment_url,
     memo: settlement.memo,
     payments: (settlement.settlement_payments ?? []).map((payment) => ({

@@ -44,7 +44,7 @@ function basePlan(settlements: Array<Record<string, unknown>>, expenseSplits: Ex
     id: "plan-1",
     title: "夏祭りの計画",
     owner_user_id: "user-1",
-    events: [{ id: "event-1", title: "夏祭り" }],
+    events: { id: "event-1", title: "夏祭り" },
     share_links: [{ token: "tok-1", purpose: "answer" }],
     participants: [participant("p1", "田中", "user-1", "PayPay"), participant("p2", "鈴木", "user-2")],
     expenses: [

@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 import { isWithdrawn } from "@/lib/domain/account/withdrawal";
+import type { Database } from "@/lib/supabase/database";
 
 type CookieToSet = {
   name: string;
@@ -26,7 +27,7 @@ export const createSupabaseServerClient = cache(async () => {
 
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -53,7 +54,7 @@ export function createSupabaseAdminClient() {
     throw new Error("Supabaseの管理用環境変数が設定されていません");
   }
 
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
       persistSession: false

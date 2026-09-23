@@ -29,7 +29,7 @@ const basePlan = {
   confirmed_start_at: null,
   confirmed_end_at: null,
   is_all_day: false,
-  events: [{ title: "夏祭り", location_name: null }],
+  events: { title: "夏祭り", location_name: null },
   participants: [
     { id: "p1", display_name: "田中", user_id: "user-1", settlement_payment_method: "PayPay" },
     { id: "p2", display_name: "鈴木", user_id: "user-2", settlement_payment_method: null }

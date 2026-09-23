@@ -15,6 +15,7 @@ import {
   type ProfileActionState
 } from "@/lib/domain/account/profile";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentActiveUser } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/database";
 
 const PROFILE_MIGRATION_MESSAGE =
   "プロフィール機能の準備がまだ完了していません。管理者がmigration 019を適用してください。";
@@ -78,7 +79,7 @@ export async function updateProfileAction(
   }
 
   const mode = formData.get("mode") === "onboarding" ? "onboarding" : "settings";
-  const profileValues: Record<string, string | null> = {
+  const profileValues: Database["public"]["Tables"]["profiles"]["Insert"] = {
     user_id: user.id,
     nickname: parsed.data.nickname,
     avatar_path: avatarPath

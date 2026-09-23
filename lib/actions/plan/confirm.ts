@@ -9,14 +9,7 @@ import { createSupabaseServerClient, getCurrentActiveUserId } from "@/lib/supaba
 
 type AnswerRow = {
   answer: "yes" | "maybe" | "no" | "unanswered";
-  participants: { id: string } | { id: string }[] | null;
-};
-
-type CandidatePlan = {
-  id: string;
-  title: string | null;
-  event_id: string;
-  owner_user_id: string;
+  participants: { id: string } | null;
 };
 
 export async function confirmPlanAction(planId: string, formData: FormData) {
@@ -38,7 +31,7 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
     throw new Error("候補日時が見つかりません");
   }
 
-  const plan = (Array.isArray(candidate.plans) ? candidate.plans[0] : candidate.plans) as CandidatePlan;
+  const plan = candidate.plans;
   if (plan.owner_user_id !== userId) {
     throw new Error("主催者だけが日程を確定できます");
   }
@@ -54,7 +47,7 @@ export async function confirmPlanAction(planId: string, formData: FormData) {
 
   const updates = buildConfirmationUpdates(
     ((answers ?? []) as AnswerRow[]).flatMap((row) => {
-      const participant = Array.isArray(row.participants) ? row.participants[0] : row.participants;
+      const participant = row.participants;
       return participant ? [{ participantId: participant.id, answer: row.answer }] : [];
     })
   );
