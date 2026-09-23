@@ -11,5 +11,6 @@ dev-server-*.log
 .playwright-mcp/
 .superpowers/
 .worktrees/
+supabase/.temp/
 tsconfig.tsbuildinfo
 design/screenshots/
