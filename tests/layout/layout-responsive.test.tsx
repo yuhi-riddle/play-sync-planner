@@ -92,6 +92,17 @@ describe("RootLayout responsive header", () => {
     expect(mainClasses).toEqual(expect.arrayContaining(["min-h-[calc(100vh-10rem)]"]));
   });
 
+  // <main> は「本文へ移動」の着地点として tabIndex=-1 を持つ。クリックでもフォーカスが入るので、
+  // 枠を出すと本文全体が赤い枠で囲まれて見える。
+  it("does not outline <main> when it receives focus from a click or the skip link", async () => {
+    vi.stubGlobal("React", React);
+    const layout = await RootLayout({ children: "本文" });
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(layout), "text/html");
+
+    const mainClasses = document.querySelector("main")?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(mainClasses).toContain("focus:outline-none");
+  });
+
   it("gets authentication once and shares the result with every signed-in navigation", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });

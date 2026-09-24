@@ -6,7 +6,7 @@ import { LoginConsentForm } from "@/components/account/login-consent-form";
 
 function elements() {
   return {
-    submit: screen.getByRole("button", { name: "Google でログイン" }),
+    submit: screen.getByRole("button", { name: "Googleで始める" }),
     termsButton: screen.getByRole("button", { name: "利用規約を読む" }),
     privacyButton: screen.getByRole("button", { name: "プライバシーポリシーを読む" }),
     termsBox: screen.getByRole("checkbox", { name: "利用規約に同意する" }),
@@ -15,6 +15,13 @@ function elements() {
 }
 
 describe("LoginConsentForm", () => {
+  // 同意だけを求める /consent（ログイン済みの人が来る）でも使うので、ログインを前提にした説明はフォームに持たない。
+  it("フォーム自体はログインの案内文を持たない", () => {
+    render(<LoginConsentForm action={vi.fn()} nextPath="/events" submitLabel="同意して続ける" />);
+
+    expect(screen.queryByText(/ログインへ進めます/)).not.toBeInTheDocument();
+  });
+
   it("書面を開くまでチェックできない（開いてもいない書面への同意は同意ではない）", () => {
     render(<LoginConsentForm action={vi.fn()} nextPath="/events" />);
     const { submit, termsButton, termsBox, privacyBox } = elements();

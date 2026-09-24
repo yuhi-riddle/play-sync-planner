@@ -60,7 +60,7 @@ export default async function LoginPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Welcome" title="はじめに確認してください" description="Madoi を使うには、利用規約とプライバシーポリシーへの同意、Google ログインが必要です。" />
+      <PageHeader eyebrow="Welcome" title="はじめに確認してください" description="利用規約とプライバシーポリシーに同意すると、Googleで始められます。" />
       {withdrawn === "1" ? (
         <Alert tone="info" title="退会が完了しました">
           ご利用ありがとうございました。このアカウントではログインできません。もう一度使う場合は、新しいアカウントを作成してください。
