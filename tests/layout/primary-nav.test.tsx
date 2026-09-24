@@ -45,7 +45,7 @@ describe("PrimaryNav", () => {
 
     const current = screen.getByRole("link", { name: "つながり" });
     expect(current).toHaveAttribute("aria-current", "page");
-    expect(current).toHaveClass("bg-mist", "border-moss", "text-pine");
+    expect(current).toHaveClass("bg-pine", "border-pine", "text-white");
   });
 
   it("hides the primary navigation during profile onboarding", () => {

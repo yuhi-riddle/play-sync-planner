@@ -50,7 +50,8 @@ export function PrimaryNav({ isSignedIn, unreadCount = 0 }: { isSignedIn: boolea
             aria-label={badge ? `${item.label} 未読${unreadCount}件` : undefined}
             className={clsx(
               "relative inline-flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 py-2 text-center text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 sm:min-h-11 sm:border sm:px-2 sm:text-body sm:shadow-raise",
-              active ? "border-moss bg-mist text-pine" : "border-line bg-surface text-muted hover:text-pine"
+              // 選択中は深緑で塗る。カレンダーの選択日と同じ「塗り＝いま選んでいる」にそろえる。
+              active ? "border-pine bg-pine text-white" : "border-line bg-surface text-muted hover:text-pine"
             )}
           >
             <Icon aria-hidden="true" className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
