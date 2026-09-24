@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { CalendarDays, CalendarRange, House, UsersRound } from "lucide-react";
 
-import { shouldShowPrimaryNavigation } from "@/lib/domain/account/navigation-visibility";
+import { getNavigationChrome } from "@/lib/domain/account/navigation-visibility";
 
 /**
  * スマートフォンでは画面下部に固定し、デスクトップではヘッダー直下の静的な行として表示する主要ナビ。
- * 表示するパスの判定は lib/navigation-visibility.ts に切り出し、集中操作画面では出さない。
+ * 表示するかどうかは getNavigationChrome（lib/domain/account/navigation-visibility.ts）で決め、集中操作画面では出さない。
  */
 const items = [
   { href: "/", label: "ホーム", icon: House },
@@ -25,7 +25,7 @@ function isActive(pathname: string, href: string) {
 export function PrimaryNav({ isSignedIn }: { isSignedIn: boolean }) {
   const pathname = usePathname();
 
-  if (!isSignedIn || !shouldShowPrimaryNavigation(pathname)) return null;
+  if (!getNavigationChrome(pathname, isSignedIn).primaryNav) return null;
 
   return (
     <nav

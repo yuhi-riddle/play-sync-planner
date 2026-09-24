@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
 import React from "react";
 
-import { shouldShowPrimaryNavigation } from "@/lib/domain/account/navigation-visibility";
+import { getNavigationChrome } from "@/lib/domain/account/navigation-visibility";
 
 /**
  * 一覧系の画面だけに出す。
@@ -17,14 +17,10 @@ import { shouldShowPrimaryNavigation } from "@/lib/domain/account/navigation-vis
  * 作成ボタンごと画面外に消える。デスクトップでも同じ固定位置に常設し、
  * 見た目だけサイトの縁取りカードの作法（白背景+線+影）に寄せている。
  */
-function isFabVisiblePath(pathname: string) {
-  return pathname === "/events" || pathname === "/plans";
-}
-
 export function MobileEventFab({ isSignedIn }: { isSignedIn: boolean }) {
   const pathname = usePathname();
 
-  if (!isSignedIn || !isFabVisiblePath(pathname) || !shouldShowPrimaryNavigation(pathname)) return null;
+  if (!getNavigationChrome(pathname, isSignedIn).createFab) return null;
 
   return (
     <Link
