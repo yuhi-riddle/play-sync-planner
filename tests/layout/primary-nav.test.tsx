@@ -17,17 +17,18 @@ describe("PrimaryNav", () => {
     navigation.pathname = "/";
   });
 
-  it("shows the four primary destinations as icon buttons in a fixed mobile bar and a static desktop row", () => {
+  it("shows the five primary destinations as icon buttons in a fixed mobile bar and a static desktop row", () => {
     render(<PrimaryNav isSignedIn />);
 
     const nav = screen.getByRole("navigation", { name: "主要な画面" });
-    expect(nav).toHaveClass("fixed", "bottom-0", "grid-cols-4", "sm:static", "sm:grid-cols-4");
+    expect(nav).toHaveClass("fixed", "bottom-0", "grid-cols-5", "sm:static", "sm:grid-cols-5");
 
     const destinations = [
       ["ホーム", "/"],
       ["イベント", "/events"],
       ["カレンダー", "/plans"],
-      ["つながり", "/connections"]
+      ["つながり", "/connections"],
+      ["通知", "/notifications"]
     ] as const;
 
     for (const [name, href] of destinations) {
@@ -58,5 +59,34 @@ describe("PrimaryNav", () => {
     render(<PrimaryNav isSignedIn={false} />);
 
     expect(screen.queryByRole("navigation", { name: "主要な画面" })).not.toBeInTheDocument();
+  });
+
+  it("puts the unread count on the notifications destination", () => {
+    render(<PrimaryNav isSignedIn unreadCount={3} />);
+
+    const link = screen.getByRole("link", { name: "通知 未読3件" });
+    expect(link).toHaveAttribute("href", "/notifications");
+    expect(within(link).getByText("3")).toHaveClass("bg-clay", "text-white");
+  });
+
+  it("caps the badge at 99+ while the accessible name keeps the exact count", () => {
+    render(<PrimaryNav isSignedIn unreadCount={150} />);
+
+    const link = screen.getByRole("link", { name: "通知 未読150件" });
+    expect(within(link).getByText("99+")).toBeInTheDocument();
+  });
+
+  it("shows no badge when everything is read", () => {
+    render(<PrimaryNav isSignedIn unreadCount={0} />);
+
+    const link = screen.getByRole("link", { name: "通知" });
+    expect(link.querySelector(".bg-clay")).not.toBeInTheDocument();
+  });
+
+  it("marks notifications as the current destination on the notifications page", () => {
+    navigation.pathname = "/notifications";
+    render(<PrimaryNav isSignedIn />);
+
+    expect(screen.getByRole("link", { name: "通知" })).toHaveAttribute("aria-current", "page");
   });
 });

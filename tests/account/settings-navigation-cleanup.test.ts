@@ -10,4 +10,14 @@ describe("settings navigation cleanup", () => {
     expect(page).not.toContain("SecondaryLink");
     expect(page).not.toContain("つながりを開く");
   });
+
+  it("places sign-out just above the withdrawal card", () => {
+    const page = readFileSync(resolve(process.cwd(), "app/settings/page.tsx"), "utf8");
+
+    const signOut = page.indexOf("<SignOutCard />");
+    const withdrawal = page.indexOf("退会の手続きへ");
+    expect(signOut).toBeGreaterThan(-1);
+    expect(signOut).toBeLessThan(withdrawal);
+    expect(page.indexOf("<CalendarConnectionCard")).toBeLessThan(signOut);
+  });
 });

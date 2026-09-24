@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AccountEmailCard } from "@/components/account/account-email-card";
+import { SignOutCard } from "@/components/account/sign-out-card";
 import { CalendarConnectionCard } from "@/components/calendar/calendar-connection-card";
 import { ProfileSettingsCard } from "@/components/account/profile-settings-card";
 import { LoginPanel, SetupPanel } from "@/components/ui/state-panels";
@@ -85,6 +86,7 @@ export default async function SettingsPage({
         updatedAt={calendarIntegration?.updated_at ?? null}
         status={query.calendar}
       />
+      <SignOutCard />
       <Card className="max-w-2xl">
         <h2 className="text-title text-ink">退会</h2>
         <p className="mt-1 text-caption text-muted">

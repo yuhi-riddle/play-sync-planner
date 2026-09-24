@@ -11,6 +11,7 @@ import { MobileEventFab } from "@/components/layout/mobile-event-fab";
 import { PrimaryNav } from "@/components/layout/primary-nav";
 import { WebVitalsReporter } from "@/components/ui/web-vitals-reporter";
 import { brand } from "@/lib/shared/brand";
+import { getUnreadNotificationCount } from "@/lib/supabase/notification-count";
 import { getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 import "./globals.css";
@@ -51,6 +52,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     user = await getCurrentUser();
   }
   const isSignedIn = Boolean(user);
+  const unreadNotificationCount = user ? await getUnreadNotificationCount(user.id) : null;
 
   return (
     <html lang="ja" className={zenMaruGothic.variable}>
@@ -72,7 +74,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </div>
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
-            <PrimaryNav isSignedIn={isSignedIn} />
+            <PrimaryNav isSignedIn={isSignedIn} unreadCount={unreadNotificationCount ?? 0} />
             <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
               {children}
             </main>

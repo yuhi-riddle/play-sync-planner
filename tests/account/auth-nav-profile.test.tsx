@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { User } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -22,7 +22,7 @@ describe("AuthNav profile", () => {
     vi.clearAllMocks();
   });
 
-  it("separates the completed profile entry from general settings", async () => {
+  it("shows a single settings entry with the avatar and no bell or sign-out", async () => {
     vi.stubGlobal("React", React);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
     const profileQuery = {
@@ -39,22 +39,22 @@ describe("AuthNav profile", () => {
       is: vi.fn().mockResolvedValue({ count: 0 })
     };
     const user = { id: "user-1", email: "user@example.com", user_metadata: {} } as User;
-    createSupabaseServerClient.mockResolvedValue({
-      from: vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery))
-    });
+    const from = vi.fn((table: string) => (table === "profiles" ? profileQuery : notificationQuery));
+    createSupabaseServerClient.mockResolvedValue({ from });
 
     render(await AuthNav({ user }));
 
-    const profileLink = screen.getByRole("link", { name: "プロフィールを開く（ゆうやん）" });
-    expect(profileLink).toHaveAttribute("href", "/settings#profile");
-    expect(profileLink).toHaveAttribute("title", "プロフィールを開く");
-    expect(screen.queryByRole("link", { name: "設定" })).not.toBeInTheDocument();
-    expect(screen.getByText("ゆうやん")).toBeInTheDocument();
-    expect(screen.getByText("ゆうやん")).toHaveClass("hidden", "sm:inline");
+    const settingsLink = screen.getByRole("link", { name: "設定（ゆうやん）" });
+    expect(settingsLink).toHaveAttribute("href", "/settings");
+    expect(settingsLink).toHaveAttribute("title", "設定");
+    expect(within(settingsLink).getByText("設定")).not.toHaveClass("hidden");
     expect(screen.getByRole("img", { name: "ゆうやんのプロフィール画像" })).toHaveAttribute(
       "src",
       "https://project.supabase.co/storage/v1/object/public/profile-avatars/user-1/avatar.webp"
     );
+    expect(screen.queryByRole("link", { name: /通知/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ログアウト" })).not.toBeInTheDocument();
+    expect(from).not.toHaveBeenCalledWith("notifications");
   });
 
   it("shows the profile onboarding entry at mobile widths when setup is incomplete", async () => {
