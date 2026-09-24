@@ -1,16 +1,17 @@
 import React from "react";
 
-import { ButtonLink, SecondaryLink } from "@/components/ui";
+import { ButtonLink } from "@/components/ui";
 
 /**
  * 未ログインで最初に出る画面。
  *
  * 認証は Google だけなので、ボタンは1つにしてある。「はじめる」と「ログイン」に
  * 割っても行き先は同じ /login で、押し分けを迷わせるだけになる。
+ * ボタンの先は同意画面なので、文言に「Google」は入れない。
  *
  * 規約の同意はここでは取らない。/login にチェックボックスがあり、本文を開くまで
- * チェックできない作りになっている。ここで「続けると同意したことになります」と
- * 書くと、その証跡より弱い形を先に見せることになる。
+ * チェックできない作りになっている。規約とプライバシーポリシーへのリンクは
+ * 全画面共通のフッターにあるので、ここには置かない。
  */
 export function WelcomeHero() {
   return (
@@ -48,15 +49,7 @@ export function WelcomeHero() {
         </p>
 
         <div className="mt-9 w-full">
-          <ButtonLink href="/login">Google ではじめる</ButtonLink>
-          <p className="mt-3 text-caption leading-5 text-muted">
-            次の画面で利用規約とプライバシーポリシーを確認します。
-          </p>
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <SecondaryLink href="/terms">利用規約</SecondaryLink>
-          <SecondaryLink href="/privacy">プライバシーポリシー</SecondaryLink>
+          <ButtonLink href="/login">Madoiをはじめる</ButtonLink>
         </div>
       </div>
     </section>
