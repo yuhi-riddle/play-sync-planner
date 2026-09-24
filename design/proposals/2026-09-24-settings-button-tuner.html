@@ -1,0 +1,159 @@
+<title>設定ボタンの大きさ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap">
+<style id="css">
+  /* アプリにダークモードは無いので、実際の画面に合わせて明るい色で固定する */
+  :root {
+    color-scheme: light;
+    --canvas: #f7f3ef; --surface: #fffdf7; --sunken: #f6f0e4;
+    --line: #e4dac6; --line-strong: #cbbfa6;
+    --text: #262320; --muted: #6f665c;
+    --moss: #5f7d65; --pine: #344f43; --mist: #eff3ee;
+    --shadow-soft: 0 8px 26px rgba(62, 51, 39, 0.09);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--text); font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif; line-height: 1.6; }
+  .page { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 72px; display: grid; gap: 20px; }
+  h1 { font-size: 1.4rem; margin: 0; }
+  .lead { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .previews { display: grid; gap: 16px; min-width: 0; }
+  .cap { font-size: .75rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .screen { border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden; background: var(--canvas); }
+  .sp { max-width: 375px; }
+  .hdr { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .pc .hdr { padding: 16px 24px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .logo i { width: 32px; height: 32px; border-radius: 9px; background: var(--moss); display: block; }
+  .pc .logo i { width: 40px; height: 40px; }
+  .grow { flex: 1; }
+  .btn {
+    display: inline-flex; align-items: center; gap: var(--gap); height: var(--h);
+    padding: 0 var(--pr) 0 var(--pl); border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); color: var(--pine); font-weight: 700; font-size: var(--fs);
+    box-shadow: var(--shadow-soft); white-space: nowrap;
+  }
+  .avatar { width: var(--av); height: var(--av); border-radius: 50%; background: linear-gradient(135deg, #d9c7a8, #b8a17b); flex: none; }
+  .body { padding: 12px 16px 16px; display: grid; gap: 8px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: grid; gap: 14px; position: sticky; top: 16px; }
+  .panel h2 { margin: 0; font-size: 1rem; }
+  .knob { display: grid; gap: 4px; }
+  .knob label { font-size: .85rem; font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+  .knob .now { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+  .knob .row { display: flex; gap: 8px; align-items: center; }
+  .knob input[type=range] { flex: 1; accent-color: var(--pine); }
+  .knob input[type=number] { width: 64px; padding: 4px 6px; border: 1px solid var(--line-strong); border-radius: 8px; font: inherit; font-variant-numeric: tabular-nums; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.act { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+  button.act.primary { background: var(--pine); border-color: var(--pine); color: #fff; }
+  button.act:focus-visible, input:focus-visible { outline: 2px solid #df7d69; outline-offset: 2px; }
+  .status { font-size: .82rem; color: var(--muted); min-height: 1.2em; margin: 0; }
+  textarea { width: 100%; min-height: 110px; font: 12px/1.5 ui-monospace, Consolas, monospace; border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px; }
+</style>
+<div id="root"></div>
+<script type="application/json" id="tuner-state">{"h":44,"av":28,"fs":14,"pl":6,"pr":14,"gap":8}</script>
+<script id="app">
+(function () {
+  var INITIAL = { h: 44, av: 28, fs: 14, pl: 6, pr: 14, gap: 8 };
+  var KNOBS = [
+    { key: "h", label: "ボタンの高さ", min: 36, max: 60, step: 2, tw: function (v) { return "h-[" + v + "px]"; } },
+    { key: "av", label: "顔写真の大きさ", min: 20, max: 44, step: 2, tw: function (v) { return "h-[" + v + "px] w-[" + v + "px]"; } },
+    { key: "fs", label: "文字の大きさ", min: 12, max: 20, step: 1, tw: function (v) { return "text-[" + v + "px]"; } },
+    { key: "pl", label: "左の余白", min: 2, max: 16, step: 1, tw: function (v) { return "pl-[" + v + "px]"; } },
+    { key: "pr", label: "右の余白", min: 8, max: 28, step: 1, tw: function (v) { return "pr-[" + v + "px]"; } },
+    { key: "gap", label: "顔写真と文字の間", min: 4, max: 16, step: 1, tw: function (v) { return "gap-[" + v + "px]"; } }
+  ];
+  var state;
+  try { state = JSON.parse(document.getElementById("tuner-state").textContent); } catch (e) { state = Object.assign({}, INITIAL); }
+
+  function header(pc) {
+    return '<div class="hdr"><span class="logo"><i></i>Madoi</span><span class="grow"></span>' +
+      '<span class="btn"><span class="avatar"></span>設定</span></div>';
+  }
+  function screen(pc) {
+    var body = pc
+      ? '<div class="body" style="grid-template-columns:1fr 1fr"><div class="card"><b>次の予定</b><br>10/4(土) 謎解き</div><div class="card"><b>選択日の予定</b></div></div>'
+      : '<div class="body"><div class="card"><b>次の予定</b><br>10/4(土) 謎解き</div></div>';
+    return '<div class="cap">' + (pc ? "PC" : "スマホ（実寸375px）") + '</div><div class="screen ' + (pc ? "pc" : "sp") + '">' + header(pc) + body + "</div>";
+  }
+  function tailwindText() {
+    return KNOBS.map(function (k) { return k.label + ": " + state[k.key] + "px → " + k.tw(state[k.key]); }).join("\n");
+  }
+  function applyVars() {
+    var r = document.documentElement.style;
+    KNOBS.forEach(function (k) { r.setProperty("--" + k.key, state[k.key] + "px"); });
+    KNOBS.forEach(function (k) {
+      var now = document.getElementById("now-" + k.key);
+      if (now) now.textContent = "今 " + INITIAL[k.key] + "px";
+    });
+    var out = document.getElementById("out");
+    if (out) out.value = tailwindText();
+  }
+  function render() {
+    var knobs = KNOBS.map(function (k) {
+      return '<div class="knob"><label for="r-' + k.key + '">' + k.label + '<span class="now" id="now-' + k.key + '"></span></label>' +
+        '<div class="row"><input type="range" id="r-' + k.key + '" min="' + k.min + '" max="' + k.max + '" step="' + k.step + '" value="' + state[k.key] + '">' +
+        '<input type="number" id="n-' + k.key + '" aria-label="' + k.label + '（px）" min="' + k.min + '" max="' + k.max + '" step="' + k.step + '" value="' + state[k.key] + '"><span>px</span></div></div>';
+    }).join("");
+    document.getElementById("root").innerHTML =
+      '<div class="page"><div><h1>右上の「設定」ボタンの大きさ</h1><p class="lead">つまみを動かすと、スマホとPCの両方の見た目が変わります。決まったら「この値で確定」を押してください（押せないときは、下の値をチャットに貼ってください）。</p></div>' +
+      '<div class="layout"><div class="previews"><div>' + screen(false) + "</div><div>" + screen(true) + "</div></div>" +
+      '<aside class="panel"><h2>調整</h2>' + knobs +
+      '<div class="actions"><button type="button" class="act primary" id="save">この値で確定</button><button type="button" class="act" id="reset">初期値に戻す</button></div>' +
+      '<p class="status" id="status" role="status" aria-live="polite"></p>' +
+      '<label for="out" class="cap">反映する値</label><textarea id="out" readonly></textarea></aside></div></div>';
+    KNOBS.forEach(function (k) {
+      var r = document.getElementById("r-" + k.key), n = document.getElementById("n-" + k.key);
+      function set(v) { v = Math.min(k.max, Math.max(k.min, Number(v) || INITIAL[k.key])); state[k.key] = v; r.value = v; n.value = v; applyVars(); }
+      r.addEventListener("input", function () { set(r.value); });
+      n.addEventListener("change", function () { set(n.value); });
+    });
+    document.getElementById("reset").addEventListener("click", function () {
+      state = Object.assign({}, INITIAL);
+      KNOBS.forEach(function (k) { document.getElementById("r-" + k.key).value = state[k.key]; document.getElementById("n-" + k.key).value = state[k.key]; });
+      applyVars();
+    });
+    document.getElementById("save").addEventListener("click", save);
+    applyVars();
+  }
+
+  var artifactApi = null;
+  function buildDocument() {
+    var css = document.getElementById("css").textContent;
+    var app = document.getElementById("app").textContent;
+    var close = "</" + "script>";
+    return "<!doctype html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>設定ボタンの大きさ</title>\n" +
+      "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap\">\n" +
+      "<style id=\"css\">" + css + "</style>\n</head>\n<body>\n<div id=\"root\"></div>\n" +
+      "<script type=\"application/json\" id=\"tuner-state\">" + JSON.stringify(state) + close + "\n" +
+      "<script id=\"app\">" + app + close + "\n</body>\n</html>\n";
+  }
+  function save() {
+    var status = document.getElementById("status");
+    if (!artifactApi) {
+      status.textContent = "ここでは確定できません。下の値をコピーしてチャットに貼ってください。";
+      return;
+    }
+    status.textContent = "保存しています…";
+    artifactApi.publish(buildDocument()).then(function () {
+      status.textContent = "確定しました。この値でアプリに反映します。";
+    }, function (err) {
+      var code = err && err.code;
+      status.textContent = code === "conflict"
+        ? "ほかの画面で先に保存されました。ページが読み込み直されます。"
+        : "保存できませんでした（" + (code || "不明") + "）。下の値をチャットに貼ってください。";
+    });
+  }
+
+  render();
+  var saveBtn = document.getElementById("save");
+  saveBtn.hidden = true;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("artifact").then(function (api) {
+      artifactApi = api;
+      if (api) saveBtn.hidden = false;
+    }, function () {});
+  }
+})();
+</script>

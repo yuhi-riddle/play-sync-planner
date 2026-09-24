@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { UserRound } from "lucide-react";
 import React from "react";
 
+import { SignedOutLoginLink } from "@/components/layout/signed-out-login-link";
 import { getAuthNavState } from "@/lib/domain/account/auth-nav";
 import { getGoogleProfileDefaults, getProfileAvatarUrl } from "@/lib/domain/account/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -11,7 +12,7 @@ export async function AuthNav({ user }: { user: User | null }) {
   const state = getAuthNavState(user?.email);
 
   if (!state.isSignedIn) {
-    return <AuthLink href={state.primaryHref} label={state.primaryLabel} />;
+    return <SignedOutLoginLink />;
   }
 
   const supabase = await createSupabaseServerClient();
@@ -50,11 +51,11 @@ export async function AuthNav({ user }: { user: User | null }) {
           <img
             src={avatarUrl}
             alt={`${nickname}のプロフィール画像`}
-            className="h-7 w-7 shrink-0 rounded-full object-cover"
+            className="h-8 w-8 shrink-0 rounded-full object-cover"
             referrerPolicy="no-referrer"
           />
         ) : (
-          <UserRound aria-hidden="true" className="h-5 w-5 text-pine" />
+          <UserRound aria-hidden="true" className="h-6 w-6 text-pine" />
         )}
         <span
           className="min-w-0 truncate font-bold sm:max-w-32"
@@ -64,18 +65,5 @@ export async function AuthNav({ user }: { user: User | null }) {
         </span>
       </Link>
     </div>
-  );
-}
-
-function AuthLink({ href, label }: { href: "/login"; label: "ログイン" }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-moss hover:bg-skywash/60 focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
-      aria-label={label}
-      title={label}
-    >
-      {label}
-    </Link>
   );
 }

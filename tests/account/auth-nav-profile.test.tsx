@@ -48,10 +48,12 @@ describe("AuthNav profile", () => {
     expect(settingsLink).toHaveAttribute("href", "/settings");
     expect(settingsLink).toHaveAttribute("title", "設定");
     expect(within(settingsLink).getByText("設定")).not.toHaveClass("hidden");
-    expect(screen.getByRole("img", { name: "ゆうやんのプロフィール画像" })).toHaveAttribute(
+    const avatar = screen.getByRole("img", { name: "ゆうやんのプロフィール画像" });
+    expect(avatar).toHaveAttribute(
       "src",
       "https://project.supabase.co/storage/v1/object/public/profile-avatars/user-1/avatar.webp"
     );
+    expect(avatar).toHaveClass("h-8", "w-8");
     expect(screen.queryByRole("link", { name: /通知/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ログアウト" })).not.toBeInTheDocument();
     expect(from).not.toHaveBeenCalledWith("notifications");

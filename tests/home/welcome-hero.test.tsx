@@ -12,7 +12,7 @@ describe("WelcomeHero", () => {
   it("入口のボタンは1つで、ログイン画面へ送る", () => {
     render(<WelcomeHero />);
 
-    const start = screen.getByRole("link", { name: "Google ではじめる" });
+    const start = screen.getByRole("link", { name: "Madoiをはじめる" });
     expect(start).toHaveAttribute("href", "/login");
     expect(screen.queryByRole("link", { name: "ログイン" })).not.toBeInTheDocument();
   });
@@ -24,16 +24,17 @@ describe("WelcomeHero", () => {
   it("この画面では同意を取ったことにしない", () => {
     render(<WelcomeHero />);
 
-    expect(screen.getByText(/次の画面で利用規約とプライバシーポリシーを確認します/)).toBeInTheDocument();
     expect(screen.queryByText(/同意したことになります/)).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("規約とプライバシーポリシーはログイン前でも読める", () => {
+  // 規約のリンクは画面下のフッターに常にある。ここにも置くと同じリンクが二重になる。
+  it("規約のリンクはフッターに任せて、ここには置かない", () => {
     render(<WelcomeHero />);
 
-    expect(screen.getByRole("link", { name: "利用規約" })).toHaveAttribute("href", "/terms");
-    expect(screen.getByRole("link", { name: "プライバシーポリシー" })).toHaveAttribute("href", "/privacy");
+    expect(screen.queryByRole("link", { name: "利用規約" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "プライバシーポリシー" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/次の画面で利用規約/)).not.toBeInTheDocument();
   });
 
   // 背景の円はただの飾り。読み上げに出すと意味のない要素を読ませることになる。
