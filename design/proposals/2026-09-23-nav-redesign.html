@@ -16,28 +16,8 @@
     --shadow: 0 1px 2px rgba(62,51,39,.04), 0 3px 10px rgba(62,51,39,.05);
     --lift: 0 20px 48px rgba(62,51,39,.15);
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
-      --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
-      --moss: #8fae94; --pine: #b9d3c0; --pine-deep: #a7c4ae; --clay: #e0917a;
-      --clay-ink: #eaa892; --mist: #2b332c; --skywash: #24302f; --scrim: rgba(0,0,0,.55);
-      --good: #8fc79f; --bad: #eaa892; --meh: #e6c68a;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.35);
-      --lift: 0 20px 48px rgba(0,0,0,.5);
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --canvas: #1c1a17; --surface: #262320; --sunken: #211e1a; --line: #3a342c;
-    --line-strong: #4d4638; --text: #f0ebe2; --muted: #a99f90; --subtle: #7c7466;
-    --moss: #8fae94; --pine: #b9d3c0; --pine-deep: #a7c4ae; --clay: #e0917a;
-    --clay-ink: #eaa892; --mist: #2b332c; --skywash: #24302f; --scrim: rgba(0,0,0,.55);
-    --good: #8fc79f; --bad: #eaa892; --meh: #e6c68a;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 10px rgba(0,0,0,.35);
-    --lift: 0 20px 48px rgba(0,0,0,.5);
-  }
+  /* アプリにダークモードは無いので、実際の画面に合わせて明るい色で固定する */
+  :root { color-scheme: light; }
 
   * { box-sizing: border-box; }
   body {

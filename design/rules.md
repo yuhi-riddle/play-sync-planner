@@ -151,7 +151,7 @@ AIがUIを書くときに参照するルール。値の定義は [tokens.css](./
 
 理由: `docs/design/03_screen_flow.md` の設計方針。
 
-**スマートフォンの下部固定ナビゲーションのみ例外**: 2026-07-17付の設計（`docs/superpowers/specs/2026-07-17-mobile-navigation-and-event-list-polish-design.md`）で、スマートフォンに限り「ホーム」「イベント」「カレンダー」「つながり」4項目の下部固定ナビゲーションを採用済み（`components/primary-nav.tsx`）。ログイン・同意・作成・編集・確定などの集中操作画面では表示しない（`lib/navigation-visibility.ts`）。デスクトップは従来どおりヘッダー直下の細いテキストナビ行のまま、固定下部ナビゲーションは出さない。新規に下部タブを追加する場合はこの1本に統合し、増やさない。
+**スマートフォンの下部固定ナビゲーションのみ例外**: 2026-07-17付の設計（`docs/superpowers/specs/2026-07-17-mobile-navigation-and-event-list-polish-design.md`）で、スマートフォンに限り「ホーム」「イベント」「カレンダー」「つながり」「通知」の5項目の下部固定ナビゲーションを採用済み（`components/layout/primary-nav.tsx`。通知は2026-09-23の設計 `docs/superpowers/specs/2026-09-23-nav-redesign-design.md` で追加）。ログイン・同意・作成・編集・確定などの集中操作画面では表示しない（`getNavigationChrome`、`lib/domain/account/navigation-visibility.ts`）。デスクトップは従来どおりヘッダー直下の細いテキストナビ行のまま、固定下部ナビゲーションは出さない。新規に下部タブを追加する場合はこの1本に統合し、増やさない。
 
 ---
 

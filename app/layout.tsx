@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
 import type { User } from "@supabase/supabase-js";
@@ -9,8 +9,10 @@ import { BottomNavSpacer } from "@/components/layout/bottom-nav-spacer";
 import { Logo } from "@/components/layout/logo";
 import { MobileEventFab } from "@/components/layout/mobile-event-fab";
 import { PrimaryNav } from "@/components/layout/primary-nav";
+import { PrimaryNavWithUnread } from "@/components/layout/primary-nav-with-unread";
 import { WebVitalsReporter } from "@/components/ui/web-vitals-reporter";
 import { brand } from "@/lib/shared/brand";
+import { getUnreadNotificationCount } from "@/lib/supabase/notification-count";
 import { getCurrentUser, hasSupabaseEnv } from "@/lib/supabase/server";
 
 import "./globals.css";
@@ -51,6 +53,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     user = await getCurrentUser();
   }
   const isSignedIn = Boolean(user);
+  // ここでは待たない。ナビ側で待つので、ヘッダーのプロフィール取得と同時に進む。
+  // 件数は補助情報なので、失敗してもバッジを出さないだけにする。
+  const unreadNotificationCount = user
+    ? getUnreadNotificationCount(user.id).catch(() => null)
+    : Promise.resolve(null);
 
   return (
     <html lang="ja" className={zenMaruGothic.variable}>
@@ -72,7 +79,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </div>
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
-            <PrimaryNav isSignedIn={isSignedIn} />
+            {/* 件数が遅くてもページ全体を止めない。先にバッジなしのナビを出し、件数が取れたら差し替える */}
+            <Suspense fallback={<PrimaryNav isSignedIn={isSignedIn} unreadCount={0} />}>
+              <PrimaryNavWithUnread isSignedIn={isSignedIn} unreadCount={unreadNotificationCount} />
+            </Suspense>
             <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
               {children}
             </main>

@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   primaryNav: vi.fn(),
   mobileEventFab: vi.fn(),
   bottomNavSpacer: vi.fn(),
+  getUnreadNotificationCount: vi.fn(),
+  suspendUnreadNav: false,
   getCurrentUser: vi.fn(),
   hasSupabaseEnv: vi.fn()
 }));
@@ -23,17 +25,35 @@ vi.mock("@/components/layout/mobile-event-fab", () => ({
     return null;
   }
 }));
-vi.mock("@/components/layout/primary-nav", () => ({
-  PrimaryNav: (props: unknown) => {
+vi.mock("@/components/layout/primary-nav-with-unread", () => ({
+  PrimaryNavWithUnread: (props: unknown) => {
     mocks.primaryNav(props);
+    if (mocks.suspendUnreadNav) {
+      // 件数が返ってこない状態を再現する（Suspense の外なら画面全体の描画が止まる）
+      throw new Promise(() => {});
+    }
     return null;
   }
 }));
+vi.mock("@/components/layout/primary-nav", () => ({
+  PrimaryNav: (props: { unreadCount?: number }) => (
+    <nav data-mock="primary-nav-fallback" data-unread={props.unreadCount} />
+  )
+}));
+
+type PrimaryNavProps = { isSignedIn: boolean; unreadCount: Promise<number | null> };
+
+function primaryNavProps() {
+  return mocks.primaryNav.mock.calls[0][0] as PrimaryNavProps;
+}
 vi.mock("@/components/layout/bottom-nav-spacer", () => ({
   BottomNavSpacer: (props: unknown) => {
     mocks.bottomNavSpacer(props);
     return <div data-mock="bottom-nav-spacer" />;
   }
+}));
+vi.mock("@/lib/supabase/notification-count", () => ({
+  getUnreadNotificationCount: mocks.getUnreadNotificationCount
 }));
 vi.mock("@/components/ui/web-vitals-reporter", () => ({
   WebVitalsReporter: () => null
@@ -49,6 +69,8 @@ describe("RootLayout responsive header", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hasSupabaseEnv.mockReturnValue(true);
+    mocks.getUnreadNotificationCount.mockResolvedValue(3);
+    mocks.suspendUnreadNav = false;
     mocks.getCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com", user_metadata: {} });
   });
 
@@ -111,7 +133,9 @@ describe("RootLayout responsive header", () => {
     const user = { id: "user-1", email: "user@example.com", user_metadata: {} };
     expect(mocks.getCurrentUser).toHaveBeenCalledTimes(1);
     expect(mocks.authNav).toHaveBeenCalledWith({ user });
-    expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: true });
+    expect(mocks.getUnreadNotificationCount).toHaveBeenCalledWith("user-1");
+    expect(primaryNavProps().isSignedIn).toBe(true);
+    await expect(primaryNavProps().unreadCount).resolves.toBe(3);
     expect(mocks.mobileEventFab).toHaveBeenCalledWith({ isSignedIn: true });
     expect(mocks.bottomNavSpacer).toHaveBeenCalledWith({ isSignedIn: true });
   });
@@ -130,5 +154,46 @@ describe("RootLayout responsive header", () => {
     expect(footerClasses).toContain("pb-8");
     expect(footerClasses).not.toContain("pb-36");
     expect(footer?.nextElementSibling?.getAttribute("data-mock")).toBe("bottom-nav-spacer");
+  });
+
+  it("does not count notifications for signed-out visitors", async () => {
+    vi.stubGlobal("React", React);
+    mocks.getCurrentUser.mockResolvedValue(null);
+
+    renderToStaticMarkup(await RootLayout({ children: "本文" }));
+
+    expect(mocks.getUnreadNotificationCount).not.toHaveBeenCalled();
+    expect(primaryNavProps().isSignedIn).toBe(false);
+    await expect(primaryNavProps().unreadCount).resolves.toBeNull();
+  });
+
+  // 件数をレイアウトで待つと、ヘッダーのプロフィール取得と並ばずに全ページの表示が1往復ぶん遅れる。
+  it("does not wait for the unread count before rendering the page", async () => {
+    vi.stubGlobal("React", React);
+    mocks.getUnreadNotificationCount.mockReturnValue(new Promise(() => {}));
+
+    const layout = await RootLayout({ children: "本文" });
+
+    expect(renderToStaticMarkup(layout)).toContain("本文");
+  });
+
+  it("shows the navigation without a badge while the unread count is still loading", async () => {
+    vi.stubGlobal("React", React);
+    mocks.suspendUnreadNav = true;
+
+    const markup = renderToStaticMarkup(await RootLayout({ children: "本文" }));
+
+    expect(markup).toContain("本文");
+    expect(markup).toContain('data-mock="primary-nav-fallback"');
+    expect(markup).toContain('data-unread="0"');
+  });
+
+  it("still renders the navigation without a badge when the count query throws", async () => {
+    vi.stubGlobal("React", React);
+    mocks.getUnreadNotificationCount.mockRejectedValue(new Error("network"));
+
+    renderToStaticMarkup(await RootLayout({ children: "本文" }));
+
+    await expect(primaryNavProps().unreadCount).resolves.toBeNull();
   });
 });
