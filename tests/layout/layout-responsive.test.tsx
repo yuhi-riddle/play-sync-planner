@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   authNav: vi.fn(),
   primaryNav: vi.fn(),
   mobileEventFab: vi.fn(),
+  bottomNavSpacer: vi.fn(),
   getCurrentUser: vi.fn(),
   hasSupabaseEnv: vi.fn()
 }));
@@ -26,6 +27,12 @@ vi.mock("@/components/layout/primary-nav", () => ({
   PrimaryNav: (props: unknown) => {
     mocks.primaryNav(props);
     return null;
+  }
+}));
+vi.mock("@/components/layout/bottom-nav-spacer", () => ({
+  BottomNavSpacer: (props: unknown) => {
+    mocks.bottomNavSpacer(props);
+    return <div data-mock="bottom-nav-spacer" />;
   }
 }));
 vi.mock("@/components/ui/web-vitals-reporter", () => ({
@@ -95,17 +102,22 @@ describe("RootLayout responsive header", () => {
     expect(mocks.authNav).toHaveBeenCalledWith({ user });
     expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: true });
     expect(mocks.mobileEventFab).toHaveBeenCalledWith({ isSignedIn: true });
+    expect(mocks.bottomNavSpacer).toHaveBeenCalledWith({ isSignedIn: true });
   });
 
-  it("keeps body content and the footer clear of the fixed mobile navigation", async () => {
+  it("leaves the fixed-navigation clearance to BottomNavSpacer instead of padding every page", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });
     const document = new DOMParser().parseFromString(renderToStaticMarkup(layout), "text/html");
 
     const mainWrapperClasses = document.querySelector("main")?.parentElement?.getAttribute("class")?.split(/\s+/) ?? [];
-    expect(mainWrapperClasses).toEqual(expect.arrayContaining(["pb-36", "sm:pb-10"]));
+    expect(mainWrapperClasses).toContain("pb-10");
+    expect(mainWrapperClasses).not.toContain("pb-36");
 
-    const footerClasses = document.querySelector("footer")?.getAttribute("class")?.split(/\s+/) ?? [];
-    expect(footerClasses).toEqual(expect.arrayContaining(["pb-36", "sm:pb-8"]));
+    const footer = document.querySelector("footer");
+    const footerClasses = footer?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(footerClasses).toContain("pb-8");
+    expect(footerClasses).not.toContain("pb-36");
+    expect(footer?.nextElementSibling?.getAttribute("data-mock")).toBe("bottom-nav-spacer");
   });
 });
