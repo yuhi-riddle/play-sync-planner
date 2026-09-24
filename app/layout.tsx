@@ -8,7 +8,7 @@ import { AuthNav } from "@/components/layout/auth-nav";
 import { BottomNavSpacer } from "@/components/layout/bottom-nav-spacer";
 import { Logo } from "@/components/layout/logo";
 import { MobileEventFab } from "@/components/layout/mobile-event-fab";
-import { PrimaryNav } from "@/components/layout/primary-nav";
+import { PrimaryNavWithUnread } from "@/components/layout/primary-nav-with-unread";
 import { WebVitalsReporter } from "@/components/ui/web-vitals-reporter";
 import { brand } from "@/lib/shared/brand";
 import { getUnreadNotificationCount } from "@/lib/supabase/notification-count";
@@ -52,7 +52,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     user = await getCurrentUser();
   }
   const isSignedIn = Boolean(user);
-  const unreadNotificationCount = user ? await getUnreadNotificationCount(user.id) : null;
+  // ここでは待たない。ナビ側で待つので、ヘッダーのプロフィール取得と同時に進む。
+  // 件数は補助情報なので、失敗してもバッジを出さないだけにする。
+  const unreadNotificationCount = user
+    ? getUnreadNotificationCount(user.id).catch(() => null)
+    : Promise.resolve(null);
 
   return (
     <html lang="ja" className={zenMaruGothic.variable}>
@@ -74,7 +78,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </div>
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
-            <PrimaryNav isSignedIn={isSignedIn} unreadCount={unreadNotificationCount ?? 0} />
+            <PrimaryNavWithUnread isSignedIn={isSignedIn} unreadCount={unreadNotificationCount} />
             <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
               {children}
             </main>

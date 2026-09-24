@@ -24,12 +24,18 @@ vi.mock("@/components/layout/mobile-event-fab", () => ({
     return null;
   }
 }));
-vi.mock("@/components/layout/primary-nav", () => ({
-  PrimaryNav: (props: unknown) => {
+vi.mock("@/components/layout/primary-nav-with-unread", () => ({
+  PrimaryNavWithUnread: (props: unknown) => {
     mocks.primaryNav(props);
     return null;
   }
 }));
+
+type PrimaryNavProps = { isSignedIn: boolean; unreadCount: Promise<number | null> };
+
+function primaryNavProps() {
+  return mocks.primaryNav.mock.calls[0][0] as PrimaryNavProps;
+}
 vi.mock("@/components/layout/bottom-nav-spacer", () => ({
   BottomNavSpacer: (props: unknown) => {
     mocks.bottomNavSpacer(props);
@@ -117,7 +123,8 @@ describe("RootLayout responsive header", () => {
     expect(mocks.getCurrentUser).toHaveBeenCalledTimes(1);
     expect(mocks.authNav).toHaveBeenCalledWith({ user });
     expect(mocks.getUnreadNotificationCount).toHaveBeenCalledWith("user-1");
-    expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: true, unreadCount: 3 });
+    expect(primaryNavProps().isSignedIn).toBe(true);
+    await expect(primaryNavProps().unreadCount).resolves.toBe(3);
     expect(mocks.mobileEventFab).toHaveBeenCalledWith({ isSignedIn: true });
     expect(mocks.bottomNavSpacer).toHaveBeenCalledWith({ isSignedIn: true });
   });
@@ -145,15 +152,26 @@ describe("RootLayout responsive header", () => {
     renderToStaticMarkup(await RootLayout({ children: "本文" }));
 
     expect(mocks.getUnreadNotificationCount).not.toHaveBeenCalled();
-    expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: false, unreadCount: 0 });
+    expect(primaryNavProps().isSignedIn).toBe(false);
+    await expect(primaryNavProps().unreadCount).resolves.toBeNull();
   });
 
-  it("still renders the navigation without a badge when the count cannot be read", async () => {
+  // 件数をレイアウトで待つと、ヘッダーのプロフィール取得と並ばずに全ページの表示が1往復ぶん遅れる。
+  it("does not wait for the unread count before rendering the page", async () => {
     vi.stubGlobal("React", React);
-    mocks.getUnreadNotificationCount.mockResolvedValue(null);
+    mocks.getUnreadNotificationCount.mockReturnValue(new Promise(() => {}));
+
+    const layout = await RootLayout({ children: "本文" });
+
+    expect(renderToStaticMarkup(layout)).toContain("本文");
+  });
+
+  it("still renders the navigation without a badge when the count query throws", async () => {
+    vi.stubGlobal("React", React);
+    mocks.getUnreadNotificationCount.mockRejectedValue(new Error("network"));
 
     renderToStaticMarkup(await RootLayout({ children: "本文" }));
 
-    expect(mocks.primaryNav).toHaveBeenCalledWith({ isSignedIn: true, unreadCount: 0 });
+    await expect(primaryNavProps().unreadCount).resolves.toBeNull();
   });
 });
