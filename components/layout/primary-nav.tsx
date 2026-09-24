@@ -58,7 +58,7 @@ export function PrimaryNav({ isSignedIn, unreadCount = 0 }: { isSignedIn: boolea
             {badge ? (
               <span
                 aria-hidden="true"
-                className="absolute right-2 top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-clay px-1.5 py-0.5 text-[11px] font-bold leading-none text-white sm:-right-1 sm:-top-1"
+                className="absolute right-2 top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-clay-ink px-1.5 py-0.5 text-[11px] font-bold leading-none text-white sm:-right-1 sm:-top-1"
               >
                 {badge}
               </span>

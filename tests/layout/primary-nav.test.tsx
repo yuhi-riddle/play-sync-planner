@@ -66,7 +66,7 @@ describe("PrimaryNav", () => {
 
     const link = screen.getByRole("link", { name: "通知 未読3件" });
     expect(link).toHaveAttribute("href", "/notifications");
-    expect(within(link).getByText("3")).toHaveClass("bg-clay", "text-white");
+    expect(within(link).getByText("3")).toHaveClass("bg-clay-ink", "text-white");
   });
 
   it("caps the badge at 99+ while the accessible name keeps the exact count", () => {
@@ -80,7 +80,7 @@ describe("PrimaryNav", () => {
     render(<PrimaryNav isSignedIn unreadCount={0} />);
 
     const link = screen.getByRole("link", { name: "通知" });
-    expect(link.querySelector(".bg-clay")).not.toBeInTheDocument();
+    expect(link.querySelector(".bg-clay-ink")).not.toBeInTheDocument();
   });
 
   it("marks notifications as the current destination on the notifications page", () => {
