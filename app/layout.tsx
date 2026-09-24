@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
 import type { User } from "@supabase/supabase-js";
@@ -8,6 +8,7 @@ import { AuthNav } from "@/components/layout/auth-nav";
 import { BottomNavSpacer } from "@/components/layout/bottom-nav-spacer";
 import { Logo } from "@/components/layout/logo";
 import { MobileEventFab } from "@/components/layout/mobile-event-fab";
+import { PrimaryNav } from "@/components/layout/primary-nav";
 import { PrimaryNavWithUnread } from "@/components/layout/primary-nav-with-unread";
 import { WebVitalsReporter } from "@/components/ui/web-vitals-reporter";
 import { brand } from "@/lib/shared/brand";
@@ -78,7 +79,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </div>
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
-            <PrimaryNavWithUnread isSignedIn={isSignedIn} unreadCount={unreadNotificationCount} />
+            {/* 件数が遅くてもページ全体を止めない。先にバッジなしのナビを出し、件数が取れたら差し替える */}
+            <Suspense fallback={<PrimaryNav isSignedIn={isSignedIn} unreadCount={0} />}>
+              <PrimaryNavWithUnread isSignedIn={isSignedIn} unreadCount={unreadNotificationCount} />
+            </Suspense>
             <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
               {children}
             </main>

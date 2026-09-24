@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   mobileEventFab: vi.fn(),
   bottomNavSpacer: vi.fn(),
   getUnreadNotificationCount: vi.fn(),
+  suspendUnreadNav: false,
   getCurrentUser: vi.fn(),
   hasSupabaseEnv: vi.fn()
 }));
@@ -27,8 +28,17 @@ vi.mock("@/components/layout/mobile-event-fab", () => ({
 vi.mock("@/components/layout/primary-nav-with-unread", () => ({
   PrimaryNavWithUnread: (props: unknown) => {
     mocks.primaryNav(props);
+    if (mocks.suspendUnreadNav) {
+      // 件数が返ってこない状態を再現する（Suspense の外なら画面全体の描画が止まる）
+      throw new Promise(() => {});
+    }
     return null;
   }
+}));
+vi.mock("@/components/layout/primary-nav", () => ({
+  PrimaryNav: (props: { unreadCount?: number }) => (
+    <nav data-mock="primary-nav-fallback" data-unread={props.unreadCount} />
+  )
 }));
 
 type PrimaryNavProps = { isSignedIn: boolean; unreadCount: Promise<number | null> };
@@ -60,6 +70,7 @@ describe("RootLayout responsive header", () => {
     vi.clearAllMocks();
     mocks.hasSupabaseEnv.mockReturnValue(true);
     mocks.getUnreadNotificationCount.mockResolvedValue(3);
+    mocks.suspendUnreadNav = false;
     mocks.getCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com", user_metadata: {} });
   });
 
@@ -164,6 +175,17 @@ describe("RootLayout responsive header", () => {
     const layout = await RootLayout({ children: "本文" });
 
     expect(renderToStaticMarkup(layout)).toContain("本文");
+  });
+
+  it("shows the navigation without a badge while the unread count is still loading", async () => {
+    vi.stubGlobal("React", React);
+    mocks.suspendUnreadNav = true;
+
+    const markup = renderToStaticMarkup(await RootLayout({ children: "本文" }));
+
+    expect(markup).toContain("本文");
+    expect(markup).toContain('data-mock="primary-nav-fallback"');
+    expect(markup).toContain('data-unread="0"');
   });
 
   it("still renders the navigation without a badge when the count query throws", async () => {
