@@ -1,8 +1,9 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LoginConsentForm } from "@/components/account/login-consent-form";
 import { Alert, Card, PageHeader } from "@/components/ui";
+import { resolveAuthRedirectOrigin } from "@/lib/auth/auth-redirect-origin";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { hasAcceptedLegalDocuments, PENDING_CONSENT_COOKIE, PRIVACY_VERSION, TERMS_VERSION } from "@/lib/domain/account/legal";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
@@ -33,11 +34,20 @@ async function signInWithGoogle(formData: FormData) {
     maxAge: 10 * 60
   });
 
+  // ログインを始めたサイト（本番・プレビュー・ローカル）に戻す。知らないサイトなら本番に戻す
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const proto = requestHeaders.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const origin = resolveAuthRedirectOrigin(
+    host ? `${proto}://${host}` : null,
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  );
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`
+      redirectTo: `${origin}/auth/callback`
     }
   });
 
