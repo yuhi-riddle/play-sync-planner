@@ -64,6 +64,11 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import RootLayout from "@/app/layout";
+import Loading from "@/app/loading";
+import EventLoading from "@/app/events/[eventId]/loading";
+import PlanLoading from "@/app/plans/[planId]/loading";
+import SettlementLoading from "@/app/plans/[planId]/settlement/loading";
+import TimetableLoading from "@/app/plans/[planId]/timetable/loading";
 
 describe("RootLayout responsive header", () => {
   beforeEach(() => {
@@ -103,15 +108,29 @@ describe("RootLayout responsive header", () => {
     expect(classNames).not.toContain("self-start");
   });
 
-  it("gives <main> a minimum height so the footer stays off-screen while the route Suspense boundary resolves", async () => {
+  // 最低の高さを <main> に付けると、ログイン画面のように中身が少ない画面でカードの下が大きく空く。
+  // フッターを画面外に保ちたいのは読み込み中だけなので、読み込み画面の側に持たせる。
+  it("does not stretch <main> on short pages such as the login screen", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });
-    const markup = renderToStaticMarkup(layout);
-    const parsedDocument = new DOMParser().parseFromString(markup, "text/html");
-    document.body.innerHTML = parsedDocument.body.innerHTML;
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(layout), "text/html");
 
     const mainClasses = document.querySelector("main")?.getAttribute("class")?.split(/\s+/) ?? [];
-    expect(mainClasses).toEqual(expect.arrayContaining(["min-h-[calc(100vh-10rem)]"]));
+    expect(mainClasses).not.toContain("min-h-[calc(100vh-10rem)]");
+  });
+
+  it.each([
+    ["app/loading.tsx", Loading],
+    ["app/plans/[planId]/loading.tsx", PlanLoading],
+    ["app/plans/[planId]/settlement/loading.tsx", SettlementLoading],
+    ["app/plans/[planId]/timetable/loading.tsx", TimetableLoading],
+    ["app/events/[eventId]/loading.tsx", EventLoading]
+  ])("keeps the footer off-screen while %s is shown", (_path, LoadingScreen) => {
+    vi.stubGlobal("React", React);
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(<LoadingScreen />), "text/html");
+
+    const loadingClasses = document.querySelector('[role="status"]')?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(loadingClasses).toContain("min-h-[calc(100vh-10rem)]");
   });
 
   // <main> は「本文へ移動」の着地点として tabIndex=-1 を持つ。クリックでもフォーカスが入るので、

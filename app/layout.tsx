@@ -83,7 +83,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <Suspense fallback={<PrimaryNav isSignedIn={isSignedIn} unreadCount={0} />}>
               <PrimaryNavWithUnread isSignedIn={isSignedIn} unreadCount={unreadNotificationCount} />
             </Suspense>
-            <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
+            <main id="main-content" tabIndex={-1} className="focus:outline-none">
               {children}
             </main>
           </div>
