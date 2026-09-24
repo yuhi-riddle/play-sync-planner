@@ -4,7 +4,7 @@ import { Card, Skeleton } from "@/components/ui";
 
 export default function Loading() {
   return (
-    <div role="status" aria-label="読み込み中" className="min-h-[calc(100vh-10rem)] space-y-6">
+    <div role="status" aria-label="読み込み中" className="space-y-6">
       <Skeleton className="h-32 w-full" />
 
       <div data-testid="event-tab-skeleton" className="flex border-b border-line">

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { AuthPageFrame } from "@/components/account/auth-page-frame";
 import { LoginConsentForm } from "@/components/account/login-consent-form";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
@@ -59,14 +60,14 @@ export default async function LoginPage({
   const nextPath = safeNextPath(next);
 
   return (
-    <div className="space-y-6">
+    <AuthPageFrame>
       <PageHeader eyebrow="Welcome" title="はじめに確認してください" description="利用規約とプライバシーポリシーに同意すると、Googleで始められます。" />
       {withdrawn === "1" ? (
         <Alert tone="info" title="退会が完了しました">
           ご利用ありがとうございました。このアカウントではログインできません。もう一度使う場合は、新しいアカウントを作成してください。
         </Alert>
       ) : null}
-      <Card className="max-w-xl">
+      <Card>
         {hasSupabaseEnv() ? (
           <LoginConsentForm action={signInWithGoogle} nextPath={nextPath} />
         ) : (
@@ -75,6 +76,6 @@ export default async function LoginPage({
           </p>
         )}
       </Card>
-    </div>
+    </AuthPageFrame>
   );
 }
