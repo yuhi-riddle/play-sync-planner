@@ -1,0 +1,88 @@
+<title>ログイン画面の空きの置き場所</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap">
+<style>
+  /* アプリにダークモードは無いので、実際の画面に合わせて明るい色で固定する */
+  :root {
+    color-scheme: light;
+    --canvas: #f7f3ef; --surface: #fffdf7; --sunken: #f6f0e4;
+    --line: #e4dac6; --line-strong: #cbbfa6;
+    --text: #262320; --muted: #6f665c; --moss: #5f7d65; --pine: #344f43; --mist: #eff3ee;
+    --gap-mark: #df7d69;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--text); font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif; line-height: 1.6; }
+  .page { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 72px; }
+  h1 { font-size: 1.45rem; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 22px; max-width: 70ch; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .opt { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: grid; gap: 12px; }
+  .opt.rec { border-color: var(--moss); box-shadow: 0 0 0 2px var(--moss) inset; }
+  .opt h2 { font-size: 1.05rem; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .tag { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--mist); color: var(--pine); }
+  .tag.now { background: var(--sunken); color: var(--muted); }
+  .aim { margin: 0; font-size: .88rem; color: var(--muted); }
+  .frames { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .cap { font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: 3px; }
+  /* 端末の枠: スマホ 375x812 と PC 1280x800 を同じ縮尺で縮めて描く */
+  .dev { position: relative; border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; background: var(--canvas); display: flex; flex-direction: column; }
+  .sp { width: 150px; height: 325px; }
+  .pc { width: 200px; height: 125px; }
+  .hdr { height: 16px; flex: none; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 6px; gap: 3px; font-size: 6px; font-weight: 700; }
+  .hdr i { width: 8px; height: 8px; border-radius: 2px; background: var(--moss); display: block; }
+  .pc .hdr { height: 12px; }
+  .content { padding: 6px; display: grid; gap: 4px; align-content: start; }
+  .pc .content { padding: 5px 10px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; }
+  .title { height: 24px; }
+  .form { height: 70px; }
+  .pc .title { height: 14px; width: 90%; }
+  .pc .form { height: 40px; width: 50%; }
+  .ftr { flex: none; height: 16px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 6px; padding: 0 6px; font-size: 5.5px; color: var(--muted); }
+  .pc .ftr { height: 10px; }
+  .space { flex: 1; display: grid; place-items: center; font-size: 7px; font-weight: 700; color: var(--gap-mark); background: repeating-linear-gradient(45deg, transparent 0 5px, rgba(223,125,105,.10) 5px 10px); }
+  .pc .space { font-size: 6px; }
+  .center { flex: 1; display: grid; align-content: center; gap: 4px; padding: 6px; }
+  .pc .center { padding: 4px 10px; }
+  .pros { margin: 0; padding-left: 1.1em; font-size: .85rem; }
+  .pros li.minus { color: var(--muted); }
+  .note { font-size: .8rem; color: var(--muted); margin-top: 16px; }
+</style>
+
+<div class="page">
+  <h1>ログイン画面の空きを、どこに置くか</h1>
+  <p class="lead">ログイン画面は中身が少ないので、画面の高さが余ります。余りを「どこに置くか」の3案です。斜線が余りの場所。各案、左がスマホ、右がPC（同じ縮尺）。</p>
+  <div class="opts">
+
+    <section class="opt">
+      <h2>案1 カードとフッターの間 <span class="tag now">PR #64 の前</span></h2>
+      <p class="aim">フッターは常に画面の一番下。カードの下に大きな余りが出る（前回「隙間が気になる」と言われた状態）。</p>
+      <div class="frames">
+        <div><div class="cap">スマホ</div><div class="dev sp"><div class="hdr"><i></i>Madoi</div><div class="content"><div class="card title"></div><div class="card form"></div></div><div class="space">余り</div><div class="ftr">利用規約　プライバシー</div></div></div>
+        <div><div class="cap">PC</div><div class="dev pc"><div class="hdr"><i></i>Madoi</div><div class="content"><div class="card title"></div><div class="card form"></div></div><div class="space">余り</div><div class="ftr">利用規約　プライバシー</div></div></div>
+      </div>
+      <ul class="pros"><li>読み込み中からの切り替えでフッターが動かない</li><li class="minus">カードの下がぽっかり空く</li></ul>
+    </section>
+
+    <section class="opt">
+      <h2>案2 フッターの下 <span class="tag now">PR #64（今）</span></h2>
+      <p class="aim">フッターがカードのすぐ下に来る。余りはフッターの下に回る。</p>
+      <div class="frames">
+        <div><div class="cap">スマホ</div><div class="dev sp"><div class="hdr"><i></i>Madoi</div><div class="content"><div class="card title"></div><div class="card form"></div></div><div class="ftr">利用規約　プライバシー</div><div class="space">余り</div></div></div>
+        <div><div class="cap">PC</div><div class="dev pc"><div class="hdr"><i></i>Madoi</div><div class="content"><div class="card title"></div><div class="card form"></div></div><div class="ftr">利用規約　プライバシー</div><div class="space">余り</div></div></div>
+      </div>
+      <ul class="pros"><li>カードとフッターがまとまる</li><li class="minus">ページが途中で終わったように見える。読み込み画面から切り替わるとフッターが上に跳ねる</li></ul>
+    </section>
+
+    <section class="opt rec">
+      <h2>案3 カードを上下の真ん中に <span class="tag">推奨</span></h2>
+      <p class="aim">フッターは画面の一番下のまま、ログインのカードを残りの高さの真ん中に置く。余りが上下に分かれて、狙って置いた余白に見える。</p>
+      <div class="frames">
+        <div><div class="cap">スマホ</div><div class="dev sp"><div class="hdr"><i></i>Madoi</div><div class="center"><div class="card title"></div><div class="card form"></div></div><div class="ftr">利用規約　プライバシー</div></div></div>
+        <div><div class="cap">PC</div><div class="dev pc"><div class="hdr"><i></i>Madoi</div><div class="center"><div class="card title"></div><div class="card form"></div></div><div class="ftr">利用規約　プライバシー</div></div></div>
+      </div>
+      <ul class="pros"><li>ぽっかり空いた感じが消える。フッターも動かない</li><li class="minus">ログイン画面と同意画面だけ、ほかの画面と置き方が変わる</li></ul>
+    </section>
+
+  </div>
+  <p class="note">参考モックです。スマホ375×812、PC 1280×800 を同じ縮尺で縮めています。色は design/tokens.css に合わせています。</p>
+</div>

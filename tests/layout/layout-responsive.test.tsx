@@ -103,15 +103,26 @@ describe("RootLayout responsive header", () => {
     expect(classNames).not.toContain("self-start");
   });
 
-  it("gives <main> a minimum height so the footer stays off-screen while the route Suspense boundary resolves", async () => {
+  // 最低の高さを <main> に付けると、ログイン画面のように中身が少ない画面でカードの下が大きく空く。
+  it("does not stretch <main> on short pages such as the login screen", async () => {
     vi.stubGlobal("React", React);
     const layout = await RootLayout({ children: "本文" });
-    const markup = renderToStaticMarkup(layout);
-    const parsedDocument = new DOMParser().parseFromString(markup, "text/html");
-    document.body.innerHTML = parsedDocument.body.innerHTML;
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(layout), "text/html");
 
     const mainClasses = document.querySelector("main")?.getAttribute("class")?.split(/\s+/) ?? [];
-    expect(mainClasses).toEqual(expect.arrayContaining(["min-h-[calc(100vh-10rem)]"]));
+    expect(mainClasses).not.toContain("min-h-[calc(100vh-10rem)]");
+  });
+
+  // フッターは常に画面の一番下。短い画面でも、読み込み中からの切り替えでもフッターが動かない。
+  it("pins the footer to the bottom of the screen on short pages", async () => {
+    vi.stubGlobal("React", React);
+    const document = new DOMParser().parseFromString(renderToStaticMarkup(await RootLayout({ children: "本文" })), "text/html");
+
+    const shellClasses = document.querySelector(".app-shell")?.getAttribute("class")?.split(/\s+/) ?? [];
+    expect(shellClasses).toEqual(expect.arrayContaining(["flex", "min-h-screen", "flex-col"]));
+    const main = document.querySelector("main");
+    expect(main?.parentElement?.getAttribute("class")?.split(/\s+/)).toEqual(expect.arrayContaining(["flex", "flex-1", "flex-col"]));
+    expect(main?.getAttribute("class")?.split(/\s+/)).toEqual(expect.arrayContaining(["flex", "flex-1", "flex-col"]));
   });
 
   // <main> は「本文へ移動」の着地点として tabIndex=-1 を持つ。クリックでもフォーカスが入るので、

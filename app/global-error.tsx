@@ -55,6 +55,23 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             >
               もう一度試す
             </button>
+            {/* ルートレイアウトごと置き換わるのでヘッダーもフッターも出ない。入口はここに置く */}
+            <nav aria-label="ほかの画面へ" style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px", marginTop: 20 }}>
+              {[
+                { href: "/", label: "ホームへ" },
+                { href: "/login", label: "ログイン" },
+                { href: "/terms", label: "利用規約" },
+                { href: "/privacy", label: "プライバシーポリシー" }
+              ].map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  style={{ color: "#344f43", fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 4, padding: "10px 0" }}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
           </section>
         </main>
       </body>

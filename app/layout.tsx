@@ -68,7 +68,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         >
           本文へ移動
         </a>
-        <div className="app-shell min-h-screen">
+        <div className="app-shell flex min-h-screen flex-col">
           <header className="sticky top-0 z-50 border-b border-line bg-surface/85 backdrop-blur-md">
             <div className="mx-auto flex max-w-[1440px] flex-row items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-4 lg:px-8 xl:px-10">
               <Link href="/" className="group flex items-center gap-3 text-lg font-bold tracking-normal text-ink">
@@ -78,16 +78,16 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               <AuthNav user={user} />
             </div>
           </header>
-          <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
             {/* 件数が遅くてもページ全体を止めない。先にバッジなしのナビを出し、件数が取れたら差し替える */}
             <Suspense fallback={<PrimaryNav isSignedIn={isSignedIn} unreadCount={0} />}>
               <PrimaryNavWithUnread isSignedIn={isSignedIn} unreadCount={unreadNotificationCount} />
             </Suspense>
-            <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
+            <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
               {children}
             </main>
           </div>
-          <footer className="mx-auto max-w-[1440px] px-4 pb-8 text-body text-muted sm:px-6 lg:px-8 xl:px-10">
+          <footer className="mx-auto w-full max-w-[1440px] px-4 pb-8 text-body text-muted sm:px-6 lg:px-8 xl:px-10">
             <div className="flex flex-wrap gap-4 border-t border-line pt-5">
               <Link href="/terms" className="font-semibold hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay">
                 利用規約
