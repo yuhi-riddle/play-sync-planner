@@ -80,7 +80,7 @@ type OpenDocument = "terms" | "privacy" | null;
 export function LoginConsentForm({
   action,
   nextPath,
-  submitLabel = "Google でログイン"
+  submitLabel = "Googleで始める"
 }: {
   action: (formData: FormData) => void | Promise<void>;
   nextPath: string;
@@ -117,9 +117,6 @@ export function LoginConsentForm({
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="next" value={nextPath} />
-      <p className="text-body text-muted">
-        利用規約とプライバシーポリシーの両方に同意すると、Googleログインへ進めます。
-      </p>
       <div className="space-y-3 rounded-control border border-line bg-sunken p-4 text-body text-ink">
         <ConsentRow
           name="termsAccepted"

@@ -73,7 +73,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </header>
           <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 sm:pt-10 lg:px-8 xl:px-10">
             <PrimaryNav isSignedIn={isSignedIn} />
-            <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)]">
+            <main id="main-content" tabIndex={-1} className="min-h-[calc(100vh-10rem)] focus:outline-none">
               {children}
             </main>
           </div>
