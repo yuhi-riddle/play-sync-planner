@@ -102,6 +102,22 @@ as $$
   );
 $$;
 
+create or replace function private.is_connection_group_member_visible(p_owner uuid, p_member uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select not public.is_user_blocked(p_owner, p_member)
+    and not exists (
+      select 1
+      from public.profiles as profile
+      where profile.user_id = p_member
+        and (profile.deleted_at is not null or profile.deletion_state is distinct from 'active')
+    );
+$$;
+
 create or replace function private.is_connection_group_member_eligible(p_owner uuid, p_member uuid)
 returns boolean
 language sql
@@ -111,13 +127,7 @@ set search_path = ''
 as $$
   select p_member is not null
     and p_member <> p_owner
-    and not exists (
-      select 1
-      from public.profiles as profile
-      where profile.user_id = p_member
-        and (profile.deleted_at is not null or profile.deletion_state = 'done')
-    )
-    and not public.is_user_blocked(p_owner, p_member)
+    and private.is_connection_group_member_visible(p_owner, p_member)
     and (
       public.have_shared_event(p_owner, p_member)
       or exists (
@@ -250,6 +260,7 @@ $$;
 
 revoke all on function private.connection_display_name(uuid) from public;
 revoke all on function private.lock_connection_pair(uuid, uuid) from public;
+revoke all on function private.is_connection_group_member_visible(uuid, uuid) from public;
 revoke all on function private.is_connection_group_member_eligible(uuid, uuid) from public;
 revoke all on function private.consume_connection_group_action() from public;
 revoke all on function private.normalize_connection_group_input(text, text) from public;
@@ -327,13 +338,17 @@ begin
     owned.id,
     owned.name,
     owned.color,
-    (select count(*) from public.connection_group_members as member where member.group_id = owned.id)::bigint,
+    (select count(*)
+     from public.connection_group_members as member
+     where member.group_id = owned.id
+       and private.is_connection_group_member_visible(owned.owner_user_id, member.member_user_id))::bigint,
     coalesce((
       select array_agg(first_members.display_name order by first_members.created_at, first_members.member_user_id)
       from (
         select member.member_user_id, member.created_at, private.connection_display_name(member.member_user_id) as display_name
         from public.connection_group_members as member
         where member.group_id = owned.id
+          and private.is_connection_group_member_visible(owned.owner_user_id, member.member_user_id)
         order by member.created_at, member.member_user_id
         limit 5
       ) as first_members
@@ -347,6 +362,7 @@ begin
       join public.connection_group_members as member
         on member.group_id = owned.id
         and member.member_user_id = their_membership.user_id
+        and private.is_connection_group_member_visible(owned.owner_user_id, member.member_user_id)
       join public.event_activity_state as activity
         on activity.event_id = my_membership.event_id
       where my_membership.user_id = v_actor
@@ -380,7 +396,10 @@ begin
     owned.id,
     owned.name,
     owned.color,
-    (select count(*) from public.connection_group_members as member where member.group_id = owned.id)::bigint,
+    (select count(*)
+     from public.connection_group_members as member
+     where member.group_id = owned.id
+       and private.is_connection_group_member_visible(owned.owner_user_id, member.member_user_id))::bigint,
     owned.created_at
   from public.connection_groups as owned
   where owned.id = p_group_id
@@ -409,6 +428,7 @@ begin
   join public.connection_groups as owned
     on owned.id = member.group_id
   where owned.owner_user_id = v_actor
+    and private.is_connection_group_member_visible(owned.owner_user_id, member.member_user_id)
   order by member.group_id, member.member_user_id;
 end;
 $$;
@@ -548,6 +568,8 @@ begin
     perform private.require_owned_connection_group(v_actor, v_group_id);
   end loop;
 
+  perform private.lock_connection_pair(v_actor, p_member_id);
+
   delete from public.connection_group_members as member
   using public.connection_groups as owned
   where owned.id = member.group_id
@@ -600,6 +622,7 @@ begin
     on owned.id = member.group_id
     and owned.owner_user_id = v_actor
   where member.group_id = p_group_id
+    and private.is_connection_group_member_visible(owned.owner_user_id, member.member_user_id)
   order by member.created_at, member.member_user_id;
 end;
 $$;
@@ -659,13 +682,7 @@ begin
     people.shared_event_count,
     people.is_following
   from people
-  where not public.is_user_blocked(v_actor, people.user_id)
-    and not exists (
-      select 1
-      from public.profiles as profile
-      where profile.user_id = people.user_id
-        and (profile.deleted_at is not null or profile.deletion_state = 'done')
-    )
+  where private.is_connection_group_member_visible(v_actor, people.user_id)
     and not exists (
       select 1 from public.connection_group_members as member
       where member.group_id = p_group_id and member.member_user_id = people.user_id

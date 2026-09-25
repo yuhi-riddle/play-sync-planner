@@ -28,7 +28,7 @@ begin
   join public.connection_groups as favorite_group
     on favorite_group.owner_user_id = favorite.user_id
     and favorite_group.name = 'お気に入り'
-  where not public.is_user_blocked(favorite.user_id, favorite.favorite_user_id)
+  where private.is_connection_group_member_visible(favorite.user_id, favorite.favorite_user_id)
   on conflict (group_id, member_user_id) do nothing;
 
   get diagnostics v_inserted = row_count;
