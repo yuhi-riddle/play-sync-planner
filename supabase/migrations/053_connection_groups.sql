@@ -16,7 +16,8 @@ create table public.connection_groups (
   owner_user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   color text not null default 'nazotoki',
-  created_at timestamptz not null default now(),
+  -- 「作った順」に並べるので、同じトランザクション内でも行ごとに時刻が進む clock_timestamp() を使う。
+  created_at timestamptz not null default clock_timestamp(),
   updated_at timestamptz not null default now(),
   constraint connection_groups_name_check check (name = btrim(name) and char_length(name) between 1 and 20),
   constraint connection_groups_color_check check (
@@ -31,7 +32,7 @@ on public.connection_groups(owner_user_id, created_at, id);
 create table public.connection_group_members (
   group_id uuid not null references public.connection_groups(id) on delete cascade,
   member_user_id uuid not null references auth.users(id) on delete cascade,
-  created_at timestamptz not null default now(),
+  created_at timestamptz not null default clock_timestamp(),
   primary key (group_id, member_user_id)
 );
 
