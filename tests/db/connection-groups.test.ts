@@ -82,6 +82,8 @@ describe("create_connection_group / list_connection_groups", () => {
     const me = await makeUser();
     const aya = await makeUser();
     await shareEvent(me, aya);
+    // 表示名はプロフィールのニックネームを優先する（list_connections と同じ）。
+    await client.query("update public.profiles set nickname = 'あや' where user_id = $1", [aya]);
     await asUser(me);
 
     await createGroup("謎解き仲間", "nazotoki", [aya]);
@@ -91,7 +93,7 @@ describe("create_connection_group / list_connection_groups", () => {
       "select name, color, member_count, member_names, active_event_count from public.list_connection_groups()"
     );
     expect(rows).toEqual([
-      { name: "謎解き仲間", color: "nazotoki", member_count: "1", member_names: ["メンバー"], active_event_count: "1" },
+      { name: "謎解き仲間", color: "nazotoki", member_count: "1", member_names: ["あや"], active_event_count: "1" },
       { name: "大学の友達", color: "boardgame", member_count: "0", member_names: [], active_event_count: "0" }
     ]);
   });
