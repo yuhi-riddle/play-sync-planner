@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -167,9 +167,16 @@ export function HomeSelectedDateAgenda({
   todayDateKey: string;
   initialItems: HomeAgendaItem[];
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeDateKey, setActiveDateKey] = useState(selectedDateKey);
+  const [syncedSelectedDateKey, setSyncedSelectedDateKey] = useState(selectedDateKey);
+  const [madoiItemsByMonth, setMadoiItemsByMonth] = useState<Map<string, HomeAgendaItem[]>>(() =>
+    new Map([[monthParam(selectedDateKey), initialItems]])
+  );
+  const [madoiErrorMonths, setMadoiErrorMonths] = useState<Set<string>>(() => new Set());
+  const madoiRequestGeneration = useRef(0);
+  const madoiRequests = useRef(new Map<string, object>());
+  const madoiInitialProps = useRef({ initialItems, selectedDateKey });
   const [googleItems, setGoogleItems] = useState<HomeAgendaItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
   const tomorrowKey = useMemo(() => toDateKey(addDays(dateFromKey(todayDateKey), 1)), [todayDateKey]);
@@ -177,20 +184,127 @@ export function HomeSelectedDateAgenda({
   const weekDays = useMemo(() => weekDaysFor(activeDateKey), [activeDateKey]);
   const previousWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), -7));
   const nextWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), 7));
+  const initialMonth = monthParam(selectedDateKey);
   const activeMonth = monthParam(activeDateKey);
-  const items = useMemo(() => [...initialItems, ...googleItems], [googleItems, initialItems]);
+  const items = useMemo(
+    () => [...(madoiItemsByMonth.get(activeMonth) ?? []), ...googleItems],
+    [activeMonth, googleItems, madoiItemsByMonth]
+  );
   const agenda = buildHomeAgendaDay({ selectedDate: dateFromKey(activeDateKey), items });
+  const isMadoiLoading =
+    activeMonth !== initialMonth && !madoiItemsByMonth.has(activeMonth) && !madoiErrorMonths.has(activeMonth);
+  const showLoadingRows = isMadoiLoading || (agenda.items.length === 0 && googleState === "loading");
+  const showEmptyState = agenda.items.length === 0 && !showLoadingRows && !madoiErrorMonths.has(activeMonth);
 
   useEffect(() => {
     setActiveDateKey(selectedDateKey);
+    setSyncedSelectedDateKey(selectedDateKey);
   }, [selectedDateKey]);
+
+  useEffect(() => {
+    if (
+      madoiInitialProps.current.initialItems === initialItems &&
+      madoiInitialProps.current.selectedDateKey === selectedDateKey
+    ) {
+      return;
+    }
+
+    madoiInitialProps.current = { initialItems, selectedDateKey };
+    const month = monthParam(selectedDateKey);
+    madoiRequestGeneration.current += 1;
+    madoiRequests.current.clear();
+    setMadoiErrorMonths(new Set());
+    setMadoiItemsByMonth((current) => {
+      if (current.size === 1 && current.get(month) === initialItems) {
+        return current;
+      }
+
+      return new Map([[month, initialItems]]);
+    });
+  }, [initialItems, selectedDateKey]);
 
   function selectDate(dateKey: string) {
     setActiveDateKey(dateKey);
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", dateKey);
-    router.replace(`/?${params.toString()}`, { scroll: false });
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`
+    );
   }
+
+  useEffect(() => {
+    setMadoiErrorMonths((current) => {
+      if (!current.has(activeMonth)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(activeMonth);
+      return next;
+    });
+  }, [activeMonth]);
+
+  useEffect(() => {
+    if (syncedSelectedDateKey !== selectedDateKey) {
+      return;
+    }
+
+    if (
+      activeMonth === initialMonth ||
+      madoiItemsByMonth.has(activeMonth) ||
+      madoiRequests.current.has(activeMonth) ||
+      madoiErrorMonths.has(activeMonth)
+    ) {
+      return;
+    }
+
+    const generation = madoiRequestGeneration.current;
+    const requestToken = {};
+    madoiRequests.current.set(activeMonth, requestToken);
+
+    fetch(`/api/calendar-items?month=${activeMonth}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("failed");
+        }
+        return (await response.json()) as { items: HomeAgendaItem[] };
+      })
+      .then(({ items: monthItems }) => {
+        if (generation !== madoiRequestGeneration.current) {
+          return;
+        }
+        setMadoiItemsByMonth((current) => {
+          if (current.has(activeMonth)) {
+            return current;
+          }
+          const next = new Map(current);
+          next.set(activeMonth, monthItems);
+          return next;
+        });
+      })
+      .catch(() => {
+        if (generation !== madoiRequestGeneration.current) {
+          return;
+        }
+        setMadoiErrorMonths((current) => {
+          if (current.has(activeMonth)) {
+            return current;
+          }
+
+          const next = new Set(current);
+          next.add(activeMonth);
+          return next;
+        });
+      })
+      .finally(() => {
+        if (madoiRequests.current.get(activeMonth) === requestToken) {
+          madoiRequests.current.delete(activeMonth);
+        }
+      });
+  }, [activeDateKey, activeMonth, initialMonth, madoiErrorMonths, madoiItemsByMonth, selectedDateKey, syncedSelectedDateKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -297,16 +411,18 @@ export function HomeSelectedDateAgenda({
         </div>
 
         <div className="mt-3 grid gap-2">
-          {agenda.items.length > 0 ? (
-            agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)
-          ) : googleState === "loading" ? (
+          {agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)}
+          {madoiErrorMonths.has(activeMonth) ? (
+            <p className="text-body text-clay-ink">Madoiの予定を取得できませんでした</p>
+          ) : null}
+          {showLoadingRows ? (
             <>
               <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
               <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
             </>
-          ) : (
+          ) : showEmptyState ? (
             <EmptyState icon={<CalendarDays aria-hidden="true" className="h-4 w-4" />}>この日の予定はまだありません。</EmptyState>
-          )}
+          ) : null}
         </div>
       </div>
     </Card>
