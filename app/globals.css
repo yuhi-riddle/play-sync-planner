@@ -4,6 +4,30 @@
 
 :root {
   color-scheme: light;
+
+  --t-duration-fast: 150ms;
+  --t-duration-base: 240ms;
+  --t-duration-slow: 400ms;
+  --t-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-distance-sm: 8px;
+  --t-distance-md: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-duration-fast: 1ms;
+    --t-duration-base: 1ms;
+    --t-duration-slow: 1ms;
+  }
+}
+
+/* 月ピッカー等、ページ内容がクライアント遷移で差し替わる間、淡くして即時切り替えの硬さを和らげる */
+.t-content-fade {
+  transition: opacity var(--t-duration-base) var(--t-ease-in-out);
+}
+.t-content-fade.is-pending {
+  opacity: 0.5;
 }
 
 html {

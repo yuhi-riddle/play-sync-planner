@@ -9,8 +9,19 @@ vi.mock("next/navigation", () => ({
 
 import { AdjustmentMonthPicker } from "@/components/plan/adjustment-month-picker";
 
-function renderPicker(currentMonth = "2026-07", currentYear = 2026) {
-  return render(<AdjustmentMonthPicker currentMonth={currentMonth} currentYear={currentYear} label="2026年7月" />);
+function renderPicker(
+  currentMonth = "2026-07",
+  currentYear = 2026,
+  onNavigatingChange?: (pending: boolean) => void
+) {
+  return render(
+    <AdjustmentMonthPicker
+      currentMonth={currentMonth}
+      currentYear={currentYear}
+      label="2026年7月"
+      onNavigatingChange={onNavigatingChange}
+    />
+  );
 }
 
 describe("AdjustmentMonthPicker", () => {
@@ -59,6 +70,46 @@ describe("AdjustmentMonthPicker", () => {
     fireEvent.click(screen.getByRole("button", { name: "5月" }));
 
     expect(details.open).toBe(false);
+  });
+
+  it("選択中の年ボタン自体をbg-mistでハイライトする（固定位置の帯には頼らない）", () => {
+    renderPicker();
+
+    expect(screen.getByRole("button", { name: "2026年" })).toHaveClass("bg-mist");
+    expect(screen.getByRole("button", { name: "2027年" })).not.toHaveClass("bg-mist");
+
+    fireEvent.click(screen.getByRole("button", { name: "2027年" }));
+
+    expect(screen.getByRole("button", { name: "2027年" })).toHaveClass("bg-mist");
+    expect(screen.getByRole("button", { name: "2026年" })).not.toHaveClass("bg-mist");
+  });
+
+  it("月をタップした瞬間に onNavigatingChange(true) を呼ぶ", () => {
+    const onNavigatingChange = vi.fn();
+    renderPicker("2026-07", 2026, onNavigatingChange);
+
+    fireEvent.click(screen.getByRole("button", { name: "3月" }));
+
+    expect(onNavigatingChange).toHaveBeenCalledWith(true);
+  });
+
+  it("currentMonth が変わったら onNavigatingChange(false) を呼ぶ", () => {
+    const onNavigatingChange = vi.fn();
+    const { rerender } = renderPicker("2026-07", 2026, onNavigatingChange);
+
+    fireEvent.click(screen.getByRole("button", { name: "3月" }));
+    onNavigatingChange.mockClear();
+
+    rerender(
+      <AdjustmentMonthPicker
+        currentMonth="2026-03"
+        currentYear={2026}
+        label="2026年3月"
+        onNavigatingChange={onNavigatingChange}
+      />
+    );
+
+    expect(onNavigatingChange).toHaveBeenCalledWith(false);
   });
 
   it("年ボタンは aria-pressed で選択状態を示す", () => {
