@@ -107,11 +107,86 @@ describe("HomeSelectedDateAgenda", () => {
       />
     );
 
+    const replaceState = vi.spyOn(window.history, "replaceState");
+
     fireEvent.click(screen.getByRole("button", { name: "次の週" }));
 
     expect(screen.getByRole("heading", { name: "7月19日(日)" })).toBeInTheDocument();
     expect(screen.getByText("来週の予定")).toBeInTheDocument();
-    expect(navigationMocks.replace).toHaveBeenCalledWith("/?action=deadline&date=2026-07-19", { scroll: false });
+    // router.replace はホーム全体をサーバーで描き直し、スマホで一番上に戻ってしまう。URLだけ書き換える。
+    expect(navigationMocks.replace).not.toHaveBeenCalled();
+    expect(replaceState).toHaveBeenCalledWith(null, "", "/?action=deadline&date=2026-07-19");
+    replaceState.mockRestore();
+  });
+
+  it("does not refetch Madoi items while the selected date stays in the loaded month", () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-12" todayDateKey="2026-07-12" initialItems={[]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).not.toContainEqual(expect.stringContaining("/api/calendar-items"));
+  });
+
+  it("shows fresh initial items when the server re-renders the home page", () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const item = (title: string) => ({
+      id: title,
+      kind: "confirmed" as const,
+      title,
+      startAt: "2026-07-12T10:00:00+09:00",
+      endAt: "2026-07-12T11:00:00+09:00"
+    });
+
+    const { rerender } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-12" todayDateKey="2026-07-12" initialItems={[item("古い予定")]} />
+    );
+    rerender(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-12" todayDateKey="2026-07-12" initialItems={[item("新しい予定")]} />
+    );
+
+    expect(screen.getByText("新しい予定")).toBeInTheDocument();
+    expect(screen.queryByText("古い予定")).not.toBeInTheDocument();
+  });
+
+  it("fetches Madoi items for the new month when the week moves into another month", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("/api/calendar-items")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                id: "confirmed-plan-9",
+                kind: "confirmed",
+                title: "8月の予定",
+                startAt: "2026-08-02T10:00:00+09:00",
+                endAt: "2026-08-02T11:00:00+09:00",
+                href: "/plans/plan-9"
+              }
+            ]
+          })
+        });
+      }
+      return new Promise(() => {});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const replaceState = vi.spyOn(window.history, "replaceState");
+
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-26" todayDateKey="2026-07-26" initialItems={[]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+
+    expect(screen.getByRole("heading", { name: "8月2日(日)" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("8月の予定")).toBeInTheDocument();
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/calendar-items?month=2026-08");
+    expect(navigationMocks.replace).not.toHaveBeenCalled();
+    expect(replaceState).toHaveBeenCalledWith(null, "", "/?action=deadline&date=2026-08-02");
+    replaceState.mockRestore();
   });
 
   it("keeps all seven date buttons in shrinkable columns", () => {

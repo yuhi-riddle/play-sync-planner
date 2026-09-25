@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
@@ -167,9 +167,11 @@ export function HomeSelectedDateAgenda({
   todayDateKey: string;
   initialItems: HomeAgendaItem[];
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeDateKey, setActiveDateKey] = useState(selectedDateKey);
+  const [madoiItemsByMonth, setMadoiItemsByMonth] = useState<Map<string, HomeAgendaItem[]>>(() =>
+    new Map([[monthParam(selectedDateKey), initialItems]])
+  );
   const [googleItems, setGoogleItems] = useState<HomeAgendaItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
   const tomorrowKey = useMemo(() => toDateKey(addDays(dateFromKey(todayDateKey), 1)), [todayDateKey]);
@@ -177,20 +179,88 @@ export function HomeSelectedDateAgenda({
   const weekDays = useMemo(() => weekDaysFor(activeDateKey), [activeDateKey]);
   const previousWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), -7));
   const nextWeekKey = toDateKey(addDays(dateFromKey(weekDays[0]), 7));
+  const initialMonth = monthParam(selectedDateKey);
   const activeMonth = monthParam(activeDateKey);
-  const items = useMemo(() => [...initialItems, ...googleItems], [googleItems, initialItems]);
+  const items = useMemo(
+    () => [...(madoiItemsByMonth.get(activeMonth) ?? []), ...googleItems],
+    [activeMonth, googleItems, madoiItemsByMonth]
+  );
   const agenda = buildHomeAgendaDay({ selectedDate: dateFromKey(activeDateKey), items });
 
   useEffect(() => {
     setActiveDateKey(selectedDateKey);
   }, [selectedDateKey]);
 
+  useEffect(() => {
+    const month = monthParam(selectedDateKey);
+    setMadoiItemsByMonth((current) => {
+      if (current.get(month) === initialItems) {
+        return current;
+      }
+
+      const next = new Map(current);
+      next.set(month, initialItems);
+      return next;
+    });
+  }, [initialItems, selectedDateKey]);
+
   function selectDate(dateKey: string) {
     setActiveDateKey(dateKey);
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", dateKey);
-    router.replace(`/?${params.toString()}`, { scroll: false });
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`
+    );
   }
+
+  useEffect(() => {
+    if (activeMonth === initialMonth || madoiItemsByMonth.has(activeMonth)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    fetch(`/api/calendar-items?month=${activeMonth}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("failed");
+        }
+        return (await response.json()) as { items: HomeAgendaItem[] };
+      })
+      .then(({ items: monthItems }) => {
+        if (cancelled) {
+          return;
+        }
+        setMadoiItemsByMonth((current) => {
+          if (current.has(activeMonth)) {
+            return current;
+          }
+          const next = new Map(current);
+          next.set(activeMonth, monthItems);
+          return next;
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setMadoiItemsByMonth((current) => {
+          if (current.has(activeMonth)) {
+            return current;
+          }
+          const next = new Map(current);
+          next.set(activeMonth, []);
+          return next;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMonth, initialMonth, madoiItemsByMonth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,7 +369,7 @@ export function HomeSelectedDateAgenda({
         <div className="mt-3 grid gap-2">
           {agenda.items.length > 0 ? (
             agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)
-          ) : googleState === "loading" ? (
+          ) : googleState === "loading" || !madoiItemsByMonth.has(activeMonth) ? (
             <>
               <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
               <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
