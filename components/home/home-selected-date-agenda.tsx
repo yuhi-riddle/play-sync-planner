@@ -177,7 +177,6 @@ export function HomeSelectedDateAgenda({
   const madoiRequestGeneration = useRef(0);
   const madoiRequests = useRef(new Map<string, object>());
   const madoiInitialProps = useRef({ initialItems, selectedDateKey });
-  const previousActiveMonth = useRef(monthParam(selectedDateKey));
   const [googleItems, setGoogleItems] = useState<HomeAgendaItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
   const tomorrowKey = useMemo(() => toDateKey(addDays(dateFromKey(todayDateKey), 1)), [todayDateKey]);
@@ -237,22 +236,20 @@ export function HomeSelectedDateAgenda({
   }
 
   useEffect(() => {
+    setMadoiErrorMonths((current) => {
+      if (!current.has(activeMonth)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(activeMonth);
+      return next;
+    });
+  }, [activeMonth]);
+
+  useEffect(() => {
     if (syncedSelectedDateKey !== selectedDateKey) {
       return;
-    }
-
-    if (previousActiveMonth.current !== activeMonth) {
-      const previousMonth = previousActiveMonth.current;
-      previousActiveMonth.current = activeMonth;
-      setMadoiErrorMonths((current) => {
-        if (!current.has(previousMonth)) {
-          return current;
-        }
-
-        const next = new Set(current);
-        next.delete(previousMonth);
-        return next;
-      });
     }
 
     if (

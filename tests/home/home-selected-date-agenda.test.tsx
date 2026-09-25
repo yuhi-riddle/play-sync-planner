@@ -253,6 +253,40 @@ describe("HomeSelectedDateAgenda", () => {
     expect(calendarCalls.filter((url) => url.endsWith("2026-09"))).toHaveLength(1);
   });
 
+  it("refetches a month when returning to it after its request failed while another month was displayed", async () => {
+    const pending = new Map<string, (response: unknown) => void>();
+    const calendarCalls: string[] = [];
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("/api/calendar-items")) {
+        calendarCalls.push(url);
+        return new Promise((resolve) => pending.set(url, resolve));
+      }
+      return new Promise(() => {});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-26" todayDateKey="2026-07-26" initialItems={[]} />);
+    // 8/2 で8月の取得が始まり、終わる前に 9/6 へ進む。
+    for (let i = 0; i < 6; i += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+    }
+    await waitFor(() => {
+      expect(pending.has("/api/calendar-items?month=2026-09")).toBe(true);
+    });
+
+    // 9月を表示している間に、8月の取得が失敗する。
+    pending.get("/api/calendar-items?month=2026-08")?.({ ok: false, json: async () => ({}) });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // 8/30 に戻ったら、8月を取り直す（失敗のまま固まらない）。
+    fireEvent.click(screen.getByRole("button", { name: "前の週" }));
+    expect(screen.getByRole("heading", { name: "8月30日(日)" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(calendarCalls.filter((url) => url.endsWith("2026-08"))).toHaveLength(2);
+    });
+    expect(screen.queryByText("Madoiの予定を取得できませんでした")).not.toBeInTheDocument();
+  });
+
   it("keeps showing the loading rows while Madoi items for another month are loading, even if Google items arrived", async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.startsWith("/api/calendar-items")) {
