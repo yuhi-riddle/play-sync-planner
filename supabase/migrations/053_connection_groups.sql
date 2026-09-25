@@ -542,9 +542,10 @@ declare
   v_actor uuid := private.consume_connection_group_action();
 begin
   perform private.require_owned_connection_group(v_actor, p_group_id);
+  -- 追加と同じく、グループ行を先にロックしてからメンバー行に触る（逆順だとデッドロックする）。
+  update public.connection_groups set updated_at = now() where id = p_group_id;
   delete from public.connection_group_members
   where group_id = p_group_id and member_user_id = p_member_id;
-  update public.connection_groups set updated_at = now() where id = p_group_id;
 end;
 $$;
 
