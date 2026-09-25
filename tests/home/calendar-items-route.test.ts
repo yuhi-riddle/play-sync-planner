@@ -34,7 +34,7 @@ describe("GET /api/calendar-items", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it.each(["", "?month=2026-8", "?month=2026-13", "?month=abcd-ef"])("month が不正(%s)なら400", async (query) => {
+  it.each(["", "?month=2026-8", "?month=2026-13", "?month=abcd-ef", "?month=0000-01"])("month が不正(%s)なら400", async (query) => {
     const response = await GET(request(query));
 
     expect(response.status).toBe(400);

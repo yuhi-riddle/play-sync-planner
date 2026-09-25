@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   const month = request.nextUrl.searchParams.get("month") ?? "";
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+  if (!/^(1\d{3}|[2-9]\d{3})-(0[1-9]|1[0-2])$/.test(month)) {
     return NextResponse.json({ error: "month must use YYYY-MM format." }, { status: 400 });
   }
 

@@ -151,6 +151,102 @@ describe("HomeSelectedDateAgenda", () => {
     expect(screen.queryByText("古い予定")).not.toBeInTheDocument();
   });
 
+  it("drops other months' cached items when the server sends fresh initial items", async () => {
+    let augustTitle = "8月の古い予定";
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("/api/calendar-items")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                id: augustTitle,
+                kind: "confirmed",
+                title: augustTitle,
+                startAt: "2026-08-02T10:00:00+09:00",
+                endAt: "2026-08-02T11:00:00+09:00"
+              }
+            ]
+          })
+        });
+      }
+      return new Promise(() => {});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { rerender } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-26" todayDateKey="2026-07-26" initialItems={[]} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+    await waitFor(() => {
+      expect(screen.getByText("8月の古い予定")).toBeInTheDocument();
+    });
+
+    augustTitle = "8月の新しい予定";
+    // 8/2 を表示したまま、サーバーから新しい initialItems が届く。8月は取り直す。
+    rerender(<HomeSelectedDateAgenda selectedDateKey="2026-07-26" todayDateKey="2026-07-26" initialItems={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("8月の新しい予定")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("8月の古い予定")).not.toBeInTheDocument();
+  });
+
+  it("shows an error instead of an empty day when Madoi items for another month fail to load, and retries later", async () => {
+    let calendarCalls = 0;
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("/api/calendar-items")) {
+        calendarCalls += 1;
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ connected: true, busy: [] }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeSelectedDateAgenda selectedDateKey="2026-07-26" todayDateKey="2026-07-26" initialItems={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Madoiの予定を取得できませんでした")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("この日の予定はまだありません。")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "前の週" }));
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+
+    await waitFor(() => {
+      expect(calendarCalls).toBe(2);
+    });
+  });
+
+  it("keeps showing the loading rows while Madoi items for another month are loading, even if Google items arrived", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.startsWith("/api/calendar-items")) {
+        return new Promise(() => {});
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          connected: true,
+          busy: [{ start: "2026-08-02T10:00:00+09:00", end: "2026-08-02T11:00:00+09:00", title: "歯医者" }]
+        })
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { container } = render(
+      <HomeSelectedDateAgenda selectedDateKey="2026-07-26" todayDateKey="2026-07-26" initialItems={[]} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "次の週" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("歯医者")).toBeInTheDocument();
+    });
+    // 予定の行も同じ最低高クラスを持つので、スケルトン（animate-pulse）で見分ける。
+    const placeholders = container.querySelectorAll(`div.animate-pulse.${CSS.escape(AGENDA_ITEM_MIN_HEIGHT_CLASS)}`);
+    expect(placeholders.length).toBeGreaterThan(0);
+  });
+
   it("fetches Madoi items for the new month when the week moves into another month", async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.startsWith("/api/calendar-items")) {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -169,9 +169,14 @@ export function HomeSelectedDateAgenda({
 }) {
   const searchParams = useSearchParams();
   const [activeDateKey, setActiveDateKey] = useState(selectedDateKey);
+  const [syncedSelectedDateKey, setSyncedSelectedDateKey] = useState(selectedDateKey);
   const [madoiItemsByMonth, setMadoiItemsByMonth] = useState<Map<string, HomeAgendaItem[]>>(() =>
     new Map([[monthParam(selectedDateKey), initialItems]])
   );
+  const [madoiErrorMonth, setMadoiErrorMonth] = useState<string | null>(null);
+  const madoiRequestGeneration = useRef(0);
+  const madoiRequests = useRef(new Map<string, object>());
+  const madoiInitialProps = useRef({ initialItems, selectedDateKey });
   const [googleItems, setGoogleItems] = useState<HomeAgendaItem[]>([]);
   const [googleState, setGoogleState] = useState<"loading" | "ready" | "disconnected" | "error">("loading");
   const tomorrowKey = useMemo(() => toDateKey(addDays(dateFromKey(todayDateKey), 1)), [todayDateKey]);
@@ -186,21 +191,35 @@ export function HomeSelectedDateAgenda({
     [activeMonth, googleItems, madoiItemsByMonth]
   );
   const agenda = buildHomeAgendaDay({ selectedDate: dateFromKey(activeDateKey), items });
+  const isMadoiLoading =
+    activeMonth !== initialMonth && !madoiItemsByMonth.has(activeMonth) && madoiErrorMonth !== activeMonth;
+  const showLoadingRows = isMadoiLoading || (agenda.items.length === 0 && googleState === "loading");
+  const showEmptyState = agenda.items.length === 0 && !showLoadingRows && madoiErrorMonth !== activeMonth;
 
   useEffect(() => {
     setActiveDateKey(selectedDateKey);
+    setSyncedSelectedDateKey(selectedDateKey);
   }, [selectedDateKey]);
 
   useEffect(() => {
+    if (
+      madoiInitialProps.current.initialItems === initialItems &&
+      madoiInitialProps.current.selectedDateKey === selectedDateKey
+    ) {
+      return;
+    }
+
+    madoiInitialProps.current = { initialItems, selectedDateKey };
     const month = monthParam(selectedDateKey);
+    madoiRequestGeneration.current += 1;
+    madoiRequests.current.clear();
+    setMadoiErrorMonth(null);
     setMadoiItemsByMonth((current) => {
-      if (current.get(month) === initialItems) {
+      if (current.size === 1 && current.get(month) === initialItems) {
         return current;
       }
 
-      const next = new Map(current);
-      next.set(month, initialItems);
-      return next;
+      return new Map([[month, initialItems]]);
     });
   }, [initialItems, selectedDateKey]);
 
@@ -217,11 +236,27 @@ export function HomeSelectedDateAgenda({
   }
 
   useEffect(() => {
-    if (activeMonth === initialMonth || madoiItemsByMonth.has(activeMonth)) {
+    if (syncedSelectedDateKey !== selectedDateKey) {
       return;
     }
 
-    let cancelled = false;
+    if (madoiErrorMonth !== null && madoiErrorMonth !== activeMonth) {
+      setMadoiErrorMonth(null);
+    }
+
+    if (
+      activeMonth === initialMonth ||
+      madoiItemsByMonth.has(activeMonth) ||
+      madoiRequests.current.has(activeMonth) ||
+      madoiErrorMonth === activeMonth
+    ) {
+      return;
+    }
+
+    const generation = madoiRequestGeneration.current;
+    const requestToken = {};
+    madoiRequests.current.set(activeMonth, requestToken);
+    setMadoiErrorMonth((current) => (current === activeMonth ? null : current));
 
     fetch(`/api/calendar-items?month=${activeMonth}`)
       .then(async (response) => {
@@ -231,7 +266,7 @@ export function HomeSelectedDateAgenda({
         return (await response.json()) as { items: HomeAgendaItem[] };
       })
       .then(({ items: monthItems }) => {
-        if (cancelled) {
+        if (generation !== madoiRequestGeneration.current) {
           return;
         }
         setMadoiItemsByMonth((current) => {
@@ -244,23 +279,17 @@ export function HomeSelectedDateAgenda({
         });
       })
       .catch(() => {
-        if (cancelled) {
+        if (generation !== madoiRequestGeneration.current) {
           return;
         }
-        setMadoiItemsByMonth((current) => {
-          if (current.has(activeMonth)) {
-            return current;
-          }
-          const next = new Map(current);
-          next.set(activeMonth, []);
-          return next;
-        });
+        setMadoiErrorMonth(activeMonth);
+      })
+      .finally(() => {
+        if (madoiRequests.current.get(activeMonth) === requestToken) {
+          madoiRequests.current.delete(activeMonth);
+        }
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeMonth, initialMonth, madoiItemsByMonth]);
+  }, [activeDateKey, activeMonth, initialMonth, madoiErrorMonth, madoiItemsByMonth, selectedDateKey, syncedSelectedDateKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -367,16 +396,18 @@ export function HomeSelectedDateAgenda({
         </div>
 
         <div className="mt-3 grid gap-2">
-          {agenda.items.length > 0 ? (
-            agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)
-          ) : googleState === "loading" || !madoiItemsByMonth.has(activeMonth) ? (
+          {agenda.items.map((item) => <AgendaItem key={`${item.kind}-${item.id}`} item={item} />)}
+          {madoiErrorMonth === activeMonth ? (
+            <p className="text-body text-clay-ink">Madoiの予定を取得できませんでした</p>
+          ) : null}
+          {showLoadingRows ? (
             <>
               <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
               <Skeleton className={clsx(AGENDA_ITEM_MIN_HEIGHT_CLASS, "w-full")} />
             </>
-          ) : (
+          ) : showEmptyState ? (
             <EmptyState icon={<CalendarDays aria-hidden="true" className="h-4 w-4" />}>この日の予定はまだありません。</EmptyState>
-          )}
+          ) : null}
         </div>
       </div>
     </Card>
