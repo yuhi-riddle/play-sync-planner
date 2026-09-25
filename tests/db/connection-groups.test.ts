@@ -403,6 +403,39 @@ describe("退会した人", () => {
   });
 });
 
+describe("同時操作で残った行は一覧に出さない", () => {
+  it("ブロック関係の人と退会した人は、メンバー一覧・所属・人数・名前・イベント件数に含めない", async () => {
+    const me = await makeUser();
+    const aya = await makeUser();
+    const blocked = await makeUser();
+    const withdrawn = await makeUser();
+    await shareEvent(me, aya, blocked, withdrawn);
+    await client.query("update public.profiles set nickname = 'あや' where user_id = $1", [aya]);
+    await asUser(me);
+    const groupId = await createGroup("謎解き仲間", "nazotoki", [aya]);
+
+    // 競合で残った状態を作る（RPC を通さずに直接入れる）
+    await client.query(
+      "insert into public.connection_group_members (group_id, member_user_id) values ($1,$2),($1,$3)",
+      [groupId, blocked, withdrawn]
+    );
+    await client.query("insert into public.user_blocks (blocker_user_id, blocked_user_id) values ($1,$2)", [blocked, me]);
+    await client.query(
+      "update public.profiles set deleted_at = now(), deletion_state = 'pending' where user_id = $1",
+      [withdrawn]
+    );
+
+    const groups = await client.query("select member_count, member_names from public.list_connection_groups()");
+    expect(groups.rows).toEqual([{ member_count: "1", member_names: ["あや"] }]);
+    const group = await client.query("select member_count from public.get_connection_group($1)", [groupId]);
+    expect(group.rows).toEqual([{ member_count: "1" }]);
+    const members = await client.query("select user_id from public.list_connection_group_members($1)", [groupId]);
+    expect(members.rows.map((row) => row.user_id)).toEqual([aya]);
+    const memberships = await client.query("select member_user_id from public.list_connection_group_memberships()");
+    expect(memberships.rows.map((row) => row.member_user_id)).toEqual([aya]);
+  });
+});
+
 describe("ブロック・退会", () => {
   it("ブロックすると、相手を自分のグループから、自分を相手のグループから外す", async () => {
     const me = await makeUser();

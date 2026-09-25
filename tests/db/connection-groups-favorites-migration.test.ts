@@ -95,6 +95,30 @@ describe("private.migrate_favorites_to_connection_groups", () => {
     expect(rows).toEqual([{ name: "お気に入り", color: "honey", member_count: "1" }]);
   });
 
+  it("退会した人（処理途中も含む）は移さない", async () => {
+    const me = await makeUser();
+    const aya = await makeUser();
+    const withdrawn = await makeUser();
+    await shareEvent(me, aya, withdrawn);
+    await client.query("insert into public.user_favorites (user_id, favorite_user_id) values ($1,$2),($1,$3)", [
+      me,
+      aya,
+      withdrawn
+    ]);
+    await client.query(
+      "update public.profiles set deleted_at = now(), deletion_state = 'pending' where user_id = $1",
+      [withdrawn]
+    );
+
+    await client.query("select private.migrate_favorites_to_connection_groups()");
+
+    const { rows } = await client.query(
+      "select member.member_user_id from public.connection_group_members as member join public.connection_groups as owned on owned.id = member.group_id where owned.owner_user_id = $1",
+      [me]
+    );
+    expect(rows.map((row) => row.member_user_id)).toEqual([aya]);
+  });
+
   it("31人以上のお気に入りもすべて移す", async () => {
     const me = await makeUser();
     const people: string[] = [];
