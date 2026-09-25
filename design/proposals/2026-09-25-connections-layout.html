@@ -1,0 +1,388 @@
+<title>つながり画面の構成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+  /* アプリにダークモードは無いので、実際の画面に合わせて明るい色で固定する。値は design/tokens.css から写した */
+  :root {
+    color-scheme: light;
+    --canvas: #f7f3ef;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --text: #262320;
+    --muted: #6f665c;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --pine-deep: #2c4638;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --mist: #eff3ee;
+    --nazotoki: #a098ec;
+    --nazotoki-ink: #6056a3;
+    --boardgame: #39bda0;
+    --r-card: 20px;
+    --r-control: 14px;
+    --shadow-raise: 0 1px 2px rgba(62, 51, 39, 0.04), 0 3px 10px rgba(62, 51, 39, 0.05);
+    --shadow-soft: 0 8px 26px rgba(62, 51, 39, 0.09);
+    --font: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px; }
+
+  /* ---- 説明 ---- */
+  .intro { display: grid; gap: 12px; max-width: 760px; }
+  .intro h1 { font-size: 26px; line-height: 1.35; margin: 0; text-wrap: balance; }
+  .intro p { margin: 0; color: var(--muted); }
+  .premise {
+    display: grid; gap: 6px; padding: 14px 16px; border-radius: var(--r-control);
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .premise strong { color: var(--pine); }
+
+  /* ---- 案のブロック ---- */
+  .option { display: grid; gap: 16px; }
+  .option-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+  .option-head h2 { margin: 0; font-size: 21px; }
+  .tag {
+    font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 8px;
+    background: var(--sunken); color: var(--muted); border: 1px solid var(--line);
+  }
+  .tag.rec { background: var(--mist); color: var(--pine); border-color: #cfdccf; }
+  .option-lead { margin: 0; color: var(--muted); max-width: 760px; }
+  .frames { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .frame { display: grid; gap: 8px; }
+  .frame-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .phone {
+    width: 375px; max-width: 100%; background: var(--canvas); border: 1px solid var(--line-strong);
+    border-radius: 28px; padding: 18px 14px 22px; display: grid; gap: 12px;
+  }
+  .pc {
+    width: 720px; max-width: 100%; background: var(--canvas); border: 1px solid var(--line-strong);
+    border-radius: 14px; padding: 22px 26px; display: grid; gap: 14px;
+  }
+  .pc .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .pc .cols { grid-template-columns: 1fr; } }
+  .screen-title { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  /* ---- アプリ部品の写し ---- */
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+    box-shadow: var(--shadow-raise); padding: 16px; display: grid; gap: 12px;
+  }
+  .card h3 { margin: 0; font-size: 18px; }
+  .card .sub { margin: 0; font-size: 13px; color: var(--muted); }
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-control);
+    background: var(--surface);
+  }
+  .row.on { border-color: var(--moss); background: var(--mist); }
+  .row .name { font-weight: 700; display: block; }
+  .row .meta { font-size: 12px; color: var(--muted); display: block; }
+  .box {
+    width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--line-strong); flex-shrink: 0;
+    display: grid; place-items: center; background: #fff;
+  }
+  .row.on .box { background: var(--moss); border-color: var(--moss); }
+  .row.on .box::after { content: ""; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+  .cta {
+    display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 8px 20px;
+    border-radius: 999px; color: #fff; font-weight: 700; font-size: 14px;
+    background: linear-gradient(135deg, var(--pine), var(--pine-deep)); box-shadow: var(--shadow-soft);
+  }
+  .ghost {
+    display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 8px 16px;
+    border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--surface);
+    font-weight: 700; font-size: 14px; color: var(--text);
+  }
+  .groups { display: grid; gap: 8px; }
+  .groups-label { font-size: 13px; font-weight: 700; }
+  .group-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gbtn {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px;
+    border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--surface);
+    font-weight: 700; font-size: 14px;
+  }
+  .gbtn .n { font-weight: 500; color: var(--muted); font-size: 12px; }
+  .gbtn.on { border-color: var(--pine); background: var(--mist); color: var(--pine); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .avatars { display: flex; }
+  .av {
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    color: #fff; border: 2px solid var(--surface); margin-left: -6px;
+  }
+  .av:first-child { margin-left: 0; }
+  .ev { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-control); background: var(--sunken); }
+  .ev .t { font-weight: 700; font-size: 14px; display: block; }
+  .ev .m { font-size: 12px; color: var(--muted); display: block; }
+  .badge { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 6px; margin-left: auto; white-space: nowrap; }
+  .badge.honey { background: #f7ecd4; color: var(--honey-ink); }
+  .badge.pine { background: var(--mist); color: var(--pine); }
+  .note {
+    font-size: 13px; color: var(--muted); padding: 8px 12px; border-left: 3px solid var(--honey); background: var(--surface);
+    border-radius: 0 10px 10px 0;
+  }
+  .flow { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .arrow { font-size: 22px; color: var(--moss); }
+  .mini { width: 240px; max-width: 100%; }
+  .points { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--text); max-width: 760px; }
+  .points li::marker { color: var(--moss); }
+  .verdict {
+    display: grid; gap: 8px; padding: 18px 20px; border-radius: var(--r-card); background: var(--surface);
+    border: 1px solid var(--line); box-shadow: var(--shadow-raise); max-width: 820px;
+  }
+  .verdict h2 { margin: 0; font-size: 19px; }
+  .verdict p { margin: 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
+</style>
+<style>
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .tab { white-space: nowrap; font-size: 13px; font-weight: 700; padding: 8px 12px; min-height: 40px; display: inline-flex; align-items: center; gap: 6px;
+    border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--surface); }
+  .tab.on { background: linear-gradient(135deg, var(--pine), var(--pine-deep)); color: #fff; border-color: var(--pine-deep); }
+  .tab .c { font-weight: 500; font-size: 12px; opacity: .75; }
+  .person { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-control); background: var(--surface); }
+  .person .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .person .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .act { font-size: 12px; font-weight: 700; padding: 6px 10px; min-height: 36px; display: inline-flex; align-items: center; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); }
+  .act.danger { color: var(--clay-ink); }
+  .act.strong { border-color: var(--moss); color: var(--pine); background: var(--mist); }
+  .chipline { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gchip { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 6px; background: var(--sunken); color: var(--muted); display: inline-flex; gap: 5px; align-items: center; }
+  .gcard { display: grid; gap: 6px; padding: 12px; border-radius: var(--r-control); border: 1px solid var(--line); background: var(--surface); }
+  .gcard .h { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .gcard .h .count { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 500; }
+  .gcard .s { font-size: 12px; color: var(--muted); }
+  .gcard.add { border-style: dashed; color: var(--pine); font-weight: 700; place-items: center; min-height: 64px; background: transparent; }
+  .guide { font-size: 12px; color: var(--muted); display: grid; gap: 4px; padding: 10px 0; border-block: 1px solid var(--line); }
+  .sec-title { font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: baseline; gap: 8px; }
+  .sec-title .h-sub { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .ph { display: grid; gap: 2px; }
+  .ph .eyebrow { font-size: 11px; letter-spacing: .16em; color: var(--muted); }
+  .ph h3 { margin: 0; font-size: 22px; }
+  .ph p { margin: 0; font-size: 13px; color: var(--muted); }
+  .inv { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 10px 12px; border-radius: var(--r-control); background: #fbf3e2; border: 1px solid #ecd9ae; font-size: 13px; }
+  .pc .two { display: grid; grid-template-columns: 280px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .pc .two { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>つながり画面を「誘う仲間の置き場所」にする</h1>
+    <p>グループ（自分だけの仕分け）を入れ、お気に入りをやめたあとの画面構成を2案並べました。上が今、下が案1・案2。どちらもスマホ（375px）とPCの両方を描いています。名前やイベントは例です。</p>
+    <div class="premise">
+      <span>決まったこと: グループは自分にしか見えない／メンバーが1人でもいるイベントを出す／招待画面でグループを押すとまとめてチェック（案A）／<strong>お気に入りはやめてグループに移す</strong></span>
+    </div>
+  </header>
+
+  <!-- ===================== 今 ===================== -->
+  <section class="option" aria-labelledby="now-title">
+    <div class="option-head"><h2 id="now-title">今</h2><span class="tag">ビフォー</span></div>
+    <p class="option-lead">フォロー・お気に入り・ブロックの説明と、5つのタブが並ぶ。SNSの友だち管理に見えて、「イベントに誘う人を選ぶ場所」だと読み取れない。</p>
+    <div class="frames">
+      <div class="frame">
+        <span class="frame-label">スマホ</span>
+        <div class="phone">
+          <div class="ph"><span class="eyebrow">CONNECTIONS</span><h3>つながり</h3><p>一緒にイベントへ参加した人を、次の予定へ招待できます。</p></div>
+          <div class="guide">
+            <strong style="color:var(--text)">つながりの使い分け</strong>
+            <span>フォローすると、次のイベントへ招待しやすくなります。</span>
+            <span>お気に入りは、フォロー中の人を見つけやすくする目印です。</span>
+            <span>ブロックすると、お互いのフォローとお気に入りが外れます。</span>
+          </div>
+          <div class="tabs">
+            <span class="tab on">お気に入り<span class="c">2</span></span><span class="tab">相互フォロー<span class="c">3</span></span><span class="tab">フォロー中<span class="c">5</span></span><span class="tab">一緒に参加<span class="c">8</span></span>
+          </div>
+          <div class="person">
+            <div class="top"><span class="name" style="font-weight:700">あや</span><span class="meta" style="font-size:12px;color:var(--muted)">共通のイベント 5件 ・ 進行中 2件</span></div>
+            <div class="acts"><span class="act">フォローを解除</span><span class="act">お気に入りを外す</span><span class="act danger">ブロック</span></div>
+          </div>
+          <div class="person">
+            <div class="top"><span class="name" style="font-weight:700">みお</span><span class="meta" style="font-size:12px;color:var(--muted)">共通のイベント 2件</span></div>
+            <div class="acts"><span class="act">フォローを解除</span><span class="act">お気に入りを外す</span><span class="act danger">ブロック</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <span class="frame-label">PC</span>
+        <div class="pc">
+          <div class="ph"><span class="eyebrow">CONNECTIONS</span><h3>つながり</h3><p>一緒にイベントへ参加した人を、次の予定へ招待できます。</p></div>
+          <div class="guide">
+            <strong style="color:var(--text)">つながりの使い分け</strong>
+            <span>フォローすると招待しやすく／お気に入りは目印／ブロックするとフォローとお気に入りが外れる</span>
+          </div>
+          <div class="tabs">
+            <span class="tab on">お気に入り<span class="c">2</span></span><span class="tab">相互フォロー<span class="c">3</span></span><span class="tab">フォロー中<span class="c">5</span></span><span class="tab">一緒に参加<span class="c">8</span></span><span class="tab">ブロック中<span class="c">0</span></span>
+          </div>
+          <div class="cols">
+            <div class="person">
+              <div class="top"><span style="font-weight:700">あや</span><span style="font-size:12px;color:var(--muted)">共通 5件 ・ 進行中 2件</span></div>
+              <div class="acts"><span class="act">フォローを解除</span><span class="act">お気に入りを外す</span><span class="act danger">ブロック</span></div>
+            </div>
+            <div class="person">
+              <div class="top"><span style="font-weight:700">みお</span><span style="font-size:12px;color:var(--muted)">共通 2件</span></div>
+              <div class="acts"><span class="act">フォローを解除</span><span class="act">お気に入りを外す</span><span class="act danger">ブロック</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== 案1 ===================== -->
+  <section class="option" aria-labelledby="p1-title">
+    <div class="option-head"><h2 id="p1-title">案1 グループを主役にする</h2><span class="tag rec">おすすめ</span></div>
+    <p class="option-lead">画面のいちばん上（届いた招待のすぐ次）にグループを並べ、人の一覧はその下に置く。説明文は「誘う仲間をまとめる場所」と言い切り、使い分けの説明ブロックはなくす。人の行には「グループに入れる」を足す。</p>
+    <div class="frames">
+      <div class="frame">
+        <span class="frame-label">スマホ</span>
+        <div class="phone">
+          <div class="ph"><span class="eyebrow">CONNECTIONS</span><h3>つながり</h3><p>よく遊ぶ仲間をグループにまとめて、次のイベントにまとめて誘えます。</p></div>
+          <div class="inv"><span><strong>届いた招待 1件</strong>・ボドゲ会 10月</span><span class="act">見る</span></div>
+          <p class="sec-title">グループ <span class="h-sub">自分だけに見えます</span></p>
+          <div class="gcard">
+            <div class="h"><span class="dot" style="background:var(--nazotoki)"></span>謎解き仲間<span class="count">3人</span></div>
+            <span class="s">あや・けん・みお ／ 進めているイベント 2件</span>
+          </div>
+          <div class="gcard">
+            <div class="h"><span class="dot" style="background:var(--boardgame)"></span>大学の友達<span class="count">4人</span></div>
+            <span class="s">たく・ゆい・けん・さき ／ 進めているイベント 1件</span>
+          </div>
+          <div class="gcard add">＋ グループを作る</div>
+          <p class="sec-title" style="margin-top:6px">人</p>
+          <div class="tabs">
+            <span class="tab on">一緒に参加<span class="c">8</span></span><span class="tab">フォロー中<span class="c">5</span></span><span class="tab">相互<span class="c">3</span></span><span class="tab">ブロック中<span class="c">0</span></span>
+          </div>
+          <div class="person">
+            <div class="top"><span style="font-weight:700">あや</span><span style="font-size:12px;color:var(--muted)">共通 5件 ・ 進行中 2件</span></div>
+            <div class="chipline"><span class="gchip"><span class="dot" style="background:var(--nazotoki);width:8px;height:8px"></span>謎解き仲間</span></div>
+            <div class="acts"><span class="act strong">グループに入れる</span><span class="act">フォローを解除</span><span class="act danger">ブロック</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <span class="frame-label">PC</span>
+        <div class="pc">
+          <div class="ph"><span class="eyebrow">CONNECTIONS</span><h3>つながり</h3><p>よく遊ぶ仲間をグループにまとめて、次のイベントにまとめて誘えます。</p></div>
+          <div class="inv"><span><strong>届いた招待 1件</strong>・ボドゲ会 10月</span><span class="act">見る</span></div>
+          <div class="two">
+            <div style="display:grid;gap:8px">
+              <p class="sec-title">グループ <span class="h-sub">自分だけに見えます</span></p>
+              <div class="gcard">
+                <div class="h"><span class="dot" style="background:var(--nazotoki)"></span>謎解き仲間<span class="count">3人</span></div>
+                <span class="s">進めているイベント 2件</span>
+              </div>
+              <div class="gcard">
+                <div class="h"><span class="dot" style="background:var(--boardgame)"></span>大学の友達<span class="count">4人</span></div>
+                <span class="s">進めているイベント 1件</span>
+              </div>
+              <div class="gcard add">＋ グループを作る</div>
+            </div>
+            <div style="display:grid;gap:8px">
+              <p class="sec-title">人</p>
+              <div class="tabs">
+                <span class="tab on">一緒に参加<span class="c">8</span></span><span class="tab">フォロー中<span class="c">5</span></span><span class="tab">相互<span class="c">3</span></span><span class="tab">ブロック中<span class="c">0</span></span>
+              </div>
+              <div class="person">
+                <div class="top"><span style="font-weight:700">あや</span><span style="font-size:12px;color:var(--muted)">共通 5件 ・ 進行中 2件</span></div>
+                <div class="chipline"><span class="gchip"><span class="dot" style="background:var(--nazotoki);width:8px;height:8px"></span>謎解き仲間</span></div>
+                <div class="acts"><span class="act strong">グループに入れる</span><span class="act">フォローを解除</span><span class="act danger">ブロック</span></div>
+              </div>
+              <div class="person">
+                <div class="top"><span style="font-weight:700">たく</span><span style="font-size:12px;color:var(--muted)">共通 4件</span></div>
+                <div class="chipline"><span class="gchip"><span class="dot" style="background:var(--boardgame);width:8px;height:8px"></span>大学の友達</span></div>
+                <div class="acts"><span class="act strong">グループに入れる</span><span class="act">フォローを解除</span><span class="act danger">ブロック</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="points">
+      <li>開いた瞬間に「仲間をまとめて誘う場所」と分かる。グループを押すと、メンバーと進めているイベントの画面へ</li>
+      <li>グループが0件のときは「＋ グループを作る」と一言の説明だけ出る</li>
+      <li>フォローとブロックは人の行に残る。お気に入りのタブとボタンは消える</li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <!-- ===================== 案2 ===================== -->
+  <section class="option" aria-labelledby="p2-title">
+    <div class="option-head"><h2 id="p2-title">案2 タブの1つとしてグループを足す</h2><span class="tag">変更が小さい</span></div>
+    <p class="option-lead">今の構成のまま、お気に入りのタブを「グループ」に置き換える。説明ブロックも文言だけ直して残す。</p>
+    <div class="frames">
+      <div class="frame">
+        <span class="frame-label">スマホ</span>
+        <div class="phone">
+          <div class="ph"><span class="eyebrow">CONNECTIONS</span><h3>つながり</h3><p>一緒にイベントへ参加した人を、次の予定へ招待できます。</p></div>
+          <div class="guide">
+            <strong style="color:var(--text)">つながりの使い分け</strong>
+            <span>フォローすると、次のイベントへ招待しやすくなります。</span>
+            <span>グループは、よく誘う仲間をまとめる自分用の仕分けです。</span>
+            <span>ブロックすると、フォローとグループから外れます。</span>
+          </div>
+          <div class="tabs">
+            <span class="tab on">グループ<span class="c">2</span></span><span class="tab">相互フォロー<span class="c">3</span></span><span class="tab">フォロー中<span class="c">5</span></span><span class="tab">一緒に参加<span class="c">8</span></span>
+          </div>
+          <div class="gcard">
+            <div class="h"><span class="dot" style="background:var(--nazotoki)"></span>謎解き仲間<span class="count">3人</span></div>
+            <span class="s">あや・けん・みお ／ 進めているイベント 2件</span>
+          </div>
+          <div class="gcard">
+            <div class="h"><span class="dot" style="background:var(--boardgame)"></span>大学の友達<span class="count">4人</span></div>
+            <span class="s">たく・ゆい・けん・さき ／ 進めているイベント 1件</span>
+          </div>
+          <div class="gcard add">＋ グループを作る</div>
+        </div>
+      </div>
+      <div class="frame">
+        <span class="frame-label">PC</span>
+        <div class="pc">
+          <div class="ph"><span class="eyebrow">CONNECTIONS</span><h3>つながり</h3><p>一緒にイベントへ参加した人を、次の予定へ招待できます。</p></div>
+          <div class="guide">
+            <strong style="color:var(--text)">つながりの使い分け</strong>
+            <span>フォローすると招待しやすく／グループはよく誘う仲間の仕分け／ブロックするとフォローとグループから外れる</span>
+          </div>
+          <div class="tabs">
+            <span class="tab on">グループ<span class="c">2</span></span><span class="tab">相互フォロー<span class="c">3</span></span><span class="tab">フォロー中<span class="c">5</span></span><span class="tab">一緒に参加<span class="c">8</span></span><span class="tab">ブロック中<span class="c">0</span></span>
+          </div>
+          <div class="cols">
+            <div class="gcard">
+              <div class="h"><span class="dot" style="background:var(--nazotoki)"></span>謎解き仲間<span class="count">3人</span></div>
+              <span class="s">あや・けん・みお ／ 進めているイベント 2件</span>
+            </div>
+            <div class="gcard">
+              <div class="h"><span class="dot" style="background:var(--boardgame)"></span>大学の友達<span class="count">4人</span></div>
+              <span class="s">たく・ゆい・けん・さき ／ 進めているイベント 1件</span>
+            </div>
+            <div class="gcard add">＋ グループを作る</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="points">
+      <li>今の画面の作りをほぼそのまま使える</li>
+      <li>グループは5つのタブの1つなので、画面を開いたときの印象は今とあまり変わらない。「何のための画面か」の問題は残りやすい</li>
+    </ul>
+  </section>
+
+  <section class="verdict" aria-labelledby="verdict-title">
+    <h2 id="verdict-title">おすすめ: 案1</h2>
+    <p>今回の出発点は「何のための画面か分かりにくい」なので、開いてすぐ目的が伝わる構成を優先します。案2は作る量が少ない代わりに、見た目の印象が今とほぼ同じで、元の不満が解消しにくいと見ています。</p>
+  </section>
+</div>
