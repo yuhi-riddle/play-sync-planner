@@ -1,0 +1,350 @@
+<title>グループと招待のつなぎ方</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+  /* アプリにダークモードは無いので、実際の画面に合わせて明るい色で固定する。値は design/tokens.css から写した */
+  :root {
+    color-scheme: light;
+    --canvas: #f7f3ef;
+    --surface: #fffdf7;
+    --sunken: #f6f0e4;
+    --line: #e4dac6;
+    --line-strong: #cbbfa6;
+    --text: #262320;
+    --muted: #6f665c;
+    --moss: #5f7d65;
+    --pine: #344f43;
+    --pine-deep: #2c4638;
+    --clay-ink: #a8492f;
+    --honey: #d9aa4f;
+    --honey-ink: #7f5c19;
+    --mist: #eff3ee;
+    --nazotoki: #a098ec;
+    --nazotoki-ink: #6056a3;
+    --boardgame: #39bda0;
+    --r-card: 20px;
+    --r-control: 14px;
+    --shadow-raise: 0 1px 2px rgba(62, 51, 39, 0.04), 0 3px 10px rgba(62, 51, 39, 0.05);
+    --shadow-soft: 0 8px 26px rgba(62, 51, 39, 0.09);
+    --font: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px; }
+
+  /* ---- 説明 ---- */
+  .intro { display: grid; gap: 12px; max-width: 760px; }
+  .intro h1 { font-size: 26px; line-height: 1.35; margin: 0; text-wrap: balance; }
+  .intro p { margin: 0; color: var(--muted); }
+  .premise {
+    display: grid; gap: 6px; padding: 14px 16px; border-radius: var(--r-control);
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .premise strong { color: var(--pine); }
+
+  /* ---- 案のブロック ---- */
+  .option { display: grid; gap: 16px; }
+  .option-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+  .option-head h2 { margin: 0; font-size: 21px; }
+  .tag {
+    font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 8px;
+    background: var(--sunken); color: var(--muted); border: 1px solid var(--line);
+  }
+  .tag.rec { background: var(--mist); color: var(--pine); border-color: #cfdccf; }
+  .option-lead { margin: 0; color: var(--muted); max-width: 760px; }
+  .frames { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .frame { display: grid; gap: 8px; }
+  .frame-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .phone {
+    width: 375px; max-width: 100%; background: var(--canvas); border: 1px solid var(--line-strong);
+    border-radius: 28px; padding: 18px 14px 22px; display: grid; gap: 12px;
+  }
+  .pc {
+    width: 720px; max-width: 100%; background: var(--canvas); border: 1px solid var(--line-strong);
+    border-radius: 14px; padding: 22px 26px; display: grid; gap: 14px;
+  }
+  .pc .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .pc .cols { grid-template-columns: 1fr; } }
+  .screen-title { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  /* ---- アプリ部品の写し ---- */
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+    box-shadow: var(--shadow-raise); padding: 16px; display: grid; gap: 12px;
+  }
+  .card h3 { margin: 0; font-size: 18px; }
+  .card .sub { margin: 0; font-size: 13px; color: var(--muted); }
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-control);
+    background: var(--surface);
+  }
+  .row.on { border-color: var(--moss); background: var(--mist); }
+  .row .name { font-weight: 700; display: block; }
+  .row .meta { font-size: 12px; color: var(--muted); display: block; }
+  .box {
+    width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--line-strong); flex-shrink: 0;
+    display: grid; place-items: center; background: #fff;
+  }
+  .row.on .box { background: var(--moss); border-color: var(--moss); }
+  .row.on .box::after { content: ""; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+  .cta {
+    display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 8px 20px;
+    border-radius: 999px; color: #fff; font-weight: 700; font-size: 14px;
+    background: linear-gradient(135deg, var(--pine), var(--pine-deep)); box-shadow: var(--shadow-soft);
+  }
+  .ghost {
+    display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 8px 16px;
+    border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--surface);
+    font-weight: 700; font-size: 14px; color: var(--text);
+  }
+  .groups { display: grid; gap: 8px; }
+  .groups-label { font-size: 13px; font-weight: 700; }
+  .group-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gbtn {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px;
+    border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--surface);
+    font-weight: 700; font-size: 14px;
+  }
+  .gbtn .n { font-weight: 500; color: var(--muted); font-size: 12px; }
+  .gbtn.on { border-color: var(--pine); background: var(--mist); color: var(--pine); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .avatars { display: flex; }
+  .av {
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    color: #fff; border: 2px solid var(--surface); margin-left: -6px;
+  }
+  .av:first-child { margin-left: 0; }
+  .ev { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-control); background: var(--sunken); }
+  .ev .t { font-weight: 700; font-size: 14px; display: block; }
+  .ev .m { font-size: 12px; color: var(--muted); display: block; }
+  .badge { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 6px; margin-left: auto; white-space: nowrap; }
+  .badge.honey { background: #f7ecd4; color: var(--honey-ink); }
+  .badge.pine { background: var(--mist); color: var(--pine); }
+  .note {
+    font-size: 13px; color: var(--muted); padding: 8px 12px; border-left: 3px solid var(--honey); background: var(--surface);
+    border-radius: 0 10px 10px 0;
+  }
+  .flow { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .arrow { font-size: 22px; color: var(--moss); }
+  .mini { width: 240px; max-width: 100%; }
+  .points { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--text); max-width: 760px; }
+  .points li::marker { color: var(--moss); }
+  .verdict {
+    display: grid; gap: 8px; padding: 18px 20px; border-radius: var(--r-card); background: var(--surface);
+    border: 1px solid var(--line); box-shadow: var(--shadow-raise); max-width: 820px;
+  }
+  .verdict h2 { margin: 0; font-size: 19px; }
+  .verdict p { margin: 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>グループを作ったら、招待のときにどう使うか</h1>
+    <p>つながり画面で「グループ」を作れるようにする前提で、招待とのつなぎ方を2案並べました。上が今、下が案A・案B。どちらもスマホ（375px）とPCの両方を描いています。名前やイベントは例です。</p>
+    <div class="premise">
+      <span><strong>グループ</strong> = 自分だけに見える仕分け。相手には通知も表示もされない（電話帳のグループに近い）。</span>
+      <span>例: <strong>謎解き仲間</strong>（あや・けん・みお）／<strong>大学の友達</strong>（たく・ゆい・けん・さき）</span>
+      <span>招待を送るのは今と同じく、イベントを作ったあとの<strong>イベント詳細画面の「Madoiで招待」</strong>。</span>
+    </div>
+  </header>
+
+  <!-- ===================== 今 ===================== -->
+  <section class="option" aria-labelledby="now-title">
+    <div class="option-head"><h2 id="now-title">今</h2><span class="tag">ビフォー</span></div>
+    <p class="option-lead">イベント詳細の「Madoiで招待」で、つながりの人を1人ずつチェックして送る。いつものメンバーでも毎回同じ人を探して選び直す。</p>
+    <div class="frames">
+      <div class="frame">
+        <span class="frame-label">スマホ</span>
+        <div class="phone">
+          <div class="screen-title"><span>イベント詳細 › 謎解き 秋公演</span></div>
+          <div class="card">
+            <h3>Madoiで招待</h3>
+            <p class="sub">一緒に参加した人や、フォロー中・お気に入りの人から選べます。</p>
+            <div class="row"><span><span class="name">あや</span><span class="meta">一緒だったイベント 5件</span></span><span class="box"></span></div>
+            <div class="row"><span><span class="name">たく</span><span class="meta">一緒だったイベント 4件</span></span><span class="box"></span></div>
+            <div class="row"><span><span class="name">けん</span><span class="meta">一緒だったイベント 4件</span></span><span class="box"></span></div>
+            <div class="row"><span><span class="name">ゆい</span><span class="meta">一緒だったイベント 3件</span></span><span class="box"></span></div>
+            <div class="row"><span><span class="name">みお</span><span class="meta">お気に入り</span></span><span class="box"></span></div>
+            <span class="cta">Madoiで招待を送る</span>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <span class="frame-label">PC</span>
+        <div class="pc">
+          <div class="screen-title"><span>イベント詳細 › 謎解き 秋公演</span></div>
+          <div class="card">
+            <h3>Madoiで招待</h3>
+            <p class="sub">一緒に参加した人や、フォロー中・お気に入りの人から選べます。</p>
+            <div class="cols">
+              <div class="row"><span><span class="name">あや</span><span class="meta">一緒だったイベント 5件</span></span><span class="box"></span></div>
+              <div class="row"><span><span class="name">たく</span><span class="meta">一緒だったイベント 4件</span></span><span class="box"></span></div>
+              <div class="row"><span><span class="name">けん</span><span class="meta">一緒だったイベント 4件</span></span><span class="box"></span></div>
+              <div class="row"><span><span class="name">ゆい</span><span class="meta">一緒だったイベント 3件</span></span><span class="box"></span></div>
+              <div class="row"><span><span class="name">みお</span><span class="meta">お気に入り</span></span><span class="box"></span></div>
+            </div>
+            <span class="cta" style="justify-self:start">Madoiで招待を送る</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===================== 案A ===================== -->
+  <section class="option" aria-labelledby="a-title">
+    <div class="option-head"><h2 id="a-title">案A 招待の画面でグループを押す</h2><span class="tag rec">おすすめ</span></div>
+    <p class="option-lead">「Madoiで招待」のいちばん上にグループのボタンを並べる。押すと、そのメンバーにまとめてチェックが入る。あとから1人外す・足すのは今までどおり。下は「謎解き仲間」を押した直後。</p>
+    <div class="frames">
+      <div class="frame">
+        <span class="frame-label">スマホ</span>
+        <div class="phone">
+          <div class="screen-title"><span>イベント詳細 › 謎解き 秋公演</span></div>
+          <div class="card">
+            <h3>Madoiで招待</h3>
+            <div class="groups">
+              <span class="groups-label">グループでまとめて選ぶ</span>
+              <div class="group-buttons">
+                <span class="gbtn on"><span class="dot" style="background:var(--nazotoki)"></span>謎解き仲間<span class="n">3人</span></span>
+                <span class="gbtn"><span class="dot" style="background:var(--boardgame)"></span>大学の友達<span class="n">4人</span></span>
+              </div>
+            </div>
+            <p class="sub">または1人ずつ選ぶ</p>
+            <div class="row on"><span><span class="name">あや</span><span class="meta">謎解き仲間</span></span><span class="box"></span></div>
+            <div class="row"><span><span class="name">たく</span><span class="meta">大学の友達</span></span><span class="box"></span></div>
+            <div class="row on"><span><span class="name">けん</span><span class="meta">謎解き仲間・大学の友達</span></span><span class="box"></span></div>
+            <div class="row"><span><span class="name">ゆい</span><span class="meta">大学の友達</span></span><span class="box"></span></div>
+            <div class="row on"><span><span class="name">みお</span><span class="meta">謎解き仲間</span></span><span class="box"></span></div>
+            <span class="cta">3人に招待を送る</span>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <span class="frame-label">PC</span>
+        <div class="pc">
+          <div class="screen-title"><span>イベント詳細 › 謎解き 秋公演</span></div>
+          <div class="card">
+            <h3>Madoiで招待</h3>
+            <div class="groups">
+              <span class="groups-label">グループでまとめて選ぶ</span>
+              <div class="group-buttons">
+                <span class="gbtn on"><span class="dot" style="background:var(--nazotoki)"></span>謎解き仲間<span class="n">3人</span></span>
+                <span class="gbtn"><span class="dot" style="background:var(--boardgame)"></span>大学の友達<span class="n">4人</span></span>
+              </div>
+            </div>
+            <p class="sub">または1人ずつ選ぶ</p>
+            <div class="cols">
+              <div class="row on"><span><span class="name">あや</span><span class="meta">謎解き仲間</span></span><span class="box"></span></div>
+              <div class="row"><span><span class="name">たく</span><span class="meta">大学の友達</span></span><span class="box"></span></div>
+              <div class="row on"><span><span class="name">けん</span><span class="meta">謎解き仲間・大学の友達</span></span><span class="box"></span></div>
+              <div class="row"><span><span class="name">ゆい</span><span class="meta">大学の友達</span></span><span class="box"></span></div>
+              <div class="row on"><span><span class="name">みお</span><span class="meta">謎解き仲間</span></span><span class="box"></span></div>
+            </div>
+            <span class="cta" style="justify-self:start">3人に招待を送る</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="points">
+      <li>イベントを作る流れは今のまま。招待のカードに1行足すだけ</li>
+      <li>各人の行に所属グループ名が出るので、「誰がどのグループか」もここで分かる</li>
+      <li>グループを作っていない人には、ボタンの行が出ないだけで今と同じ画面</li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <!-- ===================== 案B ===================== -->
+  <section class="option" aria-labelledby="b-title">
+    <div class="option-head"><h2 id="b-title">案B グループからイベントを始める</h2><span class="tag">入口を増やす</span></div>
+    <p class="option-lead">つながり画面のグループを開くと、そのメンバーと進めているイベントが並ぶ。「このメンバーでイベントを作る」から作ると、詳細画面の招待で最初からメンバーにチェックが入っている。</p>
+    <div class="frames">
+      <div class="frame">
+        <span class="frame-label">スマホ（3画面の流れ）</span>
+        <div class="flow">
+          <div class="phone mini">
+            <div class="screen-title"><span>つながり › 謎解き仲間</span></div>
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="dot" style="background:var(--nazotoki);width:12px;height:12px"></span>
+                <h3>謎解き仲間</h3>
+              </div>
+              <div class="avatars">
+                <span class="av" style="background:#8a80d8">あ</span><span class="av" style="background:#6f8f78">け</span><span class="av" style="background:#c0876f">み</span>
+              </div>
+              <p class="sub">進めているイベント</p>
+              <div class="ev"><span><span class="t">脱出ゲーム 11月</span><span class="m">あや・けん</span></span><span class="badge honey">回答待ち</span></div>
+              <div class="ev"><span><span class="t">謎解き 秋公演</span><span class="m">3人とも</span></span><span class="badge pine">10/12</span></div>
+              <span class="cta">このメンバーでイベントを作る</span>
+            </div>
+          </div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="phone mini">
+            <div class="screen-title"><span>イベントを作る</span></div>
+            <div class="card">
+              <h3>新しいイベント</h3>
+              <div class="note">謎解き仲間の3人を招待する予定です</div>
+              <div class="row"><span><span class="name">タイトル</span><span class="meta">謎解き 冬公演</span></span></div>
+              <div class="row"><span><span class="name">カテゴリ</span><span class="meta">謎解き</span></span></div>
+              <span class="cta">作成する</span>
+            </div>
+          </div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="phone mini">
+            <div class="screen-title"><span>イベント詳細</span></div>
+            <div class="card">
+              <h3>Madoiで招待</h3>
+              <div class="row on"><span><span class="name">あや</span></span><span class="box"></span></div>
+              <div class="row on"><span><span class="name">けん</span></span><span class="box"></span></div>
+              <div class="row on"><span><span class="name">みお</span></span><span class="box"></span></div>
+              <span class="cta">3人に招待を送る</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <span class="frame-label">PC（つながり画面のグループ）</span>
+        <div class="pc">
+          <div class="screen-title"><span>つながり › 謎解き仲間</span></div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span class="dot" style="background:var(--nazotoki);width:12px;height:12px"></span>
+              <h3>謎解き仲間</h3>
+              <div class="avatars" style="margin-left:4px">
+                <span class="av" style="background:#8a80d8">あ</span><span class="av" style="background:#6f8f78">け</span><span class="av" style="background:#c0876f">み</span>
+              </div>
+              <span class="cta" style="margin-left:auto">このメンバーでイベントを作る</span>
+            </div>
+            <p class="sub">進めているイベント</p>
+            <div class="cols">
+              <div class="ev"><span><span class="t">脱出ゲーム 11月</span><span class="m">あや・けん</span></span><span class="badge honey">回答待ち</span></div>
+              <div class="ev"><span><span class="t">謎解き 秋公演</span><span class="m">3人とも</span></span><span class="badge pine">10/12</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="points">
+      <li>「仲間の予定を見る」画面と「誘う」が1か所でつながる</li>
+      <li>イベント作成の途中（下書き・中断）でも「誰を誘う予定か」を持ち回る必要があり、作る量は案Aより多い</li>
+      <li>招待は作成後に送る今の仕組みのままなので、作成画面では「招待する予定」の表示だけ</li>
+    </ul>
+  </section>
+
+  <section class="verdict" aria-labelledby="verdict-title">
+    <h2 id="verdict-title">おすすめ: まず案A、案Bはあとから足す</h2>
+    <p>案Aは招待のカードに1行足すだけで「いつものメンバーを一度に選ぶ」が片づき、今の作成の流れを変えずに済みます。案Bの「このメンバーでイベントを作る」ボタンは、グループ画面（仲間の予定を見る側）を作るときに足せば、案Aと両立します。</p>
+  </section>
+</div>
