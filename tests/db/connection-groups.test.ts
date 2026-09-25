@@ -375,6 +375,34 @@ describe("list_connection_group_members / list_connection_group_candidates", () 
   });
 });
 
+describe("退会した人", () => {
+  it("退会した人はグループに入れられず、候補にも出ない", async () => {
+    const me = await makeUser();
+    const withdrawn = await makeUser();
+    const aya = await makeUser();
+    await shareEvent(me, withdrawn, aya);
+    await client.query(
+      "update public.profiles set deleted_at = now(), deletion_state = 'done' where user_id = $1",
+      [withdrawn]
+    );
+    await asUser(me);
+
+    await expectErrorCode(() => createGroup("A", "nazotoki", [withdrawn]), "PSP08");
+    const groupId = await createGroup("B");
+    await expectErrorCode(
+      () => client.query("select public.add_connection_group_members($1, $2::uuid[])", [groupId, [withdrawn]]),
+      "PSP08"
+    );
+    await expectErrorCode(
+      () => client.query("select public.set_person_connection_groups($1, $2::uuid[])", [withdrawn, [groupId]]),
+      "PSP08"
+    );
+
+    const candidates = await client.query("select user_id from public.list_connection_group_candidates($1)", [groupId]);
+    expect(candidates.rows.map((row) => row.user_id)).toEqual([aya]);
+  });
+});
+
 describe("ブロック・退会", () => {
   it("ブロックすると、相手を自分のグループから、自分を相手のグループから外す", async () => {
     const me = await makeUser();
