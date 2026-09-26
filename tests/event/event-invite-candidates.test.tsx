@@ -57,8 +57,18 @@ describe("EventInviteCandidates", () => {
   it("explains that followed users without shared events are invite candidates", () => {
     render(<EventInviteCandidates candidates={[followedOnly]} nextCursor={null} action={vi.fn()} loadMoreAction={vi.fn()} />);
 
-    expect(screen.getByText("一緒に参加した人や、フォロー中・お気に入りの人から選べます。")).toBeInTheDocument();
+    expect(screen.getByText("一緒に参加した人や、フォロー中の人から選べます。")).toBeInTheDocument();
     expect(screen.getByText("フォロー中")).toBeInTheDocument();
+  });
+
+  it("お気に入りの人も「フォロー中」と表示し、お気に入りの文言を出さない", () => {
+    const followedFavorite = { ...followedOnly, isFavorite: true };
+    render(
+      <EventInviteCandidates candidates={[followedFavorite]} nextCursor={null} action={vi.fn()} loadMoreAction={vi.fn()} />
+    );
+
+    expect(screen.getByText("フォロー中")).toBeInTheDocument();
+    expect(screen.queryByText(/お気に入り/)).not.toBeInTheDocument();
   });
 
   it("passes caught errors through unstable_rethrow so framework redirects aren't swallowed", async () => {

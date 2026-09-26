@@ -1,17 +1,18 @@
 "use client";
 
-import { Heart, ShieldBan, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import { FolderPlus, ShieldBan, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import { clsx } from "clsx";
 import { unstable_rethrow } from "next/navigation";
-import React, { useRef, useState, useTransition } from "react";
+import React, { useId, useRef, useState, useTransition } from "react";
 import type { KeyboardEvent } from "react";
 
 import { ActiveSharedEventsModal } from "@/components/account/active-shared-events-modal";
+import { ConnectionGroupPicker } from "@/components/account/connection-group-picker";
 import {
   blockUserAction,
   followUserAction,
   loadActiveSharedEventsAction,
   loadMoreConnectionsAction,
-  toggleFavoriteAction,
   unfollowUserAction,
   unblockUserAction
 } from "@/lib/actions/account/connections";
@@ -25,8 +26,9 @@ import {
   type ConnectionCategory,
   type ConnectionCursor
 } from "@/lib/domain/account/connections";
+import { connectionGroupDotClass, type ConnectionGroup } from "@/lib/domain/account/connection-groups";
 
-type ConnectionTabId = ConnectionCategory;
+type ConnectionTabId = Exclude<ConnectionCategory, "favorites">;
 
 export type ConnectionTabData<T> = {
   items: T[];
@@ -37,15 +39,15 @@ export type ConnectionTabData<T> = {
 const emptyTabData: ConnectionTabData<never> = { items: [], totalCount: 0, nextCursor: null };
 
 type ConnectionListProps = {
-  favorites: ConnectionTabData<ConnectionCandidate>;
   mutualFollows?: ConnectionTabData<ConnectionCandidate>;
   following: ConnectionTabData<ConnectionCandidate>;
   candidates: ConnectionTabData<ConnectionCandidate>;
   blockedUsers?: ConnectionTabData<BlockedUser>;
+  groups: ConnectionGroup[];
+  groupIdsByMember: Record<string, string[]>;
 };
 
 type TabItems = {
-  favorites: ConnectionCandidate[];
   mutual: ConnectionCandidate[];
   following: ConnectionCandidate[];
   shared: ConnectionCandidate[];
@@ -55,21 +57,20 @@ type TabItems = {
 type TabCursors = Record<ConnectionTabId, ConnectionCursor>;
 
 export function ConnectionList({
-  favorites,
   mutualFollows = emptyTabData,
   following,
   candidates,
-  blockedUsers = emptyTabData
+  blockedUsers = emptyTabData,
+  groups,
+  groupIdsByMember
 }: ConnectionListProps) {
   const [items, setItems] = useState<TabItems>(() => ({
-    favorites: favorites.items,
     mutual: mutualFollows.items,
     following: following.items,
     shared: candidates.items,
     blocked: blockedUsers.items
   }));
   const [cursors, setCursors] = useState<TabCursors>(() => ({
-    favorites: favorites.nextCursor,
     mutual: mutualFollows.nextCursor,
     following: following.nextCursor,
     shared: candidates.nextCursor,
@@ -80,18 +81,11 @@ export function ConnectionList({
 
   const tabs = [
     {
-      id: "favorites",
-      label: "お気に入り",
-      people: items.favorites,
-      totalCount: favorites.totalCount,
-      emptyMessage: "お気に入りにした人はいません。"
-    },
-    {
-      id: "mutual",
-      label: "相互フォロー",
-      people: items.mutual,
-      totalCount: mutualFollows.totalCount,
-      emptyMessage: "相互フォローの人はいません。"
+      id: "shared",
+      label: "一緒に参加",
+      people: items.shared,
+      totalCount: candidates.totalCount,
+      emptyMessage: "一緒に参加している人がまだいません。"
     },
     {
       id: "following",
@@ -101,11 +95,11 @@ export function ConnectionList({
       emptyMessage: "フォロー中の人はいません。"
     },
     {
-      id: "shared",
-      label: "一緒に参加",
-      people: items.shared,
-      totalCount: candidates.totalCount,
-      emptyMessage: "一緒に参加している人がまだいません。"
+      id: "mutual",
+      label: "相互フォロー",
+      people: items.mutual,
+      totalCount: mutualFollows.totalCount,
+      emptyMessage: "相互フォローの人はいません。"
     },
     {
       id: "blocked",
@@ -157,26 +151,6 @@ export function ConnectionList({
 
   return (
     <div className="space-y-5">
-      <section aria-labelledby="connection-guide-title" className="border-y border-ink/10 py-4">
-        <h2 id="connection-guide-title" className="text-sm font-bold text-ink">
-          つながりの使い分け
-        </h2>
-        <ul className="mt-3 grid gap-3 text-sm text-ink/70 md:grid-cols-3">
-          <li className="flex items-start gap-2">
-            <UserPlus aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-pine" />
-            <p>フォローすると、次のイベントへ招待しやすくなります。</p>
-          </li>
-          <li className="flex items-start gap-2">
-            <Heart aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-clay" />
-            <p>お気に入りは、フォロー中の人を見つけやすくする目印です。</p>
-          </li>
-          <li className="flex items-start gap-2">
-            <ShieldBan aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-clay" />
-            <p>ブロックすると、お互いのフォローとお気に入りが外れます。</p>
-          </li>
-        </ul>
-      </section>
-
       <label className="grid gap-2 sm:hidden" htmlFor="connection-group-select">
         <span className="text-sm font-bold text-ink">表示するつながり</span>
         <select
@@ -234,7 +208,14 @@ export function ConnectionList({
           active.id === "blocked" ? (
             (active.people as BlockedUser[]).map((person) => <BlockedUserRow key={person.userId} person={person} />)
           ) : (
-            (active.people as ConnectionCandidate[]).map((person) => <ConnectionRow key={person.userId} person={person} />)
+            (active.people as ConnectionCandidate[]).map((person) => (
+              <ConnectionRow
+                key={person.userId}
+                person={person}
+                groups={groups}
+                groupIds={groupIdsByMember[person.userId] ?? []}
+              />
+            ))
           )
         ) : (
           <p className="rounded-lg border border-ink/8 bg-white/55 p-5 text-sm text-ink/65">{active.emptyMessage}</p>
@@ -261,13 +242,29 @@ export function ConnectionList({
   );
 }
 
-function ConnectionRow({ person }: { person: ConnectionCandidate }) {
+function ConnectionRow({
+  person,
+  groups,
+  groupIds
+}: {
+  person: ConnectionCandidate;
+  groups: ConnectionGroup[];
+  groupIds: string[];
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmingBlock, setConfirmingBlock] = useState(false);
+  const [isPickingGroups, setIsPickingGroups] = useState(false);
+  const groupPickerId = `connection-group-picker-${useId()}`;
+  const groupPickerButtonRef = useRef<HTMLButtonElement>(null);
   const [activeEvents, setActiveEvents] = useState<ActiveSharedEvent[] | null>(null);
   const [isLoadingActiveEvents, startActiveEventsTransition] = useTransition();
   const [activeEventsError, setActiveEventsError] = useState<string | null>(null);
+
+  function closeGroupPicker() {
+    setIsPickingGroups(false);
+    groupPickerButtonRef.current?.focus();
+  }
 
   function run(action: (userId: string) => Promise<ActionState>) {
     setError(null);
@@ -317,29 +314,52 @@ function ConnectionRow({ person }: { person: ConnectionCandidate }) {
             </button>
           ) : null}
           {activeEventsError ? <p className="mt-1 text-sm text-clay-ink" role="alert">{activeEventsError}</p> : null}
+          {groupIds.length > 0 ? (
+            <ul aria-label="所属グループ" className="mt-2 flex flex-wrap gap-1.5">
+              {groups
+                .filter((group) => groupIds.includes(group.id))
+                .map((group) => (
+                  <li key={group.id} className="inline-flex items-center gap-1.5 rounded-control bg-sunken px-2 py-0.5 text-caption font-bold text-muted">
+                    <span aria-hidden="true" className={clsx("h-2 w-2 rounded-full", connectionGroupDotClass[group.color])} />
+                    {group.name}
+                  </li>
+                ))}
+            </ul>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <ActionButton
+            label="グループに入れる"
+            icon={FolderPlus}
+            buttonRef={groupPickerButtonRef}
+            disabled={isPending}
+            active={isPickingGroups}
+            aria-expanded={isPickingGroups}
+            aria-controls={groupPickerId}
+            onClick={() => setIsPickingGroups((open) => !open)}
+          />
           <ActionButton
             label={person.isFollowing ? "フォローを解除" : "フォロー"}
             icon={person.isFollowing ? UserMinus : UserPlus}
             disabled={isPending}
             onClick={() => run(person.isFollowing ? unfollowUserAction : followUserAction)}
           />
-          <ActionButton
-            label={person.isFavorite ? "お気に入りを外す" : "お気に入りにする"}
-            icon={Heart}
-            disabled={isPending || (!person.isFollowing && !person.isFavorite)}
-            active={person.isFavorite}
-            title={person.isFollowing || person.isFavorite ? undefined : "フォローするとお気に入りにできます"}
-            onClick={() => run(toggleFavoriteAction)}
-          />
           <ActionButton label="ブロック" icon={ShieldBan} disabled={isPending} danger onClick={() => setConfirmingBlock(true)} />
         </div>
       </div>
+      {isPickingGroups ? (
+        <ConnectionGroupPicker
+          person={person}
+          groups={groups}
+          selectedGroupIds={groupIds}
+          panelId={groupPickerId}
+          onClose={closeGroupPicker}
+        />
+      ) : null}
       {confirmingBlock ? (
         <div className="mt-4 rounded-control border border-clay/25 bg-clay/10 p-3" aria-live="polite">
           <p className="text-sm font-semibold text-ink">{person.displayName}さんをブロックしますか？</p>
-          <p className="mt-1 text-sm text-muted">お互いのフォローとお気に入りも解除されます。</p>
+          <p className="mt-1 text-sm text-muted">お互いのフォローが解除され、グループからも外れます。</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -400,7 +420,7 @@ function BlockedUserRow({ person }: { person: BlockedUser }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-semibold text-ink">{person.displayName}</p>
-          <p className="mt-1 text-sm text-muted">解除しても、以前のフォローやお気に入りは戻りません。</p>
+          <p className="mt-1 text-sm text-muted">解除しても、以前のフォローやグループは戻りません。</p>
         </div>
         <button
           type="button"
@@ -429,21 +449,30 @@ function ActionButton({
   active = false,
   danger = false,
   title,
+  buttonRef,
+  "aria-expanded": ariaExpanded,
+  "aria-controls": ariaControls,
   onClick
 }: {
   label: string;
-  icon: typeof Heart;
+  icon: typeof FolderPlus;
   disabled: boolean;
   active?: boolean;
   danger?: boolean;
   title?: string;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
+      ref={buttonRef}
       aria-label={label}
       title={title}
+      aria-expanded={ariaExpanded}
+      aria-controls={ariaControls}
       disabled={disabled}
       onClick={onClick}
       className={

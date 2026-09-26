@@ -282,7 +282,7 @@ describe("createEventUserInvitationsAction", () => {
     ["self_invite", "自分自身は招待できません。"],
     ["not_owner", "このイベントへ招待を送る権限がありません。"],
     ["blocked", "ブロック中の人には招待を送れません。"],
-    ["not_eligible", "一緒に参加した人、フォロー中またはお気に入りの人だけを招待できます。"],
+    ["not_eligible", "一緒に参加した人か、フォロー中の人だけを招待できます。"],
     ["already_member", "すでに参加している人が含まれています。"],
     ["already_invited", "保留中または承諾済みの招待がある人が含まれています。"]
   ])("maps the %s RPC error to the existing message", async (error, message) => {

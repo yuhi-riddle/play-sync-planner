@@ -36,7 +36,7 @@ export function WithdrawAccountCard({
         <div>
           <h3 className="text-body font-bold text-ink">消えるもの</h3>
           <p className="mt-1 text-caption text-muted">
-            つながり(フォロー・お気に入り・ブロック)、通知、イベントの下書き、Google Calendar連携、プロフィール画像とニックネーム。
+            つながり(フォロー・グループ・ブロック)、通知、イベントの下書き、Google Calendar連携、プロフィール画像とニックネーム。
           </p>
         </div>
         <div>

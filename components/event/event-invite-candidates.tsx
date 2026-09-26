@@ -79,7 +79,7 @@ export function EventInviteCandidates({
     <section aria-labelledby="event-invite-candidates-heading" className="space-y-4">
       <div>
         <h2 id="event-invite-candidates-heading" className="text-xl font-semibold text-ink">Madoiで招待</h2>
-        <p className="mt-2 text-sm text-muted">一緒に参加した人や、フォロー中・お気に入りの人から選べます。</p>
+        <p className="mt-2 text-sm text-muted">一緒に参加した人や、フォロー中の人から選べます。</p>
       </div>
       <div className="space-y-2">
         {orderedCandidates.map((candidate) => {
@@ -89,11 +89,7 @@ export function EventInviteCandidates({
               <span className="min-w-0">
                 <span className="block font-semibold text-ink">{candidate.displayName}</span>
                 <span className="mt-1 block text-sm text-muted">
-                  {candidate.sharedEventCount > 0
-                    ? `一緒だったイベント ${candidate.sharedEventCount}件`
-                    : candidate.isFavorite
-                      ? "お気に入り"
-                      : "フォロー中"}
+                  {candidate.sharedEventCount > 0 ? `一緒だったイベント ${candidate.sharedEventCount}件` : "フォロー中"}
                 </span>
               </span>
               <input
