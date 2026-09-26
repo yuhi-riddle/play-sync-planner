@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 
 import { ConnectionList } from "@/components/account/connection-list";
+import { ConnectionGroupsSection } from "@/components/account/connection-groups-section";
 import { ReceivedEventInvitations, type ReceivedEventInvitation } from "@/components/event/received-event-invitations";
 import { SetupPanel } from "@/components/ui/state-panels";
 import { PageHeader } from "@/components/ui";
 import { mapConnectionCounts, mapConnectionPage, toBlockedUser, type ConnectionPage } from "@/lib/domain/account/connections";
+import { buildGroupIdsByMember, mapConnectionGroupRow } from "@/lib/domain/account/connection-groups";
 import { createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,42 +28,48 @@ export default async function ConnectionsPage() {
   }
 
   const supabase = await createSupabaseServerClient();
-  const [overview, invitations] = await Promise.all([
+  const [overview, invitations, groupData] = await Promise.all([
     loadConnectionsOverview(supabase),
-    loadReceivedEventInvitations(supabase)
+    loadReceivedEventInvitations(supabase),
+    loadConnectionGroups(supabase)
   ]);
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Connections" title="つながり" description="一緒にイベントへ参加した人を、次の予定へ招待できます。" />
+      <PageHeader eyebrow="Connections" title="つながり" description="よく遊ぶ仲間をグループにまとめて、次のイベントにまとめて誘えます。" />
       <ReceivedEventInvitations invitations={invitations} />
-      <ConnectionList
-        favorites={{ ...overview.favorites, totalCount: overview.counts.favorites }}
-        mutualFollows={{ ...overview.mutual, totalCount: overview.counts.mutual }}
-        following={{ ...overview.following, totalCount: overview.counts.following }}
-        candidates={{ ...overview.shared, totalCount: overview.counts.shared }}
-        blockedUsers={{
-          items: overview.blocked.items.map(toBlockedUser),
-          nextCursor: overview.blocked.nextCursor,
-          totalCount: overview.counts.blocked
-        }}
-      />
+      <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+        <ConnectionGroupsSection groups={groupData.groups} />
+        <section aria-labelledby="connection-people-heading" className="grid gap-3">
+          <h2 id="connection-people-heading" className="text-xl font-semibold text-ink">人</h2>
+          <ConnectionList
+            mutualFollows={{ ...overview.mutual, totalCount: overview.counts.mutual }}
+            following={{ ...overview.following, totalCount: overview.counts.following }}
+            candidates={{ ...overview.shared, totalCount: overview.counts.shared }}
+            blockedUsers={{
+              items: overview.blocked.items.map(toBlockedUser),
+              nextCursor: overview.blocked.nextCursor,
+              totalCount: overview.counts.blocked
+            }}
+            groups={groupData.groups}
+            groupIdsByMember={groupData.groupIdsByMember}
+          />
+        </section>
+      </div>
     </div>
   );
 }
 
 async function loadConnectionsOverview(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>): Promise<{
   counts: ReturnType<typeof mapConnectionCounts>;
-  favorites: ConnectionPage;
   mutual: ConnectionPage;
   following: ConnectionPage;
   shared: ConnectionPage;
   blocked: ConnectionPage;
 }> {
   const firstPage = { p_cursor_at: null, p_cursor_user_id: null, p_limit: 20 };
-  const [countsResult, favoritesResult, mutualResult, followingResult, sharedResult, blockedResult] = await Promise.all([
+  const [countsResult, mutualResult, followingResult, sharedResult, blockedResult] = await Promise.all([
     supabase.rpc("get_connection_counts"),
-    supabase.rpc("list_connections", { p_category: "favorites", ...firstPage }),
     supabase.rpc("list_connections", { p_category: "mutual", ...firstPage }),
     supabase.rpc("list_connections", { p_category: "following", ...firstPage }),
     supabase.rpc("list_connections", { p_category: "shared", ...firstPage }),
@@ -70,7 +78,6 @@ async function loadConnectionsOverview(supabase: Awaited<ReturnType<typeof creat
 
   if (
     countsResult.error ||
-    favoritesResult.error ||
     mutualResult.error ||
     followingResult.error ||
     sharedResult.error ||
@@ -81,11 +88,26 @@ async function loadConnectionsOverview(supabase: Awaited<ReturnType<typeof creat
 
   return {
     counts: mapConnectionCounts(countsResult.data ?? []),
-    favorites: mapConnectionPage(favoritesResult.data ?? []),
     mutual: mapConnectionPage(mutualResult.data ?? []),
     following: mapConnectionPage(followingResult.data ?? []),
     shared: mapConnectionPage(sharedResult.data ?? []),
     blocked: mapConnectionPage(blockedResult.data ?? [])
+  };
+}
+
+async function loadConnectionGroups(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
+  const [groupsResult, membershipsResult] = await Promise.all([
+    supabase.rpc("list_connection_groups"),
+    supabase.rpc("list_connection_group_memberships")
+  ]);
+
+  if (groupsResult.error || membershipsResult.error) {
+    throw new Error("グループを読み込めませんでした。");
+  }
+
+  return {
+    groups: (groupsResult.data ?? []).map(mapConnectionGroupRow),
+    groupIdsByMember: buildGroupIdsByMember(membershipsResult.data ?? [])
   };
 }
 

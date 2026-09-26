@@ -342,7 +342,8 @@ describe("ConnectionList", () => {
         />
       );
       fireEvent.click(screen.getByRole("button", { name: "グループに入れる" }));
-      expect(screen.getByRole("checkbox", { name: "大学の友達" })).toBeDisabled();
+      // 読み上げ名に「30人まで」も入るので、満員であることが読み上げでも伝わる
+      expect(screen.getByRole("checkbox", { name: "大学の友達 30人まで" })).toBeDisabled();
       expect(screen.getByText("30人まで")).toBeInTheDocument();
     });
 
