@@ -45,6 +45,9 @@ describe("ConnectionGroupsSection", () => {
     render(<ConnectionGroupsSection groups={[]} />);
     fireEvent.click(screen.getByRole("button", { name: "＋ グループを作る" }));
     expect(screen.getByLabelText("グループ名")).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "やめる" }));
+    expect(screen.getByRole("button", { name: "＋ グループを作る" })).toHaveFocus();
   });
 
   it("作ったらそのグループの画面へ進む", async () => {

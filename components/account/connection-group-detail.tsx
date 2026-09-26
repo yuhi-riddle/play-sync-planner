@@ -36,6 +36,20 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const membersHeadingRef = useRef<HTMLHeadingElement>(null);
+  // パネルや確認を閉じたら、開いたボタンにフォーカスを戻す（閉じた要素と一緒にフォーカスが消えないように）
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  const addMembersButtonRef = useRef<HTMLButtonElement>(null);
+
+  function closeEditing() {
+    setIsEditing(false);
+    editButtonRef.current?.focus();
+  }
+
+  function closeDeleteConfirm() {
+    setConfirmingDelete(false);
+    deleteButtonRef.current?.focus();
+  }
   const remaining = Math.max(connectionGroupLimits.members - group.memberCount, 0);
 
   function run(action: () => Promise<{ status: string; message?: string }>, onSuccess?: () => void) {
@@ -86,10 +100,15 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
         </div>
         <p className="text-caption text-muted">このグループは自分だけに見えます。メンバーには通知されません。</p>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={secondaryButton} onClick={() => setIsEditing((open) => !open)}>
+          <button ref={editButtonRef} type="button" className={secondaryButton} onClick={() => setIsEditing((open) => !open)}>
             名前と色を変える
           </button>
-          <button type="button" className={clsx(secondaryButton, "text-clay-ink")} onClick={() => setConfirmingDelete(true)}>
+          <button
+            ref={deleteButtonRef}
+            type="button"
+            className={clsx(secondaryButton, "text-clay-ink")}
+            onClick={() => setConfirmingDelete(true)}
+          >
             グループを削除
           </button>
         </div>
@@ -99,7 +118,7 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
             className="grid gap-3 rounded-control border border-line bg-surface p-3"
             onSubmit={(event) => {
               event.preventDefault();
-              run(() => updateConnectionGroupAction(group.id, { name, color }), () => setIsEditing(false));
+              run(() => updateConnectionGroupAction(group.id, { name, color }), closeEditing);
             }}
           >
             <label className="grid gap-1" htmlFor="connection-group-name">
@@ -118,7 +137,7 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
               <button type="submit" disabled={isPending} className={primaryButton}>
                 保存する
               </button>
-              <button type="button" className={secondaryButton} onClick={() => setIsEditing(false)}>
+              <button type="button" className={secondaryButton} onClick={closeEditing}>
                 やめる
               </button>
             </div>
@@ -139,7 +158,7 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
               >
                 削除する
               </button>
-              <button type="button" className={secondaryButton} onClick={() => setConfirmingDelete(false)}>
+              <button type="button" className={secondaryButton} onClick={closeDeleteConfirm}>
                 やめる
               </button>
             </div>
@@ -183,7 +202,13 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
         )}
 
         <div className="grid gap-1">
-          <button type="button" disabled={remaining === 0 || isPending} onClick={openCandidates} className={secondaryButton}>
+          <button
+            ref={addMembersButtonRef}
+            type="button"
+            disabled={remaining === 0 || isPending}
+            onClick={openCandidates}
+            className={secondaryButton}
+          >
             メンバーを追加
           </button>
           {remaining === 0 ? <p className="text-caption text-muted">1つのグループに入れられるのは30人までです</p> : null}
@@ -220,12 +245,27 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
                   type="button"
                   disabled={isPending}
                   className={primaryButton}
-                  onClick={() => run(() => addConnectionGroupMembersAction(group.id, selected), () => setCandidates(null))}
+                  onClick={() =>
+                    run(
+                      () => addConnectionGroupMembersAction(group.id, selected),
+                      () => {
+                        setCandidates(null);
+                        membersHeadingRef.current?.focus();
+                      }
+                    )
+                  }
                 >
                   {selected.length}人を追加
                 </button>
               ) : null}
-              <button type="button" className={secondaryButton} onClick={() => setCandidates(null)}>
+              <button
+                type="button"
+                className={secondaryButton}
+                onClick={() => {
+                  setCandidates(null);
+                  addMembersButtonRef.current?.focus();
+                }}
+              >
                 閉じる
               </button>
             </div>

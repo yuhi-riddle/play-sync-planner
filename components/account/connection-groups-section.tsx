@@ -117,7 +117,6 @@ export function ConnectionGroupsSection({ groups }: { groups: ConnectionGroup[] 
               作成する
             </button>
             <button
-              ref={createButtonRef}
               type="button"
               onClick={() => setIsCreating(false)}
               className="inline-flex min-h-11 items-center justify-center rounded-control border border-line bg-white px-4 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"
@@ -129,6 +128,7 @@ export function ConnectionGroupsSection({ groups }: { groups: ConnectionGroup[] 
       ) : (
         <div className="grid gap-1">
           <button
+            ref={createButtonRef}
             type="button"
             disabled={isFull}
             onClick={() => setIsCreating(true)}

@@ -84,6 +84,25 @@ describe("ConnectionGroupDetail", () => {
     fireEvent.click(within(picker).getByRole("button", { name: "1人を追加" }));
 
     await waitFor(() => expect(actions.addConnectionGroupMembersAction).toHaveBeenCalledWith(group.id, [ken.userId]));
+    // 追加するとパネルが閉じるので、フォーカスを「メンバー」の見出しへ移す
+    await waitFor(() => expect(screen.getByRole("heading", { name: "メンバー" })).toHaveFocus());
+  });
+
+  it("編集・削除の確認を閉じたら、開いたボタンにフォーカスを戻す", async () => {
+    actions.updateConnectionGroupAction.mockResolvedValue({ status: "success" });
+    render(<ConnectionGroupDetail group={group} members={[aya]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "名前と色を変える" }));
+    fireEvent.click(screen.getByRole("button", { name: "やめる" }));
+    expect(screen.getByRole("button", { name: "名前と色を変える" })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "名前と色を変える" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存する" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "名前と色を変える" })).toHaveFocus());
+
+    fireEvent.click(screen.getByRole("button", { name: "グループを削除" }));
+    fireEvent.click(screen.getByRole("button", { name: "やめる" }));
+    expect(screen.getByRole("button", { name: "グループを削除" })).toHaveFocus();
   });
 
   it("30人に達していたら追加ボタンを押せず、理由を出す", () => {
