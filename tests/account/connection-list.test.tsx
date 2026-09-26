@@ -317,6 +317,21 @@ describe("ConnectionList", () => {
       );
     });
 
+    it("「グループに入れる」は開閉の状態を伝え、閉じたらボタンにフォーカスを戻す", () => {
+      render(<ConnectionList following={empty} candidates={tabData([candidate])} groups={groups} groupIdsByMember={{}} />);
+      const toggle = screen.getByRole("button", { name: "グループに入れる" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const panel = screen.getByRole("group", { name: `${candidate.displayName}を入れるグループ` });
+      expect(toggle).toHaveAttribute("aria-controls", panel.id);
+
+      fireEvent.click(within(panel).getByRole("button", { name: "閉じる" }));
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(toggle).toHaveFocus();
+    });
+
     it("パネルの中で新しいグループを作って、その人を入れられる", async () => {
       createConnectionGroupAction.mockResolvedValue({ status: "success", groupId: "g9" });
       render(<ConnectionList following={empty} candidates={tabData([candidate])} groups={[]} groupIdsByMember={{}} />);

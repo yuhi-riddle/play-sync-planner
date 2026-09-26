@@ -69,6 +69,8 @@ describe("ConnectionGroupDetail", () => {
     render(<ConnectionGroupDetail group={group} members={[aya]} />);
     fireEvent.click(screen.getByRole("button", { name: "あやをグループから外す" }));
     await waitFor(() => expect(actions.removeConnectionGroupMemberAction).toHaveBeenCalledWith(group.id, aya.userId));
+    // 外したボタンは行ごと消えるので、フォーカスを「メンバー」の見出しへ移す
+    await waitFor(() => expect(screen.getByRole("heading", { name: "メンバー" })).toHaveFocus());
   });
 
   it("候補を読み込んで、選んだ人を追加できる", async () => {

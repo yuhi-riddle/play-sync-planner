@@ -41,6 +41,12 @@ describe("ConnectionGroupsSection", () => {
     expect(screen.getByRole("button", { name: "＋ グループを作る" })).toBeEnabled();
   });
 
+  it("作るフォームを開いたら、グループ名の入力欄にフォーカスを移す", () => {
+    render(<ConnectionGroupsSection groups={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "＋ グループを作る" }));
+    expect(screen.getByLabelText("グループ名")).toHaveFocus();
+  });
+
   it("作ったらそのグループの画面へ進む", async () => {
     createConnectionGroupAction.mockResolvedValue({ status: "success", groupId: "g9" });
     render(<ConnectionGroupsSection groups={[]} />);
