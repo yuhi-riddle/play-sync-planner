@@ -1,24 +1,35 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { unblockUserAction, unfollowUserAction, loadMoreConnectionsAction, loadActiveSharedEventsAction } = vi.hoisted(
-  () => ({
-    unblockUserAction: vi.fn().mockResolvedValue(undefined),
-    unfollowUserAction: vi.fn(),
-    loadMoreConnectionsAction: vi.fn(),
-    loadActiveSharedEventsAction: vi.fn()
-  })
-);
+const {
+  unblockUserAction,
+  unfollowUserAction,
+  loadMoreConnectionsAction,
+  loadActiveSharedEventsAction,
+  setPersonConnectionGroupsAction,
+  createConnectionGroupAction
+} = vi.hoisted(() => ({
+  unblockUserAction: vi.fn().mockResolvedValue(undefined),
+  unfollowUserAction: vi.fn(),
+  loadMoreConnectionsAction: vi.fn(),
+  loadActiveSharedEventsAction: vi.fn(),
+  setPersonConnectionGroupsAction: vi.fn(),
+  createConnectionGroupAction: vi.fn()
+}));
 
 vi.mock("@/lib/actions/account/connections", () => ({
   blockUserAction: vi.fn(),
   followUserAction: vi.fn(),
-  toggleFavoriteAction: vi.fn(),
   unfollowUserAction,
   unblockUserAction,
   loadMoreConnectionsAction,
   loadActiveSharedEventsAction
+}));
+
+vi.mock("@/lib/actions/account/connection-groups", () => ({
+  setPersonConnectionGroupsAction,
+  createConnectionGroupAction
 }));
 
 vi.mock("next/navigation", () => ({
@@ -81,81 +92,54 @@ describe("ConnectionList", () => {
   it("shows filters with counts and only the selected group", () => {
     render(
       <ConnectionList
-        favorites={tabData([favorite])}
-        mutualFollows={empty}
+        mutualFollows={tabData([favorite])}
         following={tabData([following])}
         candidates={tabData([candidate])}
         blockedUsers={tabData([blockedUser])}
+        groups={[]}
+        groupIdsByMember={{}}
       />
     );
 
-    expect(screen.getByRole("tab", { name: "お気に入り 1件" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "相互フォロー 0件" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "一緒に参加 1件" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "フォロー中 1件" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "一緒に参加 1件" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "相互フォロー 1件" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "ブロック中 1件" })).toBeInTheDocument();
-    expect(screen.getByText("あきらさん")).toBeInTheDocument();
+    expect(screen.getByText("みなとさん")).toBeInTheDocument();
     expect(screen.queryByText("はるかさん")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "フォロー中 1件" }));
 
     expect(screen.getByText("はるかさん")).toBeInTheDocument();
-    expect(screen.queryByText("あきらさん")).not.toBeInTheDocument();
+    expect(screen.queryByText("みなとさん")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ブロック" })).toBeInTheDocument();
   });
 
   it("switches the mobile connection group from one dropdown", () => {
     render(
       <ConnectionList
-        favorites={tabData([favorite])}
-        mutualFollows={empty}
+        mutualFollows={tabData([favorite])}
         following={tabData([following])}
         candidates={tabData([candidate])}
         blockedUsers={tabData([blockedUser])}
+        groups={[]}
+        groupIdsByMember={{}}
       />
     );
 
     const select = screen.getByRole("combobox", { name: "表示するつながり" });
     expect(select).toHaveClass("sm:hidden");
-    expect(screen.getByRole("option", { name: "お気に入り (1件)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "一緒に参加 (1件)" })).toBeInTheDocument();
 
     fireEvent.change(select, { target: { value: "following" } });
 
     expect(screen.getByText("はるかさん")).toBeInTheDocument();
-    expect(screen.queryByText("あきらさん")).not.toBeInTheDocument();
+    expect(screen.queryByText("みなとさん")).not.toBeInTheDocument();
     expect(screen.getByRole("tablist", { name: "つながりを絞り込む" }).parentElement).toHaveClass("hidden", "sm:block");
   });
 
-  it("briefly explains follow, favorite, and block behavior", () => {
-    render(<ConnectionList favorites={empty} following={empty} candidates={empty} blockedUsers={emptyBlocked} />);
-
-    expect(screen.getByText("フォローすると、次のイベントへ招待しやすくなります。")).toBeInTheDocument();
-    expect(screen.getByText("お気に入りは、フォロー中の人を見つけやすくする目印です。")).toBeInTheDocument();
-    expect(screen.getByText("ブロックすると、お互いのフォローとお気に入りが外れます。")).toBeInTheDocument();
-  });
-
-  it("keeps favorite disabled until the person is followed", () => {
-    render(<ConnectionList favorites={empty} following={empty} candidates={tabData([candidate])} blockedUsers={emptyBlocked} />);
-    fireEvent.click(screen.getByRole("tab", { name: "一緒に参加 1件" }));
-
-    expect(screen.getByRole("button", { name: "お気に入りにする" })).toBeDisabled();
-  });
-
-  it("allows an existing favorite to be removed even after an unfollow", () => {
-    render(
-      <ConnectionList
-        favorites={tabData([{ ...favorite, isFollowing: false }])}
-        following={empty}
-        candidates={empty}
-        blockedUsers={emptyBlocked}
-      />
-    );
-
-    expect(screen.getByRole("button", { name: "お気に入りを外す" })).toBeEnabled();
-  });
-
   it("describes shared participation without implying that every event is in the past", () => {
-    render(<ConnectionList favorites={empty} following={empty} candidates={tabData([candidate])} />);
+    render(<ConnectionList following={empty} candidates={tabData([candidate])} groups={[]} groupIdsByMember={{}} />);
 
     fireEvent.click(screen.getByRole("tab", { name: "一緒に参加 1件" }));
     expect(screen.getByText("共通のイベント 3件")).toBeInTheDocument();
@@ -164,11 +148,11 @@ describe("ConnectionList", () => {
   });
 
   it("shows blocked users and lets the user unblock them", async () => {
-    render(<ConnectionList favorites={empty} following={empty} candidates={empty} blockedUsers={tabData([blockedUser])} />);
+    render(<ConnectionList following={empty} candidates={empty} blockedUsers={tabData([blockedUser])} groups={[]} groupIdsByMember={{}} />);
 
     fireEvent.click(screen.getByRole("tab", { name: "ブロック中 1件" }));
     expect(screen.getByText("なぎささん")).toBeInTheDocument();
-    expect(screen.getByText("解除しても、以前のフォローやお気に入りは戻りません。")).toBeInTheDocument();
+    expect(screen.getByText("解除しても、以前のフォローやグループは戻りません。")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "なぎささんのブロックを解除" }));
 
@@ -178,7 +162,7 @@ describe("ConnectionList", () => {
   it("passes unfollow errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
     const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
     unfollowUserAction.mockRejectedValueOnce(redirectError);
-    render(<ConnectionList favorites={empty} following={tabData([following])} candidates={empty} blockedUsers={emptyBlocked} />);
+    render(<ConnectionList following={tabData([following])} candidates={empty} blockedUsers={emptyBlocked} groups={[]} groupIdsByMember={{}} />);
 
     fireEvent.click(screen.getByRole("button", { name: "フォローを解除" }));
 
@@ -188,7 +172,7 @@ describe("ConnectionList", () => {
   it("passes unblock errors through unstable_rethrow so framework redirects aren't swallowed", async () => {
     const redirectError = new Error("NEXT_REDIRECT;push;/login;replace;307;");
     unblockUserAction.mockRejectedValueOnce(redirectError);
-    render(<ConnectionList favorites={empty} following={empty} candidates={empty} blockedUsers={tabData([blockedUser])} />);
+    render(<ConnectionList following={empty} candidates={empty} blockedUsers={tabData([blockedUser])} groups={[]} groupIdsByMember={{}} />);
 
     fireEvent.click(screen.getByRole("tab", { name: "ブロック中 1件" }));
     fireEvent.click(screen.getByRole("button", { name: "なぎささんのブロックを解除" }));
@@ -205,10 +189,11 @@ describe("ConnectionList", () => {
 
     render(
       <ConnectionList
-        favorites={empty}
         following={empty}
         candidates={tabData([candidate], { totalCount: 2, nextCursor })}
         blockedUsers={emptyBlocked}
+        groups={[]}
+        groupIdsByMember={{}}
       />
     );
 
@@ -228,10 +213,11 @@ describe("ConnectionList", () => {
 
     render(
       <ConnectionList
-        favorites={empty}
         following={empty}
         candidates={tabData([candidate], { totalCount: 2, nextCursor })}
         blockedUsers={emptyBlocked}
+        groups={[]}
+        groupIdsByMember={{}}
       />
     );
 
@@ -246,9 +232,10 @@ describe("ConnectionList", () => {
     it("activeSharedEventCountが0より大きいときだけボタンを出す", () => {
       render(
         <ConnectionList
-          favorites={{ items: [favorite], totalCount: 1, nextCursor: null }}
           following={{ items: [following], totalCount: 1, nextCursor: null }}
-          candidates={{ items: [candidate], totalCount: 1, nextCursor: null }}
+          candidates={{ items: [favorite], totalCount: 1, nextCursor: null }}
+          groups={[]}
+          groupIdsByMember={{}}
         />
       );
 
@@ -262,9 +249,10 @@ describe("ConnectionList", () => {
 
       render(
         <ConnectionList
-          favorites={{ items: [favorite], totalCount: 1, nextCursor: null }}
           following={{ items: [], totalCount: 0, nextCursor: null }}
-          candidates={{ items: [], totalCount: 0, nextCursor: null }}
+          candidates={{ items: [favorite], totalCount: 1, nextCursor: null }}
+          groups={[]}
+          groupIdsByMember={{}}
         />
       );
 
@@ -276,6 +264,92 @@ describe("ConnectionList", () => {
       await waitFor(() => {
         expect(screen.getByRole("link", { name: /夏の集まり/ })).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("お気に入りの撤去とグループ", () => {
+    const groups = [
+      { id: "g1", name: "謎解き仲間", color: "nazotoki" as const, memberCount: 1, memberNames: ["あきらさん"], activeEventCount: 0 },
+      { id: "g2", name: "大学の友達", color: "boardgame" as const, memberCount: 0, memberNames: [], activeEventCount: 0 }
+    ];
+
+    it("タブは 一緒に参加／フォロー中／相互フォロー／ブロック中 の順で、お気に入りは出さない", () => {
+      render(
+        <ConnectionList
+          mutualFollows={tabData([favorite])}
+          following={tabData([following])}
+          candidates={tabData([candidate])}
+          blockedUsers={emptyBlocked}
+          groups={groups}
+          groupIdsByMember={{}}
+        />
+      );
+      expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.replace(/\d+件?/g, "").trim())).toEqual([
+        "一緒に参加",
+        "フォロー中",
+        "相互フォロー",
+        "ブロック中"
+      ]);
+      expect(screen.queryByText(/お気に入り/)).not.toBeInTheDocument();
+      expect(screen.queryByText("つながりの使い分け")).not.toBeInTheDocument();
+    });
+
+    it("人の行に所属グループを出し、「グループに入れる」で選んで保存できる", async () => {
+      setPersonConnectionGroupsAction.mockResolvedValue({ status: "success" });
+      render(
+        <ConnectionList
+          following={empty}
+          candidates={tabData([candidate])}
+          groups={groups}
+          groupIdsByMember={{ [candidate.userId]: ["g1"] }}
+        />
+      );
+
+      expect(screen.getByText("謎解き仲間")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "グループに入れる" }));
+      const dialog = screen.getByRole("group", { name: `${candidate.displayName}を入れるグループ` });
+      expect(within(dialog).getByRole("checkbox", { name: "謎解き仲間" })).toBeChecked();
+      fireEvent.click(within(dialog).getByRole("checkbox", { name: "大学の友達" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "保存する" }));
+
+      await waitFor(() =>
+        expect(setPersonConnectionGroupsAction).toHaveBeenCalledWith(candidate.userId, ["g1", "g2"])
+      );
+    });
+
+    it("パネルの中で新しいグループを作って、その人を入れられる", async () => {
+      createConnectionGroupAction.mockResolvedValue({ status: "success", groupId: "g9" });
+      render(<ConnectionList following={empty} candidates={tabData([candidate])} groups={[]} groupIdsByMember={{}} />);
+      fireEvent.click(screen.getByRole("button", { name: "グループに入れる" }));
+      fireEvent.change(screen.getByLabelText("新しいグループを作って入れる"), { target: { value: "謎解き仲間" } });
+      fireEvent.click(screen.getByRole("button", { name: "作って入れる" }));
+      await waitFor(() =>
+        expect(createConnectionGroupAction).toHaveBeenCalledWith({
+          name: "謎解き仲間",
+          color: "nazotoki",
+          memberIds: [candidate.userId]
+        })
+      );
+    });
+
+    it("30人に達したグループは、まだ入っていない人には選べない", () => {
+      render(
+        <ConnectionList
+          following={empty}
+          candidates={tabData([candidate])}
+          groups={[{ ...groups[1], memberCount: 30 }]}
+          groupIdsByMember={{}}
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: "グループに入れる" }));
+      expect(screen.getByRole("checkbox", { name: "大学の友達" })).toBeDisabled();
+      expect(screen.getByText("30人まで")).toBeInTheDocument();
+    });
+
+    it("ブロックの確認に、グループからも外れることを書く", () => {
+      render(<ConnectionList following={empty} candidates={tabData([candidate])} groups={[]} groupIdsByMember={{}} />);
+      fireEvent.click(screen.getByRole("button", { name: "ブロック" }));
+      expect(screen.getByText("お互いのフォローが解除され、グループからも外れます。")).toBeInTheDocument();
     });
   });
 });

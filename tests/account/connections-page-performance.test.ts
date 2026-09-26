@@ -18,4 +18,11 @@ describe("connections page query count", () => {
     expect(source).not.toContain('from("user_blocks")');
     expect(source).not.toContain('from("user_favorites")');
   });
+
+  it("お気に入りの一覧は読み込まず、グループは RPC 2本で読む", () => {
+    const source = readFileSync(resolve(process.cwd(), "app/connections/page.tsx"), "utf8");
+    expect(source).not.toContain('p_category: "favorites"');
+    expect(source).toContain('supabase.rpc("list_connection_groups")');
+    expect(source).toContain('supabase.rpc("list_connection_group_memberships")');
+  });
 });
