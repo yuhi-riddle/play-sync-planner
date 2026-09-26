@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useTransition } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import { clsx } from "clsx";
 
 import { ConnectionGroupColorField } from "@/components/account/connection-group-color-field";
@@ -28,7 +28,19 @@ export function ConnectionGroupsSection({ groups }: { groups: ConnectionGroup[] 
   const [color, setColor] = useState<ConnectionGroupColor>(defaultConnectionGroupColor);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const wasCreating = useRef(false);
   const isFull = groups.length >= connectionGroupLimits.groups;
+
+  useEffect(() => {
+    if (isCreating) {
+      nameInputRef.current?.focus();
+    } else if (wasCreating.current) {
+      createButtonRef.current?.focus();
+    }
+    wasCreating.current = isCreating;
+  }, [isCreating]);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,6 +92,7 @@ export function ConnectionGroupsSection({ groups }: { groups: ConnectionGroup[] 
           <label className="grid gap-1" htmlFor="new-connection-group-name">
             <span className="text-body font-bold text-ink">グループ名</span>
             <input
+              ref={nameInputRef}
               id="new-connection-group-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -104,6 +117,7 @@ export function ConnectionGroupsSection({ groups }: { groups: ConnectionGroup[] 
               作成する
             </button>
             <button
+              ref={createButtonRef}
               type="button"
               onClick={() => setIsCreating(false)}
               className="inline-flex min-h-11 items-center justify-center rounded-control border border-line bg-white px-4 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2"

@@ -3,7 +3,7 @@
 import { FolderPlus, ShieldBan, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
 import { clsx } from "clsx";
 import { unstable_rethrow } from "next/navigation";
-import React, { useRef, useState, useTransition } from "react";
+import React, { useId, useRef, useState, useTransition } from "react";
 import type { KeyboardEvent } from "react";
 
 import { ActiveSharedEventsModal } from "@/components/account/active-shared-events-modal";
@@ -255,9 +255,16 @@ function ConnectionRow({
   const [error, setError] = useState<string | null>(null);
   const [confirmingBlock, setConfirmingBlock] = useState(false);
   const [isPickingGroups, setIsPickingGroups] = useState(false);
+  const groupPickerId = `connection-group-picker-${useId()}`;
+  const groupPickerButtonRef = useRef<HTMLButtonElement>(null);
   const [activeEvents, setActiveEvents] = useState<ActiveSharedEvent[] | null>(null);
   const [isLoadingActiveEvents, startActiveEventsTransition] = useTransition();
   const [activeEventsError, setActiveEventsError] = useState<string | null>(null);
+
+  function closeGroupPicker() {
+    setIsPickingGroups(false);
+    groupPickerButtonRef.current?.focus();
+  }
 
   function run(action: (userId: string) => Promise<ActionState>) {
     setError(null);
@@ -324,8 +331,11 @@ function ConnectionRow({
           <ActionButton
             label="グループに入れる"
             icon={FolderPlus}
+            buttonRef={groupPickerButtonRef}
             disabled={isPending}
             active={isPickingGroups}
+            aria-expanded={isPickingGroups}
+            aria-controls={groupPickerId}
             onClick={() => setIsPickingGroups((open) => !open)}
           />
           <ActionButton
@@ -342,7 +352,8 @@ function ConnectionRow({
           person={person}
           groups={groups}
           selectedGroupIds={groupIds}
-          onClose={() => setIsPickingGroups(false)}
+          panelId={groupPickerId}
+          onClose={closeGroupPicker}
         />
       ) : null}
       {confirmingBlock ? (
@@ -438,6 +449,9 @@ function ActionButton({
   active = false,
   danger = false,
   title,
+  buttonRef,
+  "aria-expanded": ariaExpanded,
+  "aria-controls": ariaControls,
   onClick
 }: {
   label: string;
@@ -446,13 +460,19 @@ function ActionButton({
   active?: boolean;
   danger?: boolean;
   title?: string;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
+      ref={buttonRef}
       aria-label={label}
       title={title}
+      aria-expanded={ariaExpanded}
+      aria-controls={ariaControls}
       disabled={disabled}
       onClick={onClick}
       className={

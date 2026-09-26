@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
-import React, { useState, useTransition } from "react";
+import React, { useRef, useState, useTransition } from "react";
 import { clsx } from "clsx";
 
 import { ConnectionGroupColorField } from "@/components/account/connection-group-color-field";
@@ -35,6 +35,7 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const membersHeadingRef = useRef<HTMLHeadingElement>(null);
   const remaining = Math.max(connectionGroupLimits.members - group.memberCount, 0);
 
   function run(action: () => Promise<{ status: string; message?: string }>, onSuccess?: () => void) {
@@ -147,7 +148,12 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
       </header>
 
       <section aria-labelledby="connection-group-members-heading" className="grid gap-3">
-        <h2 id="connection-group-members-heading" className="text-xl font-semibold text-ink">
+        <h2
+          ref={membersHeadingRef}
+          id="connection-group-members-heading"
+          tabIndex={-1}
+          className="text-xl font-semibold text-ink focus:outline-none"
+        >
           メンバー
         </h2>
         {members.length === 0 ? (
@@ -166,7 +172,7 @@ export function ConnectionGroupDetail({ group, members }: { group: ConnectionGro
                   type="button"
                   disabled={isPending}
                   aria-label={`${member.displayName}をグループから外す`}
-                  onClick={() => run(() => removeConnectionGroupMemberAction(group.id, member.userId))}
+                  onClick={() => run(() => removeConnectionGroupMemberAction(group.id, member.userId), () => membersHeadingRef.current?.focus())}
                   className={secondaryButton}
                 >
                   外す

@@ -15,11 +15,13 @@ export function ConnectionGroupPicker({
   person,
   groups,
   selectedGroupIds,
+  panelId,
   onClose
 }: {
   person: { userId: string; displayName: string };
   groups: ConnectionGroup[];
   selectedGroupIds: string[];
+  panelId: string;
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>(selectedGroupIds);
@@ -62,7 +64,7 @@ export function ConnectionGroupPicker({
   }
 
   return (
-    <div role="group" aria-label={`${person.displayName}を入れるグループ`} className="mt-3 grid gap-2 rounded-control border border-line bg-sunken p-3">
+    <div id={panelId} role="group" aria-label={`${person.displayName}を入れるグループ`} className="mt-3 grid gap-2 rounded-control border border-line bg-sunken p-3">
       {groups.length === 0 ? (
         <p className="text-sm text-muted">まだグループがありません。下で作れます。</p>
       ) : (
