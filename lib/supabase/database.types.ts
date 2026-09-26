@@ -145,6 +145,59 @@ export type Database = {
           },
         ]
       }
+      connection_group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          member_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          member_user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          member_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connection_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "connection_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connection_groups: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_drafts: {
         Row: {
           created_at: string
@@ -1268,6 +1321,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_connection_group_members: {
+        Args: { p_group_id: string; p_member_ids: string[] }
+        Returns: undefined
+      }
       assert_plan_expenses_mutable: {
         Args: { target_plan_id: string }
         Returns: undefined
@@ -1279,6 +1336,10 @@ export type Database = {
       consume_authenticated_rate_limit: {
         Args: { p_operation: string }
         Returns: Json
+      }
+      create_connection_group: {
+        Args: { p_color: string; p_member_ids?: string[]; p_name: string }
+        Returns: string
       }
       create_event_user_invitations: {
         Args: { p_event_id: string; p_invitee_user_ids: string[] }
@@ -1312,6 +1373,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_connection_group: {
+        Args: { p_group_id: string }
+        Returns: undefined
+      }
       delete_expense: {
         Args: { target_expense_id: string }
         Returns: undefined
@@ -1329,6 +1394,16 @@ export type Database = {
         Returns: {
           category: string
           item_count: number
+        }[]
+      }
+      get_connection_group: {
+        Args: { p_group_id: string }
+        Returns: {
+          color: string
+          created_at: string
+          group_id: string
+          member_count: number
+          name: string
         }[]
       }
       have_shared_event: {
@@ -1397,6 +1472,43 @@ export type Database = {
           status: string
           unanswered_count: number
           yes_count: number
+        }[]
+      }
+      list_connection_group_candidates: {
+        Args: { p_group_id: string }
+        Returns: {
+          display_name: string
+          is_following: boolean
+          shared_event_count: number
+          user_id: string
+        }[]
+      }
+      list_connection_group_members: {
+        Args: { p_group_id: string }
+        Returns: {
+          display_name: string
+          is_following: boolean
+          shared_event_count: number
+          user_id: string
+        }[]
+      }
+      list_connection_group_memberships: {
+        Args: never
+        Returns: {
+          group_id: string
+          member_user_id: string
+        }[]
+      }
+      list_connection_groups: {
+        Args: never
+        Returns: {
+          active_event_count: number
+          color: string
+          created_at: string
+          group_id: string
+          member_count: number
+          member_names: string[]
+          name: string
         }[]
       }
       list_connections: {
@@ -1506,6 +1618,10 @@ export type Database = {
         }
         Returns: Json
       }
+      remove_connection_group_member: {
+        Args: { p_group_id: string; p_member_id: string }
+        Returns: undefined
+      }
       replace_expense_splits: {
         Args: {
           p_amount: number
@@ -1532,12 +1648,20 @@ export type Database = {
         Args: { p_invitation_id: string; p_response: string }
         Returns: Json
       }
+      set_person_connection_groups: {
+        Args: { p_group_ids: string[]; p_member_id: string }
+        Returns: undefined
+      }
       toggle_favorite_atomic: {
         Args: { target_user_id: string }
         Returns: undefined
       }
       unfollow_user_atomic: {
         Args: { target_user_id: string }
+        Returns: undefined
+      }
+      update_connection_group: {
+        Args: { p_color: string; p_group_id: string; p_name: string }
         Returns: undefined
       }
       update_expense: {
