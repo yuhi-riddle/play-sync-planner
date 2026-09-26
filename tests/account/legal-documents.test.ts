@@ -25,7 +25,7 @@ describe("法的文書の本文", () => {
   });
 
   it("施行日を持つ", () => {
-    expect(LEGAL_EFFECTIVE_DATE).toBe("2026年8月11日");
+    expect(LEGAL_EFFECTIVE_DATE).toBe("2026年9月26日");
   });
 
   /*
