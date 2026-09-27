@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -109,5 +109,62 @@ describe("EventInviteCandidates", () => {
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("続きを読み込めませんでした。"));
     await waitFor(() => expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument());
+  });
+});
+
+describe("グループでまとめて選ぶ", () => {
+  const unloaded = { ...recent, userId: "55555555-5555-4555-8555-555555555555", displayName: "Eさん" };
+  const groups = [
+    { id: "g1", name: "謎解き仲間", color: "nazotoki" as const, memberCount: 2, invitees: [favorite, unloaded] },
+    { id: "g2", name: "大学の友達", color: "boardgame" as const, memberCount: 3, invitees: [] }
+  ];
+
+  it("グループを作っていなければボタンの行を出さない", () => {
+    render(<EventInviteCandidates candidates={[favorite]} nextCursor={null} action={vi.fn()} loadMoreAction={vi.fn()} />);
+    expect(screen.queryByRole("group", { name: "グループでまとめて選ぶ" })).not.toBeInTheDocument();
+  });
+
+  it("ボタンに招待できる人数を出し、0人のグループは押せない", () => {
+    render(
+      <EventInviteCandidates candidates={[favorite, recent]} nextCursor={null} action={vi.fn()} loadMoreAction={vi.fn()} groups={groups} />
+    );
+    const row = screen.getByRole("group", { name: "グループでまとめて選ぶ" });
+    expect(within(row).getByRole("button", { name: /謎解き仲間 2人/ })).toBeEnabled();
+    const full = within(row).getByRole("button", { name: /大学の友達/ });
+    expect(full).toBeDisabled();
+    expect(full).toHaveTextContent("全員参加済み・招待済み");
+  });
+
+  it("押すと、まだ読み込んでいない人も含めてチェックし、選んだ人を先頭に出す", async () => {
+    const action = vi.fn().mockResolvedValue({ status: "success" });
+    render(
+      <EventInviteCandidates candidates={[recent, favorite]} nextCursor={null} action={action} loadMoreAction={vi.fn()} groups={groups} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /謎解き仲間 2人/ }));
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    expect(checkboxes[0]).toHaveAccessibleName("Aさんを招待する");
+    expect(checkboxes[0]).toBeChecked();
+    expect(checkboxes[1]).toHaveAccessibleName("Eさんを招待する");
+    expect(checkboxes[1]).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Bさんを招待する" })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "2人に招待を送る" }));
+    await waitFor(() => expect(action).toHaveBeenCalledWith([favorite.userId, unloaded.userId]));
+  });
+
+  it("送ったあとは、その人たちをグループの招待できる人から外す", async () => {
+    const action = vi.fn().mockResolvedValue({ status: "success" });
+    render(
+      <EventInviteCandidates candidates={[favorite]} nextCursor={null} action={action} loadMoreAction={vi.fn()} groups={groups} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /謎解き仲間 2人/ }));
+    fireEvent.click(screen.getByRole("button", { name: "2人に招待を送る" }));
+
+    await waitFor(() => expect(screen.getByText("招待を送りました")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /謎解き仲間/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Madoiで招待を送る" })).toBeInTheDocument();
   });
 });

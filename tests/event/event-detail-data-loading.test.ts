@@ -37,4 +37,9 @@ describe("イベント詳細ページのデータ取得", () => {
   it("ログインしていない場合はチャットタブでフェッチしない", () => {
     expect(source).toMatch(/tab === "chat"\s*\?\s*\(\s*currentUserId\s*\?/);
   });
+
+  it("招待候補とグループの招待できる人を並列に読む", () => {
+    expect(source).toContain('supabase.rpc("list_event_group_invitees"');
+    expect(source).toMatch(/Promise\.all\(\[\s*loadInviteCandidates\(eventId, supabase\),\s*loadEventInviteGroups\(eventId, supabase\)/);
+  });
 });
