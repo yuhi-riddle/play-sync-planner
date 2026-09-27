@@ -6,6 +6,7 @@ import {
   connectionGroupDotClass,
   isConnectionGroupColor,
   isUuid,
+  mapConnectionGroupEventRow,
   mapConnectionGroupMemberRow,
   mapConnectionGroupRow,
   normalizeConnectionGroupName
@@ -60,6 +61,26 @@ describe("mappers", () => {
     expect(
       mapConnectionGroupMemberRow({ user_id: "u1", display_name: "あや", shared_event_count: "5", is_following: true })
     ).toEqual({ userId: "u1", displayName: "あや", sharedEventCount: 5, isFollowing: true });
+  });
+
+  it("イベントの行を変換する", () => {
+    expect(
+      mapConnectionGroupEventRow({
+        event_id: "e1",
+        title: "謎解き 秋公演",
+        display_state: "answer_waiting",
+        is_active: true,
+        member_count: "2",
+        group_member_count: "3"
+      })
+    ).toEqual({
+      eventId: "e1",
+      title: "謎解き 秋公演",
+      displayState: "answer_waiting",
+      isActive: true,
+      memberCount: 2,
+      groupMemberCount: 3
+    });
   });
 
   it("buildGroupIdsByMember は人ごとに所属グループの ID をまとめる", () => {

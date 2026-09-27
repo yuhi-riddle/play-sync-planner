@@ -1,3 +1,5 @@
+import type { EventDisplayState } from "@/lib/domain/event/event-filter";
+
 /** 並びの1番目が既定。キーはカテゴリ定数（lib/shared/constants.ts）と同じ綴り。 */
 export const connectionGroupColors = [
   "nazotoki",
@@ -121,4 +123,35 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}
 
 export function isUuid(value: string): boolean {
   return uuidPattern.test(value);
+}
+
+export type ConnectionGroupEvent = {
+  eventId: string;
+  title: string;
+  displayState: EventDisplayState;
+  isActive: boolean;
+  /** このイベントに参加しているグループのメンバーの人数。 */
+  memberCount: number;
+  /** グループの人数（ブロック関係・退会した人を除く）。 */
+  groupMemberCount: number;
+};
+
+type ConnectionGroupEventRpcRow = {
+  event_id: string;
+  title: string;
+  display_state: string;
+  is_active: boolean;
+  member_count: number | string;
+  group_member_count: number | string;
+};
+
+export function mapConnectionGroupEventRow(row: ConnectionGroupEventRpcRow): ConnectionGroupEvent {
+  return {
+    eventId: row.event_id,
+    title: row.title,
+    displayState: row.display_state as EventDisplayState,
+    isActive: row.is_active,
+    memberCount: Number(row.member_count),
+    groupMemberCount: Number(row.group_member_count)
+  };
 }

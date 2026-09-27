@@ -14,6 +14,7 @@ const { createSupabaseServerClient, getCurrentUserId, notFound, redirect } = vi.
 vi.mock("next/navigation", () => ({ notFound, redirect }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient, getCurrentUserId, hasSupabaseEnv: () => true }));
 vi.mock("@/components/account/connection-group-detail", () => ({ ConnectionGroupDetail: () => null }));
+vi.mock("@/components/account/connection-group-events", () => ({ ConnectionGroupEvents: () => null }));
 
 import ConnectionGroupPage from "@/app/connections/groups/[groupId]/page";
 
@@ -41,5 +42,24 @@ describe("ConnectionGroupPage", () => {
     await expect(ConnectionGroupPage({ params: Promise.resolve({ groupId }) })).rejects.toThrow(
       `NEXT_REDIRECT;/login?next=%2Fconnections%2Fgroups%2F${groupId}`
     );
+  });
+
+  it("グループとメンバーとイベントを並列に読む", async () => {
+    const rpc = vi.fn((name: string) => {
+      if (name === "get_connection_group") {
+        return Promise.resolve({
+          data: [{ group_id: groupId, name: "謎解き仲間", color: "nazotoki", member_count: 1, created_at: "2026-09-27T00:00:00Z" }],
+          error: null
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+    createSupabaseServerClient.mockResolvedValue({ rpc });
+
+    await ConnectionGroupPage({ params: Promise.resolve({ groupId }) });
+
+    expect(rpc).toHaveBeenCalledWith("get_connection_group", { p_group_id: groupId });
+    expect(rpc).toHaveBeenCalledWith("list_connection_group_members", { p_group_id: groupId });
+    expect(rpc).toHaveBeenCalledWith("list_connection_group_events", { p_group_id: groupId });
   });
 });

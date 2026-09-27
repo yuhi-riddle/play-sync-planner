@@ -1483,6 +1483,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_connection_group_events: {
+        Args: { p_group_id: string }
+        Returns: {
+          display_state: string
+          event_id: string
+          group_member_count: number
+          is_active: boolean
+          member_count: number
+          title: string
+        }[]
+      }
       list_connection_group_members: {
         Args: { p_group_id: string }
         Returns: {
