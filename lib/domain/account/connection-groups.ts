@@ -1,4 +1,5 @@
 import type { EventDisplayState } from "@/lib/domain/event/event-filter";
+import type { ConnectionCandidate } from "@/lib/domain/account/connections";
 
 /** 並びの1番目が既定。キーはカテゴリ定数（lib/shared/constants.ts）と同じ綴り。 */
 export const connectionGroupColors = [
@@ -154,4 +155,60 @@ export function mapConnectionGroupEventRow(row: ConnectionGroupEventRpcRow): Con
     memberCount: Number(row.member_count),
     groupMemberCount: Number(row.group_member_count)
   };
+}
+
+export type EventInviteGroup = {
+  id: string;
+  name: string;
+  color: ConnectionGroupColor;
+  /** グループの人数（ブロック関係・退会した人を除く）。 */
+  memberCount: number;
+  /** そのイベントにいま招待できるメンバー。 */
+  invitees: ConnectionCandidate[];
+};
+
+type EventGroupInviteeRpcRow = {
+  group_id: string;
+  group_name: string;
+  group_color: string;
+  group_member_count: number | string;
+  user_id: string | null;
+  display_name: string | null;
+  shared_event_count: number | string | null;
+  is_following: boolean | null;
+};
+
+export function buildEventInviteGroups(rows: EventGroupInviteeRpcRow[]): EventInviteGroup[] {
+  const groups: EventInviteGroup[] = [];
+  const byId = new Map<string, EventInviteGroup>();
+
+  for (const row of rows) {
+    let group = byId.get(row.group_id);
+    if (!group) {
+      group = {
+        id: row.group_id,
+        name: row.group_name,
+        color: isConnectionGroupColor(row.group_color) ? row.group_color : defaultConnectionGroupColor,
+        memberCount: Number(row.group_member_count),
+        invitees: []
+      };
+      byId.set(row.group_id, group);
+      groups.push(group);
+    }
+
+    if (row.user_id) {
+      group.invitees.push({
+        userId: row.user_id,
+        displayName: row.display_name ?? "Madoiユーザー",
+        sharedEventCount: Number(row.shared_event_count ?? 0),
+        activeSharedEventCount: 0,
+        latestSharedAt: "",
+        isFollowing: Boolean(row.is_following),
+        isFollowedBy: false,
+        isFavorite: false
+      });
+    }
+  }
+
+  return groups;
 }

@@ -32,6 +32,7 @@ import { canStartDateAdjustment, isTerminalEventStatus } from "@/lib/domain/even
 import { normalizeCategory } from "@/lib/domain/event/event-filter";
 import type { EventMessage } from "@/lib/domain/event/event-chat";
 import { mapConnectionPage, type ConnectionPage } from "@/lib/domain/account/connections";
+import { buildEventInviteGroups } from "@/lib/domain/account/connection-groups";
 import { formatDateTime } from "@/lib/shared/format";
 import { createSupabaseAdminClient, createSupabaseServerClient, getCurrentUserId } from "@/lib/supabase/server";
 
@@ -263,13 +264,17 @@ export default async function EventDetailPage({
 }
 
 async function EventMembersInviteCandidates({ eventId, supabase }: { eventId: string; supabase: SupabaseServerClient }) {
-  const page = await loadInviteCandidates(eventId, supabase);
+  const [page, groups] = await Promise.all([
+    loadInviteCandidates(eventId, supabase),
+    loadEventInviteGroups(eventId, supabase)
+  ]);
 
   return (
     <Card>
       <EventInviteCandidates
         candidates={page.items}
         nextCursor={page.nextCursor}
+        groups={groups}
         action={createEventUserInvitationsAction.bind(null, eventId)}
         loadMoreAction={loadEventInviteCandidatesAction.bind(null, eventId)}
       />
@@ -447,6 +452,16 @@ async function loadInviteCandidates(eventId: string, supabase: SupabaseServerCli
   }
 
   return mapConnectionPage(data ?? []);
+}
+
+async function loadEventInviteGroups(eventId: string, supabase: SupabaseServerClient) {
+  const { data, error } = await supabase.rpc("list_event_group_invitees", { p_event_id: eventId });
+
+  if (error) {
+    throw new Error("グループを読み込めませんでした。");
+  }
+
+  return buildEventInviteGroups(data ?? []);
 }
 
 function Info({ label, value }: { label: string; value: string }) {
