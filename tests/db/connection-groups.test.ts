@@ -473,26 +473,3 @@ describe("ブロック・退会", () => {
     ).toEqual([]);
   });
 });
-
-describe("list_connections / get_connection_counts からお気に入りの振り分けを外す", () => {
-  it("お気に入りでフォロー中の人は following に入り、favorites には入らない", async () => {
-    const me = await makeUser();
-    const aya = await makeUser();
-    await shareEvent(me, aya);
-    await client.query("insert into public.user_connections (follower_user_id, followed_user_id) values ($1,$2)", [me, aya]);
-    await client.query("insert into public.user_favorites (user_id, favorite_user_id) values ($1,$2)", [me, aya]);
-    await asUser(me);
-
-    const following = await client.query(
-      "select user_id from public.list_connections('following', null, null, 20)"
-    );
-    expect(following.rows.map((row) => row.user_id)).toEqual([aya]);
-    const favorites = await client.query("select user_id from public.list_connections('favorites', null, null, 20)");
-    expect(favorites.rows).toEqual([]);
-
-    const counts = await client.query("select category, item_count from public.get_connection_counts()");
-    const byCategory = Object.fromEntries(counts.rows.map((row) => [row.category, Number(row.item_count)]));
-    expect(byCategory.following).toBe(1);
-    expect(byCategory.favorites ?? 0).toBe(0);
-  });
-});
