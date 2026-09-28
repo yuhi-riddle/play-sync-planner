@@ -6,7 +6,6 @@ import {
   mapConnectionCandidateRow,
   mapConnectionCounts,
   mapConnectionPage,
-  sortInviteCandidates,
   toBlockedUser,
   type ConnectionCandidate
 } from "@/lib/domain/account/connections";
@@ -18,39 +17,8 @@ const baseCandidate: ConnectionCandidate = {
   activeSharedEventCount: 0,
   latestSharedAt: "2026-07-01T00:00:00.000Z",
   isFollowing: false,
-  isFollowedBy: false,
-  isFavorite: false
+  isFollowedBy: false
 };
-
-describe("sortInviteCandidates", () => {
-  it("prioritizes favorites, mutual follows, follows, then the latest shared event", () => {
-    const candidates: ConnectionCandidate[] = [
-      { ...baseCandidate, userId: "older", latestSharedAt: "2026-07-05T00:00:00.000Z" },
-      { ...baseCandidate, userId: "recent", latestSharedAt: "2026-07-10T00:00:00.000Z" },
-      { ...baseCandidate, userId: "following", isFollowing: true },
-      { ...baseCandidate, userId: "mutual", isFollowing: true, isFollowedBy: true },
-      { ...baseCandidate, userId: "favorite", isFavorite: true }
-    ];
-
-    expect(sortInviteCandidates(candidates).map((candidate) => candidate.userId)).toEqual([
-      "favorite",
-      "mutual",
-      "following",
-      "recent",
-      "older"
-    ]);
-  });
-
-  it("breaks ties by user ID without mutating the original list", () => {
-    const candidates: ConnectionCandidate[] = [
-      { ...baseCandidate, userId: "zeta" },
-      { ...baseCandidate, userId: "alpha" }
-    ];
-
-    expect(sortInviteCandidates(candidates).map((candidate) => candidate.userId)).toEqual(["alpha", "zeta"]);
-    expect(candidates.map((candidate) => candidate.userId)).toEqual(["zeta", "alpha"]);
-  });
-});
 
 describe("isMutualFollow", () => {
   it("returns true only when both users follow each other", () => {
@@ -79,7 +47,6 @@ describe("mapConnectionCandidateRow", () => {
         latest_shared_at: "2026-07-01T00:00:00.000Z",
         is_following: true,
         is_followed_by: false,
-        is_favorite: false,
         cursor_at: "2026-07-01T00:00:00.000Z",
         cursor_user_id: "row-user"
       })
@@ -90,8 +57,7 @@ describe("mapConnectionCandidateRow", () => {
       activeSharedEventCount: 1,
       latestSharedAt: "2026-07-01T00:00:00.000Z",
       isFollowing: true,
-      isFollowedBy: false,
-      isFavorite: false
+      isFollowedBy: false
     });
   });
 
@@ -105,7 +71,6 @@ describe("mapConnectionCandidateRow", () => {
         latest_shared_at: null,
         is_following: false,
         is_followed_by: false,
-        is_favorite: false,
         cursor_at: "2026-07-01T00:00:00.000Z",
         cursor_user_id: "row-user"
       }).latestSharedAt
@@ -122,11 +87,23 @@ describe("mapConnectionCandidateRow", () => {
         latest_shared_at: "2026-07-01T00:00:00.000Z",
         is_following: false,
         is_followed_by: false,
-        is_favorite: false,
         cursor_at: "2026-07-01T00:00:00.000Z",
         cursor_user_id: "row-user"
       }).activeSharedEventCount
     ).toBe(0);
+  });
+  it("ConnectionCandidate に isFavorite を持たない", () => {
+    const candidate = mapConnectionCandidateRow({
+      user_id: "u1",
+      display_name: "あや",
+      shared_event_count: 1,
+      latest_shared_at: null,
+      is_following: true,
+      is_followed_by: false,
+      cursor_at: "2026-09-28T00:00:00Z",
+      cursor_user_id: "u1"
+    });
+    expect(candidate).not.toHaveProperty("isFavorite");
   });
 });
 
@@ -139,7 +116,6 @@ describe("mapConnectionPage", () => {
     latest_shared_at: "2026-07-01T00:00:00.000Z",
     is_following: false,
     is_followed_by: false,
-    is_favorite: false,
     cursor_at: "2026-07-01T00:00:00.000Z",
     cursor_user_id: userId
   });
@@ -161,15 +137,14 @@ describe("mapConnectionCounts", () => {
   it("fills every category with 0 and coerces bigint counts that were returned", () => {
     expect(
       mapConnectionCounts([
-        { category: "favorites", item_count: "2" },
+        { category: "following", item_count: "2" },
         { category: "blocked", item_count: 1 }
       ])
-    ).toEqual({ favorites: 2, mutual: 0, following: 0, shared: 0, blocked: 1 });
+    ).toEqual({ mutual: 0, following: 2, shared: 0, blocked: 1 });
   });
 
   it("ignores unknown categories instead of throwing", () => {
-    expect(mapConnectionCounts([{ category: "unexpected", item_count: 5 }])).toEqual({
-      favorites: 0,
+    expect(mapConnectionCounts([{ category: "favorites", item_count: 5 }])).toEqual({
       mutual: 0,
       following: 0,
       shared: 0,
