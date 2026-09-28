@@ -120,7 +120,9 @@ declare
   current_user_id uuid := auth.uid();
   normalized_invitee_user_ids uuid[];
   event_title text;
-  invitee_user_id uuid;
+  -- 列の invitee_user_id と同じ名前だと「すでに招待済みか」の条件で 42702（どちらか決まらない）になり、
+  -- 招待が毎回失敗していた。変数の名前を変えて区別する。
+  v_invitee_user_id uuid;
   created_count integer;
   retry_seconds integer;
 begin
@@ -174,26 +176,26 @@ begin
   from public.events
   where public.events.id = p_event_id;
 
-  foreach invitee_user_id in array normalized_invitee_user_ids loop
-    if public.is_user_blocked(current_user_id, invitee_user_id) then
+  foreach v_invitee_user_id in array normalized_invitee_user_ids loop
+    if public.is_user_blocked(current_user_id, v_invitee_user_id) then
       insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
       values (current_user_id, 'event_invitation_create', 'event', p_event_id, 'denied');
       return jsonb_build_object('ok', false, 'error', 'blocked');
     end if;
 
     if not (
-      public.have_shared_event(current_user_id, invitee_user_id)
+      public.have_shared_event(current_user_id, v_invitee_user_id)
       or exists (
         select 1
         from public.user_connections
         where public.user_connections.follower_user_id = current_user_id
-          and public.user_connections.followed_user_id = invitee_user_id
+          and public.user_connections.followed_user_id = v_invitee_user_id
       )
       or exists (
         select 1
         from public.user_favorites
         where public.user_favorites.user_id = current_user_id
-          and public.user_favorites.favorite_user_id = invitee_user_id
+          and public.user_favorites.favorite_user_id = v_invitee_user_id
       )
     ) then
       insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
@@ -205,7 +207,7 @@ begin
       select 1
       from public.event_members
       where public.event_members.event_id = p_event_id
-        and public.event_members.user_id = invitee_user_id
+        and public.event_members.user_id = v_invitee_user_id
         and public.event_members.status = 'joined'
     ) then
       insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
@@ -217,8 +219,7 @@ begin
       select 1
       from public.event_user_invitations
       where public.event_user_invitations.event_id = p_event_id
-        -- 変数を関数名で修飾する。修飾しないと同名の列と区別できず 42702 になり、招待が毎回失敗していた。
-        and public.event_user_invitations.invitee_user_id = create_event_user_invitations.invitee_user_id
+        and public.event_user_invitations.invitee_user_id = v_invitee_user_id
         and public.event_user_invitations.status in ('pending', 'accepted')
     ) then
       insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)
