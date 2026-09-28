@@ -18,7 +18,6 @@ const userIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{
 const sharedEventRequiredErrorCode = "PSP01";
 const rateLimitExceededErrorCode = "PSP02";
 const blockedRelationshipErrorCode = "PSP03";
-const followRequiredErrorCode = "PSP04";
 
 type ConnectionTarget = {
   currentUserId: string;
@@ -106,36 +105,6 @@ export async function unfollowUserAction(userId: string): Promise<ActionState> {
   } catch (cause) {
     unstable_rethrow(cause);
     return errorState(cause instanceof Error ? cause.message : "フォローを解除できませんでした");
-  }
-}
-
-export async function toggleFavoriteAction(userId: string): Promise<ActionState> {
-  try {
-    const { targetUserId } = await requireAuthenticatedTarget(userId);
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.rpc("toggle_favorite_atomic", { target_user_id: targetUserId });
-
-    if (error) {
-      if (error.code === sharedEventRequiredErrorCode) {
-        return errorState("共通のイベントに参加しているユーザーだけを操作できます");
-      }
-      if (error.code === blockedRelationshipErrorCode) {
-        return errorState("ブロック中のユーザーにはこの操作を行えません");
-      }
-      if (error.code === followRequiredErrorCode) {
-        return errorState("フォローしている人だけをお気に入りにできます");
-      }
-      if (error.code === rateLimitExceededErrorCode) {
-        return errorState("操作が多すぎます。しばらく待ってから再度お試しください。");
-      }
-      return errorState("お気に入りを更新できませんでした");
-    }
-
-    revalidateConnections();
-    return successState();
-  } catch (cause) {
-    unstable_rethrow(cause);
-    return errorState(cause instanceof Error ? cause.message : "お気に入りを更新できませんでした");
   }
 }
 
