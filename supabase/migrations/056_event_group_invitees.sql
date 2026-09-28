@@ -217,7 +217,8 @@ begin
       select 1
       from public.event_user_invitations
       where public.event_user_invitations.event_id = p_event_id
-        and public.event_user_invitations.invitee_user_id = invitee_user_id
+        -- 変数を関数名で修飾する。修飾しないと同名の列と区別できず 42702 になり、招待が毎回失敗していた。
+        and public.event_user_invitations.invitee_user_id = create_event_user_invitations.invitee_user_id
         and public.event_user_invitations.status in ('pending', 'accepted')
     ) then
       insert into private.security_audit_logs (actor_user_id, operation, target_type, target_id, outcome)

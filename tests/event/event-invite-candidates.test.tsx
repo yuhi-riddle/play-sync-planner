@@ -48,7 +48,7 @@ describe("EventInviteCandidates", () => {
     expect(invitation).toHaveAccessibleName("Aさんを招待する");
 
     fireEvent.click(invitation);
-    fireEvent.click(screen.getByRole("button", { name: "Madoiで招待を送る" }));
+    fireEvent.click(screen.getByRole("button", { name: "1人に招待を送る" }));
 
     await waitFor(() => expect(action).toHaveBeenCalledWith([favorite.userId]));
     expect(screen.getByText("招待を送りました")).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("EventInviteCandidates", () => {
     render(<EventInviteCandidates candidates={[favorite]} nextCursor={null} action={action} loadMoreAction={vi.fn()} />);
 
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
-    fireEvent.click(screen.getByRole("button", { name: "Madoiで招待を送る" }));
+    fireEvent.click(screen.getByRole("button", { name: "1人に招待を送る" }));
 
     await waitFor(() => expect(unstable_rethrow).toHaveBeenCalledWith(redirectError));
   });

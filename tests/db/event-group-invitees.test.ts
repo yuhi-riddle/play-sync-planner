@@ -126,6 +126,23 @@ describe("list_event_group_invitees", () => {
   });
 });
 
+describe("create_event_user_invitations", () => {
+  it("招待を送れ、同じ人にもう一度送ると already_invited になる（変数と列の名前の衝突 42702 の回帰）", async () => {
+    const me = await makeUser();
+    const aya = await makeUser();
+    await shareEvent(me, aya);
+    const target = await makeEvent(me);
+    await joinEvent(target, me);
+    await asUser(me);
+
+    const first = await client.query("select public.create_event_user_invitations($1, $2::uuid[]) as result", [target, [aya]]);
+    expect(first.rows[0].result).toMatchObject({ ok: true, created_count: 1 });
+
+    const second = await client.query("select public.create_event_user_invitations($1, $2::uuid[]) as result", [target, [aya]]);
+    expect(second.rows[0].result).toMatchObject({ ok: false, error: "already_invited" });
+  });
+});
+
 describe("create_event_user_invitations の上限", () => {
   it("30人までまとめて送れて、31人は invalid_input", async () => {
     const me = await makeUser();
