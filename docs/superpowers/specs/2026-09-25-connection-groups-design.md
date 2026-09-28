@@ -1,7 +1,7 @@
 # つながりのグループ（自分だけの仕分け）と、つながり画面の役割の整理
 
 - 日付: 2026-09-25
-- ステータス: 設計確定（実装計画待ち）
+- ステータス: 実装済み（PR①〜④）
 - 比較シート: `design/proposals/2026-09-25-connection-groups-invite.html`（招待とのつなぎ方2案、案Aを採用）、`design/proposals/2026-09-25-connections-layout.html`（つながり画面の構成2案、案1を採用）
 - 前段: `docs/superpowers/specs/2026-09-16-connections-active-events-design.md`（人ごとの「進行中の共通イベント」）
 
@@ -103,6 +103,7 @@
 - PR①のデプロイ直後に適用する migration（054）で、お気に入りが1人以上いる人ごとに「お気に入り」グループ（色は1番目）を作り、お気に入りの相手をメンバーに入れる。移行分は30人の上限を超えても入れる（上限は、あとから追加するときだけ効かせる） 退会済み・退会処理中の人は移さない。`list_connections`・`get_connection_counts` の振り分けの変更も同じ 054 で行う（先に入れると、デプロイまでの間お気に入りタブが空になるため）
 - 同じ PR で、画面からお気に入り（タブ・ボタン・件数・説明）をなくす。`user_favorites` と `toggle_favorite_atomic`、各 RPC の `is_favorite` 列やお気に入りの分岐はこの時点では残す（画面からは使わない）
 - PR④で、`user_favorites`・`toggle_favorite_atomic`・RPC のお気に入り関係の列と分岐・退会処理の該当行を消す。本番で移行後のグループが揃っていることを確かめてから出す
+- 2026-09-28 に PR④（migration 057）で削除した。本番の `user_favorites` は0件だったため、移したデータはない
 
 ## PR の分け方
 
