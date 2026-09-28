@@ -204,8 +204,7 @@ export function buildEventInviteGroups(rows: EventGroupInviteeRpcRow[]): EventIn
         activeSharedEventCount: 0,
         latestSharedAt: "",
         isFollowing: Boolean(row.is_following),
-        isFollowedBy: false,
-        isFavorite: false
+        isFollowedBy: false
       });
     }
   }

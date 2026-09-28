@@ -8,10 +8,9 @@ export type ConnectionCandidate = {
   latestSharedAt: string;
   isFollowing: boolean;
   isFollowedBy: boolean;
-  isFavorite: boolean;
 };
 
-export type ConnectionCategory = "favorites" | "mutual" | "following" | "shared" | "blocked";
+export type ConnectionCategory = "mutual" | "following" | "shared" | "blocked";
 
 export type ConnectionCursor = { at: string; userId: string } | null;
 
@@ -30,7 +29,6 @@ type ConnectionRpcRow = {
   latest_shared_at: string | null;
   is_following: boolean;
   is_followed_by: boolean;
-  is_favorite: boolean;
   cursor_at: string;
   cursor_user_id: string;
 };
@@ -43,8 +41,7 @@ export function mapConnectionCandidateRow(row: ConnectionRpcRow): ConnectionCand
     activeSharedEventCount: Number(row.active_shared_event_count ?? 0),
     latestSharedAt: row.latest_shared_at ?? "",
     isFollowing: row.is_following,
-    isFollowedBy: row.is_followed_by,
-    isFavorite: row.is_favorite
+    isFollowedBy: row.is_followed_by
   };
 }
 
@@ -65,7 +62,6 @@ export function mapConnectionCounts(
   rows: { category: string; item_count: number | string }[]
 ): Record<ConnectionCategory, number> {
   const counts: Record<ConnectionCategory, number> = {
-    favorites: 0,
     mutual: 0,
     following: 0,
     shared: 0,
@@ -92,29 +88,6 @@ export type BlockedUser = {
 
 export function isMutualFollow(candidate: ConnectionCandidate): boolean {
   return candidate.isFollowing && candidate.isFollowedBy;
-}
-
-function latestSharedAtTimestamp(value: string): number {
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
-}
-
-export function sortInviteCandidates(candidates: ConnectionCandidate[]): ConnectionCandidate[] {
-  return [...candidates].sort((a, b) => {
-    const favoriteDifference = Number(b.isFavorite) - Number(a.isFavorite);
-    if (favoriteDifference !== 0) return favoriteDifference;
-
-    const mutualFollowDifference = Number(isMutualFollow(b)) - Number(isMutualFollow(a));
-    if (mutualFollowDifference !== 0) return mutualFollowDifference;
-
-    const followingDifference = Number(b.isFollowing) - Number(a.isFollowing);
-    if (followingDifference !== 0) return followingDifference;
-
-    const latestSharedAtDifference = latestSharedAtTimestamp(b.latestSharedAt) - latestSharedAtTimestamp(a.latestSharedAt);
-    if (latestSharedAtDifference !== 0) return latestSharedAtDifference;
-
-    return a.userId.localeCompare(b.userId);
-  });
 }
 
 export type ActiveSharedEvent = {

@@ -17,8 +17,7 @@ const favorite = {
   activeSharedEventCount: 0,
   latestSharedAt: "2026-07-01T10:00:00.000Z",
   isFollowing: true,
-  isFollowedBy: true,
-  isFavorite: true
+  isFollowedBy: true
 };
 
 const recent = {
@@ -26,8 +25,7 @@ const recent = {
   userId: "22222222-2222-4222-8222-222222222222",
   displayName: "Bさん",
   isFollowing: false,
-  isFollowedBy: false,
-  isFavorite: false
+  isFollowedBy: false
 };
 
 const followedOnly = {
@@ -62,7 +60,7 @@ describe("EventInviteCandidates", () => {
   });
 
   it("お気に入りの人も「フォロー中」と表示し、お気に入りの文言を出さない", () => {
-    const followedFavorite = { ...followedOnly, isFavorite: true };
+    const followedFavorite = { ...followedOnly };
     render(
       <EventInviteCandidates candidates={[followedFavorite]} nextCursor={null} action={vi.fn()} loadMoreAction={vi.fn()} />
     );

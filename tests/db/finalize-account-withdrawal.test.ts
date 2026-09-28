@@ -34,7 +34,6 @@ async function seed(): Promise<Fixture> {
   );
 
   await client.query("insert into public.user_connections (follower_user_id, followed_user_id) values ($1,$2),($2,$1)", [userId, peerId]);
-  await client.query("insert into public.user_favorites (user_id, favorite_user_id) values ($1,$2)", [userId, peerId]);
   await client.query("insert into public.user_blocks (blocker_user_id, blocked_user_id) values ($2,$1)", [userId, peerId]);
   await client.query(
     "insert into public.notifications (user_id, kind, title, body, href, dedupe_key) values ($1,'unanswered','t','b','/x',$2)",
@@ -85,7 +84,6 @@ describe("finalize_account_withdrawal", () => {
     await client.query("select public.finalize_account_withdrawal($1)", [f.userId]);
 
     expect(await count("public.user_connections where follower_user_id = $1 or followed_user_id = $1", [f.userId])).toBe(0);
-    expect(await count("public.user_favorites where user_id = $1 or favorite_user_id = $1", [f.userId])).toBe(0);
     expect(await count("public.user_blocks where blocker_user_id = $1 or blocked_user_id = $1", [f.userId])).toBe(0);
     expect(await count("public.notifications where user_id = $1", [f.userId])).toBe(0);
     expect(await count("public.event_drafts where owner_user_id = $1", [f.userId])).toBe(0);

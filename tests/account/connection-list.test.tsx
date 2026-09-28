@@ -48,8 +48,7 @@ const favorite: ConnectionCandidate = {
   activeSharedEventCount: 2,
   latestSharedAt: "2026-07-01T10:00:00.000Z",
   isFollowing: true,
-  isFollowedBy: true,
-  isFavorite: true
+  isFollowedBy: true
 };
 
 const following: ConnectionCandidate = {
@@ -58,8 +57,7 @@ const following: ConnectionCandidate = {
   displayName: "はるかさん",
   activeSharedEventCount: 0,
   isFollowing: true,
-  isFollowedBy: false,
-  isFavorite: false
+  isFollowedBy: false
 };
 
 const candidate: ConnectionCandidate = {
@@ -68,8 +66,7 @@ const candidate: ConnectionCandidate = {
   displayName: "みなとさん",
   activeSharedEventCount: 0,
   isFollowing: false,
-  isFollowedBy: false,
-  isFavorite: false
+  isFollowedBy: false
 };
 
 const blockedUser: BlockedUser = {

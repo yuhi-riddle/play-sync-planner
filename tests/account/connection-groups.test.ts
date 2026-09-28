@@ -117,8 +117,8 @@ describe("buildEventInviteGroups", () => {
         color: "nazotoki",
         memberCount: 2,
         invitees: [
-          { userId: "u1", displayName: "あや", sharedEventCount: 3, activeSharedEventCount: 0, latestSharedAt: "", isFollowing: true, isFollowedBy: false, isFavorite: false },
-          { userId: "u2", displayName: "けん", sharedEventCount: 0, activeSharedEventCount: 0, latestSharedAt: "", isFollowing: true, isFollowedBy: false, isFavorite: false }
+          { userId: "u1", displayName: "あや", sharedEventCount: 3, activeSharedEventCount: 0, latestSharedAt: "", isFollowing: true, isFollowedBy: false },
+          { userId: "u2", displayName: "けん", sharedEventCount: 0, activeSharedEventCount: 0, latestSharedAt: "", isFollowing: true, isFollowedBy: false }
         ]
       },
       { id: "g2", name: "大学の友達", color: "nazotoki", memberCount: 1, invitees: [] }

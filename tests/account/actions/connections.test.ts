@@ -27,7 +27,6 @@ import {
   createEventUserInvitationsAction,
   followUserAction,
   respondToEventUserInvitationAction,
-  toggleFavoriteAction,
   unblockUserAction,
   unfollowUserAction
 } from "@/lib/actions/account/connections";
@@ -123,44 +122,6 @@ describe("unfollowUserAction", () => {
     const result = await unfollowUserAction(blockedUserId);
 
     expect(result).toEqual({ status: "error", message: "フォローを解除できませんでした" });
-  });
-});
-
-describe("toggleFavoriteAction", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getCurrentActiveUser.mockResolvedValue({ id: currentUserId });
-  });
-
-  it("delegates the whole favorite toggle to one atomic RPC", async () => {
-    const rpc = vi.fn().mockResolvedValue({ error: null });
-    createSupabaseServerClient.mockResolvedValue({ rpc });
-
-    const result = await toggleFavoriteAction(blockedUserId);
-
-    expect(result.status).toBe("success");
-    expect(rpc).toHaveBeenCalledWith("toggle_favorite_atomic", { target_user_id: blockedUserId });
-    expect(revalidatePath).toHaveBeenCalledWith("/connections");
-  });
-
-  it("preserves the existing message when the target isn't followed or favorited yet", async () => {
-    createSupabaseServerClient.mockResolvedValue({
-      rpc: vi.fn().mockResolvedValue({ error: { code: "PSP04", message: "Must be following to favorite" } })
-    });
-
-    const result = await toggleFavoriteAction(blockedUserId);
-
-    expect(result).toEqual({ status: "error", message: "フォローしている人だけをお気に入りにできます" });
-  });
-
-  it("uses the general favorite error for an unexpected database failure", async () => {
-    createSupabaseServerClient.mockResolvedValue({
-      rpc: vi.fn().mockResolvedValue({ error: { code: "XX000", message: "database failure" } })
-    });
-
-    const result = await toggleFavoriteAction(blockedUserId);
-
-    expect(result).toEqual({ status: "error", message: "お気に入りを更新できませんでした" });
   });
 });
 

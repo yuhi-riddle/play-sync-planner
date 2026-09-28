@@ -1288,24 +1288,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_favorites: {
-        Row: {
-          created_at: string
-          favorite_user_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          favorite_user_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          favorite_user_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       event_activity_state: {
@@ -1534,7 +1516,6 @@ export type Database = {
           cursor_at: string
           cursor_user_id: string
           display_name: string
-          is_favorite: boolean
           is_followed_by: boolean
           is_following: boolean
           latest_shared_at: string
@@ -1567,7 +1548,6 @@ export type Database = {
           cursor_at: string
           cursor_user_id: string
           display_name: string
-          is_favorite: boolean
           is_followed_by: boolean
           is_following: boolean
           latest_shared_at: string
@@ -1674,10 +1654,6 @@ export type Database = {
       }
       set_person_connection_groups: {
         Args: { p_group_ids: string[]; p_member_id: string }
-        Returns: undefined
-      }
-      toggle_favorite_atomic: {
-        Args: { target_user_id: string }
         Returns: undefined
       }
       unfollow_user_atomic: {

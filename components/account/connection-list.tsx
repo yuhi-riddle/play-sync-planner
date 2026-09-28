@@ -28,7 +28,7 @@ import {
 } from "@/lib/domain/account/connections";
 import { connectionGroupDotClass, type ConnectionGroup } from "@/lib/domain/account/connection-groups";
 
-type ConnectionTabId = Exclude<ConnectionCategory, "favorites">;
+type ConnectionTabId = ConnectionCategory;
 
 export type ConnectionTabData<T> = {
   items: T[];
