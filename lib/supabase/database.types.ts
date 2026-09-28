@@ -1542,6 +1542,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_event_group_invitees: {
+        Args: { p_event_id: string }
+        Returns: {
+          display_name: string
+          group_color: string
+          group_id: string
+          group_member_count: number
+          group_name: string
+          is_following: boolean
+          shared_event_count: number
+          user_id: string
+        }[]
+      }
       list_event_invite_candidates: {
         Args: {
           p_cursor_at: string

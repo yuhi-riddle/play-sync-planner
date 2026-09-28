@@ -2,29 +2,57 @@
 
 import { unstable_rethrow } from "next/navigation";
 import React, { useState, useTransition } from "react";
+import { clsx } from "clsx";
 
 import type { ActionState } from "@/lib/domain/shared/action-state";
 import type { ConnectionCandidate, ConnectionCursor, ConnectionPage } from "@/lib/domain/account/connections";
+import { connectionGroupDotClass, type EventInviteGroup } from "@/lib/domain/account/connection-groups";
+
+const maxInviteesPerRequest = 30;
 
 export function EventInviteCandidates({
   candidates,
   nextCursor,
   action,
-  loadMoreAction
+  loadMoreAction,
+  groups = []
 }: {
   candidates: ConnectionCandidate[];
   nextCursor: ConnectionCursor;
   action: (inviteeUserIds: string[]) => Promise<ActionState>;
   loadMoreAction: (cursor: ConnectionCursor) => Promise<ConnectionPage>;
+  groups?: EventInviteGroup[];
 }) {
   const [orderedCandidates, setOrderedCandidates] = useState(candidates);
+  const [inviteGroups, setInviteGroups] = useState(groups);
   const [cursor, setCursor] = useState(nextCursor);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // 招待を一度に送れるのは30人まで（create_event_user_invitations の上限。グループの上限と同じ）。
+  const isOverInviteLimit = selectedIds.length > maxInviteesPerRequest;
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, startLoadMoreTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+  const knownCandidates = new Map(orderedCandidates.map((candidate) => [candidate.userId, candidate]));
+  for (const group of inviteGroups) {
+    for (const invitee of group.invitees) {
+      if (!knownCandidates.has(invitee.userId)) knownCandidates.set(invitee.userId, invitee);
+    }
+  }
+  const selectedCandidates = selectedIds.flatMap((id) => {
+    const candidate = knownCandidates.get(id);
+    return candidate ? [candidate] : [];
+  });
+  const displayedCandidates = [
+    ...selectedCandidates,
+    ...orderedCandidates.filter((candidate) => !selectedIds.includes(candidate.userId))
+  ];
+
+  function selectGroup(group: EventInviteGroup) {
+    setSelectedIds((current) => [...current, ...group.invitees.map((invitee) => invitee.userId).filter((id) => !current.includes(id))]);
+  }
 
   function loadMore() {
     if (!cursor) return;
@@ -62,6 +90,10 @@ export function EventInviteCandidates({
           setError(result.message ?? "招待を送れませんでした。");
           return;
         }
+        const sentIds = new Set(selectedIds);
+        setInviteGroups((current) =>
+          current.map((group) => ({ ...group, invitees: group.invitees.filter((invitee) => !sentIds.has(invitee.userId)) }))
+        );
         setSelectedIds([]);
         setMessage("招待を送りました");
       } catch (cause) {
@@ -71,7 +103,7 @@ export function EventInviteCandidates({
     });
   }
 
-  if (orderedCandidates.length === 0) {
+  if (orderedCandidates.length === 0 && inviteGroups.length === 0) {
     return <p className="text-sm text-muted">招待できるつながりがまだいません。</p>;
   }
 
@@ -81,8 +113,33 @@ export function EventInviteCandidates({
         <h2 id="event-invite-candidates-heading" className="text-xl font-semibold text-ink">Madoiで招待</h2>
         <p className="mt-2 text-sm text-muted">一緒に参加した人や、フォロー中の人から選べます。</p>
       </div>
+      {inviteGroups.length > 0 ? (
+        <div role="group" aria-label="グループでまとめて選ぶ" className="grid gap-2">
+          <p className="text-sm font-bold text-ink">グループでまとめて選ぶ</p>
+          <div className="flex flex-wrap gap-2">
+            {inviteGroups.map((group) => {
+              const isEmpty = group.invitees.length === 0;
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  disabled={isEmpty || isPending}
+                  onClick={() => selectGroup(group)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-control border border-line-strong bg-surface px-3 py-2 text-sm font-bold text-ink transition-colors hover:border-moss hover:text-pine focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span aria-hidden="true" className={clsx("h-2.5 w-2.5 rounded-full", connectionGroupDotClass[group.color])} />
+                  <span>{group.name}</span>
+                  <span className="font-normal text-muted">
+                    {isEmpty ? "全員参加済み・招待済み" : `${group.invitees.length}人`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-2">
-        {orderedCandidates.map((candidate) => {
+        {displayedCandidates.map((candidate) => {
           const checked = selectedIds.includes(candidate.userId);
           return (
             <label key={candidate.userId} className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-control border border-line bg-surface p-3">
@@ -120,13 +177,19 @@ export function EventInviteCandidates({
           ) : null}
         </div>
       ) : null}
+      {isOverInviteLimit ? (
+        <p id="event-invite-limit" className="text-sm font-semibold text-clay-ink" role="status">
+          一度に招待できるのは{maxInviteesPerRequest}人までです（いま{selectedIds.length}人）
+        </p>
+      ) : null}
       <button
         type="button"
-        disabled={isPending}
+        disabled={isPending || isOverInviteLimit}
+        aria-describedby={isOverInviteLimit ? "event-invite-limit" : undefined}
         onClick={sendInvitations}
         className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Madoiで招待を送る
+        {selectedIds.length > 0 ? `${selectedIds.length}人に招待を送る` : "Madoiで招待を送る"}
       </button>
       {message ? <p className="text-sm font-semibold text-pine" role="status">{message}</p> : null}
       {error ? <p className="text-sm font-semibold text-clay-ink" role="alert">{error}</p> : null}

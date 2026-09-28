@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildEventInviteGroups,
   buildGroupIdsByMember,
   connectionGroupColors,
   connectionGroupDotClass,
@@ -98,5 +99,29 @@ describe("isUuid", () => {
   it("UUID だけ通す", () => {
     expect(isUuid("11111111-1111-4111-8111-111111111111")).toBe(true);
     expect(isUuid("not-a-uuid")).toBe(false);
+  });
+});
+
+describe("buildEventInviteGroups", () => {
+  it("グループごとにまとめ、招待できる人を候補の形にする。null の行は招待できる人なし", () => {
+    expect(
+      buildEventInviteGroups([
+        { group_id: "g1", group_name: "謎解き仲間", group_color: "nazotoki", group_member_count: "2", user_id: "u1", display_name: "あや", shared_event_count: "3", is_following: true },
+        { group_id: "g1", group_name: "謎解き仲間", group_color: "nazotoki", group_member_count: "2", user_id: "u2", display_name: "けん", shared_event_count: "0", is_following: true },
+        { group_id: "g2", group_name: "大学の友達", group_color: "unknown", group_member_count: "1", user_id: null, display_name: null, shared_event_count: null, is_following: null }
+      ])
+    ).toEqual([
+      {
+        id: "g1",
+        name: "謎解き仲間",
+        color: "nazotoki",
+        memberCount: 2,
+        invitees: [
+          { userId: "u1", displayName: "あや", sharedEventCount: 3, activeSharedEventCount: 0, latestSharedAt: "", isFollowing: true, isFollowedBy: false, isFavorite: false },
+          { userId: "u2", displayName: "けん", sharedEventCount: 0, activeSharedEventCount: 0, latestSharedAt: "", isFollowing: true, isFollowedBy: false, isFavorite: false }
+        ]
+      },
+      { id: "g2", name: "大学の友達", color: "nazotoki", memberCount: 1, invitees: [] }
+    ]);
   });
 });
