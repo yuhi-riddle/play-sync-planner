@@ -168,3 +168,26 @@ describe("グループでまとめて選ぶ", () => {
     expect(screen.getByRole("button", { name: "Madoiで招待を送る" })).toBeInTheDocument();
   });
 });
+
+describe("一度に招待できる人数", () => {
+  it("31人以上を選ぶと理由を出し、送るボタンを押せない", () => {
+    const many = Array.from({ length: 31 }, (_, index) => ({
+      ...recent,
+      userId: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      displayName: `メンバー${index}`
+    }));
+    const groups = [
+      { id: "g1", name: "前半", color: "nazotoki" as const, memberCount: 20, invitees: many.slice(0, 20) },
+      { id: "g2", name: "後半", color: "boardgame" as const, memberCount: 11, invitees: many.slice(20) }
+    ];
+    const action = vi.fn();
+    render(<EventInviteCandidates candidates={[]} nextCursor={null} action={action} loadMoreAction={vi.fn()} groups={groups} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /前半 20人/ }));
+    fireEvent.click(screen.getByRole("button", { name: /後半 11人/ }));
+
+    expect(screen.getByText("一度に招待できるのは30人までです（いま31人）")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "31人に招待を送る" })).toBeDisabled();
+    expect(action).not.toHaveBeenCalled();
+  });
+});

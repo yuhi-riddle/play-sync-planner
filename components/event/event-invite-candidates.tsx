@@ -8,6 +8,8 @@ import type { ActionState } from "@/lib/domain/shared/action-state";
 import type { ConnectionCandidate, ConnectionCursor, ConnectionPage } from "@/lib/domain/account/connections";
 import { connectionGroupDotClass, type EventInviteGroup } from "@/lib/domain/account/connection-groups";
 
+const maxInviteesPerRequest = 30;
+
 export function EventInviteCandidates({
   candidates,
   nextCursor,
@@ -25,6 +27,8 @@ export function EventInviteCandidates({
   const [inviteGroups, setInviteGroups] = useState(groups);
   const [cursor, setCursor] = useState(nextCursor);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // 招待を一度に送れるのは30人まで（create_event_user_invitations の上限。グループの上限と同じ）。
+  const isOverInviteLimit = selectedIds.length > maxInviteesPerRequest;
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, startLoadMoreTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
@@ -173,9 +177,15 @@ export function EventInviteCandidates({
           ) : null}
         </div>
       ) : null}
+      {isOverInviteLimit ? (
+        <p id="event-invite-limit" className="text-sm font-semibold text-clay-ink" role="status">
+          一度に招待できるのは{maxInviteesPerRequest}人までです（いま{selectedIds.length}人）
+        </p>
+      ) : null}
       <button
         type="button"
-        disabled={isPending}
+        disabled={isPending || isOverInviteLimit}
+        aria-describedby={isOverInviteLimit ? "event-invite-limit" : undefined}
         onClick={sendInvitations}
         className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-br from-pine to-pine-deep px-5 py-2 text-sm font-bold text-white shadow-soft transition-colors hover:from-pine-deep hover:to-pine-deep focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
