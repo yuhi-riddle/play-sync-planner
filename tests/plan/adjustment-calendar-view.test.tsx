@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -61,11 +61,14 @@ describe("AdjustmentCalendarView", () => {
 
     expect(screen.getByText("謎解き公演")).toBeInTheDocument();
     expect(screen.getByText("Google Calendar")).toBeInTheDocument();
+    // タイムラインの日時は曜日つき（見出しの日付と食い違って見えないように）。2026-07-12 は日曜。
+    expect(screen.getByText(/2026\/07\/12\(日\) 19:00/)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText("歯医者")).toBeInTheDocument();
     });
     expect(screen.getByText("新宿")).toBeInTheDocument();
+    expect(screen.getByText(/2026\/07\/12\(日\) 10:00 - 11:00/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/google-calendar/freebusy?month=2026-07");
   });
 
@@ -222,5 +225,30 @@ describe("AdjustmentCalendarView", () => {
       expect(screen.getByTestId("adjustment-month-grid")).toBeInTheDocument();
     });
     expect(screen.queryByRole("link", { name: "今日に戻る" })).not.toBeInTheDocument();
+  });
+
+  it("月ピッカーで月を選んだ瞬間から、新しい月のデータが来るまでカレンダー全体を淡くする", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connected: false, busy: [] }) })
+    );
+
+    const { container, rerender } = render(
+      <AdjustmentCalendarView month="2026-07" selectedDateKey="2026-07-12" todayDateKey="2026-07-01" candidates={[]} />
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("adjustment-month-grid")).toBeInTheDocument();
+    });
+
+    const wrapper = container.querySelector(".t-content-fade") as HTMLElement;
+    expect(wrapper).not.toHaveClass("is-pending");
+
+    fireEvent.click(screen.getByRole("button", { name: "8月" }));
+    expect(wrapper).toHaveClass("is-pending");
+
+    rerender(
+      <AdjustmentCalendarView month="2026-08" selectedDateKey="2026-08-01" todayDateKey="2026-07-01" candidates={[]} />
+    );
+    expect(wrapper).not.toHaveClass("is-pending");
   });
 });
